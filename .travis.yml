@@ -1,0 +1,26 @@
+sudo: false
+
+dist: trusty
+
+language:
+  - go
+
+go:
+  - "1.10"
+  - "1.11"
+
+git:
+  depth: 1
+
+install: true
+
+script:
+  # Verify that all source files are correctly formatted.
+  - find . -name "*.go" | grep -v vendor/ | xargs gofmt -d -e -l
+
+  - go clean -i
+  - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+
+# TODO: Set up coverage.
+#after_success:
+#  - bash <(curl -s https://codecov.io/bash)
