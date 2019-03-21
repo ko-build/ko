@@ -23,10 +23,10 @@ import (
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/ko/build"
-	"github.com/google/go-containerregistry/pkg/ko/publish"
-	"github.com/google/go-containerregistry/pkg/ko/resolve"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/publish"
+	"github.com/google/ko/pkg/resolve"
 	"github.com/mattmoor/dep-notify/pkg/graph"
 )
 

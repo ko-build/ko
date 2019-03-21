@@ -20,12 +20,10 @@ import (
 	"io"
 	"sync"
 
-	yaml "gopkg.in/yaml.v2"
-
+	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/publish"
 	"golang.org/x/sync/errgroup"
-
-	"github.com/google/go-containerregistry/pkg/ko/build"
-	"github.com/google/go-containerregistry/pkg/ko/publish"
+	yaml "gopkg.in/yaml.v2"
 )
 
 // ImageReferences resolves supported references to images within the input yaml

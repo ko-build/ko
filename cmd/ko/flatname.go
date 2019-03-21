@@ -19,7 +19,7 @@ import (
 	"encoding/hex"
 	"path/filepath"
 
-	"github.com/google/go-containerregistry/pkg/ko/publish"
+	"github.com/google/ko/pkg/publish"
 	"github.com/spf13/cobra"
 )
 

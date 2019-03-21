@@ -23,9 +23,9 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/ko/build"
-	"github.com/google/go-containerregistry/pkg/ko/publish"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/publish"
 )
 
 func qualifyLocalImport(importpath, gopathsrc, pwd string) (string, error) {
