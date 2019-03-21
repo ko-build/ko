@@ -20,5 +20,5 @@ metadata:
 spec:
   containers:
   - name: obiwan
-    image: github.com/google/go-containerregistry/cmd/ko/test
+    image: github.com/google/ko/cmd/test
   restartPolicy: Never

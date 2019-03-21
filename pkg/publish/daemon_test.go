@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
-
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 )
@@ -49,7 +48,7 @@ func init() {
 }
 
 func TestDaemon(t *testing.T) {
-	importpath := "github.com/google/go-containerregistry/cmd/ko"
+	importpath := "github.com/google/ko/cmd/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -66,7 +65,7 @@ func TestDaemon(t *testing.T) {
 func TestDaemonTags(t *testing.T) {
 	Tags = nil
 
-	importpath := "github.com/google/go-containerregistry/cmd/ko"
+	importpath := "github.com/google/ko/cmd/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -79,7 +78,7 @@ func TestDaemonTags(t *testing.T) {
 		t.Errorf("Publish() = %v, wanted prefix %v", got, want)
 	}
 
-	expected := []string{"ko.local/d502d3a1d9858acbab6106d78a0e05f0:v2.0.0", "ko.local/d502d3a1d9858acbab6106d78a0e05f0:v1.2.3", "ko.local/d502d3a1d9858acbab6106d78a0e05f0:production"}
+	expected := []string{"ko.local/099ba5bcefdead87f92606265fb99ac0:v2.0.0", "ko.local/099ba5bcefdead87f92606265fb99ac0:v1.2.3", "ko.local/099ba5bcefdead87f92606265fb99ac0:production"}
 
 	for i, v := range expected {
 		if Tags[i] != v {

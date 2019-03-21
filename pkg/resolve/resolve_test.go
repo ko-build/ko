@@ -19,13 +19,12 @@ import (
 	"io"
 	"testing"
 
-	yaml "gopkg.in/yaml.v2"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	yaml "gopkg.in/yaml.v2"
 )
 
 var (
@@ -309,7 +308,7 @@ func TestMultiDocumentYAMLs(t *testing.T) {
 }
 
 func mustRandom() v1.Image {
-	img, err := random.Image(5, 1024)
+	img, err := random.Image(1024, 5)
 	if err != nil {
 		panic(err)
 	}

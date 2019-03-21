@@ -31,7 +31,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
-const appPath = "/ko-app"
+const (
+	appDir             = "/ko-app"
+	defaultAppFilename = "ko-app"
+)
 
 // GetBase takes an importpath and returns a base v1.Image.
 type GetBase func(string) (v1.Image, error)
@@ -117,10 +120,52 @@ func build(ip string) (string, error) {
 	return file, nil
 }
 
-func tarBinary(binary string) (*bytes.Buffer, error) {
+func appFilename(importpath string) string {
+	base := filepath.Base(importpath)
+
+	// If we fail to determine a good name from the importpath then use a
+	// safe default.
+	if base == "." || base == string(filepath.Separator) {
+		return defaultAppFilename
+	}
+
+	return base
+}
+
+func tarAddDirectories(tw *tar.Writer, dir string) error {
+	if dir == "." || dir == string(filepath.Separator) {
+		return nil
+	}
+
+	// Write parent directories first
+	if err := tarAddDirectories(tw, filepath.Dir(dir)); err != nil {
+		return err
+	}
+
+	// write the directory header to the tarball archive
+	if err := tw.WriteHeader(&tar.Header{
+		Name:     dir,
+		Typeflag: tar.TypeDir,
+		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
+		// under which it was created. Additionally, windows can only set 0222,
+		// 0444, or 0666, none of which are executable.
+		Mode: 0555,
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func tarBinary(name, binary string) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
+
+	// write the parent directories to the tarball archive
+	if err := tarAddDirectories(tw, filepath.Dir(name)); err != nil {
+		return nil, err
+	}
 
 	file, err := os.Open(binary)
 	if err != nil {
@@ -132,7 +177,7 @@ func tarBinary(binary string) (*bytes.Buffer, error) {
 		return nil, err
 	}
 	header := &tar.Header{
-		Name:     appPath,
+		Name:     name,
 		Size:     stat.Size(),
 		Typeflag: tar.TypeReg,
 		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
@@ -249,8 +294,10 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	}
 	layers = append(layers, dataLayer)
 
+	appPath := filepath.Join(appDir, appFilename(s))
+
 	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(file)
+	binaryLayerBuf, err := tarBinary(appPath, file)
 	if err != nil {
 		return nil, err
 	}
