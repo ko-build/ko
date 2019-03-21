@@ -40,8 +40,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/cmd/ko"),
-		filepath.FromSlash("github.com/google/ko/vendor/github.com/googleapis/gnostic/compiler"), // vendored commands work too.
+		filepath.FromSlash("github.com/google/ko/cmd/ko"), // ko can build itself.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if !ng.IsSupportedReference(importpath) {
@@ -96,7 +95,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 		withBuilder(writeTempFile),
 	)
 
-	img, err := ng.Build(filepath.Join(importpath, "cmd", "crane"))
+	img, err := ng.Build(filepath.Join(importpath, "cmd", "ko"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -118,7 +117,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 	t.Run("check determinism", func(t *testing.T) {
 		expectedHash := v1.Hash{
 			Algorithm: "sha256",
-			Hex:       "a688c9bc444d0a34cbc24abd62aa2fa263f61f2060963bb7a4fc3fa92075a2bf",
+			Hex:       "1d4fb5a6e81840aa5996d6efad00cca54b14412917ed42acf51d88d3f9482fd0",
 		}
 		appLayer := ls[baseLayers+1]
 
@@ -195,7 +194,7 @@ func TestGoBuild(t *testing.T) {
 	t.Run("check determinism", func(t *testing.T) {
 		expectedHash := v1.Hash{
 			Algorithm: "sha256",
-			Hex:       "71912d718600c5a2b8db3a127a14073bba61dded0dac8e1a6ebdeb4a37f2ce8d",
+			Hex:       "481f1025f9a594d8742cadb1928d1d601115a14a77001958dc539cee04fddfcf",
 		}
 		appLayer := ls[baseLayers+1]
 
