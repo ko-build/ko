@@ -11,13 +11,13 @@
 `ko` can be installed via:
 
 ```shell
-go get github.com/google/ko/cmd
+go get github.com/google/ko/cmd/ko
 ```
 
 To update your installation:
 
 ```shell
-go get -u github.com/google/ko/cmd
+go get -u github.com/google/ko/cmd/ko
 ```
 
 ## The `ko` Model
