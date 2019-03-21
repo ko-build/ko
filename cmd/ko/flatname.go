@@ -19,6 +19,7 @@ import (
 	"encoding/hex"
 	"path/filepath"
 
+	"github.com/google/go-containerregistry/pkg/ko/publish"
 	"github.com/spf13/cobra"
 )
 
@@ -49,4 +50,13 @@ func preserveImportPath(importpath string) string {
 
 func baseImportPaths(importpath string) string {
 	return filepath.Base(importpath)
+}
+
+func makeNamer(no *NameOptions) publish.Namer {
+	if no.PreserveImportPaths {
+		return preserveImportPath
+	} else if no.BaseImportPaths {
+		return baseImportPaths
+	}
+	return packageWithMD5
 }

@@ -131,7 +131,21 @@ func addKubeCommands(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error piping to 'kubectl apply': %v", err)
 			}
-			go resolveFilesToWriter(fo, no, lo, ta, stdin)
+
+			go func() {
+				// kubectl buffers data before starting to apply it, which
+				// can lead to resources being created more slowly than desired.
+				// In the case of --watch, it can lead to resources not being
+				// applied at all until enough iteration has occurred.  To work
+				// around this, we prime the stream with a bunch of empty objects
+				// which kubectl will discard.
+				// See https://github.com/google/go-containerregistry/pull/348
+				for i := 0; i < 1000; i++ {
+					stdin.Write([]byte("---\n"))
+				}
+				// Once primed kick things off.
+				resolveFilesToWriter(fo, no, lo, ta, stdin)
+			}()
 
 			// Run it.
 			if err := kubectlCmd.Run(); err != nil {

@@ -142,10 +142,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:123ca2e74131111f6302f6e0eb27bbae6d8989b7dae00ca7a624793b4549353b"
+  digest = "1:9d25404d202ff8f0097f3086b18645b6ac1e6634ab35a193328c5b888776252b"
   name = "github.com/google/go-containerregistry"
   packages = [
     "pkg/authn",
+    "pkg/ko/build",
+    "pkg/ko/publish",
+    "pkg/ko/resolve",
     "pkg/name",
     "pkg/v1",
     "pkg/v1/daemon",
@@ -161,7 +164,7 @@
     "pkg/v1/v1util",
   ]
   pruneopts = "UT"
-  revision = "6225ca1a4de721ff14f6c4cbbfd141ab462bdb22"
+  revision = "8d4083db9aa0d2fae6588c1acdbe6a1f5db461e3"
 
 [[projects]]
   branch = "master"
@@ -608,6 +611,9 @@
     "github.com/google/go-cmp/cmp",
     "github.com/google/go-cmp/cmp/cmpopts",
     "github.com/google/go-containerregistry/pkg/authn",
+    "github.com/google/go-containerregistry/pkg/ko/build",
+    "github.com/google/go-containerregistry/pkg/ko/publish",
+    "github.com/google/go-containerregistry/pkg/ko/resolve",
     "github.com/google/go-containerregistry/pkg/name",
     "github.com/google/go-containerregistry/pkg/v1",
     "github.com/google/go-containerregistry/pkg/v1/daemon",

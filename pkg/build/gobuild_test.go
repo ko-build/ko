@@ -19,9 +19,8 @@ import (
 	"io"
 	"io/ioutil"
 	"path/filepath"
-	"time"
-
 	"testing"
+	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
@@ -117,7 +116,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 	t.Run("check determinism", func(t *testing.T) {
 		expectedHash := v1.Hash{
 			Algorithm: "sha256",
-			Hex:       "1d4fb5a6e81840aa5996d6efad00cca54b14412917ed42acf51d88d3f9482fd0",
+			Hex:       "fb82c95fc73eaf26d0b18b1bc2d23ee32059e46806a83a313e738aac4d039492",
 		}
 		appLayer := ls[baseLayers+1]
 
@@ -139,7 +138,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 			t.Errorf("len(entrypoint) = %v, want %v", got, want)
 		}
 
-		if got, want := entrypoint[0], appPath; got != want {
+		if got, want := entrypoint[0], "/ko-app/ko"; got != want {
 			t.Errorf("entrypoint = %v, want %v", got, want)
 		}
 	})
@@ -194,7 +193,7 @@ func TestGoBuild(t *testing.T) {
 	t.Run("check determinism", func(t *testing.T) {
 		expectedHash := v1.Hash{
 			Algorithm: "sha256",
-			Hex:       "481f1025f9a594d8742cadb1928d1d601115a14a77001958dc539cee04fddfcf",
+			Hex:       "4c7f97dda30576670c3a8967424f7dea023030bb3df74fc4bd10329bcb266fc2",
 		}
 		appLayer := ls[baseLayers+1]
 
@@ -275,7 +274,7 @@ func TestGoBuild(t *testing.T) {
 			t.Errorf("len(entrypoint) = %v, want %v", got, want)
 		}
 
-		if got, want := entrypoint[0], appPath; got != want {
+		if got, want := entrypoint[0], "/ko-app/test"; got != want {
 			t.Errorf("entrypoint = %v, want %v", got, want)
 		}
 	})

@@ -23,12 +23,11 @@ import (
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/ko/build"
+	"github.com/google/go-containerregistry/pkg/ko/publish"
+	"github.com/google/go-containerregistry/pkg/ko/resolve"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/mattmoor/dep-notify/pkg/graph"
-
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/publish"
-	"github.com/google/ko/pkg/resolve"
 )
 
 func gobuildOptions() ([]build.Option, error) {
@@ -78,12 +77,7 @@ func makePublisher(no *NameOptions, lo *LocalOptions, ta *TagsOptions) (publish.
 	// Create the publish.Interface that we will use to publish image references
 	// to either a docker daemon or a container image registry.
 	innerPublisher, err := func() (publish.Interface, error) {
-		namer := func() publish.Namer {
-			if no.PreserveImportPaths {
-				return preserveImportPath
-			}
-			return packageWithMD5
-		}()
+		namer := makeNamer(no)
 
 		repoName := os.Getenv("KO_DOCKER_REPO")
 		if lo.Local || repoName == publish.LocalDomain {

@@ -23,10 +23,9 @@ import (
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/ko/build"
+	"github.com/google/go-containerregistry/pkg/ko/publish"
 	"github.com/google/go-containerregistry/pkg/name"
-
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/publish"
 )
 
 func qualifyLocalImport(importpath, gopathsrc, pwd string) (string, error) {
@@ -75,14 +74,7 @@ func publishImages(importpaths []string, no *NameOptions, lo *LocalOptions, ta *
 		var pub publish.Interface
 		repoName := os.Getenv("KO_DOCKER_REPO")
 
-		var namer publish.Namer
-		if no.PreserveImportPaths {
-			namer = preserveImportPath
-		} else if no.BaseImportPaths {
-			namer = baseImportPaths
-		} else {
-			namer = packageWithMD5
-		}
+		namer := makeNamer(no)
 
 		if lo.Local || repoName == publish.LocalDomain {
 			pub = publish.NewDaemon(namer, ta.Tags)
