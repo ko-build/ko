@@ -95,7 +95,7 @@ func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
 	s = strings.ToLower(s)
 
 	for _, tagName := range d.tags {
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", d.base, d.namer(s), tagName), name.WeakValidation)
+		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", d.base, d.namer(s), tagName))
 		if err != nil {
 			return nil, err
 		}
@@ -112,7 +112,7 @@ func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
 	if err != nil {
 		return nil, err
 	}
-	dig, err := name.NewDigest(fmt.Sprintf("%s/%s@%s", d.base, d.namer(s), h), name.WeakValidation)
+	dig, err := name.NewDigest(fmt.Sprintf("%s/%s@%s", d.base, d.namer(s), h))
 	if err != nil {
 		return nil, err
 	}

@@ -316,7 +316,7 @@ func mustRandom() v1.Image {
 }
 
 func mustRepository(s string) name.Repository {
-	n, err := name.NewRepository(s, name.WeakValidation)
+	n, err := name.NewRepository(s)
 	if err != nil {
 		panic(err)
 	}
