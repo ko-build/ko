@@ -93,6 +93,9 @@ func TestGoBuildNoKoData(t *testing.T) {
 		WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
 		withBuilder(writeTempFile),
 	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
 
 	img, err := ng.Build(filepath.Join(importpath, "cmd", "ko"))
 	if err != nil {
@@ -170,6 +173,9 @@ func TestGoBuild(t *testing.T) {
 		WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
 		withBuilder(writeTempFile),
 	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
 
 	img, err := ng.Build(filepath.Join(importpath, "cmd", "ko", "test"))
 	if err != nil {
