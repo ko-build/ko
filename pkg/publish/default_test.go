@@ -67,7 +67,7 @@ func TestDefault(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse(%v) = %v", server.URL, err)
 	}
-	tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo), name.WeakValidation)
+	tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo))
 	if err != nil {
 		t.Fatalf("NewTag() = %v", err)
 	}
@@ -130,7 +130,7 @@ func TestDefaultWithCustomNamer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse(%v) = %v", server.URL, err)
 	}
-	tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo), name.WeakValidation)
+	tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo))
 	if err != nil {
 		t.Fatalf("NewTag() = %v", err)
 	}
@@ -194,7 +194,7 @@ func TestDefaultWithTags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("url.Parse(%v) = %v", server.URL, err)
 	}
-	tag, err := name.NewTag(fmt.Sprintf("%s/%s:notLatest", u.Host, expectedRepo), name.WeakValidation)
+	tag, err := name.NewTag(fmt.Sprintf("%s/%s:notLatest", u.Host, expectedRepo))
 	if err != nil {
 		t.Fatalf("NewTag() = %v", err)
 	}

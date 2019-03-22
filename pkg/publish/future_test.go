@@ -31,7 +31,7 @@ func makeRef() (name.Reference, error) {
 	if err != nil {
 		return nil, err
 	}
-	return name.NewDigest(fmt.Sprintf("gcr.io/foo/bar@%s", d), name.WeakValidation)
+	return name.NewDigest(fmt.Sprintf("gcr.io/foo/bar@%s", d))
 }
 
 func TestSameFutureSameReference(t *testing.T) {

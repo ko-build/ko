@@ -26,7 +26,7 @@ import (
 )
 
 var (
-	fixedBaseRepo, _ = name.NewRepository("gcr.io/asdf", name.WeakValidation)
+	fixedBaseRepo, _ = name.NewRepository("gcr.io/asdf")
 	testImage, _     = random.Image(1024, 5)
 )
 
@@ -129,7 +129,7 @@ func (f *fixedPublish) Publish(_ v1.Image, s string) (name.Reference, error) {
 	if !ok {
 		return nil, fmt.Errorf("unsupported importpath: %q", s)
 	}
-	d, err := name.NewDigest(fmt.Sprintf("%s/%s@%s", f.base, s, h), name.WeakValidation)
+	d, err := name.NewDigest(fmt.Sprintf("%s/%s@%s", f.base, s, h))
 	if err != nil {
 		return nil, err
 	}

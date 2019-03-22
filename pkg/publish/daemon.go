@@ -50,7 +50,7 @@ func (d *demon) Publish(img v1.Image, s string) (name.Reference, error) {
 		return nil, err
 	}
 
-	digestTag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", LocalDomain, d.namer(s), h.Hex), name.WeakValidation)
+	digestTag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", LocalDomain, d.namer(s), h.Hex))
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (d *demon) Publish(img v1.Image, s string) (name.Reference, error) {
 
 	for _, tagName := range d.tags {
 		log.Printf("Adding tag %v", tagName)
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", LocalDomain, d.namer(s), tagName), name.WeakValidation)
+		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", LocalDomain, d.namer(s), tagName))
 		if err != nil {
 			return nil, err
 		}

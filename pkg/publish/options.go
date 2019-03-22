@@ -48,7 +48,7 @@ func WithAuthFromKeychain(keys authn.Keychain) Option {
 		// means that docker.io/mattmoor actually gets interpreted as
 		// docker.io/library/mattmoor, which gets tricky when we start
 		// appending things to it in the publisher.
-		repo, err := name.NewRepository(i.base, name.WeakValidation)
+		repo, err := name.NewRepository(i.base)
 		if err != nil {
 			return err
 		}
