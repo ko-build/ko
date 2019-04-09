@@ -62,7 +62,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 }
 
 // A helper method we use to substitute for the default "build" method.
-func writeTempFile(s string) (string, error) {
+func writeTempFile(s string, _ bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
