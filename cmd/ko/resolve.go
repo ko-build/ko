@@ -30,7 +30,7 @@ import (
 	"github.com/mattmoor/dep-notify/pkg/graph"
 )
 
-func gobuildOptions() ([]build.Option, error) {
+func gobuildOptions(do *DebugOptions) ([]build.Option, error) {
 	creationTime, err := getCreationTime()
 	if err != nil {
 		return nil, err
@@ -41,11 +41,14 @@ func gobuildOptions() ([]build.Option, error) {
 	if creationTime != nil {
 		opts = append(opts, build.WithCreationTime(*creationTime))
 	}
+	if do.DisableOptimizations {
+		opts = append(opts, build.WithDisabledOptimizations())
+	}
 	return opts, nil
 }
 
-func makeBuilder() (*build.Caching, error) {
-	opt, err := gobuildOptions()
+func makeBuilder(do *DebugOptions) (*build.Caching, error) {
+	opt, err := gobuildOptions(do)
 	if err != nil {
 		log.Fatalf("error setting up builder options: %v", err)
 	}
@@ -104,9 +107,9 @@ func makePublisher(no *NameOptions, lo *LocalOptions, ta *TagsOptions) (publish.
 // resolvedFuture represents a "future" for the bytes of a resolved file.
 type resolvedFuture chan []byte
 
-func resolveFilesToWriter(fo *FilenameOptions, no *NameOptions, lo *LocalOptions, ta *TagsOptions, out io.WriteCloser) {
+func resolveFilesToWriter(fo *FilenameOptions, no *NameOptions, lo *LocalOptions, ta *TagsOptions, do *DebugOptions, out io.WriteCloser) {
 	defer out.Close()
-	builder, err := makeBuilder()
+	builder, err := makeBuilder(do)
 	if err != nil {
 		log.Fatalf("error creating builder: %v", err)
 	}
