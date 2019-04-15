@@ -64,6 +64,14 @@ func addKubeCommands(topLevel *cobra.Command) {
 		},
 	})
 
+        topLevel.AddCommand(&cobra.Command{
+                Use:   "version",
+                Short: `Print ko version.`,
+                Run: func(cmd *cobra.Command, args []string) {
+                  version()
+                },
+        })
+
 	koApplyFlags := []string{}
 	lo := &LocalOptions{}
 	bo := &BinaryOptions{}
