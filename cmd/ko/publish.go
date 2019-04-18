@@ -38,8 +38,8 @@ func qualifyLocalImport(importpath, gopathsrc, pwd string) (string, error) {
 	return filepath.Join(strings.TrimPrefix(pwd, gopathsrc+string(filepath.Separator)), importpath), nil
 }
 
-func publishImages(importpaths []string, no *NameOptions, lo *LocalOptions, ta *TagsOptions) map[string]name.Reference {
-	opt, err := gobuildOptions()
+func publishImages(importpaths []string, no *NameOptions, lo *LocalOptions, ta *TagsOptions, do *DebugOptions) map[string]name.Reference {
+	opt, err := gobuildOptions(do)
 	if err != nil {
 		log.Fatalf("error setting up builder options: %v", err)
 	}

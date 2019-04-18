@@ -38,12 +38,13 @@ const (
 
 // GetBase takes an importpath and returns a base v1.Image.
 type GetBase func(string) (v1.Image, error)
-type builder func(string) (string, error)
+type builder func(string, bool) (string, error)
 
 type gobuild struct {
 	getBase      GetBase
 	creationTime v1.Time
 	build        builder
+	disableOptimizations bool
 }
 
 // Option is a functional option for NewGo.
@@ -53,6 +54,7 @@ type gobuildOpener struct {
 	getBase      GetBase
 	creationTime v1.Time
 	build        builder
+	disableOptimizations bool
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -63,6 +65,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		getBase:      gbo.getBase,
 		creationTime: gbo.creationTime,
 		build:        gbo.build,
+		disableOptimizations: gbo.disableOptimizations,
 	}, nil
 }
 
@@ -94,14 +97,22 @@ func (*gobuild) IsSupportedReference(s string) bool {
 	return p.IsCommand()
 }
 
-func build(ip string) (string, error) {
+func build(ip string, disableOptimizations bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
 	}
 	file := filepath.Join(tmpDir, "out")
 
-	cmd := exec.Command("go", "build", "-o", file, ip)
+	args := make([]string, 0, 6)
+	args = append(args, "build")
+	if disableOptimizations {
+		// Disable optimizations (-N) and inlining (-l).
+		args = append(args, "-gcflags", "all=-N -l")
+	}
+	args = append(args, "-o", file)
+	args = append(args, ip)
+	cmd := exec.Command("go", args...)
 
 	// Last one wins
 	// TODO(mattmoor): GOARCH=amd64
@@ -273,7 +284,7 @@ func tarKoData(importpath string) (*bytes.Buffer, error) {
 // Build implements build.Interface
 func (gb *gobuild) Build(s string) (v1.Image, error) {
 	// Do the build into a temporary file.
-	file, err := gb.build(s)
+	file, err := gb.build(s, gb.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}
