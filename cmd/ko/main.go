@@ -15,6 +15,7 @@
 package main
 
 import (
+	"github.com/google/ko/pkg/commands"
 	"log"
 
 	"github.com/spf13/cobra"
@@ -29,7 +30,7 @@ func main() {
 			cmd.Help()
 		},
 	}
-	addKubeCommands(cmds)
+	commands.AddKubeCommands(cmds)
 
 	if err := cmds.Execute(); err != nil {
 		log.Fatalf("error during command execution: %v", err)
