@@ -23,6 +23,7 @@ import (
 //    https://github.com/google/go-containerregistry/issues/80
 func AddKubeCommands(topLevel *cobra.Command) {
 	addDelete(topLevel)
+	addCreate(topLevel)
 	addApply(topLevel)
 	addResolve(topLevel)
 	addPublish(topLevel)
