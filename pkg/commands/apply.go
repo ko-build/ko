@@ -16,33 +16,19 @@ package commands
 
 import (
 	"github.com/google/ko/pkg/commands/options"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 	"log"
 	"os"
 	"os/exec"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
 
-// AddKubeCommands augments our CLI surface with a passthru delete command, and an apply
-// command that realizes the promise of ko, as outlined here:
-//    https://github.com/google/go-containerregistry/issues/80
-func AddKubeCommands(topLevel *cobra.Command) {
-	topLevel.AddCommand(&cobra.Command{
-		Use:   "delete",
-		Short: `See "kubectl help delete" for detailed usage.`,
-		Run:   passthru("kubectl"),
-		// We ignore unknown flags to avoid importing everything Go exposes
-		// from our commands.
-		FParseErrWhitelist: cobra.FParseErrWhitelist{
-			UnknownFlags: true,
-		},
-	})
-
+// addApply augments our CLI surface with apply.
+func addApply(topLevel *cobra.Command) {
 	koApplyFlags := []string{}
 	lo := &options.LocalOptions{}
-	bo := &options.BinaryOptions{}
 	no := &options.NameOptions{}
 	fo := &options.FilenameOptions{}
 	ta := &options.TagsOptions{}
@@ -148,132 +134,4 @@ func AddKubeCommands(topLevel *cobra.Command) {
 	kubeConfigFlags.AddFlags(apply.Flags())
 
 	topLevel.AddCommand(apply)
-
-	resolve := &cobra.Command{
-		Use:   "resolve -f FILENAME",
-		Short: "Print the input files with image references resolved to built/pushed image digests.",
-		Long:  `This sub-command finds import path references within the provided files, builds them into Go binaries, containerizes them, publishes them, and prints the resulting yaml.`,
-		Example: `
-  # Build and publish import path references to a Docker
-  # Registry as:
-  #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local and --preserve-import-paths were passed.
-  ko resolve -f config/
-
-  # Build and publish import path references to a Docker
-  # Registry preserving import path names as:
-  #   ${KO_DOCKER_REPO}/<import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local was passed.
-  ko resolve --preserve-import-paths -f config/
-
-  # Build and publish import path references to a Docker
-  # daemon as:
-  #   ko.local/<import path>
-  # This always preserves import paths.
-  ko resolve --local -f config/`,
-		Args: cobra.NoArgs,
-		Run: func(cmd *cobra.Command, args []string) {
-			resolveFilesToWriter(fo, no, lo, ta, do, os.Stdout)
-		},
-	}
-	options.AddLocalArg(resolve, lo)
-	options.AddNamingArgs(resolve, no)
-	options.AddFileArg(resolve, fo)
-	options.AddTagsArg(resolve, ta)
-	options.AddDebugArg(resolve, do)
-	topLevel.AddCommand(resolve)
-
-	publish := &cobra.Command{
-		Use:   "publish IMPORTPATH...",
-		Short: "Build and publish container images from the given importpaths.",
-		Long:  `This sub-command builds the provided import paths into Go binaries, containerizes them, and publishes them.`,
-		Example: `
-  # Build and publish import path references to a Docker
-  # Registry as:
-  #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local and --preserve-import-paths were passed.
-  ko publish github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
-
-  # Build and publish a relative import path as:
-  #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local and --preserve-import-paths were passed.
-  ko publish ./cmd/blah
-
-  # Build and publish a relative import path as:
-  #   ${KO_DOCKER_REPO}/<import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local was passed.
-  ko publish --preserve-import-paths ./cmd/blah
-
-  # Build and publish import path references to a Docker
-  # daemon as:
-  #   ko.local/<import path>
-  # This always preserves import paths.
-  ko publish --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
-		Args: cobra.MinimumNArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
-			publishImages(args, no, lo, ta, do)
-		},
-	}
-	options.AddLocalArg(publish, lo)
-	options.AddNamingArgs(publish, no)
-	options.AddTagsArg(publish, ta)
-	options.AddDebugArg(publish, do)
-	topLevel.AddCommand(publish)
-
-	run := &cobra.Command{
-		Use:   "run NAME --image=IMPORTPATH",
-		Short: "A variant of `kubectl run` that containerizes IMPORTPATH first.",
-		Long:  `This sub-command combines "ko publish" and "kubectl run" to support containerizing and running Go binaries on Kubernetes in a single command.`,
-		Example: `
-  # Publish the --image and run it on Kubernetes as:
-  #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local and --preserve-import-paths were passed.
-  ko run foo --image=github.com/foo/bar/cmd/baz
-
-  # This supports relative import paths as well.
-  ko run foo --image=./cmd/baz`,
-		Run: func(cmd *cobra.Command, args []string) {
-			imgs := publishImages([]string{bo.Path}, no, lo, ta, do)
-
-			// There's only one, but this is the simple way to access the
-			// reference since the import path may have been qualified.
-			for k, v := range imgs {
-				log.Printf("Running %q", k)
-				// Issue a "kubectl run" command with our same arguments,
-				// but supply a second --image to override the one we intercepted.
-				argv := append(os.Args[1:], "--image", v.String())
-				kubectlCmd := exec.Command("kubectl", argv...)
-
-				// Pass through our environment
-				kubectlCmd.Env = os.Environ()
-				// Pass through our std*
-				kubectlCmd.Stderr = os.Stderr
-				kubectlCmd.Stdout = os.Stdout
-				kubectlCmd.Stdin = os.Stdin
-
-				// Run it.
-				if err := kubectlCmd.Run(); err != nil {
-					log.Fatalf("error executing \"kubectl run\": %v", err)
-				}
-			}
-		},
-		// We ignore unknown flags to avoid importing everything Go exposes
-		// from our commands.
-		FParseErrWhitelist: cobra.FParseErrWhitelist{
-			UnknownFlags: true,
-		},
-	}
-	options.AddLocalArg(run, lo)
-	options.AddNamingArgs(run, no)
-	options.AddImageArg(run, bo)
-	options.AddTagsArg(run, ta)
-	options.AddDebugArg(run, do)
-
-	topLevel.AddCommand(run)
 }

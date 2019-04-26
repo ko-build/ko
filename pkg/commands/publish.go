@@ -15,85 +15,55 @@
 package commands
 
 import (
-	"fmt"
 	"github.com/google/ko/pkg/commands/options"
-	gb "go/build"
-	"log"
-	"os"
-	"path/filepath"
-	"strings"
-
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/publish"
+	"github.com/spf13/cobra"
 )
 
-func qualifyLocalImport(importpath, gopathsrc, pwd string) (string, error) {
-	if !strings.HasPrefix(pwd, gopathsrc) {
-		return "", fmt.Errorf("pwd (%q) must be on $GOPATH/src (%q) to support local imports", pwd, gopathsrc)
+
+// addPublish augments our CLI surface with publish.
+func addPublish(topLevel *cobra.Command) {
+	lo := &options.LocalOptions{}
+	no := &options.NameOptions{}
+	ta := &options.TagsOptions{}
+	do := &options.DebugOptions{}
+
+	publish := &cobra.Command{
+		Use:   "publish IMPORTPATH...",
+		Short: "Build and publish container images from the given importpaths.",
+		Long:  `This sub-command builds the provided import paths into Go binaries, containerizes them, and publishes them.`,
+		Example: `
+  # Build and publish import path references to a Docker
+  # Registry as:
+  #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
+  # When KO_DOCKER_REPO is ko.local, it is the same as if
+  # --local and --preserve-import-paths were passed.
+  ko publish github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
+
+  # Build and publish a relative import path as:
+  #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
+  # When KO_DOCKER_REPO is ko.local, it is the same as if
+  # --local and --preserve-import-paths were passed.
+  ko publish ./cmd/blah
+
+  # Build and publish a relative import path as:
+  #   ${KO_DOCKER_REPO}/<import path>
+  # When KO_DOCKER_REPO is ko.local, it is the same as if
+  # --local was passed.
+  ko publish --preserve-import-paths ./cmd/blah
+
+  # Build and publish import path references to a Docker
+  # daemon as:
+  #   ko.local/<import path>
+  # This always preserves import paths.
+  ko publish --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
+		Args: cobra.MinimumNArgs(1),
+		Run: func(_ *cobra.Command, args []string) {
+			publishImages(args, no, lo, ta, do)
+		},
 	}
-	// Given $GOPATH/src and $PWD (which must be within $GOPATH/src), trim
-	// off $GOPATH/src/ from $PWD and append local importpath to get the
-	// fully-qualified importpath.
-	return filepath.Join(strings.TrimPrefix(pwd, gopathsrc+string(filepath.Separator)), importpath), nil
-}
-
-func publishImages(importpaths []string, no *options.NameOptions, lo *options.LocalOptions, ta *options.TagsOptions, do *options.DebugOptions) map[string]name.Reference {
-	opt, err := gobuildOptions(do)
-	if err != nil {
-		log.Fatalf("error setting up builder options: %v", err)
-	}
-	b, err := build.NewGo(opt...)
-	if err != nil {
-		log.Fatalf("error creating go builder: %v", err)
-	}
-	imgs := make(map[string]name.Reference)
-	for _, importpath := range importpaths {
-		if gb.IsLocalImport(importpath) {
-			// Qualify relative imports to their fully-qualified
-			// import path, assuming $PWD is within $GOPATH/src.
-			gopathsrc := filepath.Join(gb.Default.GOPATH, "src")
-			pwd, err := os.Getwd()
-			if err != nil {
-				log.Fatalf("error getting current working directory: %v", err)
-			}
-			importpath, err = qualifyLocalImport(importpath, gopathsrc, pwd)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		if !b.IsSupportedReference(importpath) {
-			log.Fatalf("importpath %q is not supported", importpath)
-		}
-
-		img, err := b.Build(importpath)
-		if err != nil {
-			log.Fatalf("error building %q: %v", importpath, err)
-		}
-		var pub publish.Interface
-		repoName := os.Getenv("KO_DOCKER_REPO")
-
-		namer := options.MakeNamer(no)
-
-		if lo.Local || repoName == publish.LocalDomain {
-			pub = publish.NewDaemon(namer, ta.Tags)
-		} else {
-			if _, err := name.NewRepository(repoName, name.WeakValidation); err != nil {
-				log.Fatalf("the environment variable KO_DOCKER_REPO must be set to a valid docker repository, got %v", err)
-			}
-			opts := []publish.Option{publish.WithAuthFromKeychain(authn.DefaultKeychain), publish.WithNamer(namer), publish.WithTags(ta.Tags)}
-			pub, err = publish.NewDefault(repoName, opts...)
-			if err != nil {
-				log.Fatalf("error setting up default image publisher: %v", err)
-			}
-		}
-		ref, err := pub.Publish(img, importpath)
-		if err != nil {
-			log.Fatalf("error publishing %s: %v", importpath, err)
-		}
-		imgs[importpath] = ref
-	}
-	return imgs
+	options.AddLocalArg(publish, lo)
+	options.AddNamingArgs(publish, no)
+	options.AddTagsArg(publish, ta)
+	options.AddDebugArg(publish, do)
+	topLevel.AddCommand(publish)
 }
