@@ -12,27 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package commands
 
 import (
-	"github.com/google/ko/pkg/commands"
-	"log"
-
 	"github.com/spf13/cobra"
 )
 
-func main() {
-	// Parent command to which all subcommands are added.
-	cmds := &cobra.Command{
-		Use:   "ko",
-		Short: "Rapidly iterate with Go, Containers, and Kubernetes.",
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
-		},
-	}
-	commands.AddKubeCommands(cmds)
-
-	if err := cmds.Execute(); err != nil {
-		log.Fatalf("error during command execution: %v", err)
-	}
+// AddKubeCommands augments our CLI surface with a passthru delete command, and an apply
+// command that realizes the promise of ko, as outlined here:
+//    https://github.com/google/go-containerregistry/issues/80
+func AddKubeCommands(topLevel *cobra.Command) {
+	addDelete(topLevel)
+	addApply(topLevel)
+	addResolve(topLevel)
+	addPublish(topLevel)
+	addRun(topLevel)
 }
