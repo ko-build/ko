@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package options
 
 import (
 	"crypto/md5"
@@ -31,7 +31,7 @@ type NameOptions struct {
 	BaseImportPaths bool
 }
 
-func addNamingArgs(cmd *cobra.Command, no *NameOptions) {
+func AddNamingArgs(cmd *cobra.Command, no *NameOptions) {
 	cmd.Flags().BoolVarP(&no.PreserveImportPaths, "preserve-import-paths", "P", no.PreserveImportPaths,
 		"Whether to preserve the full import path after KO_DOCKER_REPO.")
 	cmd.Flags().BoolVarP(&no.BaseImportPaths, "base-import-paths", "B", no.BaseImportPaths,
@@ -52,7 +52,7 @@ func baseImportPaths(importpath string) string {
 	return filepath.Base(importpath)
 }
 
-func makeNamer(no *NameOptions) publish.Namer {
+func MakeNamer(no *NameOptions) publish.Namer {
 	if no.PreserveImportPaths {
 		return preserveImportPath
 	} else if no.BaseImportPaths {

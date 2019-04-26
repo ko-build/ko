@@ -1,4 +1,4 @@
-// Copyright 2019 Google LLC All Rights Reserved.
+// Copyright 2018 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package options
 
 import (
 	"github.com/spf13/cobra"
 )
 
-// DebugOptions holds options to improve debugging containers.
-type DebugOptions struct {
-	DisableOptimizations bool
+// BinaryOptions represents options for the ko binary.
+type BinaryOptions struct {
+	// Path is the import path of the binary to publish.
+	Path string
 }
 
-func addDebugArg(cmd *cobra.Command, do *DebugOptions) {
-	cmd.Flags().BoolVar(&do.DisableOptimizations, "disable-optimizations", do.DisableOptimizations,
-		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
+func AddImageArg(cmd *cobra.Command, lo *BinaryOptions) {
+	cmd.Flags().StringVarP(&lo.Path, "image", "i", lo.Path,
+		"The import path of the binary to publish.")
 }
