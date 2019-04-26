@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/google/ko/pkg/commands/options"
 	gb "go/build"
 	"log"
 	"os"
@@ -38,7 +39,7 @@ func qualifyLocalImport(importpath, gopathsrc, pwd string) (string, error) {
 	return filepath.Join(strings.TrimPrefix(pwd, gopathsrc+string(filepath.Separator)), importpath), nil
 }
 
-func publishImages(importpaths []string, no *NameOptions, lo *LocalOptions, ta *TagsOptions, do *DebugOptions) map[string]name.Reference {
+func publishImages(importpaths []string, no *options.NameOptions, lo *options.LocalOptions, ta *options.TagsOptions, do *options.DebugOptions) map[string]name.Reference {
 	opt, err := gobuildOptions(do)
 	if err != nil {
 		log.Fatalf("error setting up builder options: %v", err)
@@ -74,7 +75,7 @@ func publishImages(importpaths []string, no *NameOptions, lo *LocalOptions, ta *
 		var pub publish.Interface
 		repoName := os.Getenv("KO_DOCKER_REPO")
 
-		namer := makeNamer(no)
+		namer := options.MakeNamer(no)
 
 		if lo.Local || repoName == publish.LocalDomain {
 			pub = publish.NewDaemon(namer, ta.Tags)

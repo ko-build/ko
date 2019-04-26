@@ -15,6 +15,7 @@
 package main
 
 import (
+	"github.com/google/ko/pkg/commands/options"
 	"log"
 	"os"
 	"os/exec"
@@ -65,12 +66,12 @@ func addKubeCommands(topLevel *cobra.Command) {
 	})
 
 	koApplyFlags := []string{}
-	lo := &LocalOptions{}
-	bo := &BinaryOptions{}
-	no := &NameOptions{}
-	fo := &FilenameOptions{}
-	ta := &TagsOptions{}
-	do := &DebugOptions{}
+	lo := &options.LocalOptions{}
+	bo := &options.BinaryOptions{}
+	no := &options.NameOptions{}
+	fo := &options.FilenameOptions{}
+	ta := &options.TagsOptions{}
+	do := &options.DebugOptions{}
 	apply := &cobra.Command{
 		Use:   "apply -f FILENAME",
 		Short: "Apply the input files with image references resolved to built/pushed image digests.",
@@ -154,11 +155,11 @@ func addKubeCommands(topLevel *cobra.Command) {
 			}
 		},
 	}
-	addLocalArg(apply, lo)
-	addNamingArgs(apply, no)
-	addFileArg(apply, fo)
-	addTagsArg(apply, ta)
-	addDebugArg(apply, do)
+	options.AddLocalArg(apply, lo)
+	options.AddNamingArgs(apply, no)
+	options.AddFileArg(apply, fo)
+	options.AddTagsArg(apply, ta)
+	options.AddDebugArg(apply, do)
 
 	// Collect the ko-specific apply flags before registering the kubectl global
 	// flags so that we can ignore them when passing kubectl global flags through
@@ -202,11 +203,11 @@ func addKubeCommands(topLevel *cobra.Command) {
 			resolveFilesToWriter(fo, no, lo, ta, do, os.Stdout)
 		},
 	}
-	addLocalArg(resolve, lo)
-	addNamingArgs(resolve, no)
-	addFileArg(resolve, fo)
-	addTagsArg(resolve, ta)
-	addDebugArg(resolve, do)
+	options.AddLocalArg(resolve, lo)
+	options.AddNamingArgs(resolve, no)
+	options.AddFileArg(resolve, fo)
+	options.AddTagsArg(resolve, ta)
+	options.AddDebugArg(resolve, do)
 	topLevel.AddCommand(resolve)
 
 	publish := &cobra.Command{
@@ -243,10 +244,10 @@ func addKubeCommands(topLevel *cobra.Command) {
 			publishImages(args, no, lo, ta, do)
 		},
 	}
-	addLocalArg(publish, lo)
-	addNamingArgs(publish, no)
-	addTagsArg(publish, ta)
-	addDebugArg(publish, do)
+	options.AddLocalArg(publish, lo)
+	options.AddNamingArgs(publish, no)
+	options.AddTagsArg(publish, ta)
+	options.AddDebugArg(publish, do)
 	topLevel.AddCommand(publish)
 
 	run := &cobra.Command{
@@ -293,11 +294,11 @@ func addKubeCommands(topLevel *cobra.Command) {
 			UnknownFlags: true,
 		},
 	}
-	addLocalArg(run, lo)
-	addNamingArgs(run, no)
-	addImageArg(run, bo)
-	addTagsArg(run, ta)
-	addDebugArg(run, do)
+	options.AddLocalArg(run, lo)
+	options.AddNamingArgs(run, no)
+	options.AddImageArg(run, bo)
+	options.AddTagsArg(run, ta)
+	options.AddDebugArg(run, do)
 
 	topLevel.AddCommand(run)
 }

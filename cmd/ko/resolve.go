@@ -16,6 +16,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/google/ko/pkg/commands/options"
 	"io"
 	"io/ioutil"
 	"log"
@@ -30,7 +31,7 @@ import (
 	"github.com/mattmoor/dep-notify/pkg/graph"
 )
 
-func gobuildOptions(do *DebugOptions) ([]build.Option, error) {
+func gobuildOptions(do *options.DebugOptions) ([]build.Option, error) {
 	creationTime, err := getCreationTime()
 	if err != nil {
 		return nil, err
@@ -47,7 +48,7 @@ func gobuildOptions(do *DebugOptions) ([]build.Option, error) {
 	return opts, nil
 }
 
-func makeBuilder(do *DebugOptions) (*build.Caching, error) {
+func makeBuilder(do *options.DebugOptions) (*build.Caching, error) {
 	opt, err := gobuildOptions(do)
 	if err != nil {
 		log.Fatalf("error setting up builder options: %v", err)
@@ -76,11 +77,11 @@ func makeBuilder(do *DebugOptions) (*build.Caching, error) {
 	return build.NewCaching(innerBuilder)
 }
 
-func makePublisher(no *NameOptions, lo *LocalOptions, ta *TagsOptions) (publish.Interface, error) {
+func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *options.TagsOptions) (publish.Interface, error) {
 	// Create the publish.Interface that we will use to publish image references
 	// to either a docker daemon or a container image registry.
 	innerPublisher, err := func() (publish.Interface, error) {
-		namer := makeNamer(no)
+		namer := options.MakeNamer(no)
 
 		repoName := os.Getenv("KO_DOCKER_REPO")
 		if lo.Local || repoName == publish.LocalDomain {
@@ -107,7 +108,7 @@ func makePublisher(no *NameOptions, lo *LocalOptions, ta *TagsOptions) (publish.
 // resolvedFuture represents a "future" for the bytes of a resolved file.
 type resolvedFuture chan []byte
 
-func resolveFilesToWriter(fo *FilenameOptions, no *NameOptions, lo *LocalOptions, ta *TagsOptions, do *DebugOptions, out io.WriteCloser) {
+func resolveFilesToWriter(fo *options.FilenameOptions, no *options.NameOptions, lo *options.LocalOptions, ta *options.TagsOptions, do *options.DebugOptions, out io.WriteCloser) {
 	defer out.Close()
 	builder, err := makeBuilder(do)
 	if err != nil {
@@ -124,7 +125,7 @@ func resolveFilesToWriter(fo *FilenameOptions, no *NameOptions, lo *LocalOptions
 	// watcher and leave `fs` open to stream the names of yaml files
 	// affected by code changes (including the modification of existing or
 	// creation of new yaml files).
-	fs := enumerateFiles(fo)
+	fs := options.EnumerateFiles(fo)
 
 	// This tracks filename -> []importpath
 	var sm sync.Map

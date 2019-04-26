@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright 2019 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package options
 
 import (
 	"github.com/spf13/cobra"
 )
 
-// TagsOptions holds the list of tags to tag the built image
-type TagsOptions struct {
-	Tags []string
+// DebugOptions holds options to improve debugging containers.
+type DebugOptions struct {
+	DisableOptimizations bool
 }
 
-func addTagsArg(cmd *cobra.Command, ta *TagsOptions) {
-	cmd.Flags().StringSliceVarP(&ta.Tags, "tags", "t", []string{"latest"},
-		"Which tags to use for the produced image instead of the default 'latest' tag.")
+func AddDebugArg(cmd *cobra.Command, do *DebugOptions) {
+	cmd.Flags().BoolVar(&do.DisableOptimizations, "disable-optimizations", do.DisableOptimizations,
+		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
 }

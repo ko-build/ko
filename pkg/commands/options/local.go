@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package options
 
 import (
 	"github.com/spf13/cobra"
@@ -24,7 +24,7 @@ type LocalOptions struct {
 	Local bool
 }
 
-func addLocalArg(cmd *cobra.Command, lo *LocalOptions) {
+func AddLocalArg(cmd *cobra.Command, lo *LocalOptions) {
 	cmd.Flags().BoolVarP(&lo.Local, "local", "L", lo.Local,
 		"Whether to publish images to a local docker daemon vs. a registry.")
 }

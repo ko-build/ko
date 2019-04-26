@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package options
 
 import (
 	"log"
@@ -30,7 +30,7 @@ type FilenameOptions struct {
 	Watch     bool
 }
 
-func addFileArg(cmd *cobra.Command, fo *FilenameOptions) {
+func AddFileArg(cmd *cobra.Command, fo *FilenameOptions) {
 	// From pkg/kubectl
 	cmd.Flags().StringSliceVarP(&fo.Filenames, "filename", "f", fo.Filenames,
 		"Filename, directory, or URL to files to use to create the resource")
@@ -41,7 +41,7 @@ func addFileArg(cmd *cobra.Command, fo *FilenameOptions) {
 }
 
 // Based heavily on pkg/kubectl
-func enumerateFiles(fo *FilenameOptions) chan string {
+func EnumerateFiles(fo *FilenameOptions) chan string {
 	files := make(chan string)
 	go func() {
 		// When we're done enumerating files, close the channel
