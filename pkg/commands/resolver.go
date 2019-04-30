@@ -15,8 +15,8 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
-	"github.com/google/ko/pkg/commands/options"
 	"io"
 	"io/ioutil"
 	"log"
@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/commands/options"
 	"github.com/google/ko/pkg/publish"
 	"github.com/google/ko/pkg/resolve"
 	"github.com/mattmoor/dep-notify/pkg/graph"
@@ -87,9 +88,12 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 		if lo.Local || repoName == publish.LocalDomain {
 			return publish.NewDaemon(namer, ta.Tags), nil
 		}
+		if repoName == "" {
+			return nil, errors.New("KO_DOCKER_REPO environment variable is unset")
+		}
 		_, err := name.NewRepository(repoName, name.WeakValidation)
 		if err != nil {
-			return nil, fmt.Errorf("the environment variable KO_DOCKER_REPO must be set to a valid docker repository, got %v", err)
+			return nil, fmt.Errorf("failed to parse environment variable KO_DOCKER_REPO=%q as repository: %v", repoName, err)
 		}
 
 		return publish.NewDefault(repoName,
@@ -108,18 +112,8 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 // resolvedFuture represents a "future" for the bytes of a resolved file.
 type resolvedFuture chan []byte
 
-func resolveFilesToWriter(fo *options.FilenameOptions, no *options.NameOptions, lo *options.LocalOptions, ta *options.TagsOptions, do *options.DebugOptions, out io.WriteCloser) {
+func resolveFilesToWriter(builder *build.Caching, publisher publish.Interface, fo *options.FilenameOptions, out io.WriteCloser) {
 	defer out.Close()
-	builder, err := makeBuilder(do)
-	if err != nil {
-		log.Fatalf("error creating builder: %v", err)
-	}
-
-	// Wrap publisher in a memoizing publisher implementation.
-	publisher, err := makePublisher(no, lo, ta)
-	if err != nil {
-		log.Fatalf("error creating publisher: %v", err)
-	}
 
 	// By having this as a channel, we can hook this up to a filesystem
 	// watcher and leave `fs` open to stream the names of yaml files
@@ -132,6 +126,7 @@ func resolveFilesToWriter(fo *options.FilenameOptions, no *options.NameOptions, 
 
 	var g graph.Interface
 	var errCh chan error
+	var err error
 	if fo.Watch {
 		// Start a dep-notify process that on notifications scans the
 		// file-to-recorded-build map and for each affected file resends

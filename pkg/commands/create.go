@@ -15,14 +15,14 @@
 package commands
 
 import (
-	"github.com/google/ko/pkg/commands/options"
-	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 	"log"
 	"os"
 	"os/exec"
 
+	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
 )
 
 // addCreate augments our CLI surface with apply.
@@ -62,6 +62,14 @@ func addCreate(topLevel *cobra.Command) {
   cat config.yaml | ko create -f -`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
+			builder, err := makeBuilder(do)
+			if err != nil {
+				log.Fatalf("error creating builder: %v", err)
+			}
+			publisher, err := makePublisher(no, lo, ta)
+			if err != nil {
+				log.Fatalf("error creating publisher: %v", err)
+			}
 			// Create a set of ko-specific flags to ignore when passing through
 			// kubectl global flags.
 			ignoreSet := make(map[string]struct{})
@@ -107,7 +115,7 @@ func addCreate(topLevel *cobra.Command) {
 					stdin.Write([]byte("---\n"))
 				}
 				// Once primed kick things off.
-				resolveFilesToWriter(fo, no, lo, ta, do, stdin)
+				resolveFilesToWriter(builder, publisher, fo, stdin)
 			}()
 
 			// Run it.

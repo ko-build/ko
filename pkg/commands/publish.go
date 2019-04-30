@@ -15,10 +15,11 @@
 package commands
 
 import (
+	"log"
+
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 )
-
 
 // addPublish augments our CLI surface with publish.
 func addPublish(topLevel *cobra.Command) {
@@ -58,7 +59,17 @@ func addPublish(topLevel *cobra.Command) {
   ko publish --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
 		Args: cobra.MinimumNArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			publishImages(args, no, lo, ta, do)
+			builder, err := makeBuilder(do)
+			if err != nil {
+				log.Fatalf("error creating builder: %v", err)
+			}
+			publisher, err := makePublisher(no, lo, ta)
+			if err != nil {
+				log.Fatalf("error creating publisher: %v", err)
+			}
+			if _, err := publishImages(args, publisher, builder); err != nil {
+				log.Fatalf("failed to publish images: %v", err)
+			}
 		},
 	}
 	options.AddLocalArg(publish, lo)
