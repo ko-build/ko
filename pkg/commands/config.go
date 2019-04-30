@@ -21,12 +21,11 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/spf13/viper"
-
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/spf13/viper"
 )
 
 var (
@@ -51,7 +50,7 @@ func getCreationTime() (*v1.Time, error) {
 
 	seconds, err := strconv.ParseInt(epoch, 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf("the environment variable SOURCE_DATE_EPOCH is invalid. It's must be a number of seconds since January 1st 1970, 00:00 UTC, got %v", err)
+		return nil, fmt.Errorf("the environment variable SOURCE_DATE_EPOCH should be the number of seconds since January 1st 1970, 00:00 UTC, got: %v", err)
 	}
 	return &v1.Time{time.Unix(seconds, 0)}, nil
 }

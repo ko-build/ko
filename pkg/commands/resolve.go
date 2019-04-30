@@ -15,9 +15,11 @@
 package commands
 
 import (
+	"log"
+	"os"
+
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
-	"os"
 )
 
 // addResolve augments our CLI surface with resolve.
@@ -55,7 +57,15 @@ func addResolve(topLevel *cobra.Command) {
   ko resolve --local -f config/`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			resolveFilesToWriter(fo, no, lo, ta, do, os.Stdout)
+			builder, err := makeBuilder(do)
+			if err != nil {
+				log.Fatalf("error creating builder: %v", err)
+			}
+			publisher, err := makePublisher(no, lo, ta)
+			if err != nil {
+				log.Fatalf("error creating publisher: %v", err)
+			}
+			resolveFilesToWriter(builder, publisher, fo, os.Stdout)
 		},
 	}
 	options.AddLocalArg(resolve, lo)

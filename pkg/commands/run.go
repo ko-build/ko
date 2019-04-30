@@ -15,11 +15,11 @@
 package commands
 
 import (
-	"github.com/google/ko/pkg/commands/options"
 	"log"
 	"os"
 	"os/exec"
 
+	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +45,18 @@ func addRun(topLevel *cobra.Command) {
   # This supports relative import paths as well.
   ko run foo --image=./cmd/baz`,
 		Run: func(cmd *cobra.Command, args []string) {
-			imgs := publishImages([]string{bo.Path}, no, lo, ta, do)
+			builder, err := makeBuilder(do)
+			if err != nil {
+				log.Fatalf("error creating builder: %v", err)
+			}
+			publisher, err := makePublisher(no, lo, ta)
+			if err != nil {
+				log.Fatalf("error creating publisher: %v", err)
+			}
+			imgs, err := publishImages([]string{bo.Path}, publisher, builder)
+			if err != nil {
+				log.Fatalf("failed to publish images: %v", err)
+			}
 
 			// There's only one, but this is the simple way to access the
 			// reference since the import path may have been qualified.
