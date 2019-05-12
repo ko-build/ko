@@ -12,27 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package options
 
 import (
-	"github.com/google/ko/pkg/commands"
-	"log"
-
 	"github.com/spf13/cobra"
 )
 
-func main() {
-	// Parent command to which all subcommands are added.
-	cmds := &cobra.Command{
-		Use:   "ko",
-		Short: "Rapidly iterate with Go, Containers, and Kubernetes.",
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
-		},
-	}
-	commands.AddKubeCommands(cmds)
+// BinaryOptions represents options for the ko binary.
+type BinaryOptions struct {
+	// Path is the import path of the binary to publish.
+	Path string
+}
 
-	if err := cmds.Execute(); err != nil {
-		log.Fatalf("error during command execution: %v", err)
-	}
+func AddImageArg(cmd *cobra.Command, lo *BinaryOptions) {
+	cmd.Flags().StringVarP(&lo.Path, "image", "i", lo.Path,
+		"The import path of the binary to publish.")
 }

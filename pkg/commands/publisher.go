@@ -12,17 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package commands
 
 import (
 	"fmt"
 	gb "go/build"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish"
@@ -38,15 +36,7 @@ func qualifyLocalImport(importpath, gopathsrc, pwd string) (string, error) {
 	return filepath.Join(strings.TrimPrefix(pwd, gopathsrc+string(filepath.Separator)), importpath), nil
 }
 
-func publishImages(importpaths []string, no *NameOptions, lo *LocalOptions, ta *TagsOptions) map[string]name.Reference {
-	opt, err := gobuildOptions()
-	if err != nil {
-		log.Fatalf("error setting up builder options: %v", err)
-	}
-	b, err := build.NewGo(opt...)
-	if err != nil {
-		log.Fatalf("error creating go builder: %v", err)
-	}
+func publishImages(importpaths []string, pub publish.Interface, b build.Interface) (map[string]name.Reference, error) {
 	imgs := make(map[string]name.Reference)
 	for _, importpath := range importpaths {
 		if gb.IsLocalImport(importpath) {
@@ -55,44 +45,27 @@ func publishImages(importpaths []string, no *NameOptions, lo *LocalOptions, ta *
 			gopathsrc := filepath.Join(gb.Default.GOPATH, "src")
 			pwd, err := os.Getwd()
 			if err != nil {
-				log.Fatalf("error getting current working directory: %v", err)
+				return nil, fmt.Errorf("error getting current working directory: %v", err)
 			}
 			importpath, err = qualifyLocalImport(importpath, gopathsrc, pwd)
 			if err != nil {
-				log.Fatal(err)
+				return nil, err
 			}
 		}
 
 		if !b.IsSupportedReference(importpath) {
-			log.Fatalf("importpath %q is not supported", importpath)
+			return nil, fmt.Errorf("importpath %q is not supported", importpath)
 		}
 
 		img, err := b.Build(importpath)
 		if err != nil {
-			log.Fatalf("error building %q: %v", importpath, err)
-		}
-		var pub publish.Interface
-		repoName := os.Getenv("KO_DOCKER_REPO")
-
-		namer := makeNamer(no)
-
-		if lo.Local || repoName == publish.LocalDomain {
-			pub = publish.NewDaemon(namer, ta.Tags)
-		} else {
-			if _, err := name.NewRepository(repoName, name.WeakValidation); err != nil {
-				log.Fatalf("the environment variable KO_DOCKER_REPO must be set to a valid docker repository, got %v", err)
-			}
-			opts := []publish.Option{publish.WithAuthFromKeychain(authn.DefaultKeychain), publish.WithNamer(namer), publish.WithTags(ta.Tags)}
-			pub, err = publish.NewDefault(repoName, opts...)
-			if err != nil {
-				log.Fatalf("error setting up default image publisher: %v", err)
-			}
+			return nil, fmt.Errorf("error building %q: %v", importpath, err)
 		}
 		ref, err := pub.Publish(img, importpath)
 		if err != nil {
-			log.Fatalf("error publishing %s: %v", importpath, err)
+			return nil, fmt.Errorf("error publishing %s: %v", importpath, err)
 		}
 		imgs[importpath] = ref
 	}
-	return imgs
+	return imgs, nil
 }

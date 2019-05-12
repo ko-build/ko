@@ -12,30 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package commands
 
 import (
 	"fmt"
 	"log"
 	"os/exec"
+	"strings"
+
+	"github.com/spf13/cobra"
 )
 
 // provided by govvv in compile-time
 var Version string
 
+// addVersion augments our CLI surface with version.
+func addVersion(topLevel *cobra.Command) {
+	topLevel.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: `Print ko version.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			version()
+		},
+	})
+}
+
 func version() {
 	if Version == "" {
-		hash, err := gitRevParseHead()
+		hash, err := exec.Command("git", "rev-parse", "HEAD").Output()
 		if err != nil {
 			log.Fatalf("error during command execution: %v", err)
 		}
-		fmt.Printf("version: %v", string(hash))
-	} else {
-		fmt.Printf("version: %v\n", Version)
+		Version = strings.TrimSpace(string(hash))
 	}
-}
-
-func gitRevParseHead() ([]byte, error) {
-	cmd := exec.Command("git", "rev-parse", "HEAD")
-	return cmd.Output()
+	fmt.Printf("version: %v\n", Version)
 }

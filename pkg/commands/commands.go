@@ -12,18 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package commands
 
 import (
 	"github.com/spf13/cobra"
 )
 
-// TagsOptions holds the list of tags to tag the built image
-type TagsOptions struct {
-	Tags []string
-}
-
-func addTagsArg(cmd *cobra.Command, ta *TagsOptions) {
-	cmd.Flags().StringSliceVarP(&ta.Tags, "tags", "t", []string{"latest"},
-		"Which tags to use for the produced image instead of the default 'latest' tag.")
+// AddKubeCommands augments our CLI surface with a passthru delete command, and an apply
+// command that realizes the promise of ko, as outlined here:
+//    https://github.com/google/go-containerregistry/issues/80
+func AddKubeCommands(topLevel *cobra.Command) {
+	addDelete(topLevel)
+	addVersion(topLevel)
+	addCreate(topLevel)
+	addApply(topLevel)
+	addResolve(topLevel)
+	addPublish(topLevel)
+	addRun(topLevel)
 }

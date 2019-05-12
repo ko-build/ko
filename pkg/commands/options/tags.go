@@ -12,19 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package options
 
 import (
 	"github.com/spf13/cobra"
 )
 
-// BinaryOptions represents options for the ko binary.
-type BinaryOptions struct {
-	// Path is the import path of the binary to publish.
-	Path string
+// TagsOptions holds the list of tags to tag the built image
+type TagsOptions struct {
+	Tags []string
 }
 
-func addImageArg(cmd *cobra.Command, lo *BinaryOptions) {
-	cmd.Flags().StringVarP(&lo.Path, "image", "i", lo.Path,
-		"The import path of the binary to publish.")
+func AddTagsArg(cmd *cobra.Command, ta *TagsOptions) {
+	cmd.Flags().StringSliceVarP(&ta.Tags, "tags", "t", []string{"latest"},
+		"Which tags to use for the produced image instead of the default 'latest' tag.")
 }
