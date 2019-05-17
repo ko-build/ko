@@ -254,6 +254,9 @@ This flag is still experimental, and feedback is very welcome.
 `ko delete` simply passes through to `kubectl delete`. It is exposed purely out
 of convenience for cleaning up resources created through `ko apply`.
 
+### `ko version`
+
+`ko version` prints version of ko. For not released binaries it will print hash of latest commit in current git tree.
 
 ## With `minikube`
 
