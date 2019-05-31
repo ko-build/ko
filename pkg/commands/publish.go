@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/google/ko/pkg/commands/options"
@@ -67,8 +68,12 @@ func addPublish(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
-			if _, err := publishImages(args, publisher, builder); err != nil {
+			images, err := publishImages(args, publisher, builder)
+			if err != nil {
 				log.Fatalf("failed to publish images: %v", err)
+			}
+			for _, img := range images {
+				fmt.Println(img)
 			}
 		},
 	}
