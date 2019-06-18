@@ -102,8 +102,10 @@ func ImageReferences(input []byte, builder build.Interface, publisher publish.In
 			return nil, err
 		}
 
-		if err := encoder.Encode(obj2); err != nil {
-			return nil, err
+		if obj2 != nil {
+			if err := encoder.Encode(obj2); err != nil {
+				return nil, err
+			}
 		}
 	}
 }

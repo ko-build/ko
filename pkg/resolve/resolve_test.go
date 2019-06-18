@@ -17,6 +17,7 @@ package resolve
 import (
 	"bytes"
 	"io"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -304,6 +305,19 @@ func TestMultiDocumentYAMLs(t *testing.T) {
 				t.Errorf("ImageReferences(%v); (-want +got) = %v", string(inputYAML), diff)
 			}
 		})
+	}
+}
+
+// See https://github.com/google/ko/issues/39
+func TestTrailingDelimiters(t *testing.T) {
+	in := "hello\n---\nworld\n---\n"
+
+	out, err := ImageReferences([]byte(in), testBuilder, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(out), "null") {
+		t.Fatalf("resolved yaml contains null:\n%s", out)
 	}
 }
 
