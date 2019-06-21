@@ -91,7 +91,7 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 		if repoName == "" {
 			return nil, errors.New("KO_DOCKER_REPO environment variable is unset")
 		}
-		_, err := name.NewRepository(repoName, name.WeakValidation)
+		_, err := name.NewRepository(repoName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse environment variable KO_DOCKER_REPO=%q as repository: %v", repoName, err)
 		}
