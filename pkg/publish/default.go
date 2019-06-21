@@ -103,7 +103,7 @@ func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
 		log.Printf("Publishing %v", tag)
 		// TODO: This is slow because we have to load the image multiple times.
 		// Figure out some way to publish the manifest with another tag.
-		if err := remote.Write(tag, img, d.auth, d.t); err != nil {
+		if err := remote.Write(tag, img, remote.WithAuth(d.auth), remote.WithTransport(d.t)); err != nil {
 			return nil, err
 		}
 	}

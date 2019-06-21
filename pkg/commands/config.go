@@ -73,7 +73,7 @@ func init() {
 	}
 
 	ref := viper.GetString("defaultBaseImage")
-	dbi, err := name.ParseReference(ref, name.WeakValidation)
+	dbi, err := name.ParseReference(ref)
 	if err != nil {
 		log.Fatalf("'defaultBaseImage': error parsing %q as image reference: %v", ref, err)
 	}
@@ -82,7 +82,7 @@ func init() {
 	baseImageOverrides = make(map[string]name.Reference)
 	overrides := viper.GetStringMapString("baseImageOverrides")
 	for k, v := range overrides {
-		bi, err := name.ParseReference(v, name.WeakValidation)
+		bi, err := name.ParseReference(v)
 		if err != nil {
 			log.Fatalf("'baseImageOverrides': error parsing %q as image reference: %v", v, err)
 		}
