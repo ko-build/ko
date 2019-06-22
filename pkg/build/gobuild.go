@@ -88,28 +88,23 @@ func NewGo(options ...Option) (Interface, error) {
 	return gbo.Open()
 }
 
-// goList is a wrapper for the `go list` command to retrieve information about a package.
-func (g *gobuild) goList(importPath, projection string) (string, error) {
-	cmd := exec.Command("go", "list", "-f", "{{."+projection+"}}", importPath)
-
+// findImportPath uses the go list command to find the full import path from a package.
+func (g *gobuild) findImportPath(importPath, format string) (string, error) {
+	cmd := exec.Command("go", "list", "-f", "{{."+format+"}}", importPath)
 	cmd.Dir = g.wd
-
 	stdout, err := cmd.Output()
-
 	if err != nil {
 		return "", err
 	}
 
 	outputs := strings.Split(string(stdout), "\n")
-
 	if len(outputs) == 0 {
 		return "", errors.New("could not find specified import path: " + importPath)
 	}
 
 	output := outputs[0]
-
 	if output == "" {
-		return "", errors.New("could not find specified import path: " + importPath)
+		return "", errors.New("import path is ambiguous: " + importPath)
 	}
 
 	return output, nil
@@ -120,7 +115,7 @@ func (g *gobuild) goList(importPath, projection string) (string, error) {
 // Only valid importpaths that provide commands (i.e., are "package main") are
 // supported.
 func (g *gobuild) IsSupportedReference(s string) bool {
-	output, err := g.goList(s, "Name")
+	output, err := g.findImportPath(s, "Name")
 	if err != nil {
 		return false
 	}
@@ -241,7 +236,7 @@ func tarBinary(name, binary string) (*bytes.Buffer, error) {
 
 // kodataPath returns the absolute path for the kodata path for a given package
 func (g *gobuild) kodataPath(importPath string) (string, error) {
-	absolutePath, err := g.goList(importPath, "Dir")
+	absolutePath, err := g.findImportPath(importPath, "Dir")
 	if err != nil {
 		return "", err
 	}
