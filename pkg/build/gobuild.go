@@ -41,9 +41,9 @@ type GetBase func(string) (v1.Image, error)
 type builder func(string, bool) (string, error)
 
 type gobuild struct {
-	getBase      GetBase
-	creationTime v1.Time
-	build        builder
+	getBase              GetBase
+	creationTime         v1.Time
+	build                builder
 	disableOptimizations bool
 }
 
@@ -51,9 +51,9 @@ type gobuild struct {
 type Option func(*gobuildOpener) error
 
 type gobuildOpener struct {
-	getBase      GetBase
-	creationTime v1.Time
-	build        builder
+	getBase              GetBase
+	creationTime         v1.Time
+	build                builder
 	disableOptimizations bool
 }
 
@@ -62,9 +62,9 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		return nil, errors.New("a way of providing base images must be specified, see build.WithBaseImages")
 	}
 	return &gobuild{
-		getBase:      gbo.getBase,
-		creationTime: gbo.creationTime,
-		build:        gbo.build,
+		getBase:              gbo.getBase,
+		creationTime:         gbo.creationTime,
+		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
 	}, nil
 }
@@ -290,7 +290,7 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	}
 	defer os.RemoveAll(filepath.Dir(file))
 
-	var layers []v1.Layer
+	var layers []mutate.Addendum
 	// Create a layer from the kodata directory under this import path.
 	dataLayerBuf, err := tarKoData(s)
 	if err != nil {
@@ -303,7 +303,14 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	layers = append(layers, dataLayer)
+	layers = append(layers, mutate.Addendum{
+		Layer: dataLayer,
+		History: v1.History{
+			Author:    "ko",
+			CreatedBy: "ko publish " + s,
+			Comment:   "kodata contents, at $KO_DATA_PATH",
+		},
+	})
 
 	appPath := filepath.Join(appDir, appFilename(s))
 
@@ -319,7 +326,14 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	layers = append(layers, binaryLayer)
+	layers = append(layers, mutate.Addendum{
+		Layer: binaryLayer,
+		History: v1.History{
+			Author:    "ko",
+			CreatedBy: "ko publish " + s,
+			Comment:   "go build output, at " + appPath,
+		},
+	})
 
 	// Determine the appropriate base image for this import path.
 	base, err := gb.getBase(s)
@@ -328,7 +342,7 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	}
 
 	// Augment the base image with our application layer.
-	withApp, err := mutate.AppendLayers(base, layers...)
+	withApp, err := mutate.Append(base, layers...)
 	if err != nil {
 		return nil, err
 	}
@@ -343,8 +357,10 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
 	cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
+	cfg.ContainerConfig = cfg.Config
+	cfg.Author = "github.com/google/ko"
 
-	image, err := mutate.Config(withApp, cfg.Config)
+	image, err := mutate.ConfigFile(withApp, cfg)
 	if err != nil {
 		return nil, err
 	}
