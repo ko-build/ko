@@ -219,6 +219,14 @@ spec:
 It is notable that this is not the default (anymore) because certain popular
 registries (including Docker Hub) do not support multi-level repository names.
 
+`ko resolve`, `ko apply`, and `ko create` accept an optional `--selector` or `-l` 
+flag,  similar to `kubectl`, which can be used to filter the resources from the 
+input Kubernetes YAMLs by their `metadata.labels`. 
+
+In the case of `ko resolve`, `--selector` will render only the resources that are selected by the provided selector.
+
+See [the documentation on Kubernetes selectors](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) for more information on using label selectors.
+
 ### `ko apply`
 
 `ko apply` is intended to parallel `kubectl apply`, but acts on the same
@@ -229,6 +237,8 @@ rebuild, repush, and redeploy their changes.
 
 `ko apply` will invoke `kubectl apply` under the covers, and therefore apply
 to whatever `kubectl` context is active.
+
+`ko apply`, when supplied the `--selector` flag, will apply only the resources that are selected by the provided selector.
 
 ### `ko apply --watch` (EXPERIMENTAL)
 
