@@ -600,6 +600,14 @@
   revision = "4e209c9383fa00631d124c8adcc011d617339b3c"
   version = "v1.11.8"
 
+[[projects]]
+  digest = "1:7719608fe0b52a4ece56c2dde37bedd95b938677d1ab0f84b8a7852e4c59f849"
+  name = "sigs.k8s.io/yaml"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "fd68e9863619f6ec2fdd8625fe1f02e7c877e480"
+  version = "v1.1.0"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
@@ -622,7 +630,12 @@
     "github.com/spf13/viper",
     "golang.org/x/sync/errgroup",
     "gopkg.in/yaml.v2",
+    "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured",
+    "k8s.io/apimachinery/pkg/labels",
+    "k8s.io/apimachinery/pkg/runtime",
+    "k8s.io/apimachinery/pkg/util/yaml",
     "k8s.io/kubernetes/pkg/kubectl/genericclioptions",
+    "sigs.k8s.io/yaml",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
