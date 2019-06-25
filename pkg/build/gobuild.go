@@ -17,6 +17,7 @@ package build
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"errors"
 	gb "go/build"
 	"io"
@@ -170,7 +171,14 @@ func tarAddDirectories(tw *tar.Writer, dir string) error {
 
 func tarBinary(name, binary string) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
-	tw := tar.NewWriter(buf)
+	// Compress this before calling tarball.LayerFromOpener, since it eagerly
+	// calculates digests and diffids. This prevents us from double compressing
+	// the layer when we have to actually upload the blob.
+	//
+	// https://github.com/google/go-containerregistry/issues/413
+	gw, _ := gzip.NewWriterLevel(buf, gzip.BestSpeed)
+	defer gw.Close()
+	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
 	// write the parent directories to the tarball archive
@@ -221,7 +229,14 @@ const kodataRoot = "/var/run/ko"
 
 func tarKoData(importpath string) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
-	tw := tar.NewWriter(buf)
+	// Compress this before calling tarball.LayerFromOpener, since it eagerly
+	// calculates digests and diffids. This prevents us from double compressing
+	// the layer when we have to actually upload the blob.
+	//
+	// https://github.com/google/go-containerregistry/issues/413
+	gw, _ := gzip.NewWriterLevel(buf, gzip.BestSpeed)
+	defer gw.Close()
+	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
 	root, err := kodataPath(importpath)
