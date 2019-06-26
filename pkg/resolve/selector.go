@@ -1,7 +1,22 @@
+// Copyright 2018 Google LLC All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package resolve
 
 import (
 	"bytes"
+	"fmt"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -10,7 +25,6 @@ import (
 	"sigs.k8s.io/yaml"
 	"strings"
 )
-
 
 // FilterBySelector filters out any resources
 // from the raw manifest bytes whose labels
@@ -23,20 +37,6 @@ func FilterBySelector(input []byte, selectorString string) ([]byte, error) {
 
 	var outputObjectsYaml [][]byte
 
-	// helper function to append selected objects to our result
-	appendObj := func(obj runtime.Object) error {
-		rawJson, err := runtime.Encode(unstructured.UnstructuredJSONScheme, obj)
-		if err != nil {
-			return err
-		}
-		rawYaml, err := yaml.JSONToYAML(rawJson)
-		if err != nil {
-			return err
-		}
-		outputObjectsYaml = append(outputObjectsYaml, rawYaml)
-		return nil
-	}
-
 	// parse runtime.Objects from the input yaml
 	objects, err := parseUnstructured(input)
 	if err != nil {
@@ -46,13 +46,11 @@ func FilterBySelector(input []byte, selectorString string) ([]byte, error) {
 	for _, object := range objects {
 		// objects parsed by UnstructuredJSONScheme can only be of
 		// type *unstructured.Unstructured or *unstructured.UnstructuredList
-		switch unstructuredObj := object.(type) {
+		switch unstructuredObj := object.obj.(type) {
 		case *unstructured.Unstructured:
 			// append the object if it matches the provided labels
 			if selector.Matches(labels.Set(unstructuredObj.GetLabels())) {
-				if err := appendObj(unstructuredObj); err != nil {
-					return nil, err
-				}
+				outputObjectsYaml = append(outputObjectsYaml, object.yaml)
 			}
 		case *unstructured.UnstructuredList:
 			// filter the list items based on label
@@ -63,12 +61,28 @@ func FilterBySelector(input []byte, selectorString string) ([]byte, error) {
 				}
 			}
 			// only append the list if it still contains items after being filtered
-			if len(filteredItems) > 0 {
+			switch len(filteredItems) {
+			case 0:
+				// the whole list was filtered, omit it from the resultant yaml
+				continue
+			case len(unstructuredObj.Items):
+				// nothing was filtered from the list, use the original yaml
+				outputObjectsYaml = append(outputObjectsYaml, object.yaml)
+			default:
 				unstructuredObj.Items = filteredItems
-				if err := appendObj(unstructuredObj); err != nil {
+				// list was partially filtered, we need to re-marshal it
+				rawJson, err := runtime.Encode(unstructured.UnstructuredJSONScheme, unstructuredObj)
+				if err != nil {
 					return nil, err
 				}
+				rawYaml, err := yaml.JSONToYAML(rawJson)
+				if err != nil {
+					return nil, err
+				}
+				outputObjectsYaml = append(outputObjectsYaml, rawYaml)
 			}
+		default:
+			panic(fmt.Sprintf("unknown object type %T parsed from yaml: \n%v ", object.obj, object.yaml))
 		}
 	}
 
@@ -76,12 +90,18 @@ func FilterBySelector(input []byte, selectorString string) ([]byte, error) {
 	return bytes.Join(outputObjectsYaml, []byte("---\n")), nil
 }
 
-var yamlSeparatorRegex = regexp.MustCompile( "\n---")
+var yamlSeparatorRegex = regexp.MustCompile("\n---")
 
-func parseUnstructured(rawYaml []byte) ([]runtime.Object, error) {
+// a tuple to represent a kubernetes object along with the original yaml snippet it was parsed from
+type objectYamlTuple struct {
+	obj  runtime.Object
+	yaml []byte
+}
+
+func parseUnstructured(rawYaml []byte) ([]objectYamlTuple, error) {
 	objectYamls := yamlSeparatorRegex.Split(string(rawYaml), -1)
 
-	var resources []runtime.Object
+	var resources []objectYamlTuple
 
 	for _, objectYaml := range objectYamls {
 		// empty yaml snippets, such as those which can be
@@ -99,7 +119,7 @@ func parseUnstructured(rawYaml []byte) ([]runtime.Object, error) {
 			return nil, err
 		}
 
-		resources = append(resources, runtimeObj)
+		resources = append(resources, objectYamlTuple{obj: runtimeObj, yaml: []byte(objectYaml)})
 	}
 
 	return resources, nil

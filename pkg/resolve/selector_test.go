@@ -15,7 +15,79 @@
 package resolve
 
 import (
+	"strings"
 	"testing"
+)
+
+const (
+	webPod = `apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    # comments should be preserved
+    app: web
+  name: rss-site
+`
+	dbPod = `apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    # comments should be preserved
+    app: db
+  name: rss-db
+`
+	bothPods = webPod + `
+---
+` + dbPod
+
+	podList = `apiVersion: v1
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      app: web
+    name: rss-site
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      app: db
+    name: rss-db
+`
+	webSelector    = `app=web`
+	notWebSelector = `app!=web`
+
+	webPodList = `apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      app: web
+    name: rss-site
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
+`
+	dbPodList = `apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    labels:
+      app: db
+    name: rss-db
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
+`
 )
 
 func TestSelector(t *testing.T) {
@@ -25,168 +97,47 @@ func TestSelector(t *testing.T) {
 		selector string
 		expected string
 	}{{
-		desc: "single object with matching selector",
-		input: `
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: web
-  name: rss-site
-`,
-		selector: `app=web`,
-		expected: `apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: web
-  name: rss-site
-`,
+		desc:     "single object with matching selector",
+		input:    webPod,
+		selector: webSelector,
+		expected: webPod,
 	},
-	{
-		desc: "single object with non-matching selector",
-		input: `
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: web
-  name: rss-site
-
-`,
-		selector: `app!=web`,
-		expected: ``,
-	},
-	{
-		desc: "selector matching 1 of two objects",
-		input: `
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: web
-  name: rss-site
----
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: db
-  name: rss-db
-
-`,
-		selector: `app=web`,
-		expected: `apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: web
-  name: rss-site
-`,
-	},
-	{
-		desc: "selector matching 1 of two objects",
-		input: `
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: web
-  name: rss-site
----
-apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: db
-  name: rss-db
-
-`,
-		selector: `app!=web`,
-		expected: `apiVersion: v1
-kind: Pod
-metadata:
-  labels:
-    app: db
-  name: rss-db
-`,
-	},
-	{
-		desc: "selector matching elements of list object",
-		input: `
-apiVersion: v1
-kind: List
-metadata:
-  resourceVersion: ""
-  selfLink: ""
-items:
-- apiVersion: v1
-  kind: Pod
-  metadata:
-    labels:
-      app: web
-    name: rss-site
-- apiVersion: v1
-  kind: Pod
-  metadata:
-    labels:
-      app: db
-    name: rss-db
-
-`,
-		selector: `app=web`,
-		expected: `apiVersion: v1
-items:
-- apiVersion: v1
-  kind: Pod
-  metadata:
-    labels:
-      app: web
-    name: rss-site
-kind: List
-metadata:
-  resourceVersion: ""
-  selfLink: ""
-`,
-	},
-	{
-		desc: "selector matching elements of list object",
-		input: `
-apiVersion: v1
-kind: List
-metadata:
-  resourceVersion: ""
-  selfLink: ""
-items:
-- apiVersion: v1
-  kind: Pod
-  metadata:
-    labels:
-      app: web
-    name: rss-site
-- apiVersion: v1
-  kind: Pod
-  metadata:
-    labels:
-      app: db
-    name: rss-db
-
-`,
-		selector: `app!=web`,
-		expected: `apiVersion: v1
-items:
-- apiVersion: v1
-  kind: Pod
-  metadata:
-    labels:
-      app: db
-    name: rss-db
-kind: List
-metadata:
-  resourceVersion: ""
-  selfLink: ""
-`,
-	}}
+		{
+			desc:     "single object with non-matching selector",
+			input:    webPod,
+			selector: notWebSelector,
+			expected: ``,
+		},
+		{
+			desc:     "selector matching 1 of two objects",
+			input:    bothPods,
+			selector: webSelector,
+			expected: webPod,
+		},
+		{
+			desc:     "selector matching 1 of two objects",
+			input:    bothPods,
+			selector: notWebSelector,
+			expected: dbPod,
+		},
+		{
+			desc:     "selector matching elements of list object",
+			input:    podList,
+			selector: webSelector,
+			expected: webPodList,
+		},
+		{
+			desc:     "selector matching elements of list object",
+			input:    podList,
+			selector: notWebSelector,
+			expected: dbPodList,
+		},
+		{
+			desc:     "selector matching all elements of list object",
+			input:    podList,
+			selector: ``,
+			expected: podList,
+		}}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
@@ -194,7 +145,7 @@ metadata:
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 			}
-			if string(filtered) != test.expected {
+			if strings.TrimSpace(string(filtered)) != strings.TrimSpace(test.expected) {
 				t.Errorf("expected \n%v\n to equal \n%v\n ", string(filtered), test.expected)
 			}
 		})
