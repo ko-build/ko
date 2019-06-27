@@ -238,8 +238,6 @@ rebuild, repush, and redeploy their changes.
 `ko apply` will invoke `kubectl apply` under the covers, and therefore apply
 to whatever `kubectl` context is active.
 
-`ko apply`, when supplied the `--selector` flag, will apply only the resources that are selected by the provided selector.
-
 ### `ko apply --watch` (EXPERIMENTAL)
 
 The `--watch` flag (`-W` for short) does an initial `apply` as above, but as it
