@@ -30,6 +30,7 @@ func addResolve(topLevel *cobra.Command) {
 	fo := &options.FilenameOptions{}
 	ta := &options.TagsOptions{}
 	do := &options.DebugOptions{}
+	so := &options.SelectorOptions{}
 
 	resolve := &cobra.Command{
 		Use:   "resolve -f FILENAME",
@@ -65,7 +66,7 @@ func addResolve(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
-			resolveFilesToWriter(builder, publisher, fo, os.Stdout)
+			resolveFilesToWriter(builder, publisher, fo, so, os.Stdout)
 		},
 	}
 	options.AddLocalArg(resolve, lo)
@@ -73,5 +74,6 @@ func addResolve(topLevel *cobra.Command) {
 	options.AddFileArg(resolve, fo)
 	options.AddTagsArg(resolve, ta)
 	options.AddDebugArg(resolve, do)
+	options.AddSelectorArg(resolve, so)
 	topLevel.AddCommand(resolve)
 }

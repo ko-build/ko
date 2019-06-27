@@ -33,6 +33,7 @@ func addApply(topLevel *cobra.Command) {
 	fo := &options.FilenameOptions{}
 	ta := &options.TagsOptions{}
 	do := &options.DebugOptions{}
+	so := &options.SelectorOptions{}
 	apply := &cobra.Command{
 		Use:   "apply -f FILENAME",
 		Short: "Apply the input files with image references resolved to built/pushed image digests.",
@@ -115,7 +116,7 @@ func addApply(topLevel *cobra.Command) {
 					stdin.Write([]byte("---\n"))
 				}
 				// Once primed kick things off.
-				resolveFilesToWriter(builder, publisher, fo, stdin)
+				resolveFilesToWriter(builder, publisher, fo, so, stdin)
 			}()
 
 			// Run it.
@@ -129,6 +130,7 @@ func addApply(topLevel *cobra.Command) {
 	options.AddFileArg(apply, fo)
 	options.AddTagsArg(apply, ta)
 	options.AddDebugArg(apply, do)
+	options.AddSelectorArg(apply, so)
 
 	// Collect the ko-specific apply flags before registering the kubectl global
 	// flags so that we can ignore them when passing kubectl global flags through
