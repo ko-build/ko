@@ -397,6 +397,23 @@ kubectl logs kodata
 2018/07/19 23:38:29 Hello there
 ```
 
+## Enable Autocompletion
+
+To generate an bash completion script, you can run:
+```
+ko completion
+```
+
+To use the completion script, you can copy the script in your bash_completion directory (e.g. /usr/local/etc/bash_completion.d/):
+```
+ko completion > /usr/local/etc/bash_completion.d/ko
+``` 
+ or source it in your shell by running:
+```
+source <(ko completion)
+```
+
+
 ## Relevance to Release Management
 
 `ko` is also useful for helping manage releases. For example, if your project
