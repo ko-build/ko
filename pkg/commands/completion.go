@@ -15,19 +15,30 @@
 package commands
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 )
 
-// AddKubeCommands augments our CLI surface with a passthru delete command, and an apply
-// command that realizes the promise of ko, as outlined here:
-//    https://github.com/google/go-containerregistry/issues/80
-func AddKubeCommands(topLevel *cobra.Command) {
-	addDelete(topLevel)
-	addVersion(topLevel)
-	addCreate(topLevel)
-	addApply(topLevel)
-	addResolve(topLevel)
-	addPublish(topLevel)
-	addRun(topLevel)
-	addCompletion(topLevel)
+type CompletionFlags struct {
+	Zsh bool
+}
+
+func addCompletion(topLevel *cobra.Command) {
+	var completionFlags CompletionFlags
+
+	completionCmd := &cobra.Command{
+		Use:   "completion",
+		Short: "Output shell completion code (default Bash)",
+		Run: func(cmd *cobra.Command, args []string) {
+			if completionFlags.Zsh {
+				cmd.Root().GenZshCompletion(os.Stdout)
+			} else {
+				cmd.Root().GenBashCompletion(os.Stdout)
+			}
+		},
+	}
+
+	completionCmd.Flags().BoolVar(&completionFlags.Zsh, "zsh", false, "Generates completion code for Zsh shell.")
+	topLevel.AddCommand(completionCmd)
 }
