@@ -53,3 +53,12 @@ func withBuilder(b builder) Option {
 		return nil
 	}
 }
+
+// withWd is a functional option for overriding the working directory
+// where ko is going run. This is exposed for testing.
+func withWd(wd string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.wd = wd
+		return nil
+	}
+}

@@ -19,13 +19,13 @@ import (
 	"bytes"
 	"compress/gzip"
 	"errors"
-	gb "go/build"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -46,6 +46,7 @@ type gobuild struct {
 	creationTime         v1.Time
 	build                builder
 	disableOptimizations bool
+	wd                   string
 }
 
 // Option is a functional option for NewGo.
@@ -56,6 +57,7 @@ type gobuildOpener struct {
 	creationTime         v1.Time
 	build                builder
 	disableOptimizations bool
+	wd                   string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -67,6 +69,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		creationTime:         gbo.creationTime,
 		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
+		wd:                   gbo.wd,
 	}, nil
 }
 
@@ -86,19 +89,42 @@ func NewGo(options ...Option) (Interface, error) {
 	return gbo.Open()
 }
 
+// findImportPath uses the go list command to find the full import path from a package.
+func (g *gobuild) findImportPath(importPath, format string) (string, error) {
+	cmd := exec.Command("go", "list", "-f", "{{."+format+"}}", importPath)
+	cmd.Dir = g.wd
+	stdout, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+
+	outputs := strings.Split(string(stdout), "\n")
+	if len(outputs) == 0 {
+		return "", errors.New("could not find specified import path: " + importPath)
+	}
+
+	output := outputs[0]
+	if output == "" {
+		return "", errors.New("import path is ambiguous: " + importPath)
+	}
+
+	return output, nil
+}
+
 // IsSupportedReference implements build.Interface
 //
 // Only valid importpaths that provide commands (i.e., are "package main") are
 // supported.
-func (*gobuild) IsSupportedReference(s string) bool {
-	p, err := gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
+func (g *gobuild) IsSupportedReference(s string) bool {
+	output, err := g.findImportPath(s, "Name")
 	if err != nil {
 		return false
 	}
-	return p.IsCommand()
+
+	return output == "main"
 }
 
-func build(ip string, disableOptimizations bool) (string, error) {
+func build(importPath string, disableOptimizations bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -112,7 +138,7 @@ func build(ip string, disableOptimizations bool) (string, error) {
 		args = append(args, "-gcflags", "all=-N -l")
 	}
 	args = append(args, "-o", file)
-	args = append(args, ip)
+	args = append(args, importPath)
 	cmd := exec.Command("go", args...)
 
 	// Last one wins
@@ -123,7 +149,7 @@ func build(ip string, disableOptimizations bool) (string, error) {
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s", ip)
+	log.Printf("Building %s", importPath)
 	if err := cmd.Run(); err != nil {
 		os.RemoveAll(tmpDir)
 		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
@@ -216,18 +242,19 @@ func tarBinary(name, binary string) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func kodataPath(s string) (string, error) {
-	p, err := gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
+// kodataPath returns the absolute path for the kodata path for a given package
+func (g *gobuild) kodataPath(importPath string) (string, error) {
+	absolutePath, err := g.findImportPath(importPath, "Dir")
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(p.Dir, "kodata"), nil
+	return filepath.Join(absolutePath, "kodata"), nil
 }
 
 // Where kodata lives in the image.
 const kodataRoot = "/var/run/ko"
 
-func tarKoData(importpath string) (*bytes.Buffer, error) {
+func (g *gobuild) tarKoData(importPath string) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	// Compress this before calling tarball.LayerFromOpener, since it eagerly
 	// calculates digests and diffids. This prevents us from double compressing
@@ -239,7 +266,7 @@ func tarKoData(importpath string) (*bytes.Buffer, error) {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	root, err := kodataPath(importpath)
+	root, err := g.kodataPath(importPath)
 	if err != nil {
 		return nil, err
 	}
@@ -297,9 +324,9 @@ func tarKoData(importpath string) (*bytes.Buffer, error) {
 }
 
 // Build implements build.Interface
-func (gb *gobuild) Build(s string) (v1.Image, error) {
+func (g *gobuild) Build(importPath string) (v1.Image, error) {
 	// Do the build into a temporary file.
-	file, err := gb.build(s, gb.disableOptimizations)
+	file, err := g.build(importPath, g.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +334,7 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 
 	var layers []mutate.Addendum
 	// Create a layer from the kodata directory under this import path.
-	dataLayerBuf, err := tarKoData(s)
+	dataLayerBuf, err := g.tarKoData(importPath)
 	if err != nil {
 		return nil, err
 	}
@@ -327,7 +354,7 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 		},
 	})
 
-	appPath := filepath.Join(appDir, appFilename(s))
+	appPath := filepath.Join(appDir, appFilename(importPath))
 
 	// Construct a tarball with the binary and produce a layer.
 	binaryLayerBuf, err := tarBinary(appPath, file)
@@ -351,7 +378,7 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	})
 
 	// Determine the appropriate base image for this import path.
-	base, err := gb.getBase(s)
+	base, err := g.getBase(importPath)
 	if err != nil {
 		return nil, err
 	}
@@ -381,8 +408,8 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	}
 
 	empty := v1.Time{}
-	if gb.creationTime != empty {
-		return mutate.CreatedAt(image, gb.creationTime)
+	if g.creationTime != empty {
+		return mutate.CreatedAt(image, g.creationTime)
 	}
 	return image, nil
 }
