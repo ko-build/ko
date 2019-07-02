@@ -46,7 +46,6 @@ type gobuild struct {
 	creationTime         v1.Time
 	build                builder
 	disableOptimizations bool
-	wd                   string
 }
 
 // Option is a functional option for NewGo.
@@ -57,7 +56,6 @@ type gobuildOpener struct {
 	creationTime         v1.Time
 	build                builder
 	disableOptimizations bool
-	wd                   string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -69,7 +67,6 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		creationTime:         gbo.creationTime,
 		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
-		wd:                   gbo.wd,
 	}, nil
 }
 
@@ -92,7 +89,6 @@ func NewGo(options ...Option) (Interface, error) {
 // findImportPath uses the go list command to find the full import path from a package.
 func (g *gobuild) findImportPath(importPath, format string) (string, error) {
 	cmd := exec.Command("go", "list", "-f", "{{."+format+"}}", importPath)
-	cmd.Dir = g.wd
 	stdout, err := cmd.Output()
 	if err != nil {
 		return "", err
@@ -349,7 +345,7 @@ func (g *gobuild) Build(importPath string) (v1.Image, error) {
 		Layer: dataLayer,
 		History: v1.History{
 			Author:    "ko",
-			CreatedBy: "ko publish " + s,
+			CreatedBy: "ko publish " + importPath,
 			Comment:   "kodata contents, at $KO_DATA_PATH",
 		},
 	})
@@ -372,7 +368,7 @@ func (g *gobuild) Build(importPath string) (v1.Image, error) {
 		Layer: binaryLayer,
 		History: v1.History{
 			Author:    "ko",
-			CreatedBy: "ko publish " + s,
+			CreatedBy: "ko publish " + importPath,
 			Comment:   "go build output, at " + appPath,
 		},
 	})
