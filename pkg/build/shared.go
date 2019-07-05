@@ -16,6 +16,7 @@ package build
 
 import (
 	"sync"
+	"unicode/utf8"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
@@ -26,8 +27,10 @@ import (
 type Caching struct {
 	inner Interface
 
-	m       sync.Mutex
-	results map[string]*future
+	m            sync.Mutex
+	results      map[string]*future
+	cm           sync.Mutex
+	supportCache map[string]bool
 }
 
 // Caching implements Interface
@@ -37,8 +40,9 @@ var _ Interface = (*Caching)(nil)
 // shares build results for a given path until the result has been invalidated.
 func NewCaching(inner Interface) (*Caching, error) {
 	return &Caching{
-		inner:   inner,
-		results: make(map[string]*future),
+		inner:        inner,
+		results:      make(map[string]*future),
+		supportCache: make(map[string]bool),
 	}, nil
 }
 
@@ -65,9 +69,32 @@ func (c *Caching) Build(ip string) (v1.Image, error) {
 	return f.Get()
 }
 
+// SafeArg is used to check if the import path is valid.
+// Copy of github.com/golang/go/blob/master/src/cmd/go/internal/load/pkg.go
+func SafeArg(name string) bool {
+	if name == "" {
+		return false
+	}
+	c := name[0]
+	return '0' <= c && c <= '9' || 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || c == '.' || c == '_' || c == '/' || c >= utf8.RuneSelf
+}
+
 // IsSupportedReference implements Interface
 func (c *Caching) IsSupportedReference(ip string) bool {
-	return c.inner.IsSupportedReference(ip)
+	if !SafeArg(ip) {
+		return false
+	}
+
+	c.cm.Lock()
+	defer c.cm.Unlock()
+
+	if supported, ok := c.supportCache[ip]; ok {
+		return supported
+	}
+
+	c.supportCache[ip] = c.inner.IsSupportedReference(ip)
+
+	return c.supportCache[ip]
 }
 
 // Invalidate removes an import path's cached results.
@@ -75,5 +102,9 @@ func (c *Caching) Invalidate(ip string) {
 	c.m.Lock()
 	defer c.m.Unlock()
 
+	c.cm.Lock()
+	defer c.cm.Unlock()
+
+	delete(c.supportCache, ip)
 	delete(c.results, ip)
 }
