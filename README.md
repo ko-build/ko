@@ -235,7 +235,7 @@ as the vehicle for rapid iteration during development. As changes are made to a
 particular application, you can run: `ko apply -f unit.yaml` to rapidly
 rebuild, repush, and redeploy their changes.
 
-`ko apply` will invoke `kubectl apply` under the covers, and therefore apply
+`ko apply` will invoke `kubectl apply` under the hood, and therefore apply
 to whatever `kubectl` context is active.
 
 ### `ko apply --watch` (EXPERIMENTAL)
