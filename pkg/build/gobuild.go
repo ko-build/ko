@@ -117,7 +117,7 @@ func build(ip string, disableOptimizations bool) (string, error) {
 
 	// Last one wins
 	// TODO(mattmoor): GOARCH=amd64
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS=linux")
+	cmd.Env = append([]string{"CGO_ENABLED=0", "GOOS=linux"}, os.Environ()...)
 
 	var output bytes.Buffer
 	cmd.Stderr = &output
