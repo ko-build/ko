@@ -47,7 +47,6 @@ func WithDisabledOptimizations() Option {
 
 // withBuilder is a functional option for overriding the way go binaries
 // are built.
-// This is exposed for testing.
 func withBuilder(b builder) Option {
 	return func(gbo *gobuildOpener) error {
 		gbo.build = b
@@ -61,6 +60,15 @@ func withBuilder(b builder) Option {
 func withModuleInfo(mi *modInfo) Option {
 	return func(gbo *gobuildOpener) error {
 		gbo.mod = mi
+		return nil
+	}
+}
+
+// WithStrict is a functional option for requiring that package references are
+// explicitly noted.
+func WithStrict() Option {
+	return func(g *gobuildOpener) error {
+		g.strict = true
 		return nil
 	}
 }

@@ -49,6 +49,7 @@ type gobuild struct {
 	build                builder
 	disableOptimizations bool
 	mod                  *modInfo
+	strict               bool
 }
 
 // Option is a functional option for NewGo.
@@ -60,6 +61,7 @@ type gobuildOpener struct {
 	build                builder
 	disableOptimizations bool
 	mod                  *modInfo
+	strict               bool
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -72,6 +74,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
 		mod:                  gbo.mod,
+		strict:               gbo.strict,
 	}, nil
 }
 
@@ -119,6 +122,10 @@ func NewGo(options ...Option) (Interface, error) {
 // Only valid importpaths that provide commands (i.e., are "package main") are
 // supported.
 func (g *gobuild) IsSupportedReference(s string) bool {
+	if g.strict && !strings.HasPrefix(s, "ko://") {
+		return false
+	}
+	s = strings.TrimPrefix(s, "ko://")
 	p, err := g.importPackage(s)
 	if err != nil {
 		return false

@@ -28,11 +28,11 @@ import (
 
 // defalt is intentionally misspelled to avoid keyword collision (and drive Jon nuts).
 type defalt struct {
-	base  string
-	t     http.RoundTripper
-	auth  authn.Authenticator
-	namer Namer
-	tags  []string
+	base     string
+	t        http.RoundTripper
+	auth     authn.Authenticator
+	namer    Namer
+	tags     []string
 	insecure bool
 }
 
@@ -40,11 +40,11 @@ type defalt struct {
 type Option func(*defaultOpener) error
 
 type defaultOpener struct {
-	base  string
-	t     http.RoundTripper
-	auth  authn.Authenticator
-	namer Namer
-	tags  []string
+	base     string
+	t        http.RoundTripper
+	auth     authn.Authenticator
+	namer    Namer
+	tags     []string
 	insecure bool
 }
 

@@ -34,6 +34,7 @@ func addApply(topLevel *cobra.Command) {
 	ta := &options.TagsOptions{}
 	do := &options.DebugOptions{}
 	so := &options.SelectorOptions{}
+	sto := &options.StrictOptions{}
 	apply := &cobra.Command{
 		Use:   "apply -f FILENAME",
 		Short: "Apply the input files with image references resolved to built/pushed image digests.",
@@ -63,7 +64,7 @@ func addApply(topLevel *cobra.Command) {
   cat config.yaml | ko apply -f -`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			builder, err := makeBuilder(do)
+			builder, err := makeBuilder(do, sto)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
@@ -116,7 +117,7 @@ func addApply(topLevel *cobra.Command) {
 					stdin.Write([]byte("---\n"))
 				}
 				// Once primed kick things off.
-				resolveFilesToWriter(builder, publisher, fo, so, stdin)
+				resolveFilesToWriter(builder, publisher, fo, so, sto, stdin)
 			}()
 
 			// Run it.
@@ -131,6 +132,7 @@ func addApply(topLevel *cobra.Command) {
 	options.AddTagsArg(apply, ta)
 	options.AddDebugArg(apply, do)
 	options.AddSelectorArg(apply, so)
+	options.AddStrictArg(apply, sto)
 
 	// Collect the ko-specific apply flags before registering the kubectl global
 	// flags so that we can ignore them when passing kubectl global flags through

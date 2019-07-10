@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright 2019 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,16 +18,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// LocalOptions represents options for the ko binary.
-type LocalOptions struct {
-	// Local publishes images to a local docker daemon.
-	Local            bool
-	InsecureRegistry bool
+// StrictOptions holds options to require strict references.
+type StrictOptions struct {
+	Strict bool
 }
 
-func AddLocalArg(cmd *cobra.Command, lo *LocalOptions) {
-	cmd.Flags().BoolVarP(&lo.Local, "local", "L", lo.Local,
-		"Whether to publish images to a local docker daemon vs. a registry.")
-	cmd.Flags().BoolVar(&lo.InsecureRegistry, "insecure-registry", lo.InsecureRegistry,
-		"Whether to skip TLS verification on the registry")
+func AddStrictArg(cmd *cobra.Command, so *StrictOptions) {
+	cmd.Flags().BoolVarP(&so.Strict, "strict", "S", so.Strict,
+		"If true, require package references to be explicitly noted")
 }
