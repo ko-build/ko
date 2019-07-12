@@ -128,7 +128,7 @@ func (g *gobuild) IsSupportedReference(s string) bool {
 
 // Import wraps go/build.Import to handle go modules.
 func (g *gobuild) Import(s string) (*gb.Package, error) {
-	if g.mod != nil && strings.HasPrefix(s, g.mod.Path) {
+	if g.mod != nil && (strings.HasPrefix(s, g.mod.Path) || gb.IsLocalImport(s)) {
 		pkg, err := gb.Import(s, g.mod.Dir, gb.ImportComment)
 		if err == nil {
 			return pkg, err
