@@ -119,19 +119,28 @@ func NewGo(options ...Option) (Interface, error) {
 // Only valid importpaths that provide commands (i.e., are "package main") are
 // supported.
 func (g *gobuild) IsSupportedReference(s string) bool {
-	p, err := g.Import(s)
+	p, err := g.importPackage(s)
 	if err != nil {
 		return false
 	}
 	return p.IsCommand()
 }
 
-// Import wraps go/build.Import to handle go modules.
-func (g *gobuild) Import(s string) (*gb.Package, error) {
-	if g.mod != nil && (strings.HasPrefix(s, g.mod.Path) || gb.IsLocalImport(s)) {
-		pkg, err := gb.Import(s, g.mod.Dir, gb.ImportComment)
-		if err == nil {
-			return pkg, err
+// importPackage wraps go/build.Import to handle go modules.
+//
+// Note that we will fall back to using GOPATH if the project isn't using go
+// modules or the import path doesn't match the module path of the project.
+func (g *gobuild) importPackage(s string) (*gb.Package, error) {
+	if g.mod != nil {
+		// If we're inside a go modules project, try to use the module's directory
+		// as our source root to import:
+		// * paths that match module path prefix (they should be in this project)
+		// * relative paths (they should also be in this project)
+		if strings.HasPrefix(s, g.mod.Path) || gb.IsLocalImport(s) {
+			pkg, err := gb.Import(s, g.mod.Dir, gb.ImportComment)
+			if err == nil {
+				return pkg, err
+			}
 		}
 	}
 	return gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
@@ -256,7 +265,7 @@ func tarBinary(name, binary string) (*bytes.Buffer, error) {
 }
 
 func (g *gobuild) kodataPath(s string) (string, error) {
-	p, err := g.Import(s)
+	p, err := g.importPackage(s)
 	if err != nil {
 		return "", err
 	}
