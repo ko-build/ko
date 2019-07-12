@@ -32,14 +32,21 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }))
+	mod := &modInfo{
+		Path: filepath.FromSlash("github.com/google/ko/cmd/ko/test"),
+		Dir:  ".",
+	}
+
+	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
+		withModuleInfo(mod))
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/cmd/ko"), // ko can build itself.
+		filepath.FromSlash("github.com/google/ko/cmd/ko"),      // ko can build itself.
+		filepath.FromSlash("github.com/google/ko/cmd/ko/test"), // ko can build the test package.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if !ng.IsSupportedReference(importpath) {

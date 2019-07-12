@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"encoding/json"
 	"errors"
 	gb "go/build"
 	"io"
@@ -26,6 +27,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -46,6 +48,7 @@ type gobuild struct {
 	creationTime         v1.Time
 	build                builder
 	disableOptimizations bool
+	mod                  *modInfo
 }
 
 // Option is a functional option for NewGo.
@@ -56,6 +59,7 @@ type gobuildOpener struct {
 	creationTime         v1.Time
 	build                builder
 	disableOptimizations bool
+	mod                  *modInfo
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -67,7 +71,30 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		creationTime:         gbo.creationTime,
 		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
+		mod:                  gbo.mod,
 	}, nil
+}
+
+// https://golang.org/pkg/cmd/go/internal/modinfo/#ModulePublic
+type modInfo struct {
+	Path string
+	Dir  string
+}
+
+// moduleInfo returns the module path and module root directory for a project
+// using go modules, otherwise returns nil.
+//
+// Related: https://github.com/golang/go/issues/26504
+func moduleInfo() *modInfo {
+	output, err := exec.Command("go", "list", "-mod=readonly", "-m", "-json").Output()
+	if err != nil {
+		return nil
+	}
+	var info modInfo
+	if err := json.Unmarshal(output, &info); err != nil {
+		return nil
+	}
+	return &info
 }
 
 // NewGo returns a build.Interface implementation that:
@@ -76,6 +103,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 func NewGo(options ...Option) (Interface, error) {
 	gbo := &gobuildOpener{
 		build: build,
+		mod:   moduleInfo(),
 	}
 
 	for _, option := range options {
@@ -90,12 +118,23 @@ func NewGo(options ...Option) (Interface, error) {
 //
 // Only valid importpaths that provide commands (i.e., are "package main") are
 // supported.
-func (*gobuild) IsSupportedReference(s string) bool {
-	p, err := gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
+func (g *gobuild) IsSupportedReference(s string) bool {
+	p, err := g.Import(s)
 	if err != nil {
 		return false
 	}
 	return p.IsCommand()
+}
+
+// Import wraps go/build.Import to handle go modules.
+func (g *gobuild) Import(s string) (*gb.Package, error) {
+	if g.mod != nil && strings.HasPrefix(s, g.mod.Path) {
+		pkg, err := gb.Import(s, g.mod.Dir, gb.ImportComment)
+		if err == nil {
+			return pkg, err
+		}
+	}
+	return gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
 }
 
 func build(ip string, disableOptimizations bool) (string, error) {
@@ -216,8 +255,8 @@ func tarBinary(name, binary string) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func kodataPath(s string) (string, error) {
-	p, err := gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
+func (g *gobuild) kodataPath(s string) (string, error) {
+	p, err := g.Import(s)
 	if err != nil {
 		return "", err
 	}
@@ -227,7 +266,7 @@ func kodataPath(s string) (string, error) {
 // Where kodata lives in the image.
 const kodataRoot = "/var/run/ko"
 
-func tarKoData(importpath string) (*bytes.Buffer, error) {
+func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	// Compress this before calling tarball.LayerFromOpener, since it eagerly
 	// calculates digests and diffids. This prevents us from double compressing
@@ -239,7 +278,7 @@ func tarKoData(importpath string) (*bytes.Buffer, error) {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	root, err := kodataPath(importpath)
+	root, err := g.kodataPath(importpath)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +346,7 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 
 	var layers []mutate.Addendum
 	// Create a layer from the kodata directory under this import path.
-	dataLayerBuf, err := tarKoData(s)
+	dataLayerBuf, err := gb.tarKoData(s)
 	if err != nil {
 		return nil, err
 	}
