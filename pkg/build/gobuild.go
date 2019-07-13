@@ -126,24 +126,25 @@ func (g *gobuild) IsSupportedReference(s string) bool {
 	return p.IsCommand()
 }
 
+var moduleErr = errors.New("unmatched importPackage with gomodules")
+
 // importPackage wraps go/build.Import to handle go modules.
 //
-// Note that we will fall back to using GOPATH if the project isn't using go
-// modules or the import path doesn't match the module path of the project.
+// Note that we will fall back to GOPATH if the project isn't using go modules.
 func (g *gobuild) importPackage(s string) (*gb.Package, error) {
-	if g.mod != nil {
-		// If we're inside a go modules project, try to use the module's directory
-		// as our source root to import:
-		// * paths that match module path prefix (they should be in this project)
-		// * relative paths (they should also be in this project)
-		if strings.HasPrefix(s, g.mod.Path) || gb.IsLocalImport(s) {
-			pkg, err := gb.Import(s, g.mod.Dir, gb.ImportComment)
-			if err == nil {
-				return pkg, err
-			}
-		}
+	if g.mod == nil {
+		return gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
 	}
-	return gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
+
+	// If we're inside a go modules project, try to use the module's directory
+	// as our source root to import:
+	// * paths that match module path prefix (they should be in this project)
+	// * relative paths (they should also be in this project)
+	if strings.HasPrefix(s, g.mod.Path) || gb.IsLocalImport(s) {
+		return gb.Import(s, g.mod.Dir, gb.ImportComment)
+	}
+
+	return nil, moduleErr
 }
 
 func build(ip string, disableOptimizations bool) (string, error) {

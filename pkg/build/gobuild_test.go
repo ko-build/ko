@@ -32,6 +32,41 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
+	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }))
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	// Supported import paths.
+	for _, importpath := range []string{
+		filepath.FromSlash("github.com/google/ko/cmd/ko"), // ko can build itself.
+	} {
+		t.Run(importpath, func(t *testing.T) {
+			if !ng.IsSupportedReference(importpath) {
+				t.Errorf("IsSupportedReference(%q) = false, want true", importpath)
+			}
+		})
+	}
+
+	// Unsupported import paths.
+	for _, importpath := range []string{
+		filepath.FromSlash("github.com/google/ko/pkg/build"),       // not a command.
+		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), // does not exist.
+	} {
+		t.Run(importpath, func(t *testing.T) {
+			if ng.IsSupportedReference(importpath) {
+				t.Errorf("IsSupportedReference(%v) = true, want false", importpath)
+			}
+		})
+	}
+}
+
+func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
+	base, err := random.Image(1024, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
 	mod := &modInfo{
 		Path: filepath.FromSlash("github.com/google/ko/cmd/ko/test"),
 		Dir:  ".",
@@ -45,7 +80,6 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/cmd/ko"),      // ko can build itself.
 		filepath.FromSlash("github.com/google/ko/cmd/ko/test"), // ko can build the test package.
 	} {
 		t.Run(importpath, func(t *testing.T) {
@@ -59,6 +93,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 	for _, importpath := range []string{
 		filepath.FromSlash("github.com/google/ko/pkg/build"),       // not a command.
 		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), // does not exist.
+		filepath.FromSlash("github.com/google/ko/cmd/ko"),          // not in this module.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if ng.IsSupportedReference(importpath) {
