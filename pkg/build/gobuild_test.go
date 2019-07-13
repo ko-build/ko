@@ -61,6 +61,48 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 	}
 }
 
+func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
+	base, err := random.Image(1024, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
+	mod := &modInfo{
+		Path: filepath.FromSlash("github.com/google/ko/cmd/ko/test"),
+		Dir:  ".",
+	}
+
+	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
+		withModuleInfo(mod))
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	// Supported import paths.
+	for _, importpath := range []string{
+		filepath.FromSlash("github.com/google/ko/cmd/ko/test"), // ko can build the test package.
+	} {
+		t.Run(importpath, func(t *testing.T) {
+			if !ng.IsSupportedReference(importpath) {
+				t.Errorf("IsSupportedReference(%q) = false, want true", importpath)
+			}
+		})
+	}
+
+	// Unsupported import paths.
+	for _, importpath := range []string{
+		filepath.FromSlash("github.com/google/ko/pkg/build"),       // not a command.
+		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), // does not exist.
+		filepath.FromSlash("github.com/google/ko/cmd/ko"),          // not in this module.
+	} {
+		t.Run(importpath, func(t *testing.T) {
+			if ng.IsSupportedReference(importpath) {
+				t.Errorf("IsSupportedReference(%v) = true, want false", importpath)
+			}
+		})
+	}
+}
+
 // A helper method we use to substitute for the default "build" method.
 func writeTempFile(s string, _ bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")

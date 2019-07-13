@@ -46,10 +46,21 @@ func WithDisabledOptimizations() Option {
 }
 
 // withBuilder is a functional option for overriding the way go binaries
-// are built.  This is exposed for testing.
+// are built.
+// This is exposed for testing.
 func withBuilder(b builder) Option {
 	return func(gbo *gobuildOpener) error {
 		gbo.build = b
+		return nil
+	}
+}
+
+// withModulePath is a functional option for overriding the module path for
+// the current ko invocation.
+// This is exposed for testing.
+func withModuleInfo(mi *modInfo) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.mod = mi
 		return nil
 	}
 }
