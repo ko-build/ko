@@ -345,7 +345,7 @@ not hold the value of `$KO_DOCKER_REPO`?
 The answer is that `.ko.yaml` is expected to sit in the root of a repository,
 and get checked in and versioned alongside your source code. This also means
 that the configured values will be shared across developers on a project, which
-for `KO_DOCKER_REPO` is actually undesireable because each developer is (likely)
+for `KO_DOCKER_REPO` is actually undesirable because each developer is (likely)
 using their own docker repository and cluster.
 
 
