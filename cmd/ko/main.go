@@ -11,12 +11,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 package main
-
 import (
-	"github.com/google/ko/pkg/commands"
 	"log"
+
+	"github.com/google/ko/pkg/commands"
 
 	"github.com/spf13/cobra"
 )
@@ -36,3 +35,4 @@ func main() {
 		log.Fatalf("error during command execution: %v", err)
 	}
 }
+
