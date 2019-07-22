@@ -17,13 +17,14 @@ package resolve
 import (
 	"bytes"
 	"fmt"
+	"regexp"
+	"strings"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	yaml2json "k8s.io/apimachinery/pkg/util/yaml"
-	"regexp"
 	"sigs.k8s.io/yaml"
-	"strings"
 )
 
 // FilterBySelector filters out any resources
@@ -87,7 +88,7 @@ func FilterBySelector(input []byte, selectorString string) ([]byte, error) {
 	}
 
 	// re-join the objects into a single manifest
-	return bytes.Join(outputObjectsYaml, []byte("---\n")), nil
+	return bytes.Join(outputObjectsYaml, []byte("\n---")), nil
 }
 
 var yamlSeparatorRegex = regexp.MustCompile("\n---")
