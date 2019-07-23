@@ -80,3 +80,10 @@ func WithTags(tags []string) Option {
 		return nil
 	}
 }
+
+func Insecure(b bool) Option {
+	return func(i *defaultOpener) error {
+		i.insecure = b
+		return nil
+	}
+}
