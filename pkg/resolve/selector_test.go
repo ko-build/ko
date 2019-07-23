@@ -36,10 +36,6 @@ metadata:
     app: db
   name: rss-db
 `
-	bothPods = webPod + `
----
-` + dbPod
-
 	podList = `apiVersion: v1
 kind: List
 metadata:
@@ -61,6 +57,7 @@ items:
 `
 	webSelector    = `app=web`
 	notWebSelector = `app!=web`
+	nopSelector    = `foo!=bark`
 
 	webPodList = `apiVersion: v1
 items:
@@ -90,6 +87,8 @@ metadata:
 `
 )
 
+var bothPods = strings.Join([]string{webPod, dbPod}, "\n---\n")
+
 func TestSelector(t *testing.T) {
 	tests := []struct {
 		desc     string
@@ -101,43 +100,42 @@ func TestSelector(t *testing.T) {
 		input:    webPod,
 		selector: webSelector,
 		expected: webPod,
-	},
-		{
-			desc:     "single object with non-matching selector",
-			input:    webPod,
-			selector: notWebSelector,
-			expected: ``,
-		},
-		{
-			desc:     "selector matching 1 of two objects",
-			input:    bothPods,
-			selector: webSelector,
-			expected: webPod,
-		},
-		{
-			desc:     "selector matching 1 of two objects",
-			input:    bothPods,
-			selector: notWebSelector,
-			expected: dbPod,
-		},
-		{
-			desc:     "selector matching elements of list object",
-			input:    podList,
-			selector: webSelector,
-			expected: webPodList,
-		},
-		{
-			desc:     "selector matching elements of list object",
-			input:    podList,
-			selector: notWebSelector,
-			expected: dbPodList,
-		},
-		{
-			desc:     "selector matching all elements of list object",
-			input:    podList,
-			selector: ``,
-			expected: podList,
-		}}
+	}, {
+		desc:     "single object with non-matching selector",
+		input:    webPod,
+		selector: notWebSelector,
+		expected: ``,
+	}, {
+		desc:     "selector matching 1 of two objects",
+		input:    bothPods,
+		selector: webSelector,
+		expected: webPod,
+	}, {
+		desc:     "selector matching 1 of two objects",
+		input:    bothPods,
+		selector: notWebSelector,
+		expected: dbPod,
+	}, {
+		desc:     "selector matching both objects",
+		input:    bothPods,
+		selector: nopSelector,
+		expected: bothPods,
+	}, {
+		desc:     "selector matching elements of list object",
+		input:    podList,
+		selector: webSelector,
+		expected: webPodList,
+	}, {
+		desc:     "selector matching elements of list object",
+		input:    podList,
+		selector: notWebSelector,
+		expected: dbPodList,
+	}, {
+		desc:     "selector matching all elements of list object",
+		input:    podList,
+		selector: ``,
+		expected: podList,
+	}}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
