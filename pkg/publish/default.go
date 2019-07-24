@@ -33,6 +33,7 @@ type defalt struct {
 	auth  authn.Authenticator
 	namer Namer
 	tags  []string
+	insecure bool
 }
 
 // Option is a functional option for NewDefault.
@@ -44,6 +45,7 @@ type defaultOpener struct {
 	auth  authn.Authenticator
 	namer Namer
 	tags  []string
+	insecure bool
 }
 
 // Namer is a function from a supported import path to the portion of the resulting
@@ -62,11 +64,12 @@ var defaultTags = []string{"latest"}
 
 func (do *defaultOpener) Open() (Interface, error) {
 	return &defalt{
-		base:  do.base,
-		t:     do.t,
-		auth:  do.auth,
-		namer: do.namer,
-		tags:  do.tags,
+		base:     do.base,
+		t:        do.t,
+		auth:     do.auth,
+		namer:    do.namer,
+		tags:     do.tags,
+		insecure: do.insecure,
 	}, nil
 }
 
@@ -95,7 +98,12 @@ func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
 	s = strings.ToLower(s)
 
 	for _, tagName := range d.tags {
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", d.base, d.namer(s), tagName))
+
+		var os []name.Option
+		if d.insecure {
+			os = []name.Option{name.Insecure}
+		}
+		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", d.base, d.namer(s), tagName), os...)
 		if err != nil {
 			return nil, err
 		}
