@@ -99,7 +99,8 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 		return publish.NewDefault(repoName,
 			publish.WithAuthFromKeychain(authn.DefaultKeychain),
 			publish.WithNamer(namer),
-			publish.WithTags(ta.Tags))
+			publish.WithTags(ta.Tags),
+			publish.Insecure(lo.InsecureRegistry))
 	}()
 	if err != nil {
 		return nil, err
