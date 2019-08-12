@@ -299,6 +299,10 @@ func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 			return tw.WriteHeader(&tar.Header{
 				Name:     kodataRoot,
 				Typeflag: tar.TypeDir,
+				// Use a fixed Mode, so that this isn't sensitive to the directory and umask
+				// under which it was created. Additionally, windows can only set 0222,
+				// 0444, or 0666, none of which are executable.
+				Mode: 0555,
 			})
 		}
 		if err != nil {
