@@ -255,7 +255,7 @@ func TestGoBuild(t *testing.T) {
 	t.Run("check app layer contents", func(t *testing.T) {
 		expectedHash := v1.Hash{
 			Algorithm: "sha256",
-			Hex:       "63b6e090921b79b61e7f5fba44d2ea0f81215d9abac3d005dda7cb9a1f8a025d",
+			Hex:       "4379f30a6c6f66221c3c54dddd378fcfa5a7304a6655ff783b102069c0f943ab",
 		}
 		appLayer := ls[baseLayers]
 
