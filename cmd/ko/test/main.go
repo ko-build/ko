@@ -29,4 +29,11 @@ func main() {
 		log.Fatalf("Error reading %q: %v", file, err)
 	}
 	log.Printf(string(bytes))
+
+	file = filepath.Join(dp, "refs/heads/master")
+	bytes, err = ioutil.ReadFile(file)
+	if err != nil {
+		log.Fatalf("Error reading %q: %v", file, err)
+	}
+	log.Printf(string(bytes))
 }
