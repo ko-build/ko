@@ -53,7 +53,7 @@ func ImageReferences(input []byte, strict bool, builder build.Interface, publish
 			if builder.IsSupportedReference(tref) {
 				refs[tref] = struct{}{}
 			} else if strict && strings.HasPrefix(ref, "ko://") {
-				return "", fmt.Errorf("Strict reference %q is not supported", ref)
+				return "", fmt.Errorf("Found strict reference %q but %s is not a valid import path", ref, strings.TrimPrefix(ref, "ko://"))
 			}
 			return ref, nil
 		}); err != nil {
