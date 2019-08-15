@@ -276,28 +276,12 @@ func (g *gobuild) kodataPath(s string) (string, error) {
 // Where kodata lives in the image.
 const kodataRoot = "/var/run/ko"
 
-func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
-	buf := bytes.NewBuffer(nil)
-	// Compress this before calling tarball.LayerFromOpener, since it eagerly
-	// calculates digests and diffids. This prevents us from double compressing
-	// the layer when we have to actually upload the blob.
-	//
-	// https://github.com/google/go-containerregistry/issues/413
-	gw, _ := gzip.NewWriterLevel(buf, gzip.BestSpeed)
-	defer gw.Close()
-	tw := tar.NewWriter(gw)
-	defer tw.Close()
-
-	root, err := g.kodataPath(importpath)
-	if err != nil {
-		return nil, err
-	}
-
-	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+func walkRecursive(tw *tar.Writer, root, chroot string) error {
+	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if path == root {
 			// Add an entry for /var/run/ko
 			return tw.WriteHeader(&tar.Header{
-				Name:     kodataRoot,
+				Name:     chroot,
 				Typeflag: tar.TypeDir,
 				// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 				// under which it was created. Additionally, windows can only set 0222,
@@ -318,6 +302,17 @@ func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 		if err != nil {
 			return err
 		}
+		newPath := filepath.Join(chroot, path[len(root):])
+
+		path, err = filepath.EvalSymlinks(path)
+		if err != nil {
+			return err
+		}
+
+		// Skip other directories.
+		if info.Mode().IsDir() {
+			return walkRecursive(tw, path, newPath)
+		}
 
 		// Open the file to copy it into the tarball.
 		file, err := os.Open(path)
@@ -327,7 +322,6 @@ func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 		defer file.Close()
 
 		// Copy the file into the image tarball.
-		newPath := filepath.Join(kodataRoot, path[len(root):])
 		if err := tw.WriteHeader(&tar.Header{
 			Name:     newPath,
 			Size:     info.Size(),
@@ -342,6 +336,26 @@ func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 		_, err = io.Copy(tw, file)
 		return err
 	})
+}
+
+func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
+	buf := bytes.NewBuffer(nil)
+	// Compress this before calling tarball.LayerFromOpener, since it eagerly
+	// calculates digests and diffids. This prevents us from double compressing
+	// the layer when we have to actually upload the blob.
+	//
+	// https://github.com/google/go-containerregistry/issues/413
+	gw, _ := gzip.NewWriterLevel(buf, gzip.BestSpeed)
+	defer gw.Close()
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	root, err := g.kodataPath(importpath)
+	if err != nil {
+		return nil, err
+	}
+
+	err = walkRecursive(tw, root, kodataRoot)
 	if err != nil {
 		return nil, err
 	}
