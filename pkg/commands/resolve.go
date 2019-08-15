@@ -58,7 +58,7 @@ func addResolve(topLevel *cobra.Command) {
   ko resolve --local -f config/`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			builder, err := makeBuilder(do, sto)
+			builder, err := makeBuilder(do)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}

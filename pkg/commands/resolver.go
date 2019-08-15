@@ -32,7 +32,7 @@ import (
 	"github.com/mattmoor/dep-notify/pkg/graph"
 )
 
-func gobuildOptions(do *options.DebugOptions, so *options.StrictOptions) ([]build.Option, error) {
+func gobuildOptions(do *options.DebugOptions) ([]build.Option, error) {
 	creationTime, err := getCreationTime()
 	if err != nil {
 		return nil, err
@@ -46,14 +46,11 @@ func gobuildOptions(do *options.DebugOptions, so *options.StrictOptions) ([]buil
 	if do.DisableOptimizations {
 		opts = append(opts, build.WithDisabledOptimizations())
 	}
-	if so.Strict {
-		opts = append(opts, build.WithStrict())
-	}
 	return opts, nil
 }
 
-func makeBuilder(do *options.DebugOptions, so *options.StrictOptions) (*build.Caching, error) {
-	opt, err := gobuildOptions(do, so)
+func makeBuilder(do *options.DebugOptions) (*build.Caching, error) {
+	opt, err := gobuildOptions(do)
 	if err != nil {
 		log.Fatalf("error setting up builder options: %v", err)
 	}

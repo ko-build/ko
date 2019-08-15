@@ -85,7 +85,7 @@ func TestYAMLArrays(t *testing.T) {
 				t.Fatalf("yaml.Marshal(%v) = %v", inputStructured, err)
 			}
 
-			outYAML, err := ImageReferences(inputYAML, testBuilder, newFixedPublish(test.base, testHashes))
+			outYAML, err := ImageReferences(inputYAML, false, testBuilder, newFixedPublish(test.base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -158,7 +158,7 @@ func TestYAMLMaps(t *testing.T) {
 				t.Fatalf("yaml.Marshal(%v) = %v", inputStructured, err)
 			}
 
-			outYAML, err := ImageReferences(inputYAML, testBuilder, newFixedPublish(base, testHashes))
+			outYAML, err := ImageReferences(inputYAML, false, testBuilder, newFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -226,7 +226,7 @@ func TestYAMLObject(t *testing.T) {
 				t.Fatalf("yaml.Marshal(%v) = %v", inputStructured, err)
 			}
 
-			outYAML, err := ImageReferences(inputYAML, testBuilder, newFixedPublish(base, testHashes))
+			outYAML, err := ImageReferences(inputYAML, false, testBuilder, newFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -242,8 +242,29 @@ func TestYAMLObject(t *testing.T) {
 	}
 }
 
+func TestStrict(t *testing.T) {
+	refs := []string{
+		"ko://" + fooRef,
+		"ko://" + barRef,
+	}
+	buf := bytes.NewBuffer(nil)
+	encoder := yaml.NewEncoder(buf)
+	for _, input := range refs {
+		if err := encoder.Encode(input); err != nil {
+			t.Fatalf("Encode(%v) = %v", input, err)
+		}
+	}
+	inputYAML := buf.Bytes()
+	base := mustRepository("gcr.io/multi-pass")
+	outYAML, err := ImageReferences(inputYAML, true, testBuilder, newFixedPublish(base, testHashes))
+	if err != nil {
+		t.Fatalf("ImageReferences: %v", err)
+	}
+	t.Log(string(outYAML))
+}
+
 func TestMultiDocumentYAMLs(t *testing.T) {
-	tests := []struct {
+	for _, test := range []struct {
 		desc   string
 		refs   []string
 		hashes []v1.Hash
@@ -253,9 +274,7 @@ func TestMultiDocumentYAMLs(t *testing.T) {
 		refs:   []string{fooRef, barRef},
 		hashes: []v1.Hash{fooHash, barHash},
 		base:   mustRepository("gcr.io/multi-pass"),
-	}}
-
-	for _, test := range tests {
+	}} {
 		t.Run(test.desc, func(t *testing.T) {
 			buf := bytes.NewBuffer(nil)
 			encoder := yaml.NewEncoder(buf)
@@ -266,7 +285,7 @@ func TestMultiDocumentYAMLs(t *testing.T) {
 			}
 			inputYAML := buf.Bytes()
 
-			outYAML, err := ImageReferences(inputYAML, testBuilder, newFixedPublish(test.base, testHashes))
+			outYAML, err := ImageReferences(inputYAML, false, testBuilder, newFixedPublish(test.base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}

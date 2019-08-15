@@ -63,12 +63,3 @@ func withModuleInfo(mi *modInfo) Option {
 		return nil
 	}
 }
-
-// WithStrict is a functional option for requiring that package references are
-// explicitly noted.
-func WithStrict() Option {
-	return func(g *gobuildOpener) error {
-		g.strict = true
-		return nil
-	}
-}

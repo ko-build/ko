@@ -64,7 +64,7 @@ func addApply(topLevel *cobra.Command) {
   cat config.yaml | ko apply -f -`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			builder, err := makeBuilder(do, sto)
+			builder, err := makeBuilder(do)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}

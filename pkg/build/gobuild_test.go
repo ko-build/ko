@@ -39,8 +39,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/cmd/ko"),      // ko can build itself.
-		filepath.FromSlash("ko://github.com/google/ko/cmd/ko"), // ko:// prefix is ignored in loose mode.
+		filepath.FromSlash("github.com/google/ko/cmd/ko"), // ko can build itself.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if !ng.IsSupportedReference(importpath) {
@@ -51,41 +50,6 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Unsupported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/pkg/build"),       // not a command.
-		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), // does not exist.
-	} {
-		t.Run(importpath, func(t *testing.T) {
-			if ng.IsSupportedReference(importpath) {
-				t.Errorf("IsSupportedReference(%v) = true, want false", importpath)
-			}
-		})
-	}
-}
-
-func TestGoBuildIsSupportedReference_Strict(t *testing.T) {
-	base, err := random.Image(1024, 3)
-	if err != nil {
-		t.Fatalf("random.Image() = %v", err)
-	}
-	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }), WithStrict())
-	if err != nil {
-		t.Fatalf("NewGo() = %v", err)
-	}
-
-	// Supported import paths.
-	for _, importpath := range []string{
-		filepath.FromSlash("ko://github.com/google/ko/cmd/ko"), // ko can build itself.
-	} {
-		t.Run(importpath, func(t *testing.T) {
-			if !ng.IsSupportedReference(importpath) {
-				t.Errorf("IsSupportedReference(%q) = false, want true", importpath)
-			}
-		})
-	}
-
-	// Unsupported import paths.
-	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/cmd/ko"),          // In strict mode, without ko://, it's not supported.
 		filepath.FromSlash("github.com/google/ko/pkg/build"),       // not a command.
 		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), // does not exist.
 	} {

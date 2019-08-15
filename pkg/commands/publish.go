@@ -60,7 +60,7 @@ func addPublish(topLevel *cobra.Command) {
   ko publish --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
 		Args: cobra.MinimumNArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			builder, err := makeBuilder(do, &options.StrictOptions{})
+			builder, err := makeBuilder(do)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
