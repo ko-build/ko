@@ -46,14 +46,15 @@ func ImageReferences(input []byte, strict bool, builder build.Interface, publish
 		}
 		// This simply returns the replaced object, which we discard during the gathering phase.
 		if _, err := replaceRecursive(obj, func(ref string) (string, error) {
-			if strict && !strings.HasPrefix(ref, "ko://") {
+			strictRef := strings.HasPrefix(ref, "ko://")
+			if strict && !strictRef {
 				return ref, nil
 			}
 			tref := strings.TrimPrefix(ref, "ko://")
 			if builder.IsSupportedReference(tref) {
 				refs[tref] = struct{}{}
-			} else if strict && strings.HasPrefix(ref, "ko://") {
-				return "", fmt.Errorf("Found strict reference %q but %s is not a valid import path", ref, strings.TrimPrefix(ref, "ko://"))
+			} else if strict && strictRef {
+				return "", fmt.Errorf("Found strict reference %q but %s is not a valid import path", ref, tref)
 			}
 			return ref, nil
 		}); err != nil {
