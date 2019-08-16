@@ -445,8 +445,10 @@ kubectl apply -f release.yaml
 In order to support [reproducible builds](https://reproducible-builds.org), `ko` doesn't embed timestamps in the images it produces by default; however, `ko` does respect the [`SOURCE_DATE_EPOCH`](https://reproducible-builds.org/docs/source-date-epoch/) environment variable.
 
 For example, you can set this to the current timestamp by executing:
+
     export SOURCE_DATE_EPOCH=`date +%s
 or to the latest git commit's timestamp with:
+
     export SOURCE_DATE_EPOCH=$(git log -1 --format='%ct')
 
 ## Acknowledgements
