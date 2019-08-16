@@ -124,7 +124,6 @@ However, these same commands can be directed to operate locally as well via
 the `--local` or `-L` command (or setting `KO_DOCKER_REPO=ko.local`).  See
 the [`minikube` section](./README.md#with-minikube) for more detail.
 
-
 ### `ko publish`
 
 `ko publish` simply builds and publishes images for each import path passed as
@@ -441,6 +440,14 @@ This resulting configuration may then be installed onto Kubernetes clusters via:
 kubectl apply -f release.yaml
 ```
 
+### Why are my images all created in 1970?
+
+In order to support [reproducible builds](https://reproducible-builds.org), `ko` doesn't embed timestamps in the images it produces by default; however, `ko` does respect the [`SOURCE_DATE_EPOCH`](https://reproducible-builds.org/docs/source-date-epoch/) environment variable.
+
+For example, you can set this to the current timestamp by executing:
+    export SOURCE_DATE_EPOCH=`date +%s
+or to the latest git commit's timestamp with:
+    export SOURCE_DATE_EPOCH=$(git log -1 --format='%ct')
 
 ## Acknowledgements
 
