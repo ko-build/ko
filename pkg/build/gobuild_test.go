@@ -253,19 +253,15 @@ func TestGoBuild(t *testing.T) {
 	})
 
 	t.Run("check app layer contents", func(t *testing.T) {
-		expectedHash := v1.Hash{
-			Algorithm: "sha256",
-			Hex:       "4379f30a6c6f66221c3c54dddd378fcfa5a7304a6655ff783b102069c0f943ab",
-		}
-		appLayer := ls[baseLayers]
+		dataLayer := ls[baseLayers]
 
-		if got, err := appLayer.Digest(); err != nil {
+		if _, err := dataLayer.Digest(); err != nil {
 			t.Errorf("Digest() = %v", err)
-		} else if got != expectedHash {
-			t.Errorf("Digest() = %v, want %v", got, expectedHash)
 		}
+		// We don't check the data layer here because it includes a symlink of refs and
+		// will produce a distinct hash each time we commit something.
 
-		r, err := appLayer.Uncompressed()
+		r, err := dataLayer.Uncompressed()
 		if err != nil {
 			t.Errorf("Uncompressed() = %v", err)
 		}
