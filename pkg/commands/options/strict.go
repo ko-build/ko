@@ -24,6 +24,6 @@ type StrictOptions struct {
 }
 
 func AddStrictArg(cmd *cobra.Command, so *StrictOptions) {
-	cmd.Flags().BoolVarP(&so.Strict, "strict", "S", so.Strict,
-		"If true, require package references to be explicitly noted")
+	cmd.Flags().BoolVarP(&so.Strict, "strict", "", so.Strict,
+		`If true, require package references to be explicitly prefixed with "ko://"`)
 }
