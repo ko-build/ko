@@ -446,7 +446,7 @@ In order to support [reproducible builds](https://reproducible-builds.org), `ko`
 
 For example, you can set this to the current timestamp by executing:
 
-    export SOURCE_DATE_EPOCH=`date +%s
+    export SOURCE_DATE_EPOCH=$(date +%s)
 or to the latest git commit's timestamp with:
 
     export SOURCE_DATE_EPOCH=$(git log -1 --format='%ct')
