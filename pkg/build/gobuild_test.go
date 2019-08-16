@@ -66,14 +66,12 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
 	}
-
 	mod := &modInfo{
 		Path: filepath.FromSlash("github.com/google/ko/cmd/ko/test"),
 		Dir:  ".",
 	}
 
-	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
-		withModuleInfo(mod))
+	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }), withModuleInfo(mod))
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}

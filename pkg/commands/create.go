@@ -34,6 +34,7 @@ func addCreate(topLevel *cobra.Command) {
 	ta := &options.TagsOptions{}
 	do := &options.DebugOptions{}
 	so := &options.SelectorOptions{}
+	sto := &options.StrictOptions{}
 	create := &cobra.Command{
 		Use:   "create -f FILENAME",
 		Short: "Create the input files with image references resolved to built/pushed image digests.",
@@ -116,7 +117,7 @@ func addCreate(topLevel *cobra.Command) {
 					stdin.Write([]byte("---\n"))
 				}
 				// Once primed kick things off.
-				resolveFilesToWriter(builder, publisher, fo, so, stdin)
+				resolveFilesToWriter(builder, publisher, fo, so, sto, stdin)
 			}()
 
 			// Run it.
@@ -131,6 +132,7 @@ func addCreate(topLevel *cobra.Command) {
 	options.AddTagsArg(create, ta)
 	options.AddDebugArg(create, do)
 	options.AddSelectorArg(create, so)
+	options.AddStrictArg(create, sto)
 
 	// Collect the ko-specific apply flags before registering the kubectl global
 	// flags so that we can ignore them when passing kubectl global flags through
