@@ -41,7 +41,7 @@ const (
 
 // GetBase takes an importpath and returns a base v1.Image.
 type GetBase func(string) (v1.Image, error)
-type builder func(string, bool) (string, error)
+type builder func(string, v1.Platform, bool) (string, error)
 
 type gobuild struct {
 	getBase              GetBase
@@ -147,7 +147,7 @@ func (g *gobuild) importPackage(s string) (*gb.Package, error) {
 	return nil, moduleErr
 }
 
-func build(ip string, disableOptimizations bool) (string, error) {
+func build(ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -165,8 +165,12 @@ func build(ip string, disableOptimizations bool) (string, error) {
 	cmd := exec.Command("go", args...)
 
 	// Last one wins
-	// TODO(mattmoor): GOARCH=amd64
-	cmd.Env = append([]string{"CGO_ENABLED=0", "GOOS=linux"}, os.Environ()...)
+	defaultEnv := []string{
+		"CGO_ENABLED=0",
+		"GOOS=" + platform.OS,
+		"GOARCH=" + platform.Architecture,
+	}
+	cmd.Env = append(defaultEnv, os.Environ()...)
 
 	var output bytes.Buffer
 	cmd.Stderr = &output
@@ -362,8 +366,22 @@ func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 
 // Build implements build.Interface
 func (gb *gobuild) Build(s string) (v1.Image, error) {
+	// Determine the appropriate base image for this import path.
+	base, err := gb.getBase(s)
+	if err != nil {
+		return nil, err
+	}
+	cf, err := base.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+	platform := v1.Platform{
+		OS:           cf.OS,
+		Architecture: cf.Architecture,
+	}
+
 	// Do the build into a temporary file.
-	file, err := gb.build(s, gb.disableOptimizations)
+	file, err := gb.build(s, platform, gb.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}
@@ -413,12 +431,6 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 			Comment:   "go build output, at " + appPath,
 		},
 	})
-
-	// Determine the appropriate base image for this import path.
-	base, err := gb.getBase(s)
-	if err != nil {
-		return nil, err
-	}
 
 	// Augment the base image with our application layer.
 	withApp, err := mutate.Append(base, layers...)
