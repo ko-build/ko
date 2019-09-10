@@ -1,0 +1,55 @@
+// Copyright 2018 Google LLC All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package build
+
+import (
+	"context"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"golang.org/x/sync/semaphore"
+)
+
+// Limiter composes with another Interface to limit the number of concurrent builds.
+type Limiter struct {
+	Builder   Interface
+	semaphore *semaphore.Weighted
+}
+
+// Limiter implements Interface
+var _ Interface = (*Recorder)(nil)
+
+// IsSupportedReference implements Interface
+func (l *Limiter) IsSupportedReference(ip string) bool {
+	return l.Builder.IsSupportedReference(ip)
+}
+
+// Build implements Interface
+func (l *Limiter) Build(ip string) (v1.Image, error) {
+	// TODO(jonjohnsonjr): Build should take a context.Context.
+	if err := l.semaphore.Acquire(context.TODO(), 1); err != nil {
+		return nil, err
+	}
+	defer l.semaphore.Release(1)
+
+	return l.Builder.Build(ip)
+}
+
+// NewLimiter returns a new builder that only allows n concurrent builds of b.
+func NewLimiter(b Interface, n int) *Limiter {
+	return &Limiter{
+		Builder:   b,
+		semaphore: semaphore.NewWeighted(int64(n)),
+	}
+}

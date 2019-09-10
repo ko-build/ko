@@ -18,13 +18,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// BinaryOptions represents options for the ko binary.
-type BinaryOptions struct {
+// PublishOptions represents options for the ko binary.
+type PublishOptions struct {
 	// Path is the import path of the binary to publish.
 	Path string
 }
 
-func AddImageArg(cmd *cobra.Command, lo *BinaryOptions) {
+func AddImageArg(cmd *cobra.Command, lo *PublishOptions) {
 	cmd.Flags().StringVarP(&lo.Path, "image", "i", lo.Path,
 		"The import path of the binary to publish.")
 }
