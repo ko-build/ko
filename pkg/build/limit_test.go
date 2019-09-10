@@ -51,7 +51,7 @@ func TestLimiter(t *testing.T) {
 	}
 	g.Wait()
 
-	// 5 ms * 10 builds / 2 concurrency = ~250
+	// 50 ms * 10 builds / 2 concurrency = ~250ms
 	if time.Now().Before(start.Add(250 * time.Millisecond)) {
 		t.Fatal("Too many builds")
 	}
