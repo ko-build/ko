@@ -18,7 +18,7 @@ import (
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/ko/pkg/build"
 )
 
 // caching wraps a publisher implementation in a layer that shares publish results
@@ -33,8 +33,8 @@ type caching struct {
 // entry holds the last image published and the result of publishing it for a
 // particular reference.
 type entry struct {
-	img v1.Image
-	f   *future
+	br build.Result
+	f  *future
 }
 
 // caching implements Interface
@@ -50,7 +50,7 @@ func NewCaching(inner Interface) (Interface, error) {
 }
 
 // Publish implements Interface
-func (c *caching) Publish(img v1.Image, ref string) (name.Reference, error) {
+func (c *caching) Publish(br build.Result, ref string) (name.Reference, error) {
 	f := func() *future {
 		// Lock the map of futures.
 		c.m.Lock()
@@ -60,15 +60,15 @@ func (c *caching) Publish(img v1.Image, ref string) (name.Reference, error) {
 		ent, ok := c.results[ref]
 		if ok {
 			// If the image matches, then return the same future.
-			if ent.img == img {
+			if ent.br == br {
 				return ent.f
 			}
 		}
-		// Otherwise create and record a future for publishing "img" to "ref".
+		// Otherwise create and record a future for publishing "br" to "ref".
 		f := newFuture(func() (name.Reference, error) {
-			return c.inner.Publish(img, ref)
+			return c.inner.Publish(br, ref)
 		})
-		c.results[ref] = &entry{img: img, f: f}
+		c.results[ref] = &entry{br: br, f: f}
 		return f
 	}()
 

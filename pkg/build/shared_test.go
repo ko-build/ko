@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 )
 
@@ -34,9 +33,9 @@ func (sb *slowbuild) IsSupportedReference(string) bool {
 	return true
 }
 
-func (sb *slowbuild) Build(_ context.Context, _ string) (v1.Image, error) {
+func (sb *slowbuild) Build(context.Context, string) (Result, error) {
 	time.Sleep(sb.sleep)
-	return random.Image(256, 8)
+	return random.Index(256, 8, 3)
 }
 
 func TestCaching(t *testing.T) {

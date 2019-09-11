@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 	kotesting "github.com/google/ko/pkg/internal/testing"
 	"gopkg.in/yaml.v3"
@@ -39,7 +40,7 @@ var (
 	barRef      = "github.com/awesomesauce/bar"
 	bar         = mustRandom()
 	barHash     = mustDigest(bar)
-	testBuilder = kotesting.NewFixedBuild(map[string]v1.Image{
+	testBuilder = kotesting.NewFixedBuild(map[string]build.Result{
 		fooRef: foo,
 		barRef: bar,
 	})

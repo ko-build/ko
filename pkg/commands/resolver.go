@@ -69,7 +69,7 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		return nil, err
 	}
 	opts := []build.Option{
-		build.WithBaseImages(getBaseImage),
+		build.WithBaseImages(getBaseImage(bo.Platform)),
 	}
 	if creationTime != nil {
 		opts = append(opts, build.WithCreationTime(*creationTime))

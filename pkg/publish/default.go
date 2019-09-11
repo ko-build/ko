@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/pkg/build"
 )
 
@@ -94,8 +95,32 @@ func NewDefault(base string, options ...Option) (Interface, error) {
 	return do.Open()
 }
 
+func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
+	mt, err := br.MediaType()
+	if err != nil {
+		return err
+	}
+
+	switch mt {
+	case types.OCIImageIndex, types.DockerManifestList:
+		idx, ok := br.(v1.ImageIndex)
+		if !ok {
+			return fmt.Errorf("failed to interpret result as index: %v", br)
+		}
+		return remote.WriteIndex(tag, idx, opt...)
+	case types.OCIManifestSchema1, types.DockerManifestSchema2:
+		img, ok := br.(v1.Image)
+		if !ok {
+			return fmt.Errorf("failed to interpret result as image: %v", br)
+		}
+		return remote.Write(tag, img, opt...)
+	default:
+		return fmt.Errorf("result image media type: %s", mt)
+	}
+}
+
 // Publish implements publish.Interface
-func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
+func (d *defalt) Publish(br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
@@ -114,18 +139,18 @@ func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
 
 		if i == 0 {
 			log.Printf("Publishing %v", tag)
-			if err := remote.Write(tag, img, ro...); err != nil {
+			if err := pushResult(tag, br, ro); err != nil {
 				return nil, err
 			}
 		} else {
 			log.Printf("Tagging %v", tag)
-			if err := remote.Tag(tag, img, ro...); err != nil {
+			if err := remote.Tag(tag, br, ro...); err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	h, err := img.Digest()
+	h, err := br.Digest()
 	if err != nil {
 		return nil, err
 	}

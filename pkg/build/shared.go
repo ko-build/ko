@@ -17,8 +17,6 @@ package build
 import (
 	"context"
 	"sync"
-
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 // Caching wraps a builder implementation in a layer that shares build results
@@ -44,7 +42,7 @@ func NewCaching(inner Interface) (*Caching, error) {
 }
 
 // Build implements Interface
-func (c *Caching) Build(ctx context.Context, ip string) (v1.Image, error) {
+func (c *Caching) Build(ctx context.Context, ip string) (Result, error) {
 	f := func() *future {
 		// Lock the map of futures.
 		c.m.Lock()
@@ -56,7 +54,7 @@ func (c *Caching) Build(ctx context.Context, ip string) (v1.Image, error) {
 			return f
 		}
 		// Otherwise create and record a future for a Build of "ip".
-		f = newFuture(func() (v1.Image, error) {
+		f = newFuture(func() (Result, error) {
 			return c.inner.Build(ctx, ip)
 		})
 		c.results[ip] = f

@@ -18,6 +18,7 @@ import (
 	"context"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 // Interface abstracts different methods for turning a supported importpath
@@ -28,6 +29,15 @@ type Interface interface {
 	// TODO(mattmoor): Verify that some base repo: foo.io/bar can be suffixed with this reference and parsed.
 	IsSupportedReference(string) bool
 
-	// Build turns the given importpath reference into a v1.Image containing the Go binary.
-	Build(context.Context, string) (v1.Image, error)
+	// Build turns the given importpath reference into a v1.Image containing the Go binary
+	// (or a set of images as a v1.ImageIndex).
+	Build(context.Context, string) (Result, error)
+}
+
+// Result represents the product of a Build. This is usually a v1.Image or v1.ImageIndex.
+type Result interface {
+	MediaType() (types.MediaType, error)
+	Size() (int64, error)
+	Digest() (v1.Hash, error)
+	RawManifest() ([]byte, error)
 }
