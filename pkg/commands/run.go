@@ -26,10 +26,10 @@ import (
 // addRun augments our CLI surface with run.
 func addRun(topLevel *cobra.Command) {
 	lo := &options.LocalOptions{}
-	bo := &options.BinaryOptions{}
+	po := &options.PublishOptions{}
 	no := &options.NameOptions{}
 	ta := &options.TagsOptions{}
-	do := &options.DebugOptions{}
+	bo := &options.BuildOptions{}
 
 	run := &cobra.Command{
 		Use:   "run NAME --image=IMPORTPATH",
@@ -45,7 +45,7 @@ func addRun(topLevel *cobra.Command) {
   # This supports relative import paths as well.
   ko run foo --image=./cmd/baz`,
 		Run: func(cmd *cobra.Command, args []string) {
-			builder, err := makeBuilder(do)
+			builder, err := makeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
@@ -53,7 +53,7 @@ func addRun(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
-			imgs, err := publishImages([]string{bo.Path}, publisher, builder)
+			imgs, err := publishImages([]string{po.Path}, publisher, builder)
 			if err != nil {
 				log.Fatalf("failed to publish images: %v", err)
 			}
@@ -88,9 +88,9 @@ func addRun(topLevel *cobra.Command) {
 	}
 	options.AddLocalArg(run, lo)
 	options.AddNamingArgs(run, no)
-	options.AddImageArg(run, bo)
+	options.AddImageArg(run, po)
 	options.AddTagsArg(run, ta)
-	options.AddDebugArg(run, do)
+	options.AddBuildOptions(run, bo)
 
 	topLevel.AddCommand(run)
 }

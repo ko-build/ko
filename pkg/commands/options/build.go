@@ -15,15 +15,20 @@
 package options
 
 import (
+	"runtime"
+
 	"github.com/spf13/cobra"
 )
 
-// DebugOptions holds options to improve debugging containers.
-type DebugOptions struct {
+// BuildOptions represents options for the ko builder.
+type BuildOptions struct {
+	ConcurrentBuilds     int
 	DisableOptimizations bool
 }
 
-func AddDebugArg(cmd *cobra.Command, do *DebugOptions) {
-	cmd.Flags().BoolVar(&do.DisableOptimizations, "disable-optimizations", do.DisableOptimizations,
+func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
+	cmd.Flags().IntVarP(&bo.ConcurrentBuilds, "--jobs", "j", runtime.GOMAXPROCS(0),
+		"The maximum number of concurrent builds")
+	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,
 		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
 }

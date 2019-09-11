@@ -32,7 +32,7 @@ import (
 	"github.com/mattmoor/dep-notify/pkg/graph"
 )
 
-func gobuildOptions(do *options.DebugOptions) ([]build.Option, error) {
+func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	creationTime, err := getCreationTime()
 	if err != nil {
 		return nil, err
@@ -43,14 +43,14 @@ func gobuildOptions(do *options.DebugOptions) ([]build.Option, error) {
 	if creationTime != nil {
 		opts = append(opts, build.WithCreationTime(*creationTime))
 	}
-	if do.DisableOptimizations {
+	if bo.DisableOptimizations {
 		opts = append(opts, build.WithDisabledOptimizations())
 	}
 	return opts, nil
 }
 
-func makeBuilder(do *options.DebugOptions) (*build.Caching, error) {
-	opt, err := gobuildOptions(do)
+func makeBuilder(bo *options.BuildOptions) (*build.Caching, error) {
+	opt, err := gobuildOptions(bo)
 	if err != nil {
 		log.Fatalf("error setting up builder options: %v", err)
 	}
@@ -58,6 +58,8 @@ func makeBuilder(do *options.DebugOptions) (*build.Caching, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	innerBuilder = build.NewLimiter(innerBuilder, bo.ConcurrentBuilds)
 
 	// tl;dr Wrap builder in a caching builder.
 	//
