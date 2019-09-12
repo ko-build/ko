@@ -6,8 +6,8 @@ language:
   - go
 
 go:
-  - "1.11"
   - "1.12"
+  - "1.13"
 
 git:
   depth: 1
