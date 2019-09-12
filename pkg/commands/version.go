@@ -40,6 +40,7 @@ func version() {
 		i, ok := debug.ReadBuildInfo()
 		if !ok {
 			fmt.Println("could not determine build information")
+			return
 		}
 		Version = i.Main.Version
 	}
