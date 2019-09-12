@@ -17,9 +17,10 @@ install: true
 script:
   # Verify that all source files are correctly formatted.
   - find . -name "*.go" | grep -v vendor/ | xargs gofmt -d -e -l
-
+  
+  - go get gotest.tools/gotestsum
   - go clean -i
-  - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
+  - gotestsum --format=standard-quiet --junitfile=junit_result.xml -- -v -race -count=1  -coverprofile=coverage.txt -covermode=atomic ./...
 
 # TODO: Set up coverage.
 #after_success:
