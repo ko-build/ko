@@ -79,7 +79,6 @@ func TestYAMLArrays(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			t.Fatalf("fail this test %q purposely", test.desc)
 			inputStructured := test.refs
 			inputYAML, err := yaml.Marshal(inputStructured)
 			if err != nil {
