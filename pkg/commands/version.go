@@ -44,5 +44,5 @@ func version() {
 		}
 		Version = i.Main.Version
 	}
-	fmt.Printf("version: %v\n", Version)
+	fmt.Printf(Version)
 }
