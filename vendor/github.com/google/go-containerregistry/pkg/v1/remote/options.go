@@ -15,11 +15,10 @@
 package remote
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 )
@@ -34,7 +33,7 @@ type options struct {
 	platform  v1.Platform
 }
 
-func makeOptions(reg name.Registry, opts ...Option) (*options, error) {
+func makeOptions(target authn.Resource, opts ...Option) (*options, error) {
 	o := &options{
 		auth:      authn.Anonymous,
 		transport: http.DefaultTransport,
@@ -48,12 +47,12 @@ func makeOptions(reg name.Registry, opts ...Option) (*options, error) {
 	}
 
 	if o.keychain != nil {
-		auth, err := o.keychain.Resolve(reg)
+		auth, err := o.keychain.Resolve(target)
 		if err != nil {
 			return nil, err
 		}
 		if auth == authn.Anonymous {
-			log.Println("No matching credentials were found, falling back on anonymous")
+			logs.Warn.Println("No matching credentials were found, falling back on anonymous")
 		}
 		o.auth = auth
 	}

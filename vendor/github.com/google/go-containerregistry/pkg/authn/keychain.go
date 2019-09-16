@@ -19,18 +19,29 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 	"runtime"
 
-	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/logs"
 )
+
+// Resource represents a registry or repository that can be authenticated against.
+type Resource interface {
+	// String returns the full string representation of the target, e.g.
+	// gcr.io/my-project or just gcr.io.
+	String() string
+
+	// RegistryStr returns just the registry portion of the target, e.g. for
+	// gcr.io/my-project, this should just return gcr.io. This is needed to
+	// pull out an appropriate hostname.
+	RegistryStr() string
+}
 
 // Keychain is an interface for resolving an image reference to a credential.
 type Keychain interface {
-	// Resolve looks up the most appropriate credential for the specified registry.
-	Resolve(name.Registry) (Authenticator, error)
+	// Resolve looks up the most appropriate credential for the specified target.
+	Resolve(Resource) (Authenticator, error)
 }
 
 // defaultKeychain implements Keychain with the semantics of the standard Docker
@@ -97,43 +108,43 @@ var (
 )
 
 // Resolve implements Keychain.
-func (dk *defaultKeychain) Resolve(reg name.Registry) (Authenticator, error) {
+func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 	dir, err := configDir()
 	if err != nil {
-		log.Printf("Unable to determine config dir: %v", err)
+		logs.Warn.Printf("Unable to determine config dir: %v", err)
 		return Anonymous, nil
 	}
 	file := filepath.Join(dir, "config.json")
 	content, err := ioutil.ReadFile(file)
 	if err != nil {
-		log.Printf("Unable to read %q: %v", file, err)
+		logs.Warn.Printf("Unable to read %q: %v", file, err)
 		return Anonymous, nil
 	}
 
 	var cf cfg
 	if err := json.Unmarshal(content, &cf); err != nil {
-		log.Printf("Unable to parse %q: %v", file, err)
+		logs.Warn.Printf("Unable to parse %q: %v", file, err)
 		return Anonymous, nil
 	}
 
 	// Per-registry credential helpers take precedence.
 	if cf.CredHelper != nil {
 		for _, form := range domainForms {
-			if entry, ok := cf.CredHelper[fmt.Sprintf(form, reg.Name())]; ok {
-				return &helper{name: entry, domain: reg, r: &defaultRunner{}}, nil
+			if entry, ok := cf.CredHelper[fmt.Sprintf(form, target.RegistryStr())]; ok {
+				return &helper{name: entry, domain: target.RegistryStr(), r: &defaultRunner{}}, nil
 			}
 		}
 	}
 
 	// A global credential helper is next in precedence.
 	if cf.CredStore != "" {
-		return &helper{name: cf.CredStore, domain: reg, r: &defaultRunner{}}, nil
+		return &helper{name: cf.CredStore, domain: target.RegistryStr(), r: &defaultRunner{}}, nil
 	}
 
 	// Lastly, the 'auths' section directly contains basic auth entries.
 	if cf.Auths != nil {
 		for _, form := range domainForms {
-			if entry, ok := cf.Auths[fmt.Sprintf(form, reg.Name())]; ok {
+			if entry, ok := cf.Auths[fmt.Sprintf(form, target.RegistryStr())]; ok {
 				if entry.Auth != "" {
 					return &auth{entry.Auth}, nil
 				} else if entry.Username != "" {
@@ -141,7 +152,7 @@ func (dk *defaultKeychain) Resolve(reg name.Registry) (Authenticator, error) {
 				} else {
 					// TODO(mattmoor): Support identitytoken
 					// TODO(mattmoor): Support registrytoken
-					return nil, fmt.Errorf("Unsupported entry in \"auths\" section of %q", file)
+					return nil, fmt.Errorf("unsupported entry in \"auths\" section of %q", file)
 				}
 			}
 		}

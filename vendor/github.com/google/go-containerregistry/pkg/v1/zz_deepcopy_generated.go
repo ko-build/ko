@@ -269,6 +269,11 @@ func (in *Platform) DeepCopyInto(out *Platform) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Features != nil {
+		in, out := &in.Features, &out.Features
+		*out = make([]string, len(*in))
+		copy(*out, *in)
+	}
 	return
 }
 

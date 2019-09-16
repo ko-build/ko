@@ -105,6 +105,9 @@ type singleImageTarDescriptor struct {
 	Config   string
 	RepoTags []string
 	Layers   []string
+
+	// Tracks foreign layer info. Key is DiffID.
+	LayerSources map[v1.Hash]v1.Descriptor `json:",omitempty"`
 }
 
 // tarDescriptor is the struct used inside the `manifest.json` file of a `docker save` tarball.
@@ -211,9 +214,10 @@ func extractFileFromTar(opener Opener, filePath string) (io.ReadCloser, error) {
 
 // uncompressedLayerFromTarball implements partial.UncompressedLayer
 type uncompressedLayerFromTarball struct {
-	diffID   v1.Hash
-	opener   Opener
-	filePath string
+	diffID    v1.Hash
+	mediaType types.MediaType
+	opener    Opener
+	filePath  string
 }
 
 // DiffID implements partial.UncompressedLayer
@@ -227,10 +231,7 @@ func (ulft *uncompressedLayerFromTarball) Uncompressed() (io.ReadCloser, error) 
 }
 
 func (ulft *uncompressedLayerFromTarball) MediaType() (types.MediaType, error) {
-	// Technically the media type should be 'application/tar' but given that our
-	// v1.Layer doesn't force consumers to care about whether the layer is compressed
-	// we should be fine returning the DockerLayer media type
-	return types.DockerLayer, nil
+	return ulft.mediaType, nil
 }
 
 func (i *uncompressedImage) LayerByDiffID(h v1.Hash) (partial.UncompressedLayer, error) {
@@ -240,10 +241,19 @@ func (i *uncompressedImage) LayerByDiffID(h v1.Hash) (partial.UncompressedLayer,
 	}
 	for idx, diffID := range cfg.RootFS.DiffIDs {
 		if diffID == h {
+			// Technically the media type should be 'application/tar' but given that our
+			// v1.Layer doesn't force consumers to care about whether the layer is compressed
+			// we should be fine returning the DockerLayer media type
+			mt := types.DockerLayer
+			if bd, ok := i.imgDescriptor.LayerSources[h]; ok {
+				// Overwrite the mediaType for foreign layers.
+				mt = bd.MediaType
+			}
 			return &uncompressedLayerFromTarball{
-				diffID:   diffID,
-				opener:   i.opener,
-				filePath: i.imgDescriptor.Layers[idx],
+				diffID:    diffID,
+				mediaType: mt,
+				opener:    i.opener,
+				filePath:  i.imgDescriptor.Layers[idx],
 			}, nil
 		}
 	}
@@ -277,21 +287,32 @@ func (c *compressedImage) Manifest() (*v1.Manifest, error) {
 		},
 	}
 
-	for _, p := range c.imgDescriptor.Layers {
-		l, err := extractFileFromTar(c.opener, p)
+	for i, p := range c.imgDescriptor.Layers {
+		cfg, err := partial.ConfigFile(c)
 		if err != nil {
 			return nil, err
 		}
-		defer l.Close()
-		sha, size, err := v1.SHA256(l)
-		if err != nil {
-			return nil, err
+		diffid := cfg.RootFS.DiffIDs[i]
+		if d, ok := c.imgDescriptor.LayerSources[diffid]; ok {
+			// If it's a foreign layer, just append the descriptor so we can avoid
+			// reading the entire file.
+			c.manifest.Layers = append(c.manifest.Layers, d)
+		} else {
+			l, err := extractFileFromTar(c.opener, p)
+			if err != nil {
+				return nil, err
+			}
+			defer l.Close()
+			sha, size, err := v1.SHA256(l)
+			if err != nil {
+				return nil, err
+			}
+			c.manifest.Layers = append(c.manifest.Layers, v1.Descriptor{
+				MediaType: types.DockerLayer,
+				Size:      size,
+				Digest:    sha,
+			})
 		}
-		c.manifest.Layers = append(c.manifest.Layers, v1.Descriptor{
-			MediaType: types.DockerLayer,
-			Size:      size,
-			Digest:    sha,
-		})
 	}
 	return c.manifest, nil
 }
@@ -302,14 +323,14 @@ func (c *compressedImage) RawManifest() ([]byte, error) {
 
 // compressedLayerFromTarball implements partial.CompressedLayer
 type compressedLayerFromTarball struct {
-	digest   v1.Hash
+	desc     v1.Descriptor
 	opener   Opener
 	filePath string
 }
 
 // Digest implements partial.CompressedLayer
 func (clft *compressedLayerFromTarball) Digest() (v1.Hash, error) {
-	return clft.digest, nil
+	return clft.desc.Digest, nil
 }
 
 // Compressed implements partial.CompressedLayer
@@ -319,18 +340,12 @@ func (clft *compressedLayerFromTarball) Compressed() (io.ReadCloser, error) {
 
 // MediaType implements partial.CompressedLayer
 func (clft *compressedLayerFromTarball) MediaType() (types.MediaType, error) {
-	return types.DockerLayer, nil
+	return clft.desc.MediaType, nil
 }
 
 // Size implements partial.CompressedLayer
 func (clft *compressedLayerFromTarball) Size() (int64, error) {
-	r, err := clft.Compressed()
-	if err != nil {
-		return -1, err
-	}
-	defer r.Close()
-	_, i, err := v1.SHA256(r)
-	return i, err
+	return clft.desc.Size, nil
 }
 
 func (c *compressedImage) LayerByDigest(h v1.Hash) (partial.CompressedLayer, error) {
@@ -342,7 +357,7 @@ func (c *compressedImage) LayerByDigest(h v1.Hash) (partial.CompressedLayer, err
 		if l.Digest == h {
 			fp := c.imgDescriptor.Layers[i]
 			return &compressedLayerFromTarball{
-				digest:   h,
+				desc:     l,
 				opener:   c.opener,
 				filePath: fp,
 			}, nil
