@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 )
 
 // WriteToFile writes in the compressed format to a tarball, on disk.
@@ -41,7 +42,7 @@ func WriteToFile(p string, ref name.Reference, img v1.Image) error {
 // MultiWriteToFile writes in the compressed format to a tarball, on disk.
 // This is just syntactic sugar wrapping tarball.MultiWrite with a new file.
 func MultiWriteToFile(p string, tagToImage map[name.Tag]v1.Image) error {
-	var refToImage map[name.Reference]v1.Image = make(map[name.Reference]v1.Image, len(tagToImage))
+	refToImage := make(map[name.Reference]v1.Image, len(tagToImage))
 	for i, d := range tagToImage {
 		refToImage[i] = d
 	}
@@ -71,7 +72,7 @@ func Write(ref name.Reference, img v1.Image, w io.Writer) error {
 // One file for each layer, named after the layer's SHA.
 // One file for the config blob, named after its SHA.
 func MultiWrite(tagToImage map[name.Tag]v1.Image, w io.Writer) error {
-	var refToImage map[name.Reference]v1.Image = make(map[name.Reference]v1.Image, len(tagToImage))
+	refToImage := make(map[name.Reference]v1.Image, len(tagToImage))
 	for i, d := range tagToImage {
 		refToImage[i] = d
 	}
@@ -104,6 +105,9 @@ func MultiRefWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 			return err
 		}
 
+		// Store foreign layer info.
+		layerSources := make(map[v1.Hash]v1.Descriptor)
+
 		// Write the layers.
 		layers, err := img.Layers()
 		if err != nil {
@@ -114,6 +118,19 @@ func MultiRefWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 			d, err := l.Digest()
 			if err != nil {
 				return err
+			}
+
+			// Add to LayerSources if it's a foreign layer.
+			desc, err := partial.BlobDescriptor(img, d)
+			if err != nil {
+				return err
+			}
+			if !desc.MediaType.IsDistributable() {
+				diffid, err := partial.BlobToDiffID(img, d)
+				if err != nil {
+					return err
+				}
+				layerSources[diffid] = desc
 			}
 
 			// Munge the file name to appease ancient technology.
@@ -143,9 +160,10 @@ func MultiRefWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 
 		// Generate the tar descriptor and write it.
 		sitd := singleImageTarDescriptor{
-			Config:   cfgName.String(),
-			RepoTags: tags,
-			Layers:   layerFiles,
+			Config:       cfgName.String(),
+			RepoTags:     tags,
+			Layers:       layerFiles,
+			LayerSources: layerSources,
 		}
 
 		td = append(td, sitd)

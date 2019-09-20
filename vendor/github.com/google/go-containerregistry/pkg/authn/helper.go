@@ -18,10 +18,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
-
-	"github.com/google/go-containerregistry/pkg/name"
 )
 
 // magicNotFoundMessage is the string that the CLI special cases to mean
@@ -46,7 +45,7 @@ func (dr *defaultRunner) Run(cmd *exec.Cmd) error {
 // helper executes the named credential helper against the given domain.
 type helper struct {
 	name   string
-	domain name.Registry
+	domain string
 
 	// We add this layer of indirection to facilitate unit testing.
 	r runner
@@ -72,6 +71,7 @@ func (h *helper) Authorization() (string, error) {
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
+	cmd.Stderr = os.Stderr
 	cmdErr := h.r.Run(cmd)
 
 	// If we see this specific message, it means the domain wasn't found

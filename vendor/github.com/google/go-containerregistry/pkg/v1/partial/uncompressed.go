@@ -54,7 +54,7 @@ func (ule *uncompressedLayerExtender) Compressed() (io.ReadCloser, error) {
 	if err != nil {
 		return nil, err
 	}
-	return v1util.GzipReadCloser(u)
+	return v1util.GzipReadCloser(u), nil
 }
 
 // Digest implements v1.Layer
@@ -178,6 +178,11 @@ func (i *uncompressedImageExtender) Manifest() (*v1.Manifest, error) {
 // RawManifest implements v1.Image
 func (i *uncompressedImageExtender) RawManifest() ([]byte, error) {
 	return RawManifest(i)
+}
+
+// Size implements v1.Image
+func (i *uncompressedImageExtender) Size() (int64, error) {
+	return Size(i)
 }
 
 // ConfigName implements v1.Image

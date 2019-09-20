@@ -16,7 +16,7 @@ require (
 	github.com/golang/protobuf v1.1.0 // indirect
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-cmp v0.2.0
-	github.com/google/go-containerregistry v0.0.0-20190623150931-ca8b66cb1b79
+	github.com/google/go-containerregistry v0.0.0-20190916154234-650bcbc276f3
 	github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf // indirect
 	github.com/googleapis/gnostic v0.0.0-20170729233727-0c5108395e2d // indirect
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
