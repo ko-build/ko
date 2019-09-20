@@ -27,7 +27,7 @@ type BuildOptions struct {
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
-	cmd.Flags().IntVarP(&bo.ConcurrentBuilds, "--jobs", "j", runtime.GOMAXPROCS(0),
+	cmd.Flags().IntVarP(&bo.ConcurrentBuilds, "jobs", "j", runtime.GOMAXPROCS(0),
 		"The maximum number of concurrent builds")
 	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,
 		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
