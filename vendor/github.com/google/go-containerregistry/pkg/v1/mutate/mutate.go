@@ -83,7 +83,7 @@ type IndexAddendum struct {
 	v1.Descriptor
 }
 
-// AppendManifest appends a manifest to tbe ImageIndex.
+// AppendManifests appends a manifest to the ImageIndex.
 func AppendManifests(base v1.ImageIndex, adds ...IndexAddendum) v1.ImageIndex {
 	return &index{
 		base: base,
@@ -99,8 +99,6 @@ func Config(base v1.Image, cfg v1.Config) (v1.Image, error) {
 	}
 
 	cf.Config = cfg
-	// Downstream tooling expects these to match.
-	cf.ContainerConfig = cfg
 
 	return ConfigFile(base, cf)
 }
@@ -283,7 +281,6 @@ func Time(img v1.Image, t time.Time) (v1.Image, error) {
 
 	// Copy basic config over
 	cfg.Config = ocf.Config
-	cfg.ContainerConfig = ocf.Config // Downstream tooling expects these to match.
 
 	// Strip away timestamps from the config file
 	cfg.Created = v1.Time{Time: t}
@@ -363,7 +360,6 @@ func Canonical(img v1.Image) (v1.Image, error) {
 
 	cfg.Container = ""
 	cfg.Config.Hostname = ""
-	cfg.ContainerConfig.Hostname = ""
 	cfg.DockerVersion = ""
 
 	return ConfigFile(img, cfg)

@@ -34,9 +34,9 @@ import (
 
 type image struct {
 	opener        Opener
-	td            *tarDescriptor
+	manifest      *Manifest
 	config        []byte
-	imgDescriptor *singleImageTarDescriptor
+	imgDescriptor *Descriptor
 
 	tag *name.Tag
 }
@@ -100,8 +100,8 @@ func (i *image) MediaType() (types.MediaType, error) {
 	return types.DockerManifestSchema2, nil
 }
 
-// singleImageTarDescriptor is the struct used to represent a single image inside a `docker save` tarball.
-type singleImageTarDescriptor struct {
+// Descriptor stores the manifest data for a single image inside a `docker save` tarball.
+type Descriptor struct {
 	Config   string
 	RepoTags []string
 	Layers   []string
@@ -110,17 +110,17 @@ type singleImageTarDescriptor struct {
 	LayerSources map[v1.Hash]v1.Descriptor `json:",omitempty"`
 }
 
-// tarDescriptor is the struct used inside the `manifest.json` file of a `docker save` tarball.
-type tarDescriptor []singleImageTarDescriptor
+// Manifest represents the manifests of all images as the `manifest.json` file in a `docker save` tarball.
+type Manifest []Descriptor
 
-func (td tarDescriptor) findSpecifiedImageDescriptor(tag *name.Tag) (*singleImageTarDescriptor, error) {
+func (m Manifest) findDescriptor(tag *name.Tag) (*Descriptor, error) {
 	if tag == nil {
-		if len(td) != 1 {
+		if len(m) != 1 {
 			return nil, errors.New("tarball must contain only a single image to be used with tarball.Image")
 		}
-		return &(td)[0], nil
+		return &(m)[0], nil
 	}
-	for _, img := range td {
+	for _, img := range m {
 		for _, tagStr := range img.RepoTags {
 			repoTag, err := name.NewTag(tagStr)
 			if err != nil {
@@ -150,17 +150,17 @@ func (i *image) areLayersCompressed() (bool, error) {
 }
 
 func (i *image) loadTarDescriptorAndConfig() error {
-	td, err := extractFileFromTar(i.opener, "manifest.json")
+	m, err := extractFileFromTar(i.opener, "manifest.json")
 	if err != nil {
 		return err
 	}
-	defer td.Close()
+	defer m.Close()
 
-	if err := json.NewDecoder(td).Decode(&i.td); err != nil {
+	if err := json.NewDecoder(m).Decode(&i.manifest); err != nil {
 		return err
 	}
 
-	i.imgDescriptor, err = i.td.findSpecifiedImageDescriptor(i.tag)
+	i.imgDescriptor, err = i.manifest.findDescriptor(i.tag)
 	if err != nil {
 		return err
 	}
@@ -220,6 +220,18 @@ type uncompressedLayerFromTarball struct {
 	filePath  string
 }
 
+// foreignUncompressedLayer implements partial.UncompressedLayer but returns
+// a custom descriptor. This allows the foreign layer URLs to be included in
+// the generated image manifest for uncompressed layers.
+type foreignUncompressedLayer struct {
+	uncompressedLayerFromTarball
+	desc v1.Descriptor
+}
+
+func (fl *foreignUncompressedLayer) Descriptor() (*v1.Descriptor, error) {
+	return &fl.desc, nil
+}
+
 // DiffID implements partial.UncompressedLayer
 func (ulft *uncompressedLayerFromTarball) DiffID() (v1.Hash, error) {
 	return ulft.diffID, nil
@@ -247,7 +259,15 @@ func (i *uncompressedImage) LayerByDiffID(h v1.Hash) (partial.UncompressedLayer,
 			mt := types.DockerLayer
 			if bd, ok := i.imgDescriptor.LayerSources[h]; ok {
 				// Overwrite the mediaType for foreign layers.
-				mt = bd.MediaType
+				return &foreignUncompressedLayer{
+					uncompressedLayerFromTarball: uncompressedLayerFromTarball{
+						diffID:    diffID,
+						mediaType: bd.MediaType,
+						opener:    i.opener,
+						filePath:  i.imgDescriptor.Layers[idx],
+					},
+					desc: bd,
+				}, nil
 			}
 			return &uncompressedLayerFromTarball{
 				diffID:    diffID,

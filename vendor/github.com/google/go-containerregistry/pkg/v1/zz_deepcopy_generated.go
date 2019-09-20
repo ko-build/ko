@@ -98,7 +98,6 @@ func (in *ConfigFile) DeepCopyInto(out *ConfigFile) {
 	}
 	in.RootFS.DeepCopyInto(&out.RootFS)
 	in.Config.DeepCopyInto(&out.Config)
-	in.ContainerConfig.DeepCopyInto(&out.ContainerConfig)
 	return
 }
 
