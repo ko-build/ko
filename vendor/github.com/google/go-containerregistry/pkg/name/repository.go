@@ -21,7 +21,7 @@ import (
 
 const (
 	defaultNamespace = "library"
-	repositoryChars  = "abcdefghijklmnopqrstuvwxyz0123456789_-./"
+	repositoryChars  = "abcdefghijklmnopqrstuvwxyz0123456789_-./:"
 	regRepoDelimiter = "/"
 )
 
