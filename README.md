@@ -13,7 +13,6 @@
 ```shell
 GO111MODULE=on go get github.com/google/ko/cmd/ko
 ```
-```
 
 ## The `ko` Model
 
