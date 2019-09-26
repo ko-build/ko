@@ -108,7 +108,7 @@ func ping(reg name.Registry, t http.RoundTripper) (*pingResp, error) {
 				scheme:    scheme,
 			}, nil
 		default:
-			return nil, fmt.Errorf("unrecognized HTTP status: %v", resp.Status)
+			return nil, CheckError(resp, http.StatusOK, http.StatusUnauthorized)
 		}
 	}
 	return nil, connErr

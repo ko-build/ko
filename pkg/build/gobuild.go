@@ -448,7 +448,6 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
 	cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
-	cfg.ContainerConfig = cfg.Config
 	cfg.Author = "github.com/google/ko"
 
 	image, err := mutate.ConfigFile(withApp, cfg)

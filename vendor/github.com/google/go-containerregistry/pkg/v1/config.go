@@ -24,17 +24,16 @@ import (
 // how to launch a container. See:
 // https://github.com/opencontainers/image-spec/blob/master/config.md
 type ConfigFile struct {
-	Architecture    string    `json:"architecture"`
-	Author          string    `json:"author,omitempty"`
-	Container       string    `json:"container,omitempty"`
-	Created         Time      `json:"created,omitempty"`
-	DockerVersion   string    `json:"docker_version,omitempty"`
-	History         []History `json:"history,omitempty"`
-	OS              string    `json:"os"`
-	RootFS          RootFS    `json:"rootfs"`
-	Config          Config    `json:"config"`
-	ContainerConfig Config    `json:"container_config,omitempty"`
-	OSVersion       string    `json:"osversion,omitempty"`
+	Architecture  string    `json:"architecture"`
+	Author        string    `json:"author,omitempty"`
+	Container     string    `json:"container,omitempty"`
+	Created       Time      `json:"created,omitempty"`
+	DockerVersion string    `json:"docker_version,omitempty"`
+	History       []History `json:"history,omitempty"`
+	OS            string    `json:"os"`
+	RootFS        RootFS    `json:"rootfs"`
+	Config        Config    `json:"config"`
+	OSVersion     string    `json:"osversion,omitempty"`
 }
 
 // History is one entry of a list recording how this container image was built.
