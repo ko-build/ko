@@ -21,13 +21,13 @@ import (
 // LocalOptions represents options for the ko binary.
 type LocalOptions struct {
 	// Local publishes images to a local docker daemon.
-	Local bool
+	Local            bool
 	InsecureRegistry bool
 }
 
 func AddLocalArg(cmd *cobra.Command, lo *LocalOptions) {
 	cmd.Flags().BoolVarP(&lo.Local, "local", "L", lo.Local,
 		"Whether to publish images to a local docker daemon vs. a registry.")
-	cmd.Flags().BoolVar(&lo.InsecureRegistry, "insecure-registry",  lo.InsecureRegistry,
+	cmd.Flags().BoolVar(&lo.InsecureRegistry, "insecure-registry", lo.InsecureRegistry,
 		"Whether to skip TLS verification on the registry")
 }

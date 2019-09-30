@@ -47,7 +47,6 @@ func WithDisabledOptimizations() Option {
 
 // withBuilder is a functional option for overriding the way go binaries
 // are built.
-// This is exposed for testing.
 func withBuilder(b builder) Option {
 	return func(gbo *gobuildOpener) error {
 		gbo.build = b

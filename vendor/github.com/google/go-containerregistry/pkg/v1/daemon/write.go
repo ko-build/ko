@@ -35,7 +35,7 @@ type ImageLoader interface {
 
 // GetImageLoader is a variable so we can override in tests.
 var GetImageLoader = func() (ImageLoader, error) {
-	cli, err := client.NewEnvClient()
+	cli, err := client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
 		return nil, err
 	}

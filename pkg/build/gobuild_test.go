@@ -66,14 +66,12 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
 	}
-
 	mod := &modInfo{
 		Path: filepath.FromSlash("github.com/google/ko/cmd/ko/test"),
 		Dir:  ".",
 	}
 
-	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
-		withModuleInfo(mod))
+	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }), withModuleInfo(mod))
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}
@@ -104,7 +102,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 }
 
 // A helper method we use to substitute for the default "build" method.
-func writeTempFile(s string, _ bool) (string, error) {
+func writeTempFile(s string, _ v1.Platform, _ bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -253,19 +251,15 @@ func TestGoBuild(t *testing.T) {
 	})
 
 	t.Run("check app layer contents", func(t *testing.T) {
-		expectedHash := v1.Hash{
-			Algorithm: "sha256",
-			Hex:       "63b6e090921b79b61e7f5fba44d2ea0f81215d9abac3d005dda7cb9a1f8a025d",
-		}
-		appLayer := ls[baseLayers]
+		dataLayer := ls[baseLayers]
 
-		if got, err := appLayer.Digest(); err != nil {
+		if _, err := dataLayer.Digest(); err != nil {
 			t.Errorf("Digest() = %v", err)
-		} else if got != expectedHash {
-			t.Errorf("Digest() = %v, want %v", got, expectedHash)
 		}
+		// We don't check the data layer here because it includes a symlink of refs and
+		// will produce a distinct hash each time we commit something.
 
-		r, err := appLayer.Uncompressed()
+		r, err := dataLayer.Uncompressed()
 		if err != nil {
 			t.Errorf("Uncompressed() = %v", err)
 		}

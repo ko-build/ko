@@ -27,7 +27,7 @@ func addPublish(topLevel *cobra.Command) {
 	lo := &options.LocalOptions{}
 	no := &options.NameOptions{}
 	ta := &options.TagsOptions{}
-	do := &options.DebugOptions{}
+	bo := &options.BuildOptions{}
 
 	publish := &cobra.Command{
 		Use:   "publish IMPORTPATH...",
@@ -60,7 +60,7 @@ func addPublish(topLevel *cobra.Command) {
   ko publish --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
 		Args: cobra.MinimumNArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			builder, err := makeBuilder(do)
+			builder, err := makeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
@@ -80,6 +80,6 @@ func addPublish(topLevel *cobra.Command) {
 	options.AddLocalArg(publish, lo)
 	options.AddNamingArgs(publish, no)
 	options.AddTagsArg(publish, ta)
-	options.AddDebugArg(publish, do)
+	options.AddBuildOptions(publish, bo)
 	topLevel.AddCommand(publish)
 }

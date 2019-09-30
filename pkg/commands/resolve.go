@@ -24,13 +24,13 @@ import (
 
 // addResolve augments our CLI surface with resolve.
 func addResolve(topLevel *cobra.Command) {
-
 	lo := &options.LocalOptions{}
 	no := &options.NameOptions{}
 	fo := &options.FilenameOptions{}
 	ta := &options.TagsOptions{}
-	do := &options.DebugOptions{}
 	so := &options.SelectorOptions{}
+	sto := &options.StrictOptions{}
+	bo := &options.BuildOptions{}
 
 	resolve := &cobra.Command{
 		Use:   "resolve -f FILENAME",
@@ -58,7 +58,7 @@ func addResolve(topLevel *cobra.Command) {
   ko resolve --local -f config/`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			builder, err := makeBuilder(do)
+			builder, err := makeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
@@ -66,14 +66,15 @@ func addResolve(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
-			resolveFilesToWriter(builder, publisher, fo, so, os.Stdout)
+			resolveFilesToWriter(builder, publisher, fo, so, sto, os.Stdout)
 		},
 	}
 	options.AddLocalArg(resolve, lo)
 	options.AddNamingArgs(resolve, no)
 	options.AddFileArg(resolve, fo)
 	options.AddTagsArg(resolve, ta)
-	options.AddDebugArg(resolve, do)
 	options.AddSelectorArg(resolve, so)
+	options.AddStrictArg(resolve, sto)
+	options.AddBuildOptions(resolve, bo)
 	topLevel.AddCommand(resolve)
 }

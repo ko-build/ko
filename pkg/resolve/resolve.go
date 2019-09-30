@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"strings"
 	"sync"
 
 	"github.com/google/ko/pkg/build"
@@ -28,7 +29,7 @@ import (
 
 // ImageReferences resolves supported references to images within the input yaml
 // to published image digests.
-func ImageReferences(input []byte, builder build.Interface, publisher publish.Interface) ([]byte, error) {
+func ImageReferences(input []byte, strict bool, builder build.Interface, publisher publish.Interface) ([]byte, error) {
 	// First, walk the input objects and collect a list of supported references
 	refs := make(map[string]struct{})
 	// The loop is to support multi-document yaml files.
@@ -45,8 +46,15 @@ func ImageReferences(input []byte, builder build.Interface, publisher publish.In
 		}
 		// This simply returns the replaced object, which we discard during the gathering phase.
 		if _, err := replaceRecursive(obj, func(ref string) (string, error) {
-			if builder.IsSupportedReference(ref) {
-				refs[ref] = struct{}{}
+			strictRef := strings.HasPrefix(ref, "ko://")
+			if strict && !strictRef {
+				return ref, nil
+			}
+			tref := strings.TrimPrefix(ref, "ko://")
+			if builder.IsSupportedReference(tref) {
+				refs[tref] = struct{}{}
+			} else if strict && strictRef {
+				return "", fmt.Errorf("Found strict reference %q but %s is not a valid import path", ref, tref)
 			}
 			return ref, nil
 		}); err != nil {
@@ -93,6 +101,7 @@ func ImageReferences(input []byte, builder build.Interface, publisher publish.In
 			if !builder.IsSupportedReference(ref) {
 				return ref, nil
 			}
+			ref = strings.TrimPrefix(ref, "ko://")
 			if val, ok := sm.Load(ref); ok {
 				return val.(string), nil
 			}

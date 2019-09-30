@@ -41,7 +41,7 @@ const (
 
 // GetBase takes an importpath and returns a base v1.Image.
 type GetBase func(string) (v1.Image, error)
-type builder func(string, bool) (string, error)
+type builder func(string, v1.Platform, bool) (string, error)
 
 type gobuild struct {
 	getBase              GetBase
@@ -147,7 +147,7 @@ func (g *gobuild) importPackage(s string) (*gb.Package, error) {
 	return nil, moduleErr
 }
 
-func build(ip string, disableOptimizations bool) (string, error) {
+func build(ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -165,8 +165,12 @@ func build(ip string, disableOptimizations bool) (string, error) {
 	cmd := exec.Command("go", args...)
 
 	// Last one wins
-	// TODO(mattmoor): GOARCH=amd64
-	cmd.Env = append([]string{"CGO_ENABLED=0", "GOOS=linux"}, os.Environ()...)
+	defaultEnv := []string{
+		"CGO_ENABLED=0",
+		"GOOS=" + platform.OS,
+		"GOARCH=" + platform.Architecture,
+	}
+	cmd.Env = append(defaultEnv, os.Environ()...)
 
 	var output bytes.Buffer
 	cmd.Stderr = &output
@@ -276,6 +280,70 @@ func (g *gobuild) kodataPath(s string) (string, error) {
 // Where kodata lives in the image.
 const kodataRoot = "/var/run/ko"
 
+// walkRecursive performs a filepath.Walk of the given root directory adding it
+// to the provided tar.Writer with root -> chroot.  All symlinks are dereferenced,
+// which is what leads to recursion when we encounter a directory symlink.
+func walkRecursive(tw *tar.Writer, root, chroot string) error {
+	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if path == root {
+			// Add an entry for the root directory of our walk.
+			return tw.WriteHeader(&tar.Header{
+				Name:     chroot,
+				Typeflag: tar.TypeDir,
+				// Use a fixed Mode, so that this isn't sensitive to the directory and umask
+				// under which it was created. Additionally, windows can only set 0222,
+				// 0444, or 0666, none of which are executable.
+				Mode: 0555,
+			})
+		}
+		if err != nil {
+			return err
+		}
+		// Skip other directories.
+		if info.Mode().IsDir() {
+			return nil
+		}
+		newPath := filepath.Join(chroot, path[len(root):])
+
+		path, err = filepath.EvalSymlinks(path)
+		if err != nil {
+			return err
+		}
+
+		// Chase symlinks.
+		info, err = os.Stat(path)
+		if err != nil {
+			return err
+		}
+		// Skip other directories.
+		if info.Mode().IsDir() {
+			return walkRecursive(tw, path, newPath)
+		}
+
+		// Open the file to copy it into the tarball.
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		// Copy the file into the image tarball.
+		if err := tw.WriteHeader(&tar.Header{
+			Name:     newPath,
+			Size:     info.Size(),
+			Typeflag: tar.TypeReg,
+			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
+			// under which it was created. Additionally, windows can only set 0222,
+			// 0444, or 0666, none of which are executable.
+			Mode: 0555,
+		}); err != nil {
+			return err
+		}
+		_, err = io.Copy(tw, file)
+		return err
+	})
+}
+
 func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	// Compress this before calling tarball.LayerFromOpener, since it eagerly
@@ -293,62 +361,27 @@ func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 		return nil, err
 	}
 
-	err = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if path == root {
-			// Add an entry for /var/run/ko
-			return tw.WriteHeader(&tar.Header{
-				Name:     kodataRoot,
-				Typeflag: tar.TypeDir,
-			})
-		}
-		if err != nil {
-			return err
-		}
-		// Skip other directories.
-		if info.Mode().IsDir() {
-			return nil
-		}
-
-		// Chase symlinks.
-		info, err = os.Stat(path)
-		if err != nil {
-			return err
-		}
-
-		// Open the file to copy it into the tarball.
-		file, err := os.Open(path)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
-		// Copy the file into the image tarball.
-		newPath := filepath.Join(kodataRoot, path[len(root):])
-		if err := tw.WriteHeader(&tar.Header{
-			Name:     newPath,
-			Size:     info.Size(),
-			Typeflag: tar.TypeReg,
-			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
-			// under which it was created. Additionally, windows can only set 0222,
-			// 0444, or 0666, none of which are executable.
-			Mode: 0555,
-		}); err != nil {
-			return err
-		}
-		_, err = io.Copy(tw, file)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return buf, nil
+	return buf, walkRecursive(tw, root, kodataRoot)
 }
 
 // Build implements build.Interface
 func (gb *gobuild) Build(s string) (v1.Image, error) {
+	// Determine the appropriate base image for this import path.
+	base, err := gb.getBase(s)
+	if err != nil {
+		return nil, err
+	}
+	cf, err := base.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+	platform := v1.Platform{
+		OS:           cf.OS,
+		Architecture: cf.Architecture,
+	}
+
 	// Do the build into a temporary file.
-	file, err := gb.build(s, gb.disableOptimizations)
+	file, err := gb.build(s, platform, gb.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}
@@ -399,12 +432,6 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 		},
 	})
 
-	// Determine the appropriate base image for this import path.
-	base, err := gb.getBase(s)
-	if err != nil {
-		return nil, err
-	}
-
 	// Augment the base image with our application layer.
 	withApp, err := mutate.Append(base, layers...)
 	if err != nil {
@@ -421,7 +448,6 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
 	cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
-	cfg.ContainerConfig = cfg.Config
 	cfg.Author = "github.com/google/ko"
 
 	image, err := mutate.ConfigFile(withApp, cfg)

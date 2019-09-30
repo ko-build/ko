@@ -16,10 +16,7 @@ package commands
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"os/exec"
-	"strings"
+	"runtime/debug"
 
 	"github.com/spf13/cobra"
 )
@@ -40,12 +37,12 @@ func addVersion(topLevel *cobra.Command) {
 
 func version() {
 	if Version == "" {
-		gitDir := fmt.Sprintf("--git-dir=%v/src/github.com/google/ko/.git", os.Getenv("GOPATH"))
-		hash, err := exec.Command("git", gitDir, "rev-parse", "HEAD").Output()
-		if err != nil {
-			log.Fatalf("error during command execution: %v", err)
+		i, ok := debug.ReadBuildInfo()
+		if !ok {
+			fmt.Println("could not determine build information")
+			return
 		}
-		Version = strings.TrimSpace(string(hash))
+		Version = i.Main.Version
 	}
-	fmt.Printf("version: %v\n", Version)
+	fmt.Println(Version)
 }
