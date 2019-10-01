@@ -48,11 +48,16 @@ func WithAuthFromKeychain(keys authn.Keychain) Option {
 		// means that docker.io/mattmoor actually gets interpreted as
 		// docker.io/library/mattmoor, which gets tricky when we start
 		// appending things to it in the publisher.
-		repo, err := name.NewRepository(i.base)
+		reg, err := name.NewRegistry(i.base)
 		if err != nil {
-			return err
+			// Workaround for localhost:5000 as KO_DOCKER_REPO.
+			repo, err := name.NewRepository(i.base)
+			if err != nil {
+				return err
+			}
+			reg = repo.Registry
 		}
-		auth, err := keys.Resolve(repo.Registry)
+		auth, err := keys.Resolve(reg)
 		if err != nil {
 			return err
 		}
