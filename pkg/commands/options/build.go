@@ -24,6 +24,7 @@ import (
 type BuildOptions struct {
 	ConcurrentBuilds     int
 	DisableOptimizations bool
+	OCILayoutPath    string
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -31,4 +32,5 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"The maximum number of concurrent builds")
 	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,
 		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
+	cmd.Flags().StringVarP(&bo.OCILayoutPath, "oci-layout-path", "", "", "Path to save the OCI image spec of the built images")
 }

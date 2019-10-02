@@ -19,6 +19,8 @@ import (
 	gb "go/build"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish"
 
@@ -39,7 +41,16 @@ func qualifyLocalImport(importpath string) (string, error) {
 	return pkgs[0].PkgPath, nil
 }
 
-func publishImages(importpaths []string, pub publish.Interface, b build.Interface) (map[string]name.Reference, error) {
+func publishImages(importpaths []string, pub publish.Interface, b build.Interface, ociLayoutPath string) (map[string]name.Reference, error) {
+	var ociOutput layout.Path
+	var err error
+
+	if ociLayoutPath != "" {
+		ociOutput, err = layout.Write(ociLayoutPath, empty.Index)
+		if err != nil {
+			return nil, fmt.Errorf("error creating new oci layout file: %v", err)
+		}
+	}
 	imgs := make(map[string]name.Reference)
 	for _, importpath := range importpaths {
 		if gb.IsLocalImport(importpath) {
@@ -58,6 +69,13 @@ func publishImages(importpaths []string, pub publish.Interface, b build.Interfac
 		if err != nil {
 			return nil, fmt.Errorf("error building %q: %v", importpath, err)
 		}
+
+		if ociLayoutPath != "" {
+			if err := ociOutput.AppendImage(img); err != nil {
+				return nil, fmt.Errorf("error appending image to file: %v", err)
+			}
+		}
+
 		ref, err := pub.Publish(img, importpath)
 		if err != nil {
 			return nil, fmt.Errorf("error publishing %s: %v", importpath, err)

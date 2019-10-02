@@ -68,7 +68,7 @@ func addPublish(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
-			images, err := publishImages(args, publisher, builder)
+			images, err := publishImages(args, publisher, builder, bo.OCILayoutPath)
 			if err != nil {
 				log.Fatalf("failed to publish images: %v", err)
 			}
