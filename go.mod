@@ -8,7 +8,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/google/btree v1.0.0 // indirect
 	github.com/google/go-cmp v0.2.0
-	github.com/google/go-containerregistry v0.0.0-20190926185806-cf66aa2c31a9
+	github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/imdario/mergo v0.3.5 // indirect
 	github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
@@ -20,7 +20,7 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.3.2
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
-	golang.org/x/tools v0.0.0-20190926165942-a8d5d34286bd
+	golang.org/x/tools v0.0.0-20191001184121-329c8d646ebe
 	gopkg.in/yaml.v2 v2.2.2
 	k8s.io/apimachinery v0.0.0-20180904193909-def12e63c512
 	k8s.io/client-go v8.0.0+incompatible // indirect
