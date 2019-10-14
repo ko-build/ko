@@ -6,6 +6,8 @@
 [![GoDoc](https://godoc.org/github.com/google/ko?status.svg)](https://godoc.org/github.com/google/ko)
 [![Go Report Card](https://goreportcard.com/badge/google/ko)](https://goreportcard.com/report/google/ko)
 
+<img src="https://github.com/google/ko/raw/master/logo/ko.png" width="300">
+
 ## Installation
 
 `ko` can be installed and upgraded by running:
