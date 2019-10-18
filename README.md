@@ -116,6 +116,10 @@ customresourcedefinition.apiextensions.k8s.io/warmimages.mattmoor.io configured
 their execution.  By default, `ko` publishes images to a Docker Registry
 specified via `KO_DOCKER_REPO`.
 
+**Note**: You'll need to be authenticated with your `KO_DOCKER_REPO` before pushing
+images. Run `gcloud auth configure-docker` if you are using Google Container
+Registry or `docker login` if you are using Docker Hub.
+
 However, these same commands can be directed to operate locally as well via
 the `--local` or `-L` command (or setting `KO_DOCKER_REPO=ko.local`).  See
 the [`minikube` section](./README.md#with-minikube) for more detail.
