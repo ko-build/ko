@@ -82,7 +82,7 @@ For example, any of the following would be matched:
 ### Results
 
 Employing this convention enables `ko` to have effectively zero configuration
-and enable very fast development iteration. For
+and enables very fast development iteration. For
 [warm-image](https://github.com/mattmoor/warm-image), `ko` is able to
 build, containerize, and redeploy a non-trivial Kubernetes controller app in
 seconds (dominated by two `go build`s).
