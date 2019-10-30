@@ -154,13 +154,14 @@ func build(ip string, platform v1.Platform, disableOptimizations bool) (string, 
 	}
 	file := filepath.Join(tmpDir, "out")
 
-	args := make([]string, 0, 6)
+	args := make([]string, 0, 7)
 	args = append(args, "build")
 	if disableOptimizations {
 		// Disable optimizations (-N) and inlining (-l).
 		args = append(args, "-gcflags", "all=-N -l")
 	}
 	args = append(args, "-o", file)
+	args = append(args, "-trimpath")
 	args = append(args, ip)
 	cmd := exec.Command("go", args...)
 
