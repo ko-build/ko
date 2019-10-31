@@ -50,7 +50,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Unsupported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/pkg/build"),       // not a command.
+		filepath.FromSlash("github.com/google/ko/pkg/commands/options"),       // not a command.
 		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), // does not exist.
 	} {
 		t.Run(importpath, func(t *testing.T) {
@@ -102,7 +102,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 }
 
 // A helper method we use to substitute for the default "build" method.
-func writeTempFile(s string, _ v1.Platform, _ bool) (string, error) {
+func writeTempFile(s string, _ v1.Platform, _ bool, _ bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err

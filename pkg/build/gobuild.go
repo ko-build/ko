@@ -41,7 +41,7 @@ const (
 
 // GetBase takes an importpath and returns a base v1.Image.
 type GetBase func(string) (v1.Image, error)
-type builder func(string, v1.Platform, bool) (string, error)
+type builder func(string, v1.Platform, bool, bool) (string, error)
 
 type gobuild struct {
 	getBase              GetBase
@@ -119,11 +119,23 @@ func NewGo(options ...Option) (Interface, error) {
 // Only valid importpaths that provide commands (i.e., are "package main") are
 // supported.
 func (g *gobuild) IsSupportedReference(s string) bool {
+	return g.isMain(s) || g.isTest(s)
+}
+
+func (g *gobuild) isMain(s string) bool {
 	p, err := g.importPackage(s)
 	if err != nil {
 		return false
 	}
 	return p.IsCommand()
+}
+
+func (g *gobuild) isTest(s string) bool {
+	p, err := g.importPackage(s)
+	if err != nil {
+		return false
+	}
+	return len(p.TestGoFiles) > 0
 }
 
 var moduleErr = errors.New("unmatched importPackage with gomodules")
@@ -147,7 +159,7 @@ func (g *gobuild) importPackage(s string) (*gb.Package, error) {
 	return nil, moduleErr
 }
 
-func build(ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
+func build(ip string, platform v1.Platform, disableOptimizations bool, test bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -155,7 +167,13 @@ func build(ip string, platform v1.Platform, disableOptimizations bool) (string, 
 	file := filepath.Join(tmpDir, "out")
 
 	args := make([]string, 0, 6)
-	args = append(args, "build")
+	// We want to build a test binary
+	if test {
+		args = append(args, "test")
+		args = append(args, "-c")
+	} else {
+		args = append(args, "build")
+	}
 	if disableOptimizations {
 		// Disable optimizations (-N) and inlining (-l).
 		args = append(args, "-gcflags", "all=-N -l")
@@ -176,10 +194,18 @@ func build(ip string, platform v1.Platform, disableOptimizations bool) (string, 
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s", ip)
+	if test {
+		log.Printf("Building tests for %s", ip)
+	} else {
+		log.Printf("Building %s", ip)
+	}
 	if err := cmd.Run(); err != nil {
 		os.RemoveAll(tmpDir)
-		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
+		if test {
+			log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
+		} else {
+			log.Printf("Unexpected error running \"go test -c\": %v\n%v", err, output.String())
+		}
 		return "", err
 	}
 	return file, nil
@@ -381,7 +407,8 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 	}
 
 	// Do the build into a temporary file.
-	file, err := gb.build(s, platform, gb.disableOptimizations)
+	var file string
+	file, err = gb.build(s, platform, gb.disableOptimizations, gb.isTest(s))
 	if err != nil {
 		return nil, err
 	}
