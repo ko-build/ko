@@ -281,7 +281,7 @@ func resolveFile(
 
 	// The loop is to support multi-document yaml files.
 	// This is handled by using a yaml.Decoder and reading objects until io.EOF, see:
-	// https://github.com/go-yaml/yaml/blob/v2.2.1/yaml.go#L124
+	// https://godoc.org/gopkg.in/yaml.v3#Decoder.Decode
 	decoder := yaml.NewDecoder(bytes.NewBuffer(b))
 	for {
 		var doc yaml.Node
