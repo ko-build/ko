@@ -72,7 +72,7 @@ func ImageReferences(docs []*yaml.Node, strict bool, builder build.Interface, pu
 		return err
 	}
 
-	// Walk the tags and update them with their digest
+	// Walk the tags and update them with their digest.
 	for ref, nodes := range refs {
 		digest, ok := sm.Load(ref)
 
