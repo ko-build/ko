@@ -23,7 +23,6 @@ import (
 	gb "go/build"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -145,45 +144,6 @@ func (g *gobuild) importPackage(s string) (*gb.Package, error) {
 	}
 
 	return nil, moduleErr
-}
-
-func build(ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
-	tmpDir, err := ioutil.TempDir("", "ko")
-	if err != nil {
-		return "", err
-	}
-	file := filepath.Join(tmpDir, "out")
-
-	args := make([]string, 0, 7)
-	args = append(args, "build")
-	if disableOptimizations {
-		// Disable optimizations (-N) and inlining (-l).
-		args = append(args, "-gcflags", "all=-N -l")
-	}
-	args = append(args, "-o", file)
-	args = append(args, "-trimpath")
-	args = append(args, ip)
-	cmd := exec.Command("go", args...)
-
-	// Last one wins
-	defaultEnv := []string{
-		"CGO_ENABLED=0",
-		"GOOS=" + platform.OS,
-		"GOARCH=" + platform.Architecture,
-	}
-	cmd.Env = append(defaultEnv, os.Environ()...)
-
-	var output bytes.Buffer
-	cmd.Stderr = &output
-	cmd.Stdout = &output
-
-	log.Printf("Building %s", ip)
-	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
-		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
-		return "", err
-	}
-	return file, nil
 }
 
 func appFilename(importpath string) string {
