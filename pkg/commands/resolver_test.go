@@ -81,7 +81,6 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 		if err := decoder.Decode(&output); err == nil {
 			outStructured = append(outStructured, output)
 		} else if err == io.EOF {
-			outStructured = append(outStructured, output)
 			break
 		} else {
 			t.Errorf("yaml.Unmarshal(%v) = %v", string(outYAML), err)
@@ -92,10 +91,6 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 		testutil.ComputeDigest(base, refs[0], hashes[0]),
 		testutil.ComputeDigest(base, refs[1], hashes[1]),
 	}
-
-	// The multi-document output always seems to leave a trailing --- so we end up with
-	// an extra empty element.
-	expectedStructured = append(expectedStructured, "")
 
 	if want, got := len(expectedStructured), len(outStructured); want != got {
 		t.Errorf("resolveFile(%v) = %v, want %v", string(inputYAML), got, want)
