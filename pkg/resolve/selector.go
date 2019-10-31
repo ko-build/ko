@@ -23,11 +23,11 @@ import (
 )
 
 // MatchesSelector returns true if the Kubernetes object (represented as a
-// yaml.Node matches the selector. An error is returned if the yaml.Node is
-// not an K8s object or list
+// yaml.Node) matches the selector. An error is returned if the yaml.Node is
+// not an K8s object or list.
 //
-// If the document is a list the yaml.Node will be mutated to only include
-// items that match the selector
+// If the document is a list, the yaml.Node will be mutated to only include
+// items that match the selector.
 func MatchesSelector(doc *yaml.Node, selector labels.Selector) (bool, error) {
 	// ignore the document node
 	if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 {

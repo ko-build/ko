@@ -31,7 +31,7 @@ const koPrefix = "ko://"
 // ImageReferences resolves supported references to images within the input yaml
 // to published image digests.
 //
-// If a reference can be built & pushed it's yaml.Node will be mutated
+// If a reference can be built and pushed, its yaml.Node will be mutated.
 func ImageReferences(docs []*yaml.Node, strict bool, builder build.Interface, publisher publish.Interface) error {
 	// First, walk the input objects and collect a list of supported references
 	refs := make(map[string][]*yaml.Node)
