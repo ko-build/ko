@@ -1,18 +1,38 @@
-sudo: false
+sudo: required
 
 dist: trusty
+
+services:
+  - docker
 
 language:
   - go
 
 go:
-  - "1.12"
-  - "1.13"
+  - '1.12'
+  - '1.13'
 
 git:
   depth: 1
 
-install: true
+install: true # skipping the default go dependencies install step
+
+env:
+  global:
+    - CHANGE_MINIKUBE_NONE_USER=true
+    - MINIKUBE_WANTUPDATENOTIFICATION=false
+    - MINIKUBE_WANTREPORTERRORPROMPT=false
+    - MINIKUBE_HOME=$HOME
+    - CHANGE_MINIKUBE_NONE_USER=true
+    - KUBECONFIG=$HOME/.kube/config
+
+before_script:
+  # Download minikube.
+  - curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.4.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+  - mkdir -p $HOME/.kube $HOME/.minikube
+  - touch $KUBECONFIG
+  - sudo minikube start --vm-driver=none --kubernetes-version=v1.16.0
+  - 'sudo chown -R travis: /home/travis/.minikube/'
 
 script:
   # Verify that all source files are correctly formatted.
@@ -20,7 +40,7 @@ script:
 
   - go clean -i
   - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
-
+  - bash integration_test.sh
 # TODO: Set up coverage.
 #after_success:
 #  - bash <(curl -s https://codecov.io/bash)
