@@ -12,56 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// house gb.build function for go1.12 and earlier version without -trimpath
+// house placeholder function for go1.12 and earlier version without -trimpath
 // +build !go1.13
 
 package build
 
-import (
-	"bytes"
-	"io/ioutil"
-	"log"
-	"os"
-	"os/exec"
-	"path/filepath"
-
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-)
-
-func build(ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
-	tmpDir, err := ioutil.TempDir("", "ko")
-	if err != nil {
-		return "", err
-	}
-	file := filepath.Join(tmpDir, "out")
-
-	args := make([]string, 0, 6)
-	args = append(args, "build")
-	if disableOptimizations {
-		// Disable optimizations (-N) and inlining (-l).
-		args = append(args, "-gcflags", "all=-N -l")
-	}
-	args = append(args, "-o", file)
-	args = append(args, ip)
-	cmd := exec.Command("go", args...)
-
-	// Last one wins
-	defaultEnv := []string{
-		"CGO_ENABLED=0",
-		"GOOS=" + platform.OS,
-		"GOARCH=" + platform.Architecture,
-	}
-	cmd.Env = append(defaultEnv, os.Environ()...)
-
-	var output bytes.Buffer
-	cmd.Stderr = &output
-	cmd.Stdout = &output
-
-	log.Printf("Building %s", ip)
-	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
-		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
-		return "", err
-	}
-	return file, nil
+func addGo113TrimPathFlag(args []string) []string {
+	return args
 }
