@@ -50,8 +50,8 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Unsupported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/pkg/commands/options"),       // not a command.
-		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), // does not exist.
+		filepath.FromSlash("github.com/google/ko/pkg/commands/options"),       // neither `main` nor `test`
+		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), 			 // does not exist.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if ng.IsSupportedReference(importpath) {
