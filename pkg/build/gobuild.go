@@ -408,7 +408,7 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 
 	// Do the build into a temporary file.
 	var file string
-	file, err = gb.build(s, platform, gb.disableOptimizations, gb.isTest(s))
+	file, err = gb.build(s, platform, gb.disableOptimizations, !gb.isMain(s) && gb.isTest(s))
 	if err != nil {
 		return nil, err
 	}
