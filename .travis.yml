@@ -17,22 +17,14 @@ git:
 
 install: true # skipping the default go dependencies install step
 
-env:
-  global:
-    - CHANGE_MINIKUBE_NONE_USER=true
-    - MINIKUBE_WANTUPDATENOTIFICATION=false
-    - MINIKUBE_WANTREPORTERRORPROMPT=false
-    - MINIKUBE_HOME=$HOME
-    - CHANGE_MINIKUBE_NONE_USER=true
-    - KUBECONFIG=$HOME/.kube/config
-
 before_script:
-  # Download minikube.
-  - curl -Lo minikube https://storage.googleapis.com/minikube/releases/v1.4.0/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
-  - mkdir -p $HOME/.kube $HOME/.minikube
-  - touch $KUBECONFIG
-  - sudo minikube start --vm-driver=none --kubernetes-version=v1.16.0
-  - 'sudo chown -R travis: /home/travis/.minikube/'
+  # Download and install kubectl
+  - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+  # Download and install KinD
+  - GO111MODULE=on go get sigs.k8s.io/kind
+  # Create a new Kubernetes cluster using KinD
+  - kind create cluster
+  - export KUBECONFIG=$(kind get kubeconfig-path)
 
 script:
   # Verify that all source files are correctly formatted.
