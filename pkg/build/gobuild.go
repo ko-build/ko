@@ -166,7 +166,7 @@ func build(ip string, platform v1.Platform, disableOptimizations bool, test bool
 	}
 	file := filepath.Join(tmpDir, "out")
 
-	args := make([]string, 0, 6)
+	args := make([]string, 0, 7)
 	// We want to build a test binary
 	if test {
 		args = append(args, "test")
@@ -179,6 +179,7 @@ func build(ip string, platform v1.Platform, disableOptimizations bool, test bool
 		args = append(args, "-gcflags", "all=-N -l")
 	}
 	args = append(args, "-o", file)
+	args = addGo113TrimPathFlag(args)
 	args = append(args, ip)
 	cmd := exec.Command("go", args...)
 
