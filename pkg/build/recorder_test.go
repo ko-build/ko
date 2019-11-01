@@ -30,7 +30,7 @@ type fake struct {
 var _ Interface = (*fake)(nil)
 
 // IsSupportedReference implements Interface
-func (r *fake) IsSupportedReference(ip string) bool {
+func (r *fake) IsSupportedReference(ip string, _ bool) bool {
 	return r.isr(ip)
 }
 
@@ -65,7 +65,7 @@ func TestISRPassThrough(t *testing.T) {
 			rec := &Recorder{
 				Builder: inner,
 			}
-			rec.IsSupportedReference(test.input)
+			rec.IsSupportedReference(test.input, true)
 			if !called {
 				t.Error("IsSupportedReference wasn't called, wanted called")
 			}

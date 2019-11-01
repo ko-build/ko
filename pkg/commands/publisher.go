@@ -50,7 +50,7 @@ func publishImages(importpaths []string, pub publish.Interface, b build.Interfac
 			}
 		}
 
-		if !b.IsSupportedReference(importpath) {
+		if !b.IsSupportedReference(importpath, true) {
 			return nil, fmt.Errorf("importpath %q is not supported", importpath)
 		}
 

@@ -29,7 +29,7 @@ type slowbuild struct {
 // slowbuild implements Interface
 var _ Interface = (*slowbuild)(nil)
 
-func (sb *slowbuild) IsSupportedReference(string) bool {
+func (sb *slowbuild) IsSupportedReference(string, bool) bool {
 	return true
 }
 
@@ -45,7 +45,7 @@ func TestCaching(t *testing.T) {
 	sb := &slowbuild{duration}
 	cb, _ := NewCaching(sb)
 
-	if !cb.IsSupportedReference(ip) {
+	if !cb.IsSupportedReference(ip, true) {
 		t.Errorf("ISR(%q) = false, wanted true", ip)
 	}
 

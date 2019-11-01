@@ -28,7 +28,7 @@ type sleeper struct{}
 var _ Interface = (*sleeper)(nil)
 
 // IsSupportedReference implements Interface
-func (r *sleeper) IsSupportedReference(ip string) bool {
+func (r *sleeper) IsSupportedReference(ip string, _ bool) bool {
 	return true
 }
 

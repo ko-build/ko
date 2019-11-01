@@ -24,7 +24,7 @@ type Interface interface {
 	// IsSupportedReference determines whether the given reference is to an importpath reference
 	// that Ko supports building.
 	// TODO(mattmoor): Verify that some base repo: foo.io/bar can be suffixed with this reference and parsed.
-	IsSupportedReference(string) bool
+	IsSupportedReference(string, bool) bool
 
 	// Build turns the given importpath reference into a v1.Image containing the Go binary.
 	Build(string) (v1.Image, error)

@@ -51,7 +51,7 @@ func ImageReferences(input []byte, strict bool, builder build.Interface, publish
 				return ref, nil
 			}
 			tref := strings.TrimPrefix(ref, "ko://")
-			if builder.IsSupportedReference(tref) {
+			if builder.IsSupportedReference(tref, strictRef) {
 				refs[tref] = struct{}{}
 			} else if strict && strictRef {
 				return "", fmt.Errorf("Found strict reference %q but %s is not a valid import path", ref, tref)
@@ -98,7 +98,8 @@ func ImageReferences(input []byte, strict bool, builder build.Interface, publish
 		}
 		// Recursively walk input, replacing supported reference with our computed digests.
 		obj2, err := replaceRecursive(obj, func(ref string) (string, error) {
-			if !builder.IsSupportedReference(ref) {
+			strict = strings.HasPrefix(ref, "ko://")
+			if !builder.IsSupportedReference(ref, strict) {
 				return ref, nil
 			}
 			ref = strings.TrimPrefix(ref, "ko://")

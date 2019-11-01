@@ -118,8 +118,8 @@ func NewGo(options ...Option) (Interface, error) {
 //
 // Only valid importpaths that provide commands (i.e., are "package main") are
 // supported.
-func (g *gobuild) IsSupportedReference(s string) bool {
-	return g.isMain(s) || g.isTest(s)
+func (g *gobuild) IsSupportedReference(s string, tests bool) bool {
+	return g.isMain(s) || (tests && g.isTest(s))
 }
 
 func (g *gobuild) isMain(s string) bool {
@@ -166,7 +166,7 @@ func build(ip string, platform v1.Platform, disableOptimizations bool, test bool
 	}
 	file := filepath.Join(tmpDir, "out")
 
-	args := make([]string, 0, 7)
+	args := make([]string, 0, 8)
 	// We want to build a test binary
 	if test {
 		args = append(args, "test")

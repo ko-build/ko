@@ -71,7 +71,7 @@ func TestFixedBuild(t *testing.T) {
 		"asdf": testImage,
 	})
 
-	if got, want := f.IsSupportedReference("asdf"), true; got != want {
+	if got, want := f.IsSupportedReference("asdf", true), true; got != want {
 		t.Errorf("IsSupportedReference(asdf) = %v, want %v", got, want)
 	}
 	if got, err := f.Build("asdf"); err != nil {
@@ -80,7 +80,7 @@ func TestFixedBuild(t *testing.T) {
 		t.Errorf("Build(asdf) = %v, want %v", got, testImage)
 	}
 
-	if got, want := f.IsSupportedReference("blah"), false; got != want {
+	if got, want := f.IsSupportedReference("blah", true), false; got != want {
 		t.Errorf("IsSupportedReference(blah) = %v, want %v", got, want)
 	}
 	if got, err := f.Build("blah"); err == nil {
@@ -99,7 +99,7 @@ func newFixedBuild(entries map[string]v1.Image) build.Interface {
 }
 
 // IsSupportedReference implements build.Interface
-func (f *fixedBuild) IsSupportedReference(s string) bool {
+func (f *fixedBuild) IsSupportedReference(s string, _ bool) bool {
 	_, ok := f.entries[s]
 	return ok
 }
