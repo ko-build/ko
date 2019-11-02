@@ -116,8 +116,9 @@ func NewGo(options ...Option) (Interface, error) {
 
 // IsSupportedReference implements build.Interface
 //
-// Only valid importpaths that provide commands (i.e., are "package main") are
+// Valid importpaths that provide commands (i.e., are "package main") are
 // supported.
+// test == true also importpaths that provide tests (*_test.go) are supported
 func (g *gobuild) IsSupportedReference(s string, tests bool) bool {
 	return g.isMain(s) || (tests && g.isTest(s))
 }

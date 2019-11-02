@@ -23,8 +23,10 @@ import (
 type Interface interface {
 	// IsSupportedReference determines whether the given reference is to an importpath reference
 	// that Ko supports building.
+	// `tests` activates 'test-builds'. So importpaths that do not provide `package main` but provide tests (*_test.go).
 	// TODO(mattmoor): Verify that some base repo: foo.io/bar can be suffixed with this reference and parsed.
-	IsSupportedReference(string, bool) bool
+
+	IsSupportedReference(ip string, tests bool) bool
 
 	// Build turns the given importpath reference into a v1.Image containing the Go binary.
 	Build(string) (v1.Image, error)
