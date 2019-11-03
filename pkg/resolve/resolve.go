@@ -16,6 +16,7 @@ package resolve
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"strings"
@@ -29,7 +30,7 @@ import (
 
 // ImageReferences resolves supported references to images within the input yaml
 // to published image digests.
-func ImageReferences(input []byte, strict bool, builder build.Interface, publisher publish.Interface) ([]byte, error) {
+func ImageReferences(ctx context.Context, input []byte, strict bool, builder build.Interface, publisher publish.Interface) ([]byte, error) {
 	// First, walk the input objects and collect a list of supported references
 	refs := make(map[string]struct{})
 	// The loop is to support multi-document yaml files.
@@ -68,7 +69,7 @@ func ImageReferences(input []byte, strict bool, builder build.Interface, publish
 	for ref := range refs {
 		ref := ref
 		errg.Go(func() error {
-			img, err := builder.Build(ref)
+			img, err := builder.Build(ctx, ref)
 			if err != nil {
 				return err
 			}

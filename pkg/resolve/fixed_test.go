@@ -15,6 +15,7 @@
 package resolve
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -74,7 +75,7 @@ func TestFixedBuild(t *testing.T) {
 	if got, want := f.IsSupportedReference("asdf"), true; got != want {
 		t.Errorf("IsSupportedReference(asdf) = %v, want %v", got, want)
 	}
-	if got, err := f.Build("asdf"); err != nil {
+	if got, err := f.Build(context.Background(), "asdf"); err != nil {
 		t.Errorf("Build(asdf) = %v, want %v", err, testImage)
 	} else if got != testImage {
 		t.Errorf("Build(asdf) = %v, want %v", got, testImage)
@@ -83,7 +84,7 @@ func TestFixedBuild(t *testing.T) {
 	if got, want := f.IsSupportedReference("blah"), false; got != want {
 		t.Errorf("IsSupportedReference(blah) = %v, want %v", got, want)
 	}
-	if got, err := f.Build("blah"); err == nil {
+	if got, err := f.Build(context.Background(), "blah"); err == nil {
 		t.Errorf("Build(blah) = %v, want error", got)
 	}
 }
@@ -105,7 +106,7 @@ func (f *fixedBuild) IsSupportedReference(s string) bool {
 }
 
 // Build implements build.Interface
-func (f *fixedBuild) Build(s string) (v1.Image, error) {
+func (f *fixedBuild) Build(_ context.Context, s string) (v1.Image, error) {
 	if img, ok := f.entries[s]; ok {
 		return img, nil
 	}

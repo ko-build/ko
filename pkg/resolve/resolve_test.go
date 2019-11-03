@@ -16,6 +16,7 @@ package resolve
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"testing"
 
@@ -85,7 +86,7 @@ func TestYAMLArrays(t *testing.T) {
 				t.Fatalf("yaml.Marshal(%v) = %v", inputStructured, err)
 			}
 
-			outYAML, err := ImageReferences(inputYAML, false, testBuilder, newFixedPublish(test.base, testHashes))
+			outYAML, err := ImageReferences(context.Background(), inputYAML, false, testBuilder, newFixedPublish(test.base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -158,7 +159,7 @@ func TestYAMLMaps(t *testing.T) {
 				t.Fatalf("yaml.Marshal(%v) = %v", inputStructured, err)
 			}
 
-			outYAML, err := ImageReferences(inputYAML, false, testBuilder, newFixedPublish(base, testHashes))
+			outYAML, err := ImageReferences(context.Background(), inputYAML, false, testBuilder, newFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -226,7 +227,7 @@ func TestYAMLObject(t *testing.T) {
 				t.Fatalf("yaml.Marshal(%v) = %v", inputStructured, err)
 			}
 
-			outYAML, err := ImageReferences(inputYAML, false, testBuilder, newFixedPublish(base, testHashes))
+			outYAML, err := ImageReferences(context.Background(), inputYAML, false, testBuilder, newFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -256,7 +257,7 @@ func TestStrict(t *testing.T) {
 	}
 	inputYAML := buf.Bytes()
 	base := mustRepository("gcr.io/multi-pass")
-	outYAML, err := ImageReferences(inputYAML, true, testBuilder, newFixedPublish(base, testHashes))
+	outYAML, err := ImageReferences(context.Background(), inputYAML, true, testBuilder, newFixedPublish(base, testHashes))
 	if err != nil {
 		t.Fatalf("ImageReferences: %v", err)
 	}
@@ -285,7 +286,7 @@ func TestMultiDocumentYAMLs(t *testing.T) {
 			}
 			inputYAML := buf.Bytes()
 
-			outYAML, err := ImageReferences(inputYAML, false, testBuilder, newFixedPublish(test.base, testHashes))
+			outYAML, err := ImageReferences(context.Background(), inputYAML, false, testBuilder, newFixedPublish(test.base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}

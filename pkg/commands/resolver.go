@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -116,7 +117,7 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 // resolvedFuture represents a "future" for the bytes of a resolved file.
 type resolvedFuture chan []byte
 
-func resolveFilesToWriter(builder *build.Caching, publisher publish.Interface, fo *options.FilenameOptions, so *options.SelectorOptions, sto *options.StrictOptions, out io.WriteCloser) {
+func resolveFilesToWriter(ctx context.Context, builder *build.Caching, publisher publish.Interface, fo *options.FilenameOptions, so *options.SelectorOptions, sto *options.StrictOptions, out io.WriteCloser) {
 	defer out.Close()
 
 	// By having this as a channel, we can hook this up to a filesystem
@@ -197,7 +198,7 @@ func resolveFilesToWriter(builder *build.Caching, publisher publish.Interface, f
 				recordingBuilder := &build.Recorder{
 					Builder: builder,
 				}
-				b, err := resolveFile(f, recordingBuilder, publisher, so, sto)
+				b, err := resolveFile(ctx, f, recordingBuilder, publisher, so, sto)
 				if err != nil {
 					// Don't let build errors disrupt the watch.
 					lg := log.Fatalf
@@ -242,7 +243,7 @@ func resolveFilesToWriter(builder *build.Caching, publisher publish.Interface, f
 	}
 }
 
-func resolveFile(f string, builder build.Interface, pub publish.Interface, so *options.SelectorOptions, sto *options.StrictOptions) (b []byte, err error) {
+func resolveFile(ctx context.Context, f string, builder build.Interface, pub publish.Interface, so *options.SelectorOptions, sto *options.StrictOptions) (b []byte, err error) {
 	if f == "-" {
 		b, err = ioutil.ReadAll(os.Stdin)
 	} else {
@@ -259,5 +260,5 @@ func resolveFile(f string, builder build.Interface, pub publish.Interface, so *o
 		}
 	}
 
-	return resolve.ImageReferences(b, sto.Strict, builder, pub)
+	return resolve.ImageReferences(ctx, b, sto.Strict, builder, pub)
 }
