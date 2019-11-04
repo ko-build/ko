@@ -6,6 +6,8 @@
 [![GoDoc](https://godoc.org/github.com/google/ko?status.svg)](https://godoc.org/github.com/google/ko)
 [![Go Report Card](https://goreportcard.com/badge/google/ko)](https://goreportcard.com/report/google/ko)
 
+<img src="./logo/ko.png" width="300">
+
 ## Installation
 
 `ko` can be installed and upgraded by running:
@@ -80,7 +82,7 @@ For example, any of the following would be matched:
 ### Results
 
 Employing this convention enables `ko` to have effectively zero configuration
-and enable very fast development iteration. For
+and enables very fast development iteration. For
 [warm-image](https://github.com/mattmoor/warm-image), `ko` is able to
 build, containerize, and redeploy a non-trivial Kubernetes controller app in
 seconds (dominated by two `go build`s).
@@ -113,6 +115,10 @@ customresourcedefinition.apiextensions.k8s.io/warmimages.mattmoor.io configured
 `ko` has four commands, most of which build and publish images as part of
 their execution.  By default, `ko` publishes images to a Docker Registry
 specified via `KO_DOCKER_REPO`.
+
+**Note**: You'll need to be authenticated with your `KO_DOCKER_REPO` before pushing
+images. Run `gcloud auth configure-docker` if you are using Google Container
+Registry or `docker login` if you are using Docker Hub.
 
 However, these same commands can be directed to operate locally as well via
 the `--local` or `-L` command (or setting `KO_DOCKER_REPO=ko.local`).  See
