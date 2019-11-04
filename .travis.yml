@@ -35,7 +35,7 @@ script:
   - bash integration_test.sh
 
   # Verify that generated ko docs are up-to-date.
-  - mkdir -p /tmp/gendoc && go run cmd/ko/help/main.go --dir /tmp/gendoc && diff -Naur /tmp/gendoc/ cmd/ko/doc/
+  - mkdir -p /tmp/gendoc && go run cmd/help/main.go --dir /tmp/gendoc && diff -Naur /tmp/gendoc/ cmd/ko/doc/
   
 # TODO: Set up coverage.
 #after_success:
