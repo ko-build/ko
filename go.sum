@@ -68,6 +68,8 @@ github.com/google/go-containerregistry v0.0.0-20190924190357-4a5eb885e03f h1:bte
 github.com/google/go-containerregistry v0.0.0-20190924190357-4a5eb885e03f/go.mod h1:88ABeir3OLZx+ksEpUk/4wrNTX2IyJII3YFQ2PZwSAw=
 github.com/google/go-containerregistry v0.0.0-20190926185806-cf66aa2c31a9 h1:1QFzh7vk9VgJ1moNavlesB77WXQnBd+zC3DXWcIHKWM=
 github.com/google/go-containerregistry v0.0.0-20190926185806-cf66aa2c31a9/go.mod h1:wlzAfrKs6M+mYfNFY/yAzsFY77x/KcScFwiOWats3Cs=
+github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758 h1:dhx8SZCldOm4F5Wdq8zy4EJrrtfqotWnZf4yrN/fyKI=
+github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758/go.mod h1:9RA0C5vuS7XQ4Qy5GzFKt53rXLawap1as69vSXPQPCA=
 github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf h1:+RRA9JqSOZFfKrOeqr2z77+8R2RKyh8PG66dcu1V0ck=
 github.com/google/gofuzz v0.0.0-20170612174753-24818f796faf/go.mod h1:HP5RmnzzSNb993RKQDq4+1A4ia9nllfqcQFTQJedwGI=
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
@@ -153,6 +155,7 @@ golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACk
 golang.org/x/crypto v0.0.0-20190510104115-cbcb75029529 h1:iMGN4xG0cnqj3t+zOM8wUB0BiPKHEwSxEZCvzcbZuvk=
 golang.org/x/crypto v0.0.0-20190510104115-cbcb75029529/go.mod h1:yigFU9vqHzYiE8UmvKecakEJjdnWj3jj499lnFckfCI=
 golang.org/x/lint v0.0.0-20190909230951-414d861bb4ac/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
+golang.org/x/lint v0.0.0-20190930215403-16217165b5de/go.mod h1:6SW0HCj/g11FgYtHlgUYUwCkIfeOF89ocIRzGO/8vkc=
 golang.org/x/mod v0.0.0-20190513183733-4bf6d317e70e/go.mod h1:mXi4GBBbnImb6dmsKGUJ2LatrhH/nqhxcFungHvyanc=
 golang.org/x/net v0.0.0-20171023174046-5561cd9b4330/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.0.0-20180906233101-161cd47e91fd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
@@ -191,6 +194,8 @@ golang.org/x/tools v0.0.0-20190920130846-1081e67f6b77 h1:m8wdt3dAJGnS+/iNksl3CpN
 golang.org/x/tools v0.0.0-20190920130846-1081e67f6b77/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
 golang.org/x/tools v0.0.0-20190926165942-a8d5d34286bd h1:L7bTtbmMojUZYEAt0OrTU0Z/KmN+uX195615ty32gkA=
 golang.org/x/tools v0.0.0-20190926165942-a8d5d34286bd/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
+golang.org/x/tools v0.0.0-20191001184121-329c8d646ebe h1:hFr8KcN0dM0/dqbUW0KZYN+YXJeZBpBWIG9ZkMuX1vQ=
+golang.org/x/tools v0.0.0-20191001184121-329c8d646ebe/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 google.golang.org/appengine v1.1.0/go.mod h1:EbEs0AVv82hx2wNQdGPgUI5lhzA/G0D9YwlJXL52JkM=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
