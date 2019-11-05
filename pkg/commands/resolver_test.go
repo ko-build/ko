@@ -26,7 +26,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/ko/pkg/commands/options"
-	"github.com/google/ko/pkg/testutil"
+	kotesting "github.com/google/ko/pkg/internal/testing"
 	"gopkg.in/yaml.v3"
 )
 
@@ -37,7 +37,7 @@ var (
 	barRef      = "github.com/awesomesauce/bar"
 	bar         = mustRandom()
 	barHash     = mustDigest(bar)
-	testBuilder = testutil.NewFixedBuild(map[string]v1.Image{
+	testBuilder = kotesting.NewFixedBuild(map[string]v1.Image{
 		fooRef: foo,
 		barRef: bar,
 	})
@@ -65,7 +65,7 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 	outYAML, err := resolveFile(
 		yamlToTmpFile(t, buf.Bytes()),
 		testBuilder,
-		testutil.NewFixedPublish(base, testHashes),
+		kotesting.NewFixedPublish(base, testHashes),
 		&options.SelectorOptions{},
 		&options.StrictOptions{})
 
@@ -88,8 +88,8 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 	}
 
 	expectedStructured := []string{
-		testutil.ComputeDigest(base, refs[0], hashes[0]),
-		testutil.ComputeDigest(base, refs[1], hashes[1]),
+		kotesting.ComputeDigest(base, refs[0], hashes[0]),
+		kotesting.ComputeDigest(base, refs[1], hashes[1]),
 	}
 
 	if want, got := len(expectedStructured), len(outStructured); want != got {

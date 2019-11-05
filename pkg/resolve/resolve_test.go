@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/ko/pkg/testutil"
+	kotesting "github.com/google/ko/pkg/internal/testing"
 	"gopkg.in/yaml.v3"
 )
 
@@ -38,7 +38,7 @@ var (
 	bazRef      = "github.com/awesomesauce/baz"
 	baz         = mustRandom()
 	bazHash     = mustDigest(baz)
-	testBuilder = testutil.NewFixedBuild(map[string]v1.Image{
+	testBuilder = kotesting.NewFixedBuild(map[string]v1.Image{
 		fooRef: foo,
 		barRef: bar,
 		bazRef: baz,
@@ -87,7 +87,7 @@ func TestYAMLArrays(t *testing.T) {
 			}
 
 			doc := strToYAML(t, string(inputYAML))
-			err = ImageReferences([]*yaml.Node{doc}, false, testBuilder, testutil.NewFixedPublish(test.base, testHashes))
+			err = ImageReferences([]*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(test.base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -104,7 +104,7 @@ func TestYAMLArrays(t *testing.T) {
 			for i, ref := range test.refs {
 				hash := test.hashes[i]
 				expectedStructured = append(expectedStructured,
-					testutil.ComputeDigest(test.base, ref, hash))
+					kotesting.ComputeDigest(test.base, ref, hash))
 			}
 
 			if diff := cmp.Diff(expectedStructured, outStructured, cmpopts.EquateEmpty()); diff != "" {
@@ -123,18 +123,18 @@ func TestYAMLMaps(t *testing.T) {
 	}{{
 		desc:     "simple value",
 		input:    map[string]string{"image": fooRef},
-		expected: map[string]string{"image": testutil.ComputeDigest(base, fooRef, fooHash)},
+		expected: map[string]string{"image": kotesting.ComputeDigest(base, fooRef, fooHash)},
 	}, {
 		desc:  "simple key",
 		input: map[string]string{bazRef: "blah"},
 		expected: map[string]string{
-			testutil.ComputeDigest(base, bazRef, bazHash): "blah",
+			kotesting.ComputeDigest(base, bazRef, bazHash): "blah",
 		},
 	}, {
 		desc:  "key and value",
 		input: map[string]string{fooRef: barRef},
 		expected: map[string]string{
-			testutil.ComputeDigest(base, fooRef, fooHash): testutil.ComputeDigest(base, barRef, barHash),
+			kotesting.ComputeDigest(base, fooRef, fooHash): kotesting.ComputeDigest(base, barRef, barHash),
 		},
 	}, {
 		desc:     "empty map",
@@ -147,8 +147,8 @@ func TestYAMLMaps(t *testing.T) {
 			"arg2": barRef,
 		},
 		expected: map[string]string{
-			"arg1": testutil.ComputeDigest(base, fooRef, fooHash),
-			"arg2": testutil.ComputeDigest(base, barRef, barHash),
+			"arg1": kotesting.ComputeDigest(base, fooRef, fooHash),
+			"arg2": kotesting.ComputeDigest(base, barRef, barHash),
 		},
 	}}
 
@@ -161,7 +161,7 @@ func TestYAMLMaps(t *testing.T) {
 			}
 
 			doc := strToYAML(t, string(inputYAML))
-			err = ImageReferences([]*yaml.Node{doc}, false, testBuilder, testutil.NewFixedPublish(base, testHashes))
+			err = ImageReferences([]*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -202,23 +202,23 @@ func TestYAMLObject(t *testing.T) {
 	}, {
 		desc:     "string field",
 		input:    &object{S: fooRef},
-		expected: &object{S: testutil.ComputeDigest(base, fooRef, fooHash)},
+		expected: &object{S: kotesting.ComputeDigest(base, fooRef, fooHash)},
 	}, {
 		desc:     "map field",
 		input:    &object{M: map[string]object{"blah": {S: fooRef}}},
-		expected: &object{M: map[string]object{"blah": {S: testutil.ComputeDigest(base, fooRef, fooHash)}}},
+		expected: &object{M: map[string]object{"blah": {S: kotesting.ComputeDigest(base, fooRef, fooHash)}}},
 	}, {
 		desc:     "array field",
 		input:    &object{A: []object{{S: fooRef}}},
-		expected: &object{A: []object{{S: testutil.ComputeDigest(base, fooRef, fooHash)}}},
+		expected: &object{A: []object{{S: kotesting.ComputeDigest(base, fooRef, fooHash)}}},
 	}, {
 		desc:     "pointer field",
 		input:    &object{P: &object{S: fooRef}},
-		expected: &object{P: &object{S: testutil.ComputeDigest(base, fooRef, fooHash)}},
+		expected: &object{P: &object{S: kotesting.ComputeDigest(base, fooRef, fooHash)}},
 	}, {
 		desc:     "deep field",
 		input:    &object{M: map[string]object{"blah": {A: []object{{P: &object{S: fooRef}}}}}},
-		expected: &object{M: map[string]object{"blah": {A: []object{{P: &object{S: testutil.ComputeDigest(base, fooRef, fooHash)}}}}}},
+		expected: &object{M: map[string]object{"blah": {A: []object{{P: &object{S: kotesting.ComputeDigest(base, fooRef, fooHash)}}}}}},
 	}}
 
 	for _, test := range tests {
@@ -230,7 +230,7 @@ func TestYAMLObject(t *testing.T) {
 			}
 
 			doc := strToYAML(t, string(inputYAML))
-			err = ImageReferences([]*yaml.Node{doc}, false, testBuilder, testutil.NewFixedPublish(base, testHashes))
+			err = ImageReferences([]*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -261,7 +261,7 @@ func TestStrict(t *testing.T) {
 	base := mustRepository("gcr.io/multi-pass")
 	doc := strToYAML(t, string(buf.Bytes()))
 
-	err := ImageReferences([]*yaml.Node{doc}, true, testBuilder, testutil.NewFixedPublish(base, testHashes))
+	err := ImageReferences([]*yaml.Node{doc}, true, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 	if err != nil {
 		t.Fatalf("ImageReferences: %v", err)
 	}
@@ -280,9 +280,9 @@ func TestNoStrictKoPrefixRemains(t *testing.T) {
 	base := mustRepository("gcr.io/multi-pass")
 	doc := strToYAML(t, string(buf.Bytes()))
 
-	noMatchBuilder := testutil.NewFixedBuild(nil)
+	noMatchBuilder := kotesting.NewFixedBuild(nil)
 
-	err := ImageReferences([]*yaml.Node{doc}, false, noMatchBuilder, testutil.NewFixedPublish(base, testHashes))
+	err := ImageReferences([]*yaml.Node{doc}, false, noMatchBuilder, kotesting.NewFixedPublish(base, testHashes))
 	if err != nil {
 		t.Fatalf("ImageReferences: %v", err)
 	}
