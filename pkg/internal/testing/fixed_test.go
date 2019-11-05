@@ -12,28 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package resolve
+package testing
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/publish"
-)
-
-var (
-	fixedBaseRepo, _ = name.NewRepository("gcr.io/asdf")
-	testImage, _     = random.Image(1024, 5)
 )
 
 func TestFixedPublish(t *testing.T) {
 	hex1 := "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
 	hex2 := "baadf00dbaadf00dbaadf00dbaadf00dbaadf00dbaadf00dbaadf00dbaadf00d"
-	f := newFixedPublish(fixedBaseRepo, map[string]v1.Hash{
+	fixedBaseRepo, _ := name.NewRepository("gcr.io/asdf")
+	f := NewFixedPublish(fixedBaseRepo, map[string]v1.Hash{
 		"foo": {
 			Algorithm: "sha256",
 			Hex:       hex1,
@@ -67,7 +60,8 @@ func TestFixedPublish(t *testing.T) {
 }
 
 func TestFixedBuild(t *testing.T) {
-	f := newFixedBuild(map[string]v1.Image{
+	testImage, _ := random.Image(1024, 5)
+	f := NewFixedBuild(map[string]v1.Image{
 		"asdf": testImage,
 	})
 
@@ -86,52 +80,4 @@ func TestFixedBuild(t *testing.T) {
 	if got, err := f.Build("blah"); err == nil {
 		t.Errorf("Build(blah) = %v, want error", got)
 	}
-}
-
-type fixedBuild struct {
-	entries map[string]v1.Image
-}
-
-// newFixedBuild returns a build.Interface implementation that simply resolves
-// particular references to fixed v1.Image objects
-func newFixedBuild(entries map[string]v1.Image) build.Interface {
-	return &fixedBuild{entries}
-}
-
-// IsSupportedReference implements build.Interface
-func (f *fixedBuild) IsSupportedReference(s string) bool {
-	_, ok := f.entries[s]
-	return ok
-}
-
-// Build implements build.Interface
-func (f *fixedBuild) Build(s string) (v1.Image, error) {
-	if img, ok := f.entries[s]; ok {
-		return img, nil
-	}
-	return nil, fmt.Errorf("unsupported reference: %q", s)
-}
-
-type fixedPublish struct {
-	base    name.Repository
-	entries map[string]v1.Hash
-}
-
-// newFixedPublish returns a publish.Interface implementation that simply
-// resolves particular references to fixed name.Digest references.
-func newFixedPublish(base name.Repository, entries map[string]v1.Hash) publish.Interface {
-	return &fixedPublish{base, entries}
-}
-
-// Publish implements publish.Interface
-func (f *fixedPublish) Publish(_ v1.Image, s string) (name.Reference, error) {
-	h, ok := f.entries[s]
-	if !ok {
-		return nil, fmt.Errorf("unsupported importpath: %q", s)
-	}
-	d, err := name.NewDigest(fmt.Sprintf("%s/%s@%s", f.base, s, h))
-	if err != nil {
-		return nil, err
-	}
-	return &d, nil
 }

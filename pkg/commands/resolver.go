@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -30,6 +31,8 @@ import (
 	"github.com/google/ko/pkg/publish"
 	"github.com/google/ko/pkg/resolve"
 	"github.com/mattmoor/dep-notify/pkg/graph"
+	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
@@ -116,7 +119,13 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 // resolvedFuture represents a "future" for the bytes of a resolved file.
 type resolvedFuture chan []byte
 
-func resolveFilesToWriter(builder *build.Caching, publisher publish.Interface, fo *options.FilenameOptions, so *options.SelectorOptions, sto *options.StrictOptions, out io.WriteCloser) {
+func resolveFilesToWriter(
+	builder *build.Caching,
+	publisher publish.Interface,
+	fo *options.FilenameOptions,
+	so *options.SelectorOptions,
+	sto *options.StrictOptions,
+	out io.WriteCloser) {
 	defer out.Close()
 
 	// By having this as a channel, we can hook this up to a filesystem
@@ -242,7 +251,23 @@ func resolveFilesToWriter(builder *build.Caching, publisher publish.Interface, f
 	}
 }
 
-func resolveFile(f string, builder build.Interface, pub publish.Interface, so *options.SelectorOptions, sto *options.StrictOptions) (b []byte, err error) {
+func resolveFile(
+	f string,
+	builder build.Interface,
+	pub publish.Interface,
+	so *options.SelectorOptions,
+	sto *options.StrictOptions) (b []byte, err error) {
+
+	var selector labels.Selector
+	if so.Selector != "" {
+		var err error
+		selector, err = labels.Parse(so.Selector)
+
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse selector: %v", err)
+		}
+	}
+
 	if f == "-" {
 		b, err = ioutil.ReadAll(os.Stdin)
 	} else {
@@ -252,12 +277,49 @@ func resolveFile(f string, builder build.Interface, pub publish.Interface, so *o
 		return nil, err
 	}
 
-	if so.Selector != "" {
-		b, err = resolve.FilterBySelector(b, so.Selector)
-		if err != nil {
+	var docNodes []*yaml.Node
+
+	// The loop is to support multi-document yaml files.
+	// This is handled by using a yaml.Decoder and reading objects until io.EOF, see:
+	// https://godoc.org/gopkg.in/yaml.v3#Decoder.Decode
+	decoder := yaml.NewDecoder(bytes.NewBuffer(b))
+	for {
+		var doc yaml.Node
+		if err := decoder.Decode(&doc); err != nil {
+			if err == io.EOF {
+				break
+			}
 			return nil, err
 		}
+
+		if selector != nil {
+			if match, err := resolve.MatchesSelector(&doc, selector); err != nil {
+				return nil, fmt.Errorf("error evaluating selector: %v", err)
+			} else if !match {
+				continue
+			}
+		}
+
+		docNodes = append(docNodes, &doc)
+
 	}
 
-	return resolve.ImageReferences(b, sto.Strict, builder, pub)
+	if err := resolve.ImageReferences(docNodes, sto.Strict, builder, pub); err != nil {
+		return nil, fmt.Errorf("error resolving image references: %v", err)
+	}
+
+	buf := &bytes.Buffer{}
+	e := yaml.NewEncoder(buf)
+	e.SetIndent(2)
+
+	for _, doc := range docNodes {
+		err := e.Encode(doc)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encode output: %v", err)
+		}
+	}
+	e.Close()
+
+	return buf.Bytes(), nil
+
 }
