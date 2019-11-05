@@ -41,9 +41,10 @@ func ImageReferences(docs []*yaml.Node, strict bool, builder build.Interface, pu
 
 		for node, ok := it(); ok; node, ok = it() {
 			ref := strings.TrimSpace(node.Value)
+			tref := strings.TrimPrefix(ref, koPrefix)
 
-			if builder.IsSupportedReference(ref) {
-				refs[ref] = append(refs[ref], node)
+			if builder.IsSupportedReference(tref) {
+				refs[tref] = append(refs[tref], node)
 			} else if strict {
 				return fmt.Errorf("found strict reference but %s is not a valid import path", ref)
 			}
@@ -94,18 +95,8 @@ func refsFromDoc(doc *yaml.Node, strict bool) yit.Iterator {
 		Filter(yit.StringValue)
 
 	if strict {
-		it = it.Filter(yit.WithPrefix(koPrefix))
+		return it.Filter(yit.WithPrefix(koPrefix))
 	}
 
-	return it.Iterate(trimKoPrefix)
-}
-
-func trimKoPrefix(next yit.Iterator) yit.Iterator {
-	return func() (node *yaml.Node, ok bool) {
-		node, ok = next()
-		if ok {
-			node.Value = strings.TrimPrefix(node.Value, koPrefix)
-		}
-		return
-	}
+	return it
 }

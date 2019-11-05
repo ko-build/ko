@@ -16,6 +16,7 @@ package resolve
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -265,6 +266,29 @@ func TestStrict(t *testing.T) {
 		t.Fatalf("ImageReferences: %v", err)
 	}
 	t.Log(yamlToStr(t, doc))
+}
+
+func TestNoStrictKoPrefixRemains(t *testing.T) {
+	ref := "ko://" + fooRef
+
+	buf := bytes.NewBuffer(nil)
+	encoder := yaml.NewEncoder(buf)
+	if err := encoder.Encode(ref); err != nil {
+		t.Fatalf("Encode(%v) = %v", ref, err)
+	}
+
+	base := mustRepository("gcr.io/multi-pass")
+	doc := strToYAML(t, string(buf.Bytes()))
+
+	noMatchBuilder := testutil.NewFixedBuild(nil)
+
+	err := ImageReferences([]*yaml.Node{doc}, false, noMatchBuilder, testutil.NewFixedPublish(base, testHashes))
+	if err != nil {
+		t.Fatalf("ImageReferences: %v", err)
+	}
+	if diff := cmp.Diff(ref, strings.TrimSpace(yamlToStr(t, doc))); diff != "" {
+		t.Errorf("expected the ko prefix to remain (-want,+got): %v", diff)
+	}
 }
 
 func mustRandom() v1.Image {
