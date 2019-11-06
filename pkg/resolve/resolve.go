@@ -15,51 +15,40 @@
 package resolve
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"strings"
 	"sync"
 
+	"github.com/dprotaso/go-yit"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish"
 	"golang.org/x/sync/errgroup"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
+
+const koPrefix = "ko://"
 
 // ImageReferences resolves supported references to images within the input yaml
 // to published image digests.
-func ImageReferences(ctx context.Context, input []byte, strict bool, builder build.Interface, publisher publish.Interface) ([]byte, error) {
+//
+// If a reference can be built and pushed, its yaml.Node will be mutated.
+func ImageReferences(ctx context.Context, docs []*yaml.Node, strict bool, builder build.Interface, publisher publish.Interface) error {
 	// First, walk the input objects and collect a list of supported references
-	refs := make(map[string]struct{})
-	// The loop is to support multi-document yaml files.
-	// This is handled by using a yaml.Decoder and reading objects until io.EOF, see:
-	// https://github.com/go-yaml/yaml/blob/v2.2.1/yaml.go#L124
-	decoder := yaml.NewDecoder(bytes.NewBuffer(input))
-	for {
-		var obj interface{}
-		if err := decoder.Decode(&obj); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-		// This simply returns the replaced object, which we discard during the gathering phase.
-		if _, err := replaceRecursive(obj, func(ref string) (string, error) {
-			strictRef := strings.HasPrefix(ref, "ko://")
-			if strict && !strictRef {
-				return ref, nil
-			}
-			tref := strings.TrimPrefix(ref, "ko://")
+	refs := make(map[string][]*yaml.Node)
+
+	for _, doc := range docs {
+		it := refsFromDoc(doc, strict)
+
+		for node, ok := it(); ok; node, ok = it() {
+			ref := strings.TrimSpace(node.Value)
+			tref := strings.TrimPrefix(ref, koPrefix)
+
 			if builder.IsSupportedReference(tref) {
-				refs[tref] = struct{}{}
-			} else if strict && strictRef {
-				return "", fmt.Errorf("Found strict reference %q but %s is not a valid import path", ref, tref)
+				refs[tref] = append(refs[tref], node)
+			} else if strict {
+				return fmt.Errorf("found strict reference but %s is not a valid import path", ref)
 			}
-			return ref, nil
-		}); err != nil {
-			return nil, err
 		}
 	}
 
@@ -82,87 +71,33 @@ func ImageReferences(ctx context.Context, input []byte, strict bool, builder bui
 		})
 	}
 	if err := errg.Wait(); err != nil {
-		return nil, err
+		return err
 	}
 
-	// Last, walk the inputs again and replace the supported references with their published images.
-	decoder = yaml.NewDecoder(bytes.NewBuffer(input))
-	buf := bytes.NewBuffer(nil)
-	encoder := yaml.NewEncoder(buf)
-	for {
-		var obj interface{}
-		if err := decoder.Decode(&obj); err != nil {
-			if err == io.EOF {
-				return buf.Bytes(), nil
-			}
-			return nil, err
-		}
-		// Recursively walk input, replacing supported reference with our computed digests.
-		obj2, err := replaceRecursive(obj, func(ref string) (string, error) {
-			if !builder.IsSupportedReference(ref) {
-				return ref, nil
-			}
-			ref = strings.TrimPrefix(ref, "ko://")
-			if val, ok := sm.Load(ref); ok {
-				return val.(string), nil
-			}
-			return "", fmt.Errorf("resolved reference to %q not found", ref)
-		})
-		if err != nil {
-			return nil, err
+	// Walk the tags and update them with their digest.
+	for ref, nodes := range refs {
+		digest, ok := sm.Load(ref)
+
+		if !ok {
+			return fmt.Errorf("resolved reference to %q not found", ref)
 		}
 
-		if err := encoder.Encode(obj2); err != nil {
-			return nil, err
+		for _, node := range nodes {
+			node.Value = digest.(string)
 		}
 	}
+
+	return nil
 }
 
-type replaceString func(string) (string, error)
+func refsFromDoc(doc *yaml.Node, strict bool) yit.Iterator {
+	it := yit.FromNode(doc).
+		RecurseNodes().
+		Filter(yit.StringValue)
 
-// replaceRecursive walks the provided untyped object recursively by switching
-// on the type of the object at each level. It supports walking through the
-// keys and values of maps, and the elements of an array. When a leaf of type
-// string is encountered, this will call the provided replaceString function on
-// it. This function does not support walking through struct types, but also
-// should not need to as the input is expected to be the result of parsing yaml
-// or json into an interface{}, which should only produce primitives, maps and
-// arrays. This function will return a copy of the object rebuilt by the walk
-// with the replacements made.
-func replaceRecursive(obj interface{}, rs replaceString) (interface{}, error) {
-	switch typed := obj.(type) {
-	case map[interface{}]interface{}:
-		m2 := make(map[interface{}]interface{}, len(typed))
-		for k, v := range typed {
-			k2, err := replaceRecursive(k, rs)
-			if err != nil {
-				return nil, err
-			}
-			v2, err := replaceRecursive(v, rs)
-			if err != nil {
-				return nil, err
-			}
-			m2[k2] = v2
-		}
-		return m2, nil
-
-	case []interface{}:
-		a2 := make([]interface{}, len(typed))
-		for idx, v := range typed {
-			v2, err := replaceRecursive(v, rs)
-			if err != nil {
-				return nil, err
-			}
-			a2[idx] = v2
-		}
-		return a2, nil
-
-	case string:
-		// call our replaceString on this string leaf.
-		return rs(typed)
-
-	default:
-		// leave other leaves alone.
-		return typed, nil
+	if strict {
+		return it.Filter(yit.WithPrefix(koPrefix))
 	}
+
+	return it
 }
