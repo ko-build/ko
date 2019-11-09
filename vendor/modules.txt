@@ -36,6 +36,8 @@ github.com/docker/go-connections/sockets
 github.com/docker/go-connections/tlsconfig
 # github.com/docker/go-units v0.3.3
 github.com/docker/go-units
+# github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
+github.com/dprotaso/go-yit
 # github.com/evanphx/json-patch v4.2.0+incompatible
 github.com/evanphx/json-patch
 # github.com/fsnotify/fsnotify v1.4.7
@@ -61,7 +63,7 @@ github.com/google/go-cmp/cmp/cmpopts
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.0.0-20190926185806-cf66aa2c31a9
+# github.com/google/go-containerregistry v0.0.0-20191002200252-ff1ac7f97758
 github.com/google/go-containerregistry/pkg/authn
 github.com/google/go-containerregistry/pkg/internal/retry
 github.com/google/go-containerregistry/pkg/internal/retry/wait
@@ -169,7 +171,7 @@ golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 # golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20190926165942-a8d5d34286bd
+# golang.org/x/tools v0.0.0-20191001184121-329c8d646ebe
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/gcimporter
 golang.org/x/tools/go/internal/packagesdriver
@@ -181,6 +183,8 @@ golang.org/x/tools/internal/semver
 gopkg.in/inf.v0
 # gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
+# gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d
+gopkg.in/yaml.v3
 # k8s.io/api v0.0.0-20180904230853-4e7be11eab3f
 k8s.io/api/admissionregistration/v1alpha1
 k8s.io/api/admissionregistration/v1beta1
@@ -277,5 +281,3 @@ k8s.io/client-go/util/jsonpath
 k8s.io/kubernetes/pkg/kubectl/genericclioptions
 k8s.io/kubernetes/pkg/kubectl/genericclioptions/printers
 k8s.io/kubernetes/pkg/kubectl/genericclioptions/resource
-# sigs.k8s.io/yaml v1.1.0
-sigs.k8s.io/yaml

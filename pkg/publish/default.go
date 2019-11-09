@@ -97,22 +97,28 @@ func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
-	for _, tagName := range d.tags {
+	ro := []remote.Option{remote.WithAuth(d.auth), remote.WithTransport(d.t)}
+	no := []name.Option{}
+	if d.insecure {
+		no = append(no, name.Insecure)
+	}
 
-		var os []name.Option
-		if d.insecure {
-			os = []name.Option{name.Insecure}
-		}
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", d.base, d.namer(s), tagName), os...)
+	for i, tagName := range d.tags {
+		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", d.base, d.namer(s), tagName), no...)
 		if err != nil {
 			return nil, err
 		}
 
-		log.Printf("Publishing %v", tag)
-		// TODO: This is slow because we have to load the image multiple times.
-		// Figure out some way to publish the manifest with another tag.
-		if err := remote.Write(tag, img, remote.WithAuth(d.auth), remote.WithTransport(d.t)); err != nil {
-			return nil, err
+		if i == 0 {
+			log.Printf("Publishing %v", tag)
+			if err := remote.Write(tag, img, ro...); err != nil {
+				return nil, err
+			}
+		} else {
+			log.Printf("Tagging %v", tag)
+			if err := remote.Tag(tag, img, ro...); err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -120,7 +126,13 @@ func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
 	if err != nil {
 		return nil, err
 	}
-	dig, err := name.NewDigest(fmt.Sprintf("%s/%s@%s", d.base, d.namer(s), h))
+	ref := fmt.Sprintf("%s/%s@%s", d.base, d.namer(s), h)
+	if len(d.tags) == 1 && d.tags[0] != defaultTags[0] {
+		// If a single tag is explicitly set (not latest), then this
+		// is probably a release, so include the tag in the reference.
+		ref = fmt.Sprintf("%s/%s:%s@%s", d.base, d.namer(s), d.tags[0], h)
+	}
+	dig, err := name.NewDigest(ref)
 	if err != nil {
 		return nil, err
 	}
