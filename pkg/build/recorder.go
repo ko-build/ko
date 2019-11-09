@@ -31,8 +31,8 @@ type Recorder struct {
 var _ Interface = (*Recorder)(nil)
 
 // IsSupportedReference implements Interface
-func (r *Recorder) IsSupportedReference(ip string, tests bool) bool {
-	return r.Builder.IsSupportedReference(ip, tests)
+func (r *Recorder) IsSupportedReference(ip string, strict bool) bool {
+	return r.Builder.IsSupportedReference(ip, strict)
 }
 
 // Build implements Interface

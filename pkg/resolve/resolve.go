@@ -43,7 +43,7 @@ func ImageReferences(docs []*yaml.Node, strict bool, builder build.Interface, pu
 			ref := strings.TrimSpace(node.Value)
 			tref := strings.TrimPrefix(ref, koPrefix)
 
-			if builder.IsSupportedReference(tref) {
+			if builder.IsSupportedReference(tref, strings.HasPrefix(ref, koPrefix)) {
 				refs[tref] = append(refs[tref], node)
 			} else if strict {
 				return fmt.Errorf("found strict reference but %s is not a valid import path", ref)
@@ -70,7 +70,7 @@ func ImageReferences(docs []*yaml.Node, strict bool, builder build.Interface, pu
 		})
 	}
 	if err := errg.Wait(); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Walk the tags and update them with their digest.

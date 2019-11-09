@@ -37,25 +37,54 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	// Supported import paths.
-	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/cmd/ko"), // ko can build itself.
-	} {
-		t.Run(importpath, func(t *testing.T) {
-			if !ng.IsSupportedReference(importpath, true) {
-				t.Errorf("IsSupportedReference(%q) = false, want true", importpath)
-			}
-		})
+	tests := []struct {
+		desc       string
+		giveIp     string
+		giveStrict bool
+		wantSr     bool
+	}{
+		{
+			desc:       "IP has main and was not defined as strict ref",
+			giveIp:     "github.com/google/ko/cmd/ko",
+			giveStrict: false,
+			wantSr:     true,
+		},
+		{
+			desc:       "IP has main and was defined as strict ref",
+			giveIp:     "github.com/google/ko/cmd/ko",
+			giveStrict: true,
+			wantSr:     true},
+		{
+			desc:       "IP has neither main nor test",
+			giveIp:     "github.com/google/ko/pkg/commands/options",
+			giveStrict: true,
+			wantSr:     false,
+		},
+		{
+			desc:       "ip doesnt exist",
+			giveIp:     "github.com/google/ko/pkg/idontexist",
+			giveStrict: true,
+			wantSr:     false,
+		},
+		{
+			desc:       "ip has only tests but was not a strict ref",
+			giveIp:     "github.com/google/ko/pkg/build",
+			giveStrict: false,
+			wantSr:     false,
+		},
+		{
+			desc:       "ip has only test and was a strict ref",
+			giveIp:     "github.com/google/ko/pkg/build",
+			giveStrict: true,
+			wantSr:     true,
+		},
 	}
 
-	// Unsupported import paths.
-	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/pkg/commands/options"),       // neither `main` nor `test`
-		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), 			 // does not exist.
-	} {
-		t.Run(importpath, func(t *testing.T) {
-			if ng.IsSupportedReference(importpath, true) {
-				t.Errorf("IsSupportedReference(%v) = true, want false", importpath)
+	for _, ts := range tests {
+		ip := filepath.FromSlash(ts.giveIp)
+		t.Run(ts.desc, func(t *testing.T) {
+			if ng.IsSupportedReference(ip, ts.giveStrict) != ts.wantSr {
+				t.Errorf("IsSupportedReference(%q,%v) = %v, want %v", ip, ts.giveStrict, !ts.wantSr, ts.wantSr)
 			}
 		})
 	}

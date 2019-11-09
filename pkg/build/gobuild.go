@@ -118,9 +118,9 @@ func NewGo(options ...Option) (Interface, error) {
 //
 // Valid importpaths that provide commands (i.e., are "package main") are
 // supported.
-// test == true also importpaths that provide tests (*_test.go) are supported
-func (g *gobuild) IsSupportedReference(s string, tests bool) bool {
-	return g.isMain(s) || (tests && g.isTest(s))
+// strict == true: import path was referenced as a "strict" reference. Here we use this to also allow test builds
+func (g *gobuild) IsSupportedReference(s string, strict bool) bool {
+	return g.isMain(s) || (strict && g.isTest(s))
 }
 
 func (g *gobuild) isMain(s string) bool {

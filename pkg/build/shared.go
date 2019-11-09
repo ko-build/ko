@@ -66,8 +66,8 @@ func (c *Caching) Build(ip string) (v1.Image, error) {
 }
 
 // IsSupportedReference implements Interface
-func (c *Caching) IsSupportedReference(ip string, tests bool) bool {
-	return c.inner.IsSupportedReference(ip, tests)
+func (c *Caching) IsSupportedReference(ip string, strict bool) bool {
+	return c.inner.IsSupportedReference(ip, strict)
 }
 
 // Invalidate removes an import path's cached results.

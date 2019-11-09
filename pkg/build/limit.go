@@ -31,8 +31,8 @@ type Limiter struct {
 var _ Interface = (*Recorder)(nil)
 
 // IsSupportedReference implements Interface
-func (l *Limiter) IsSupportedReference(ip string, tests bool) bool {
-	return l.Builder.IsSupportedReference(ip, tests)
+func (l *Limiter) IsSupportedReference(ip string, strict bool) bool {
+	return l.Builder.IsSupportedReference(ip, strict)
 }
 
 // Build implements Interface
