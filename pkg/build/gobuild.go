@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	gb "go/build"
@@ -41,7 +42,7 @@ const (
 
 // GetBase takes an importpath and returns a base v1.Image.
 type GetBase func(string) (v1.Image, error)
-type builder func(string, v1.Platform, bool, bool) (string, error)
+type builder func(context.Context, string, v1.Platform, bool, bool) (string, error)
 
 type gobuild struct {
 	getBase              GetBase
@@ -160,7 +161,7 @@ func (g *gobuild) importPackage(s string) (*gb.Package, error) {
 	return nil, moduleErr
 }
 
-func build(ip string, platform v1.Platform, disableOptimizations bool, test bool) (string, error) {
+func build(ctx context.Context, ip string, platform v1.Platform, disableOptimizations bool, test bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -182,7 +183,7 @@ func build(ip string, platform v1.Platform, disableOptimizations bool, test bool
 	args = append(args, "-o", file)
 	args = addGo113TrimPathFlag(args)
 	args = append(args, ip)
-	cmd := exec.Command("go", args...)
+	cmd := exec.CommandContext(ctx, "go", args...)
 
 	// Last one wins
 	defaultEnv := []string{
@@ -393,7 +394,7 @@ func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 }
 
 // Build implements build.Interface
-func (gb *gobuild) Build(s string) (v1.Image, error) {
+func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 	// Determine the appropriate base image for this import path.
 	base, err := gb.getBase(s)
 	if err != nil {
@@ -410,7 +411,7 @@ func (gb *gobuild) Build(s string) (v1.Image, error) {
 
 	// Do the build into a temporary file.
 	var file string
-	file, err = gb.build(s, platform, gb.disableOptimizations, !gb.isMain(s) && gb.isTest(s))
+	file, err = gb.build(ctx, s, platform, gb.disableOptimizations, !gb.isMain(s) && gb.isTest(s))
 	if err != nil {
 		return nil, err
 	}

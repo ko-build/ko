@@ -15,6 +15,7 @@
 package build
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -33,7 +34,7 @@ func (sb *slowbuild) IsSupportedReference(string, bool) bool {
 	return true
 }
 
-func (sb *slowbuild) Build(string) (v1.Image, error) {
+func (sb *slowbuild) Build(_ context.Context, _ string) (v1.Image, error) {
 	time.Sleep(sb.sleep)
 	return random.Image(256, 8)
 }
@@ -55,7 +56,7 @@ func TestCaching(t *testing.T) {
 	// cache and iterate.
 	for idx := 0; idx < 3; idx++ {
 		start := time.Now()
-		img1, err := cb.Build(ip)
+		img1, err := cb.Build(context.Background(), ip)
 		if err != nil {
 			t.Errorf("Build() = %v", err)
 		}
@@ -73,7 +74,7 @@ func TestCaching(t *testing.T) {
 		previousDigest = d1
 
 		start = time.Now()
-		img2, err := cb.Build(ip)
+		img2, err := cb.Build(context.Background(), ip)
 		if err != nil {
 			t.Errorf("Build() = %v", err)
 		}

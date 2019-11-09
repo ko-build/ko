@@ -16,6 +16,7 @@ package commands
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -64,6 +65,7 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 	inputYAML := buf.Bytes()
 
 	outYAML, err := resolveFile(
+		context.Background(),
 		yamlToTmpFile(t, buf.Bytes()),
 		testBuilder,
 		kotesting.NewFixedPublish(base, testHashes),
@@ -117,6 +119,7 @@ kind: Bar
 	base := mustRepository("gcr.io/multi-pass")
 
 	outputYAML, err := resolveFile(
+		context.Background(),
 		yamlToTmpFile(t, inputYAML),
 		testBuilder,
 		kotesting.NewFixedPublish(base, testHashes),

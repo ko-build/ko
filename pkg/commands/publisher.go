@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	gb "go/build"
 
@@ -39,7 +40,7 @@ func qualifyLocalImport(importpath string) (string, error) {
 	return pkgs[0].PkgPath, nil
 }
 
-func publishImages(importpaths []string, pub publish.Interface, b build.Interface) (map[string]name.Reference, error) {
+func publishImages(ctx context.Context, importpaths []string, pub publish.Interface, b build.Interface) (map[string]name.Reference, error) {
 	imgs := make(map[string]name.Reference)
 	for _, importpath := range importpaths {
 		if gb.IsLocalImport(importpath) {
@@ -54,7 +55,7 @@ func publishImages(importpaths []string, pub publish.Interface, b build.Interfac
 			return nil, fmt.Errorf("importpath %q is not supported", importpath)
 		}
 
-		img, err := b.Build(importpath)
+		img, err := b.Build(ctx, importpath)
 		if err != nil {
 			return nil, fmt.Errorf("error building %q: %v", importpath, err)
 		}

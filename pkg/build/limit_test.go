@@ -33,7 +33,7 @@ func (r *sleeper) IsSupportedReference(ip string, _ bool) bool {
 }
 
 // Build implements Interface
-func (r *sleeper) Build(ip string) (v1.Image, error) {
+func (r *sleeper) Build(_ context.Context, ip string) (v1.Image, error) {
 	time.Sleep(50 * time.Millisecond)
 	return nil, nil
 }
@@ -45,7 +45,7 @@ func TestLimiter(t *testing.T) {
 	g, _ := errgroup.WithContext(context.TODO())
 	for i := 0; i <= 10; i++ {
 		g.Go(func() error {
-			_, _ = b.Build("whatever")
+			_, _ = b.Build(context.Background(), "whatever")
 			return nil
 		})
 	}

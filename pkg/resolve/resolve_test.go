@@ -16,6 +16,7 @@ package resolve
 
 import (
 	"bytes"
+	"context"
 	"strings"
 	"testing"
 
@@ -87,7 +88,7 @@ func TestYAMLArrays(t *testing.T) {
 			}
 
 			doc := strToYAML(t, string(inputYAML))
-			err = ImageReferences([]*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(test.base, testHashes))
+			err = ImageReferences(context.Background(), []*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(test.base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -161,7 +162,7 @@ func TestYAMLMaps(t *testing.T) {
 			}
 
 			doc := strToYAML(t, string(inputYAML))
-			err = ImageReferences([]*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(base, testHashes))
+			err = ImageReferences(context.Background(), []*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -230,7 +231,7 @@ func TestYAMLObject(t *testing.T) {
 			}
 
 			doc := strToYAML(t, string(inputYAML))
-			err = ImageReferences([]*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(base, testHashes))
+			err = ImageReferences(context.Background(), []*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -261,7 +262,7 @@ func TestStrict(t *testing.T) {
 	base := mustRepository("gcr.io/multi-pass")
 	doc := strToYAML(t, string(buf.Bytes()))
 
-	err := ImageReferences([]*yaml.Node{doc}, true, testBuilder, kotesting.NewFixedPublish(base, testHashes))
+	err := ImageReferences(context.Background(), []*yaml.Node{doc}, true, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 	if err != nil {
 		t.Fatalf("ImageReferences: %v", err)
 	}
@@ -282,7 +283,7 @@ func TestNoStrictKoPrefixRemains(t *testing.T) {
 
 	noMatchBuilder := kotesting.NewFixedBuild(nil)
 
-	err := ImageReferences([]*yaml.Node{doc}, false, noMatchBuilder, kotesting.NewFixedPublish(base, testHashes))
+	err := ImageReferences(context.Background(), []*yaml.Node{doc}, false, noMatchBuilder, kotesting.NewFixedPublish(base, testHashes))
 	if err != nil {
 		t.Fatalf("ImageReferences: %v", err)
 	}

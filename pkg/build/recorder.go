@@ -15,6 +15,7 @@
 package build
 
 import (
+	"context"
 	"sync"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -36,11 +37,11 @@ func (r *Recorder) IsSupportedReference(ip string, strict bool) bool {
 }
 
 // Build implements Interface
-func (r *Recorder) Build(ip string) (v1.Image, error) {
+func (r *Recorder) Build(ctx context.Context, ip string) (v1.Image, error) {
 	func() {
 		r.m.Lock()
 		defer r.m.Unlock()
 		r.ImportPaths = append(r.ImportPaths, ip)
 	}()
-	return r.Builder.Build(ip)
+	return r.Builder.Build(ctx, ip)
 }

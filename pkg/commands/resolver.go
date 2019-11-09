@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"bytes"
 	"errors"
 	"fmt"
@@ -120,6 +121,7 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 type resolvedFuture chan []byte
 
 func resolveFilesToWriter(
+	ctx context.Context, 
 	builder *build.Caching,
 	publisher publish.Interface,
 	fo *options.FilenameOptions,
@@ -206,7 +208,7 @@ func resolveFilesToWriter(
 				recordingBuilder := &build.Recorder{
 					Builder: builder,
 				}
-				b, err := resolveFile(f, recordingBuilder, publisher, so, sto)
+				b, err := resolveFile(ctx, f, recordingBuilder, publisher, so, sto)
 				if err != nil {
 					// Don't let build errors disrupt the watch.
 					lg := log.Fatalf
@@ -252,6 +254,7 @@ func resolveFilesToWriter(
 }
 
 func resolveFile(
+	ctx context.Context,
 	f string,
 	builder build.Interface,
 	pub publish.Interface,
@@ -304,7 +307,7 @@ func resolveFile(
 
 	}
 
-	if err := resolve.ImageReferences(docNodes, sto.Strict, builder, pub); err != nil {
+	if err := resolve.ImageReferences(ctx, docNodes, sto.Strict, builder, pub); err != nil {
 		return nil, fmt.Errorf("error resolving image references: %v", err)
 	}
 
