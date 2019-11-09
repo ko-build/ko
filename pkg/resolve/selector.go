@@ -47,6 +47,11 @@ func MatchesSelector(doc *yaml.Node, selector labels.Selector) (bool, error) {
 }
 
 func docKind(doc *yaml.Node) (string, error) {
+	// Null nodes will fail the check below, so simply ignore them.
+	if doc.Tag == "!!null" {
+		return "", nil
+	}
+
 	it := FromNode(doc).
 		Filter(Intersect(
 			WithKind(yaml.MappingNode),

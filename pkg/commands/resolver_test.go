@@ -17,6 +17,7 @@ package commands
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"testing"
@@ -100,6 +101,37 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 
 	if diff := cmp.Diff(expectedStructured, outStructured, cmpopts.EquateEmpty()); diff != "" {
 		t.Errorf("resolveFile(%v); (-want +got) = %v", string(inputYAML), diff)
+	}
+}
+
+func TestResolveMultiDocumentYAMLsWithSelector(t *testing.T) {
+	passesSelector := `apiVersion: something/v1
+kind: Foo
+metadata:
+  labels:
+    qux: baz
+`
+	failsSelector := `apiVersion: other/v2
+kind: Bar
+`
+	// Note that this ends in '---', so it in ends in a final null YAML document.
+	inputYAML := []byte(fmt.Sprintf("%s---\n%s---", passesSelector, failsSelector))
+	base := mustRepository("gcr.io/multi-pass")
+
+	outputYAML, err := resolveFile(
+		context.Background(),
+		yamlToTmpFile(t, inputYAML),
+		testBuilder,
+		kotesting.NewFixedPublish(base, testHashes),
+		&options.SelectorOptions{
+			Selector: "qux=baz",
+		},
+		&options.StrictOptions{})
+	if err != nil {
+		t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
+	}
+	if diff := cmp.Diff(passesSelector, string(outputYAML)); diff != "" {
+		t.Errorf("resolveFile (-want +got) = %v", diff)
 	}
 }
 
