@@ -117,7 +117,8 @@ func addCreate(topLevel *cobra.Command) {
 					stdin.Write([]byte("---\n"))
 				}
 				// Once primed kick things off.
-				resolveFilesToWriter(builder, publisher, fo, so, sto, stdin)
+				ctx := createCancellableContext()
+				resolveFilesToWriter(ctx, builder, publisher, fo, so, sto, stdin)
 			}()
 
 			// Run it.

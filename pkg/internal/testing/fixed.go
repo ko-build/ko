@@ -15,6 +15,7 @@
 package testing
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -40,7 +41,7 @@ func (f *fixedBuild) IsSupportedReference(s string) bool {
 }
 
 // Build implements build.Interface
-func (f *fixedBuild) Build(s string) (v1.Image, error) {
+func (f *fixedBuild) Build(_ context.Context, s string) (v1.Image, error) {
 	if img, ok := f.entries[s]; ok {
 		return img, nil
 	}

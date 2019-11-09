@@ -15,6 +15,7 @@
 package resolve
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -32,7 +33,7 @@ const koPrefix = "ko://"
 // to published image digests.
 //
 // If a reference can be built and pushed, its yaml.Node will be mutated.
-func ImageReferences(docs []*yaml.Node, strict bool, builder build.Interface, publisher publish.Interface) error {
+func ImageReferences(ctx context.Context, docs []*yaml.Node, strict bool, builder build.Interface, publisher publish.Interface) error {
 	// First, walk the input objects and collect a list of supported references
 	refs := make(map[string][]*yaml.Node)
 
@@ -57,7 +58,7 @@ func ImageReferences(docs []*yaml.Node, strict bool, builder build.Interface, pu
 	for ref := range refs {
 		ref := ref
 		errg.Go(func() error {
-			img, err := builder.Build(ref)
+			img, err := builder.Build(ctx, ref)
 			if err != nil {
 				return err
 			}
