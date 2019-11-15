@@ -43,15 +43,7 @@ var _ partial.CompressedImageCore = (*remoteImage)(nil)
 
 // Image provides access to a remote image reference.
 func Image(ref name.Reference, options ...Option) (v1.Image, error) {
-	acceptable := []types.MediaType{
-		types.DockerManifestSchema2,
-		types.OCIManifestSchema1,
-		// We resolve these to images later.
-		types.DockerManifestList,
-		types.OCIImageIndex,
-	}
-
-	desc, err := get(ref, acceptable, options...)
+	desc, err := Get(ref, options...)
 	if err != nil {
 		return nil, err
 	}

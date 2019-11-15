@@ -15,8 +15,17 @@
 package resolve
 
 import (
-	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
+	"gopkg.in/yaml.v3"
+	"k8s.io/apimachinery/pkg/labels"
+)
+
+var (
+	webSelector    = selector(`app=web`)
+	notWebSelector = selector(`app!=web`)
+	nopSelector    = selector(`foo!=bark`)
 )
 
 const (
@@ -55,11 +64,11 @@ items:
       app: db
     name: rss-db
 `
-	webSelector    = `app=web`
-	notWebSelector = `app!=web`
-	nopSelector    = `foo!=bark`
-
 	webPodList = `apiVersion: v1
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
 items:
 - apiVersion: v1
   kind: Pod
@@ -67,12 +76,12 @@ items:
     labels:
       app: web
     name: rss-site
+`
+	dbPodList = `apiVersion: v1
 kind: List
 metadata:
   resourceVersion: ""
   selfLink: ""
-`
-	dbPodList = `apiVersion: v1
 items:
 - apiVersion: v1
   kind: Pod
@@ -80,72 +89,157 @@ items:
     labels:
       app: db
     name: rss-db
-kind: List
-metadata:
-  resourceVersion: ""
-  selfLink: ""
 `
 )
 
-var bothPods = strings.Join([]string{webPod, dbPod}, "\n---\n")
-
-func TestSelector(t *testing.T) {
+func TestMatchesSelector(t *testing.T) {
 	tests := []struct {
 		desc     string
 		input    string
-		selector string
-		expected string
+		selector labels.Selector
+		output   string
+		matches  bool
 	}{{
 		desc:     "single object with matching selector",
 		input:    webPod,
 		selector: webSelector,
-		expected: webPod,
+		output:   webPod,
+		matches:  true,
 	}, {
 		desc:     "single object with non-matching selector",
 		input:    webPod,
 		selector: notWebSelector,
-		expected: ``,
+		matches:  false,
 	}, {
-		desc:     "selector matching 1 of two objects",
-		input:    bothPods,
-		selector: webSelector,
-		expected: webPod,
-	}, {
-		desc:     "selector matching 1 of two objects",
-		input:    bothPods,
-		selector: notWebSelector,
-		expected: dbPod,
-	}, {
-		desc:     "selector matching both objects",
-		input:    bothPods,
+		desc:     "single object with noop selector",
+		input:    dbPod,
 		selector: nopSelector,
-		expected: bothPods,
+		output:   dbPod,
+		matches:  true,
 	}, {
 		desc:     "selector matching elements of list object",
 		input:    podList,
 		selector: webSelector,
-		expected: webPodList,
+		output:   webPodList,
+		matches:  true,
 	}, {
-		desc:     "selector matching elements of list object",
+		desc:     "selector matching other elements of list object",
 		input:    podList,
 		selector: notWebSelector,
-		expected: dbPodList,
+		output:   dbPodList,
+		matches:  true,
 	}, {
 		desc:     "selector matching all elements of list object",
 		input:    podList,
-		selector: ``,
-		expected: podList,
+		selector: labels.Everything(),
+		output:   podList,
+		matches:  true,
+	}, {
+		desc:     "selector matching no elements of list object",
+		input:    podList,
+		selector: labels.Nothing(),
+		matches:  false,
+	}, {
+		desc: "null node",
+		input: "!!null",
+		selector: labels.Everything(),
+		matches: false,
 	}}
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			filtered, err := FilterBySelector([]byte(test.input), test.selector)
+
+			doc := strToYAML(t, test.input)
+			matches, err := MatchesSelector(doc, test.selector)
 			if err != nil {
-				t.Errorf("unexpected error: %v", err)
+				t.Fatalf("unexpected error: %v", err)
 			}
-			if strings.TrimSpace(string(filtered)) != strings.TrimSpace(test.expected) {
-				t.Errorf("expected \n%v\n to equal \n%v\n ", string(filtered), test.expected)
+
+			if matches != test.matches {
+				t.Errorf("unexpected result: got %v - want %v", matches, test.matches)
+			}
+
+			// assert doc is mutated correctly
+			if test.output != "" {
+				// Normalize whitespace formatting
+				output := normalizeYAML(t, test.output)
+
+				if diff := cmp.Diff(output, yamlToStr(t, doc)); diff != "" {
+					t.Errorf("unexpected diff (-want, +got) %v", diff)
+				}
 			}
 		})
 	}
+}
+
+func TestSelectorFailure(t *testing.T) {
+	tests := []struct {
+		desc  string
+		input string
+	}{
+		{
+			desc:  "not an object",
+			input: "image: some.go/package",
+		},
+		{
+			desc: "not an object in a list",
+			input: `apiVersion: v1
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
+items:
+- blah: ha
+`,
+		},
+		{
+			desc: "not a valid list",
+			input: `apiVersion: v1
+kind: List
+`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			_, err := MatchesSelector(strToYAML(t, test.input), labels.Everything())
+
+			if err == nil {
+				t.Error("expected error")
+			}
+		})
+	}
+}
+
+func selector(s string) labels.Selector {
+	selector, err := labels.Parse(s)
+	if err != nil {
+		panic("unable to parse selector " + s)
+	}
+	return selector
+}
+
+func normalizeYAML(t *testing.T, yuml string) string {
+	t.Helper()
+	return yamlToStr(t, strToYAML(t, yuml))
+}
+
+func yamlToStr(t *testing.T, node *yaml.Node) string {
+	result, err := yaml.Marshal(node)
+	if err != nil {
+		t.Fatalf("error marshalling yaml: %v", err)
+	}
+
+	return string(result)
+}
+
+func strToYAML(t *testing.T, yuml string) *yaml.Node {
+	t.Helper()
+	var node yaml.Node
+
+	if err := yaml.Unmarshal([]byte(yuml), &node); err != nil {
+		t.Fatalf("error unmarshalling yaml: %v\n%v", err, yuml)
+	}
+
+	return &node
 }

@@ -16,6 +16,7 @@ package build
 
 import (
 	"archive/tar"
+	"context"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -102,7 +103,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 }
 
 // A helper method we use to substitute for the default "build" method.
-func writeTempFile(s string, _ v1.Platform, _ bool) (string, error) {
+func writeTempFile(_ context.Context, s string, _ v1.Platform, _ bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -137,7 +138,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	img, err := ng.Build(filepath.Join(importpath, "cmd", "ko"))
+	img, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -217,7 +218,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	img, err := ng.Build(filepath.Join(importpath, "cmd", "ko", "test"))
+	img, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}

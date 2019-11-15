@@ -15,10 +15,13 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -53,6 +56,19 @@ func getCreationTime() (*v1.Time, error) {
 		return nil, fmt.Errorf("the environment variable SOURCE_DATE_EPOCH should be the number of seconds since January 1st 1970, 00:00 UTC, got: %v", err)
 	}
 	return &v1.Time{time.Unix(seconds, 0)}, nil
+}
+
+func createCancellableContext() context.Context {
+	signals := make(chan os.Signal)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	go func() {
+		<-signals
+		cancel()
+	}()
+
+	return ctx
 }
 
 func init() {

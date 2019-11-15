@@ -15,6 +15,7 @@
 package build
 
 import (
+	"context"
 	"testing"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -35,7 +36,7 @@ func (r *fake) IsSupportedReference(ip string) bool {
 }
 
 // Build implements Interface
-func (r *fake) Build(ip string) (v1.Image, error) {
+func (r *fake) Build(_ context.Context, ip string) (v1.Image, error) {
 	return r.b(ip)
 }
 
@@ -111,7 +112,7 @@ func TestBuildRecording(t *testing.T) {
 				Builder: inner,
 			}
 			for _, in := range test.inputs {
-				rec.Build(in)
+				rec.Build(context.Background(), in)
 			}
 			if diff := cmp.Diff(test.inputs, rec.ImportPaths); diff != "" {
 				t.Errorf("Build (-want, +got): %s", diff)

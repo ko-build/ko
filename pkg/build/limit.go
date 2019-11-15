@@ -36,14 +36,14 @@ func (l *Limiter) IsSupportedReference(ip string) bool {
 }
 
 // Build implements Interface
-func (l *Limiter) Build(ip string) (v1.Image, error) {
+func (l *Limiter) Build(ctx context.Context, ip string) (v1.Image, error) {
 	// TODO(jonjohnsonjr): Build should take a context.Context.
 	if err := l.semaphore.Acquire(context.TODO(), 1); err != nil {
 		return nil, err
 	}
 	defer l.semaphore.Release(1)
 
-	return l.Builder.Build(ip)
+	return l.Builder.Build(ctx, ip)
 }
 
 // NewLimiter returns a new builder that only allows n concurrent builds of b.
