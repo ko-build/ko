@@ -221,3 +221,74 @@ func TestDefaultWithTags(t *testing.T) {
 		t.Errorf("Tag v1.2.3 was not created.")
 	}
 }
+
+func TestDefaultWithReleaseTag(t *testing.T) {
+	img, err := random.Image(1024, 1)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	base := "blah"
+	releaseTag := "v1.2.3"
+	importpath := "github.com/Google/go-containerregistry/cmd/crane"
+	expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
+	headPathPrefix := fmt.Sprintf("/v2/%s/blobs/", expectedRepo)
+	initiatePath := fmt.Sprintf("/v2/%s/blobs/uploads/", expectedRepo)
+	manifestPath := fmt.Sprintf("/v2/%s/manifests/", expectedRepo)
+
+	createdTags := make(map[string]struct{})
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodHead && strings.HasPrefix(r.URL.Path, headPathPrefix) && r.URL.Path != initiatePath {
+			http.Error(w, "NotFound", http.StatusNotFound)
+			return
+		}
+		switch {
+		case r.URL.Path == "/v2/":
+			w.WriteHeader(http.StatusOK)
+		case r.URL.Path == initiatePath:
+			if r.Method != http.MethodPost {
+				t.Errorf("Method; got %v, want %v", r.Method, http.MethodPost)
+			}
+			http.Error(w, "Mounted", http.StatusCreated)
+		case strings.HasPrefix(r.URL.Path, manifestPath):
+			if r.Method != http.MethodPut {
+				t.Errorf("Method; got %v, want %v", r.Method, http.MethodPut)
+			}
+
+			createdTags[strings.TrimPrefix(r.URL.Path, manifestPath)] = struct{}{}
+
+			http.Error(w, "Created", http.StatusCreated)
+		default:
+			t.Fatalf("Unexpected path: %v", r.URL.Path)
+		}
+	}))
+	defer server.Close()
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse(%v) = %v", server.URL, err)
+	}
+	tag, err := name.NewTag(fmt.Sprintf("%s/%s:notLatest", u.Host, expectedRepo))
+	if err != nil {
+		t.Fatalf("NewTag() = %v", err)
+	}
+
+	repoName := fmt.Sprintf("%s/%s", u.Host, base)
+
+	def, err := NewDefault(repoName, WithTags([]string{releaseTag}))
+	if err != nil {
+		t.Errorf("NewDefault() = %v", err)
+	}
+	if d, err := def.Publish(img, importpath); err != nil {
+		t.Errorf("Publish() = %v", err)
+	} else if !strings.HasPrefix(d.String(), repoName) {
+		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
+	} else if !strings.HasSuffix(d.Context().String(), strings.ToLower(importpath)) {
+		t.Errorf("Publish() = %v, wanted suffix %v", d.Context(), md5Hash(importpath))
+	} else if !strings.Contains(d.String(), releaseTag) {
+		t.Errorf("Publish() = %v, wanted tag included: %v", d.String(), releaseTag)
+	}
+
+	if _, ok := createdTags["v1.2.3"]; !ok {
+		t.Errorf("Tag v1.2.3 was not created.")
+	}
+}

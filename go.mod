@@ -4,6 +4,7 @@ go 1.12
 
 require (
 	github.com/docker/docker v1.4.2-0.20180531152204-71cd53e4a197
+	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/google/btree v1.0.0 // indirect
@@ -13,7 +14,6 @@ require (
 	github.com/imdario/mergo v0.3.5 // indirect
 	github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
 	github.com/modern-go/reflect2 v1.0.1 // indirect
-	github.com/petar/GoLLRB v0.0.0-20130427215148-53be0d36a84c // indirect
 	github.com/spf13/afero v1.2.1 // indirect
 	github.com/spf13/cobra v0.0.5
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
@@ -21,9 +21,8 @@ require (
 	github.com/spf13/viper v1.3.2
 	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/tools v0.0.0-20191001184121-329c8d646ebe
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d
 	k8s.io/apimachinery v0.0.0-20180904193909-def12e63c512
 	k8s.io/client-go v8.0.0+incompatible // indirect
 	k8s.io/kubernetes v1.11.10
-	sigs.k8s.io/yaml v1.1.0
 )
