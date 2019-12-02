@@ -27,6 +27,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -237,7 +238,7 @@ func tarBinary(name, binary string) (*bytes.Buffer, error) {
 	defer tw.Close()
 
 	// write the parent directories to the tarball archive
-	if err := tarAddDirectories(tw, filepath.Dir(name)); err != nil {
+	if err := tarAddDirectories(tw, path.Dir(name)); err != nil {
 		return nil, err
 	}
 
@@ -286,8 +287,8 @@ const kodataRoot = "/var/run/ko"
 // to the provided tar.Writer with root -> chroot.  All symlinks are dereferenced,
 // which is what leads to recursion when we encounter a directory symlink.
 func walkRecursive(tw *tar.Writer, root, chroot string) error {
-	return filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
-		if path == root {
+	return filepath.Walk(root, func(hostPath string, info os.FileInfo, err error) error {
+		if hostPath == root {
 			// Add an entry for the root directory of our walk.
 			return tw.WriteHeader(&tar.Header{
 				Name:     chroot,
@@ -305,25 +306,25 @@ func walkRecursive(tw *tar.Writer, root, chroot string) error {
 		if info.Mode().IsDir() {
 			return nil
 		}
-		newPath := filepath.Join(chroot, path[len(root):])
+		newPath := path.Join(chroot, filepath.ToSlash(hostPath[len(root):]))
 
-		path, err = filepath.EvalSymlinks(path)
+		hostPath, err = filepath.EvalSymlinks(hostPath)
 		if err != nil {
 			return err
 		}
 
 		// Chase symlinks.
-		info, err = os.Stat(path)
+		info, err = os.Stat(hostPath)
 		if err != nil {
 			return err
 		}
 		// Skip other directories.
 		if info.Mode().IsDir() {
-			return walkRecursive(tw, path, newPath)
+			return walkRecursive(tw, hostPath, newPath)
 		}
 
 		// Open the file to copy it into the tarball.
-		file, err := os.Open(path)
+		file, err := os.Open(hostPath)
 		if err != nil {
 			return err
 		}
@@ -411,7 +412,7 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 		},
 	})
 
-	appPath := filepath.Join(appDir, appFilename(s))
+	appPath := path.Join(appDir, appFilename(s))
 
 	// Construct a tarball with the binary and produce a layer.
 	binaryLayerBuf, err := tarBinary(appPath, file)

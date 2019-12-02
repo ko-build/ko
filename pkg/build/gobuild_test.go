@@ -19,6 +19,7 @@ import (
 	"context"
 	"io"
 	"io/ioutil"
+	"path"
 	"path/filepath"
 	"testing"
 	"time"
@@ -40,7 +41,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/cmd/ko"), // ko can build itself.
+		"github.com/google/ko/cmd/ko", // ko can build itself.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if !ng.IsSupportedReference(importpath) {
@@ -51,8 +52,8 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Unsupported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/pkg/build"),       // not a command.
-		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), // does not exist.
+		"github.com/google/ko/pkg/build",       // not a command.
+		"github.com/google/ko/pkg/nonexistent", // does not exist.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if ng.IsSupportedReference(importpath) {
@@ -68,7 +69,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 	mod := &modInfo{
-		Path: filepath.FromSlash("github.com/google/ko/cmd/ko/test"),
+		Path: "github.com/google/ko/cmd/ko/test",
 		Dir:  ".",
 	}
 
@@ -79,7 +80,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/cmd/ko/test"), // ko can build the test package.
+		"github.com/google/ko/cmd/ko/test", // ko can build the test package.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if !ng.IsSupportedReference(importpath) {
@@ -90,9 +91,9 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 
 	// Unsupported import paths.
 	for _, importpath := range []string{
-		filepath.FromSlash("github.com/google/ko/pkg/build"),       // not a command.
-		filepath.FromSlash("github.com/google/ko/pkg/nonexistent"), // does not exist.
-		filepath.FromSlash("github.com/google/ko/cmd/ko"),          // not in this module.
+		"github.com/google/ko/pkg/build",       // not a command.
+		"github.com/google/ko/pkg/nonexistent", // does not exist.
+		"github.com/google/ko/cmd/ko",          // not in this module.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if ng.IsSupportedReference(importpath) {
@@ -138,7 +139,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	img, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko"))
+	img, err := ng.Build(context.Background(), path.Join(importpath, "cmd", "ko"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -218,7 +219,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	img, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+	img, err := ng.Build(context.Background(), path.Join(importpath, "cmd", "ko", "test"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -290,7 +291,7 @@ func TestGoBuild(t *testing.T) {
 				t.Errorf("Next() = %v", err)
 				continue
 			}
-			if header.Name != filepath.Join(kodataRoot, "kenobi") {
+			if header.Name != path.Join(kodataRoot, "kenobi") {
 				continue
 			}
 			found = true
