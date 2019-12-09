@@ -162,16 +162,9 @@ func (r *remoteIndex) childByHash(h v1.Hash) (*Descriptor, error) {
 	return nil, fmt.Errorf("no child with digest %s in index %s", h, r.Ref)
 }
 
-func (r *remoteIndex) childRef(h v1.Hash) (name.Reference, error) {
-	return name.ParseReference(fmt.Sprintf("%s@%s", r.Ref.Context(), h), name.StrictValidation)
-}
-
 // Convert one of this index's child's v1.Descriptor into a remote.Descriptor, with the given platform option.
 func (r *remoteIndex) childDescriptor(child v1.Descriptor, platform v1.Platform) (*Descriptor, error) {
-	ref, err := r.childRef(child.Digest)
-	if err != nil {
-		return nil, err
-	}
+	ref := r.Ref.Context().Digest(child.Digest.String())
 	manifest, desc, err := r.fetchManifest(ref, []types.MediaType{child.MediaType})
 	if err != nil {
 		return nil, err
