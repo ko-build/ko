@@ -21,6 +21,7 @@ import (
 	"io/ioutil"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -336,7 +337,24 @@ func TestGoBuild(t *testing.T) {
 			}
 		}
 		if !found {
-			t.Error("Didn't find expected file in tarball.")
+			t.Error("Didn't find KO_DATA_PATH.")
+		}
+	})
+
+	// Check that PATH contains the produced binary.
+	t.Run("check PATH env var", func(t *testing.T) {
+		cfg, err := img.ConfigFile()
+		if err != nil {
+			t.Errorf("ConfigFile() = %v", err)
+		}
+		found := false
+		for _, entry := range cfg.Config.Env {
+			if strings.HasPrefix(entry, "PATH=") && strings.Contains(entry, "/ko-app/test") {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("Didn't find entrypoint in PATH.")
 		}
 	})
 
