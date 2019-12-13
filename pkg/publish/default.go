@@ -89,6 +89,7 @@ func NewDefault(base string, options ...Option) (Interface, error) {
 			return nil, err
 		}
 	}
+
 	return do.Open()
 }
 

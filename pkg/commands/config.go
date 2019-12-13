@@ -42,7 +42,9 @@ func getBaseImage(s string) (v1.Image, error) {
 		ref = defaultBaseImage
 	}
 	log.Printf("Using base %s for %s", ref, s)
-	return remote.Image(ref, remote.WithAuthFromKeychain(authn.DefaultKeychain))
+	return remote.Image(ref,
+		remote.WithTransport(defaultTransport()),
+		remote.WithAuthFromKeychain(authn.DefaultKeychain))
 }
 
 func getCreationTime() (*v1.Time, error) {

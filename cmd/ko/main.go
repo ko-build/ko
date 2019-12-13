@@ -15,8 +15,9 @@
 package main
 
 import (
-	"github.com/google/ko/pkg/commands"
 	"log"
+
+	"github.com/google/ko/pkg/commands"
 
 	"github.com/spf13/cobra"
 )
