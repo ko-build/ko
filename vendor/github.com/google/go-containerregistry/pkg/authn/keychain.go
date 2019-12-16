@@ -15,8 +15,13 @@
 package authn
 
 import (
+	"encoding/json"
+	"os"
+
 	"github.com/docker/cli/cli/config"
 	"github.com/docker/cli/cli/config/types"
+	"github.com/google/go-containerregistry/pkg/logs"
+	"github.com/google/go-containerregistry/pkg/name"
 )
 
 // Resource represents a registry or repository that can be authenticated against.
@@ -44,22 +49,36 @@ type defaultKeychain struct{}
 var (
 	// DefaultKeychain implements Keychain by interpreting the docker config file.
 	DefaultKeychain Keychain = &defaultKeychain{}
+)
 
-	// This should generally just be "", but for testing it's nice to redirect
-	// to a temporary file. If it's "", docker/cli will handle defaulting for us.
-	configDir = ""
+const (
+	defaultAuthKey = "https://" + name.DefaultRegistry + "/v1/"
 )
 
 // Resolve implements Keychain.
 func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
-	cf, err := config.Load(configDir)
+	cf, err := config.Load(os.Getenv("DOCKER_CONFIG"))
 	if err != nil {
 		return nil, err
 	}
 
-	cfg, err := cf.GetAuthConfig(target.RegistryStr())
+	// See:
+	// https://github.com/google/ko/issues/90
+	// https://github.com/moby/moby/blob/fc01c2b481097a6057bec3cd1ab2d7b4488c50c4/registry/config.go#L397-L404
+	key := target.RegistryStr()
+	if key == name.DefaultRegistry {
+		key = defaultAuthKey
+	}
+
+	cfg, err := cf.GetAuthConfig(key)
 	if err != nil {
 		return nil, err
+	}
+	if logs.Enabled(logs.Debug) {
+		b, err := json.Marshal(cfg)
+		if err == nil {
+			logs.Debug.Printf("defaultKeychain.Resolve(%q) = %s", key, string(b))
+		}
 	}
 
 	empty := types.AuthConfig{}

@@ -15,13 +15,14 @@
 package commands
 
 import (
-	"context"
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"sync"
 
@@ -35,6 +36,31 @@ import (
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/labels"
 )
+
+func defaultTransport() http.RoundTripper {
+	return &useragentTransport{
+		inner:     http.DefaultTransport,
+		useragent: ua(),
+	}
+}
+
+type useragentTransport struct {
+	useragent string
+	inner     http.RoundTripper
+}
+
+func ua() string {
+	if v := version(); v != "" {
+		return "ko/" + v
+	}
+	return "ko"
+}
+
+// RoundTrip implements http.RoundTripper
+func (ut *useragentTransport) RoundTrip(in *http.Request) (*http.Response, error) {
+	in.Header.Set("User-Agent", ut.useragent)
+	return ut.inner.RoundTrip(in)
+}
 
 func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	creationTime, err := getCreationTime()
@@ -104,6 +130,7 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 		}
 
 		return publish.NewDefault(repoName,
+			publish.WithTransport(defaultTransport()),
 			publish.WithAuthFromKeychain(authn.DefaultKeychain),
 			publish.WithNamer(namer),
 			publish.WithTags(ta.Tags),
@@ -121,7 +148,7 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 type resolvedFuture chan []byte
 
 func resolveFilesToWriter(
-	ctx context.Context, 
+	ctx context.Context,
 	builder *build.Caching,
 	publisher publish.Interface,
 	fo *options.FilenameOptions,

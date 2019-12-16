@@ -21,6 +21,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	gb "go/build"
 	"io"
 	"io/ioutil"
@@ -450,6 +451,7 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
+	updatePath(cfg, appPath)
 	cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	cfg.Author = "github.com/google/ko"
 
@@ -463,4 +465,25 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 		return mutate.CreatedAt(image, gb.creationTime)
 	}
 	return image, nil
+}
+
+// Append appPath to the PATH environment variable, if it exists. Otherwise,
+// set the PATH environment variable to appPath.
+func updatePath(cf *v1.ConfigFile, appPath string) {
+	for i, env := range cf.Config.Env {
+		parts := strings.SplitN(env, "=", 2)
+		if len(parts) != 2 {
+			// Expect environment variables to be in the form KEY=VALUE, so this is unexpected.
+			continue
+		}
+		key, value := parts[0], parts[1]
+		if key == "PATH" {
+			value = fmt.Sprintf("%s:%s", value, appPath)
+			cf.Config.Env[i] = "PATH=" + value
+			return
+		}
+	}
+
+	// If we get here, we never saw PATH.
+	cf.Config.Env = append(cf.Config.Env, "PATH="+appPath)
 }

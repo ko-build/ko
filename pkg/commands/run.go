@@ -18,6 +18,8 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
@@ -26,25 +28,43 @@ import (
 // addRun augments our CLI surface with run.
 func addRun(topLevel *cobra.Command) {
 	lo := &options.LocalOptions{}
-	po := &options.PublishOptions{}
 	no := &options.NameOptions{}
 	ta := &options.TagsOptions{}
 	bo := &options.BuildOptions{}
 
 	run := &cobra.Command{
-		Use:   "run NAME --image=IMPORTPATH",
+		Use:   "run IMPORTPATH",
 		Short: "A variant of `kubectl run` that containerizes IMPORTPATH first.",
 		Long:  `This sub-command combines "ko publish" and "kubectl run" to support containerizing and running Go binaries on Kubernetes in a single command.`,
 		Example: `
-  # Publish the --image and run it on Kubernetes as:
+  # Publish the image and run it on Kubernetes as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
   # When KO_DOCKER_REPO is ko.local, it is the same as if
   # --local and --preserve-import-paths were passed.
-  ko run foo --image=github.com/foo/bar/cmd/baz
+  ko run github.com/foo/bar/cmd/baz
 
   # This supports relative import paths as well.
-  ko run foo --image=./cmd/baz`,
+  ko run ./cmd/baz
+
+  # You can also supply args and flags to the command.
+  ko run ./cmd/baz -- -v arg1 arg2 --yes`,
 		Run: func(cmd *cobra.Command, args []string) {
+			// Args after -- are for kubectl, so only consider importPaths before it.
+			importPaths := args
+			dashes := cmd.Flags().ArgsLenAtDash()
+			if dashes != -1 {
+				importPaths = args[:cmd.Flags().ArgsLenAtDash()]
+			}
+			if len(importPaths) == 0 {
+				log.Fatalf("ko run: no importpaths listed")
+			}
+
+			kubectlArgs := []string{}
+			dashes = unparsedDashes()
+			if dashes != -1 {
+				kubectlArgs = os.Args[dashes:]
+			}
+
 			builder, err := makeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
@@ -53,19 +73,49 @@ func addRun(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
+
+			if len(os.Args) < 3 {
+				log.Fatalf("usage: %s run <package>", os.Args[0])
+			}
+			ip := os.Args[2]
+			if strings.HasPrefix(ip, "-") {
+				log.Fatalf("expected first arg to be positional, got %q", ip)
+			}
 			ctx := createCancellableContext()
-			imgs, err := publishImages(ctx, []string{po.Path}, publisher, builder)
+			imgs, err := publishImages(ctx, importPaths, publisher, builder)
 			if err != nil {
 				log.Fatalf("failed to publish images: %v", err)
 			}
 
-			// There's only one, but this is the simple way to access the
+			// Usually only one, but this is the simple way to access the
 			// reference since the import path may have been qualified.
-			for k, v := range imgs {
+			for k, ref := range imgs {
 				log.Printf("Running %q", k)
-				// Issue a "kubectl run" command with our same arguments,
-				// but supply a second --image to override the one we intercepted.
-				argv := append(os.Args[1:], "--image", v.String())
+				pod := filepath.Base(ref.Context().String())
+
+				// These are better defaults:
+				defaults := []string{
+					"--generator=run-pod/v1",   // create a pod instead of deployment
+					"--attach",                 // stream logs back
+					"--rm",                     // clean up after ourselves
+					"--restart=Never",          // we just want to run once
+					"--log-flush-frequency=1s", // flush logs more often
+				}
+
+				// Replaced "<package>" with "--image=<published image>".
+				argv := []string{"--image", ref.String()}
+
+				// Add our default kubectl flags.
+				// TODO: Add some way to override these.
+				argv = append(argv, defaults...)
+
+				// If present, adds -- arg1 arg2...
+				argv = append(argv, kubectlArgs...)
+
+				// "run <package> <defaults> --image <ref> <kubectlArgs>"
+				argv = append([]string{"run", pod}, argv...)
+
+				log.Printf("$ kubectl %s", strings.Join(argv, " "))
 				kubectlCmd := exec.Command("kubectl", argv...)
 
 				// Pass through our environment
@@ -89,9 +139,17 @@ func addRun(topLevel *cobra.Command) {
 	}
 	options.AddLocalArg(run, lo)
 	options.AddNamingArgs(run, no)
-	options.AddImageArg(run, po)
 	options.AddTagsArg(run, ta)
 	options.AddBuildOptions(run, bo)
 
 	topLevel.AddCommand(run)
+}
+
+func unparsedDashes() int {
+	for i, s := range os.Args {
+		if s == "--" {
+			return i
+		}
+	}
+	return -1
 }
