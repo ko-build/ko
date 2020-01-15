@@ -289,3 +289,62 @@ type WithDiffID interface {
 type withDescriptor interface {
 	Descriptor() (*v1.Descriptor, error)
 }
+
+// Describable represents something for which we can produce a v1.Descriptor.
+type Describable interface {
+	Digest() (v1.Hash, error)
+	MediaType() (types.MediaType, error)
+	Size() (int64, error)
+}
+
+// Descriptor returns a v1.Descriptor given a Describable. It also encodes
+// some logic for unwrapping things that have been wrapped by
+// CompressedToLayer, UncompressedToLayer, CompressedToImage, or
+// UncompressedToImage.
+func Descriptor(d Describable) (*v1.Descriptor, error) {
+	// If Describable implements Descriptor itself, return that.
+	if wd, ok := d.(withDescriptor); ok {
+		return wd.Descriptor()
+	}
+
+	// Otherwise, try to unwrap any partial implementations to see
+	// if the wrapped struct implements Descriptor.
+	if ule, ok := d.(*uncompressedLayerExtender); ok {
+		if wd, ok := ule.UncompressedLayer.(withDescriptor); ok {
+			return wd.Descriptor()
+		}
+	}
+	if cle, ok := d.(*compressedLayerExtender); ok {
+		if wd, ok := cle.CompressedLayer.(withDescriptor); ok {
+			return wd.Descriptor()
+		}
+	}
+	if uie, ok := d.(*uncompressedImageExtender); ok {
+		if wd, ok := uie.UncompressedImageCore.(withDescriptor); ok {
+			return wd.Descriptor()
+		}
+	}
+	if cie, ok := d.(*compressedImageExtender); ok {
+		if wd, ok := cie.CompressedImageCore.(withDescriptor); ok {
+			return wd.Descriptor()
+		}
+	}
+
+	// If all else fails, compute the descriptor from the individual methods.
+	var (
+		desc v1.Descriptor
+		err  error
+	)
+
+	if desc.Size, err = d.Size(); err != nil {
+		return nil, err
+	}
+	if desc.Digest, err = d.Digest(); err != nil {
+		return nil, err
+	}
+	if desc.MediaType, err = d.MediaType(); err != nil {
+		return nil, err
+	}
+
+	return &desc, nil
+}
