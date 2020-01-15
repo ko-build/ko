@@ -18,6 +18,6 @@ require (
 	golang.org/x/tools v0.0.0-20200115192306-3ded1b734dda
 	gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d
 	k8s.io/apimachinery v0.17.1
-	k8s.io/cli-runtime v0.17.1
-	k8s.io/client-go v11.0.0+incompatible // indirect
+	k8s.io/cli-runtime v0.17.0
+	k8s.io/client-go v0.17.1 // indirect
 )
