@@ -143,7 +143,7 @@ func addApply(topLevel *cobra.Command) {
 	})
 
 	// Register the kubectl global flags.
-	kubeConfigFlags := genericclioptions.NewConfigFlags()
+	kubeConfigFlags := genericclioptions.NewConfigFlags(false)
 	kubeConfigFlags.AddFlags(apply.Flags())
 
 	topLevel.AddCommand(apply)
