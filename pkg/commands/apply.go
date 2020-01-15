@@ -22,7 +22,7 @@ import (
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // addApply augments our CLI surface with apply.
