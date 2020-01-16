@@ -64,6 +64,11 @@ func addApply(topLevel *cobra.Command) {
   cat config.yaml | ko apply -f -`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
+			if !isKubectlAvailable() {
+				log.Print("error: kubectl is not available. kubectl must be installed to use ko apply.")
+				return
+			}
+
 			builder, err := makeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)

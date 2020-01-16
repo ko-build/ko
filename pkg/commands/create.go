@@ -64,6 +64,11 @@ func addCreate(topLevel *cobra.Command) {
   cat config.yaml | ko create -f -`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
+			if !isKubectlAvailable() {
+				log.Print("error: kubectl is not available. kubectl must be installed to use ko create.")
+				return
+			}
+
 			builder, err := makeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
