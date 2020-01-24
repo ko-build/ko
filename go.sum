@@ -473,7 +473,6 @@ honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
 k8s.io/api v0.17.0 h1:H9d/lw+VkZKEVIUc8F3wgiQ+FUXTTr21M87jXLU7yqM=
 k8s.io/api v0.17.0/go.mod h1:npsyOePkeP0CPwyGfXDHxvypiYMJxBWAMpQxCaJ4ZxI=
-k8s.io/api v0.17.1-beta.0/go.mod h1:t+ColJ7ZemYM/LXgLo4sVuO86DluzcnNHVKfZK4irZM=
 k8s.io/api v0.17.1 h1:i46MidoDOE9tvQ0TTEYggf3ka/pziP1+tHI/GFVeJao=
 k8s.io/api v0.17.1/go.mod h1:zxiAc5y8Ngn4fmhWUtSxuUlkfz1ixT7j9wESokELzOg=
 k8s.io/apimachinery v0.17.0 h1:xRBnuie9rXcPxUkDizUsGvPf1cnlZCFu210op7J7LJo=
@@ -483,14 +482,9 @@ k8s.io/apimachinery v0.17.1/go.mod h1:b9qmWdKlLuU9EBh+06BtLcSf/Mu89rWL33naRxs1uZ
 k8s.io/apiserver v0.17.0/go.mod h1:ABM+9x/prjINN6iiffRVNCBR2Wk7uY4z+EtEGZD48cg=
 k8s.io/cli-runtime v0.17.0 h1:XEuStbJBHCQlEKFyTQmceDKEWOSYHZkcYWKp3SsQ9Hk=
 k8s.io/cli-runtime v0.17.0/go.mod h1:1E5iQpMODZq2lMWLUJELwRu2MLWIzwvMgDBpn3Y81Qo=
-k8s.io/cli-runtime v0.17.1-beta.0/go.mod h1:MtYjgAKa4dSzeTbh6AwQMGuRwZGVVhuhAuC1BBIQ8DQ=
-k8s.io/cli-runtime v0.17.1 h1:VoZRWJNRyrxuM5SIRozYhT/EtcZ6jiS+KBCxRw66p1g=
-k8s.io/cli-runtime v0.17.1/go.mod h1:e5847Iy85W9uWH3rZofXTG/9nOUyGKGTVnObYF7zSik=
 k8s.io/client-go v0.17.0/go.mod h1:TYgR6EUHs6k45hb6KWjVD6jFZvJV4gHDikv/It0xz+k=
 k8s.io/client-go v0.17.1 h1:LbbuZ5tI7OYx4et5DfRFcJuoojvpYO0c7vps2rgJsHY=
 k8s.io/client-go v0.17.1/go.mod h1:HZtHJSC/VuSHcETN9QA5QDZky1tXiYrkF/7t7vRpO1A=
-k8s.io/client-go v11.0.0+incompatible h1:LBbX2+lOwY9flffWlJM7f1Ct8V2SRNiMRDFeiwnJo9o=
-k8s.io/client-go v11.0.0+incompatible/go.mod h1:7vJpHMYJwNQCWgzmNV+VYUl1zCObLyodBc8nIyt8L5s=
 k8s.io/cloud-provider v0.17.0/go.mod h1:Ze4c3w2C0bRsjkBUoHpFi+qWe3ob1wI2/7cUn+YQIDE=
 k8s.io/code-generator v0.17.1 h1:e3B1UqRzRUWygp7WD+QTRT3ZUahPIaRKF0OFa7duQwI=
 k8s.io/code-generator v0.17.1/go.mod h1:DVmfPQgxQENqDIzVR2ddLXMH34qeszkKSdH/N+s+38s=
