@@ -22,7 +22,7 @@ import (
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"k8s.io/kubernetes/pkg/kubectl/genericclioptions"
+	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // addCreate augments our CLI surface with apply.
@@ -64,6 +64,11 @@ func addCreate(topLevel *cobra.Command) {
   cat config.yaml | ko create -f -`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
+			if !isKubectlAvailable() {
+				log.Print("error: kubectl is not available. kubectl must be installed to use ko create.")
+				return
+			}
+
 			builder, err := makeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
@@ -143,7 +148,7 @@ func addCreate(topLevel *cobra.Command) {
 	})
 
 	// Register the kubectl global flags.
-	kubeConfigFlags := genericclioptions.NewConfigFlags()
+	kubeConfigFlags := genericclioptions.NewConfigFlags(false)
 	kubeConfigFlags.AddFlags(create.Flags())
 
 	topLevel.AddCommand(create)

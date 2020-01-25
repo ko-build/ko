@@ -15,6 +15,8 @@
 package commands
 
 import (
+	"os/exec"
+
 	"github.com/spf13/cobra"
 )
 
@@ -30,4 +32,12 @@ func AddKubeCommands(topLevel *cobra.Command) {
 	addPublish(topLevel)
 	addRun(topLevel)
 	addCompletion(topLevel)
+}
+
+// check if kubectl is installed
+func isKubectlAvailable() bool {
+	if _, err := exec.LookPath("kubectl"); err != nil {
+		return false
+	}
+	return true
 }
