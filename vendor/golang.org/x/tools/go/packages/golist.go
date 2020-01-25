@@ -253,12 +253,7 @@ func addNeededOverlayPackages(cfg *Config, driver driver, response *responseDedu
 	if len(pkgs) == 0 {
 		return nil
 	}
-	drivercfg := *cfg
-	if getGoInfo().env.modulesOn {
-		drivercfg.BuildFlags = append(drivercfg.BuildFlags, "-mod=readonly")
-	}
-	dr, err := driver(&drivercfg, pkgs...)
-
+	dr, err := driver(cfg, pkgs...)
 	if err != nil {
 		return err
 	}
@@ -678,7 +673,7 @@ func golistDriver(cfg *Config, rootsDirs func() *goInfo, words ...string) (*driv
 
 	// Run "go list" for complete
 	// information on the specified packages.
-	buf, err := invokeGo(cfg, golistargs(cfg, words)...)
+	buf, err := invokeGo(cfg, "list", golistargs(cfg, words)...)
 	if err != nil {
 		return nil, err
 	}
@@ -810,9 +805,15 @@ func golistDriver(cfg *Config, rootsDirs func() *goInfo, words ...string) (*driv
 		}
 
 		if p.Error != nil {
+			msg := strings.TrimSpace(p.Error.Err) // Trim to work around golang.org/issue/32363.
+			// Address golang.org/issue/35964 by appending import stack to error message.
+			if msg == "import cycle not allowed" && len(p.Error.ImportStack) != 0 {
+				msg += fmt.Sprintf(": import stack: %v", p.Error.ImportStack)
+			}
 			pkg.Errors = append(pkg.Errors, Error{
-				Pos: p.Error.Pos,
-				Msg: strings.TrimSpace(p.Error.Err), // Trim to work around golang.org/issue/32363.
+				Pos:  p.Error.Pos,
+				Msg:  msg,
+				Kind: ListError,
 			})
 		}
 
@@ -876,7 +877,7 @@ func absJoin(dir string, fileses ...[]string) (res []string) {
 func golistargs(cfg *Config, words []string) []string {
 	const findFlags = NeedImports | NeedTypes | NeedSyntax | NeedTypesInfo
 	fullargs := []string{
-		"list", "-e", "-json",
+		"-e", "-json",
 		fmt.Sprintf("-compiled=%t", cfg.Mode&(NeedCompiledGoFiles|NeedSyntax|NeedTypesInfo|NeedTypesSizes) != 0),
 		fmt.Sprintf("-test=%t", cfg.Tests),
 		fmt.Sprintf("-export=%t", usesExportData(cfg)),
@@ -892,10 +893,13 @@ func golistargs(cfg *Config, words []string) []string {
 }
 
 // invokeGo returns the stdout of a go command invocation.
-func invokeGo(cfg *Config, args ...string) (*bytes.Buffer, error) {
+func invokeGo(cfg *Config, verb string, args ...string) (*bytes.Buffer, error) {
 	stdout := new(bytes.Buffer)
 	stderr := new(bytes.Buffer)
-	cmd := exec.CommandContext(cfg.Context, "go", args...)
+	goArgs := []string{verb}
+	goArgs = append(goArgs, cfg.BuildFlags...)
+	goArgs = append(goArgs, args...)
+	cmd := exec.CommandContext(cfg.Context, "go", goArgs...)
 	// On darwin the cwd gets resolved to the real path, which breaks anything that
 	// expects the working directory to keep the original path, including the
 	// go command when dealing with modules.

@@ -15,10 +15,11 @@
 package commands
 
 import (
-	"github.com/spf13/cobra"
 	"log"
 	"os"
 	"os/exec"
+
+	"github.com/spf13/cobra"
 )
 
 // runCmd is suitable for use with cobra.Command's Run field.
@@ -28,6 +29,11 @@ type runCmd func(*cobra.Command, []string)
 // through to a binary named command.
 func passthru(command string) runCmd {
 	return func(_ *cobra.Command, _ []string) {
+		if !isKubectlAvailable() {
+			log.Print("error: kubectl is not available. kubectl must be installed to use ko delete.")
+			return
+		}
+
 		// Start building a command line invocation by passing
 		// through our arguments to command's CLI.
 		cmd := exec.Command(command, os.Args[1:]...)

@@ -33,7 +33,7 @@ type bearerTransport struct {
 	// Basic credentials that we exchange for bearer tokens.
 	basic authn.Authenticator
 	// Holds the bearer response from the token service.
-	bearer *authn.Bearer
+	bearer authn.AuthConfig
 	// Registry to which we send bearer tokens.
 	registry name.Registry
 	// See https://tools.ietf.org/html/rfc6750#section-3
@@ -61,11 +61,7 @@ func (bt *bearerTransport) RoundTrip(in *http.Request) (*http.Response, error) {
 		// the registry with which we are interacting.
 		// In case of redirect http.Client can use an empty Host, check URL too.
 		if matchesHost(bt.registry, in, bt.scheme) {
-			auth, err := bt.bearer.Authorization()
-			if err != nil {
-				return nil, err
-			}
-			hdr := fmt.Sprintf("Bearer %s", auth.RegistryToken)
+			hdr := fmt.Sprintf("Bearer %s", bt.bearer.RegistryToken)
 			in.Header.Set("Authorization", hdr)
 		}
 		return bt.inner.RoundTrip(in)
@@ -92,29 +88,25 @@ func (bt *bearerTransport) RoundTrip(in *http.Request) (*http.Response, error) {
 // The basic token exchange is attempted first, falling back to the oauth flow.
 // If the IdentityToken is set, this indicates that we should start with the oauth flow.
 func (bt *bearerTransport) refresh() error {
-	first, second := bt.refreshBasic, bt.refreshOauth
-
 	auth, err := bt.basic.Authorization()
 	if err != nil {
 		return err
 	}
+	var content []byte
 	if auth.IdentityToken != "" {
 		// If the secret being stored is an identity token,
 		// the Username should be set to <token>, which indicates
 		// we are using an oauth flow.
-		first, second = bt.refreshOauth, bt.refreshBasic
-	}
-
-	content, err := func() ([]byte, error) {
-		b, err := first()
-		if err != nil {
-			b, err = second()
-			if err != nil {
-				return nil, err
-			}
+		content, err = bt.refreshOauth()
+		if terr, ok := err.(*Error); ok && terr.StatusCode == http.StatusNotFound {
+			// Note: Not all token servers implement oauth2.
+			// If the request to the endpoint returns 404 using the HTTP POST method,
+			// refer to Token Documentation for using the HTTP GET method supported by all token servers.
+			content, err = bt.refreshBasic()
 		}
-		return b, err
-	}()
+	} else {
+		content, err = bt.refreshBasic()
+	}
 	if err != nil {
 		return err
 	}
@@ -138,9 +130,8 @@ func (bt *bearerTransport) refresh() error {
 	}
 
 	// Find a token to turn into a Bearer authenticator
-	var bearer authn.Bearer
 	if response.Token != "" {
-		bearer = authn.Bearer{Token: response.Token}
+		bt.bearer.RegistryToken = response.Token
 	} else {
 		return fmt.Errorf("no token in bearer response:\n%s", content)
 	}
@@ -152,8 +143,6 @@ func (bt *bearerTransport) refresh() error {
 		})
 	}
 
-	// Replace our old bearer authenticator (if we had one) with our newly refreshed authenticator.
-	bt.bearer = &bearer
 	return nil
 }
 
@@ -209,6 +198,7 @@ func (bt *bearerTransport) refreshOauth() ([]byte, error) {
 		v.Set("grant_type", "refresh_token")
 		v.Set("refresh_token", auth.IdentityToken)
 	} else if auth.Username != "" && auth.Password != "" {
+		// TODO(#629): This is unreachable.
 		v.Set("grant_type", "password")
 		v.Set("username", auth.Username)
 		v.Set("password", auth.Password)
