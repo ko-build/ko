@@ -341,16 +341,22 @@ func TestGoBuild(t *testing.T) {
 		}
 	})
 
-	// Check that PATH contains the produced binary.
+	// Check that PATH contains the directory of the produced binary.
 	t.Run("check PATH env var", func(t *testing.T) {
 		cfg, err := img.ConfigFile()
 		if err != nil {
 			t.Errorf("ConfigFile() = %v", err)
 		}
 		found := false
-		for _, entry := range cfg.Config.Env {
-			if strings.HasPrefix(entry, "PATH=") && strings.Contains(entry, "/ko-app/test") {
-				found = true
+		for _, envVar := range cfg.Config.Env {
+			if strings.HasPrefix(envVar, "PATH=") {
+				pathValue := strings.TrimPrefix(envVar, "PATH=")
+				pathEntries := strings.Split(pathValue, ":")
+				for _, pathEntry := range pathEntries {
+					if pathEntry == appDir {
+						found = true
+					}
+				}
 			}
 		}
 		if !found {

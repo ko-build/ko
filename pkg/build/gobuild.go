@@ -451,7 +451,7 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
-	updatePath(cfg, appPath)
+	updatePath(cfg)
 	cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	cfg.Author = "github.com/google/ko"
 
@@ -467,9 +467,9 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 	return image, nil
 }
 
-// Append appPath to the PATH environment variable, if it exists. Otherwise,
-// set the PATH environment variable to appPath.
-func updatePath(cf *v1.ConfigFile, appPath string) {
+// Append appDir to the PATH environment variable, if it exists. Otherwise,
+// set the PATH environment variable to appDir.
+func updatePath(cf *v1.ConfigFile) {
 	for i, env := range cf.Config.Env {
 		parts := strings.SplitN(env, "=", 2)
 		if len(parts) != 2 {
@@ -478,12 +478,12 @@ func updatePath(cf *v1.ConfigFile, appPath string) {
 		}
 		key, value := parts[0], parts[1]
 		if key == "PATH" {
-			value = fmt.Sprintf("%s:%s", value, appPath)
+			value = fmt.Sprintf("%s:%s", value, appDir)
 			cf.Config.Env[i] = "PATH=" + value
 			return
 		}
 	}
 
 	// If we get here, we never saw PATH.
-	cf.Config.Env = append(cf.Config.Env, "PATH="+appPath)
+	cf.Config.Env = append(cf.Config.Env, "PATH="+appDir)
 }
