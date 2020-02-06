@@ -77,6 +77,8 @@ func init() {
 	// If omitted, use this base image.
 	viper.SetDefault("defaultBaseImage", "gcr.io/distroless/static:latest")
 	viper.SetConfigName(".ko") // .yaml is implicit
+	viper.SetEnvPrefix("KO")
+	viper.AutomaticEnv()
 
 	if override := os.Getenv("KO_CONFIG_PATH"); override != "" {
 		viper.AddConfigPath(override)
