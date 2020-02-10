@@ -67,7 +67,9 @@ func addResolve(topLevel *cobra.Command) {
 				log.Fatalf("error creating publisher: %v", err)
 			}
 			ctx := createCancellableContext()
-			resolveFilesToWriter(ctx, builder, publisher, fo, so, sto, os.Stdout)
+			if err := resolveFilesToWriter(ctx, builder, publisher, fo, so, sto, os.Stdout); err != nil {
+				log.Fatal(err)
+			}
 		},
 	}
 	options.AddLocalArg(resolve, lo)
