@@ -33,6 +33,7 @@ import (
 	"github.com/google/ko/pkg/publish"
 	"github.com/google/ko/pkg/resolve"
 	"github.com/mattmoor/dep-notify/pkg/graph"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -82,7 +83,7 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 func makeBuilder(bo *options.BuildOptions) (*build.Caching, error) {
 	opt, err := gobuildOptions(bo)
 	if err != nil {
-		log.Fatalf("error setting up builder options: %v", err)
+		return nil, fmt.Errorf("error setting up builder options: %v", err)
 	}
 	innerBuilder, err := build.NewGo(opt...)
 	if err != nil {
@@ -154,7 +155,7 @@ func resolveFilesToWriter(
 	fo *options.FilenameOptions,
 	so *options.SelectorOptions,
 	sto *options.StrictOptions,
-	out io.WriteCloser) {
+	out io.WriteCloser) error {
 	defer out.Close()
 
 	// By having this as a channel, we can hook this up to a filesystem
@@ -189,11 +190,15 @@ func resolveFilesToWriter(
 			})
 		})
 		if err != nil {
-			log.Fatalf("Error creating dep-notify graph: %v", err)
+			return fmt.Errorf("creating dep-notify graph: %v", err)
 		}
 		// Cleanup the fsnotify hooks when we're done.
 		defer g.Shutdown()
 	}
+
+	// This tracks resolution errors and ensures we cancel other builds if an
+	// individual build fails.
+	errs, ctx := errgroup.WithContext(ctx)
 
 	var futures []resolvedFuture
 	for {
@@ -212,7 +217,7 @@ func resolveFilesToWriter(
 		}
 
 		select {
-		case f, ok := <-fs:
+		case file, ok := <-fs:
 			if !ok {
 				// a nil channel is never available to receive on.
 				// This allows us to drain the list of in-process
@@ -229,7 +234,8 @@ func resolveFilesToWriter(
 
 			// Kick off the resolution that will respond with its bytes on
 			// the future.
-			go func(f string) {
+			f := file // defensive copy
+			errs.Go(func() error {
 				defer close(ch)
 				// Record the builds we do via this builder.
 				recordingBuilder := &build.Recorder{
@@ -237,13 +243,14 @@ func resolveFilesToWriter(
 				}
 				b, err := resolveFile(ctx, f, recordingBuilder, publisher, so, sto)
 				if err != nil {
-					// Don't let build errors disrupt the watch.
-					lg := log.Fatalf
+					// This error is sometimes expected during watch mode, so this
+					// isn't fatal. Just print it and keep the watch open.
+					err := fmt.Errorf("error processing import paths in %q: %v", f, err)
 					if fo.Watch {
-						lg = log.Printf
+						log.Print(err)
+						return nil
 					}
-					lg("error processing import paths in %q: %v", f, err)
-					return
+					return err
 				}
 				// Associate with this file the collection of binary import paths.
 				sm.Store(f, recordingBuilder.ImportPaths)
@@ -255,11 +262,15 @@ func resolveFilesToWriter(
 						// notifications that they change will result in no affected
 						// yamls, and no new builds or deploys.
 						if err := g.Add(ip); err != nil {
-							log.Fatalf("Error adding importpath to dep graph: %v", err)
+							// If we're in watch mode, just fail.
+							err := fmt.Errorf("adding importpath to dep graph: %v", err)
+							errCh <- err
+							return err
 						}
 					}
 				}
-			}(f)
+				return nil
+			})
 
 		case b, ok := <-bf:
 			// Once the head channel returns something, dequeue it.
@@ -275,9 +286,13 @@ func resolveFilesToWriter(
 			}
 
 		case err := <-errCh:
-			log.Fatalf("Error watching dependencies: %v", err)
+			return fmt.Errorf("watching dependencies: %v", err)
 		}
 	}
+
+	// Make sure we exit with an error.
+	// See https://github.com/google/ko/issues/84
+	return errs.Wait()
 }
 
 func resolveFile(
@@ -351,5 +366,4 @@ func resolveFile(
 	e.Close()
 
 	return buf.Bytes(), nil
-
 }
