@@ -30,10 +30,8 @@ import (
 // addCreate augments our CLI surface with apply.
 func addCreate(topLevel *cobra.Command) {
 	koCreateFlags := []string{}
-	lo := &options.LocalOptions{}
-	no := &options.NameOptions{}
+	po := &options.PublishOptions{}
 	fo := &options.FilenameOptions{}
-	ta := &options.TagsOptions{}
 	so := &options.SelectorOptions{}
 	sto := &options.StrictOptions{}
 	bo := &options.BuildOptions{}
@@ -75,7 +73,7 @@ func addCreate(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
-			publisher, err := makePublisher(no, lo, ta)
+			publisher, err := makePublisher(po)
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
@@ -145,10 +143,8 @@ func addCreate(topLevel *cobra.Command) {
 			}
 		},
 	}
-	options.AddLocalArg(create, lo)
-	options.AddNamingArgs(create, no)
+	options.AddPublishArg(create, po)
 	options.AddFileArg(create, fo)
-	options.AddTagsArg(create, ta)
 	options.AddSelectorArg(create, so)
 	options.AddStrictArg(create, sto)
 	options.AddBuildOptions(create, bo)

@@ -30,10 +30,8 @@ import (
 // addApply augments our CLI surface with apply.
 func addApply(topLevel *cobra.Command) {
 	koApplyFlags := []string{}
-	lo := &options.LocalOptions{}
-	no := &options.NameOptions{}
+	po := &options.PublishOptions{}
 	fo := &options.FilenameOptions{}
-	ta := &options.TagsOptions{}
 	so := &options.SelectorOptions{}
 	sto := &options.StrictOptions{}
 	bo := &options.BuildOptions{}
@@ -75,7 +73,7 @@ func addApply(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
-			publisher, err := makePublisher(no, lo, ta)
+			publisher, err := makePublisher(po)
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
@@ -145,10 +143,8 @@ func addApply(topLevel *cobra.Command) {
 			}
 		},
 	}
-	options.AddLocalArg(apply, lo)
-	options.AddNamingArgs(apply, no)
+	options.AddPublishArg(apply, po)
 	options.AddFileArg(apply, fo)
-	options.AddTagsArg(apply, ta)
 	options.AddSelectorArg(apply, so)
 	options.AddStrictArg(apply, sto)
 	options.AddBuildOptions(apply, bo)

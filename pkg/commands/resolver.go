@@ -111,15 +111,15 @@ func makeBuilder(bo *options.BuildOptions) (*build.Caching, error) {
 	return build.NewCaching(innerBuilder)
 }
 
-func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *options.TagsOptions) (publish.Interface, error) {
+func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	// Create the publish.Interface that we will use to publish image references
 	// to either a docker daemon or a container image registry.
 	innerPublisher, err := func() (publish.Interface, error) {
-		namer := options.MakeNamer(no)
+		namer := options.MakeNamer(po)
 
 		repoName := os.Getenv("KO_DOCKER_REPO")
-		if lo.Local || repoName == publish.LocalDomain {
-			return publish.NewDaemon(namer, ta.Tags), nil
+		if po.Local || repoName == publish.LocalDomain {
+			return publish.NewDaemon(namer, po.Tags), nil
 		}
 		if repoName == "" {
 			return nil, errors.New("KO_DOCKER_REPO environment variable is unset")
@@ -134,8 +134,8 @@ func makePublisher(no *options.NameOptions, lo *options.LocalOptions, ta *option
 			publish.WithTransport(defaultTransport()),
 			publish.WithAuthFromKeychain(authn.DefaultKeychain),
 			publish.WithNamer(namer),
-			publish.WithTags(ta.Tags),
-			publish.Insecure(lo.InsecureRegistry))
+			publish.WithTags(po.Tags),
+			publish.Insecure(po.InsecureRegistry))
 	}()
 	if err != nil {
 		return nil, err

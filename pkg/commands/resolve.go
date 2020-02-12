@@ -24,10 +24,8 @@ import (
 
 // addResolve augments our CLI surface with resolve.
 func addResolve(topLevel *cobra.Command) {
-	lo := &options.LocalOptions{}
-	no := &options.NameOptions{}
+	po := &options.PublishOptions{}
 	fo := &options.FilenameOptions{}
-	ta := &options.TagsOptions{}
 	so := &options.SelectorOptions{}
 	sto := &options.StrictOptions{}
 	bo := &options.BuildOptions{}
@@ -62,7 +60,7 @@ func addResolve(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
-			publisher, err := makePublisher(no, lo, ta)
+			publisher, err := makePublisher(po)
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
@@ -72,10 +70,8 @@ func addResolve(topLevel *cobra.Command) {
 			}
 		},
 	}
-	options.AddLocalArg(resolve, lo)
-	options.AddNamingArgs(resolve, no)
+	options.AddPublishArg(resolve, po)
 	options.AddFileArg(resolve, fo)
-	options.AddTagsArg(resolve, ta)
 	options.AddSelectorArg(resolve, so)
 	options.AddStrictArg(resolve, sto)
 	options.AddBuildOptions(resolve, bo)
