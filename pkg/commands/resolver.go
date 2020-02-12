@@ -115,12 +115,15 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	// Create the publish.Interface that we will use to publish image references
 	// to either a docker daemon or a container image registry.
 	innerPublisher, err := func() (publish.Interface, error) {
-		namer := options.MakeNamer(po)
-
 		repoName := os.Getenv("KO_DOCKER_REPO")
-		if po.Local || repoName == publish.LocalDomain {
+		namer := options.MakeNamer(po)
+		if repoName == publish.LocalDomain || po.Local {
+			// TODO(jonjohnsonjr): I'm assuming that nobody will
+			// use local with other publishers, but that might
+			// not be true.
 			return publish.NewDaemon(namer, po.Tags), nil
 		}
+
 		if repoName == "" {
 			return nil, errors.New("KO_DOCKER_REPO environment variable is unset")
 		}
@@ -130,12 +133,31 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			}
 		}
 
-		return publish.NewDefault(repoName,
-			publish.WithTransport(defaultTransport()),
-			publish.WithAuthFromKeychain(authn.DefaultKeychain),
-			publish.WithNamer(namer),
-			publish.WithTags(po.Tags),
-			publish.Insecure(po.InsecureRegistry))
+		publishers := []publish.Interface{}
+		if po.OCILayoutPath != "" {
+			lp, err := publish.NewLayout(po.OCILayoutPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create LayoutPublisher for %q: %v", po.OCILayoutPath, err)
+			}
+			publishers = append(publishers, lp)
+		}
+		if po.TarballFile != "" {
+			tp := publish.NewTarball(po.TarballFile, repoName, namer, po.Tags)
+			publishers = append(publishers, tp)
+		}
+		if po.Push {
+			dp, err := publish.NewDefault(repoName,
+				publish.WithTransport(defaultTransport()),
+				publish.WithAuthFromKeychain(authn.DefaultKeychain),
+				publish.WithNamer(namer),
+				publish.WithTags(po.Tags),
+				publish.Insecure(po.InsecureRegistry))
+			if err != nil {
+				return nil, err
+			}
+			publishers = append(publishers, dp)
+		}
+		return publish.MultiPublisher(publishers...), nil
 	}()
 	if err != nil {
 		return nil, err
