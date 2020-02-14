@@ -129,12 +129,6 @@ func RawConfigFile(i WithConfigFile) ([]byte, error) {
 	return json.Marshal(cfg)
 }
 
-// WithUncompressedLayer defines the subset of v1.Image used by these helper methods
-type WithUncompressedLayer interface {
-	// UncompressedLayer is like UncompressedBlob, but takes the "diff id".
-	UncompressedLayer(v1.Hash) (io.ReadCloser, error)
-}
-
 // WithRawManifest defines the subset of v1.Image used by these helper methods
 type WithRawManifest interface {
 	// RawManifest returns the serialized bytes of this image's config file.
@@ -347,4 +341,42 @@ func Descriptor(d Describable) (*v1.Descriptor, error) {
 	}
 
 	return &desc, nil
+}
+
+type withUncompressedSize interface {
+	UncompressedSize() (int64, error)
+}
+
+// UncompressedSize returns the size of the Uncompressed layer. If the
+// underlying implementation doesn't implement UncompressedSize directly,
+// this will compute the uncompressedSize by reading everything returned
+// by Compressed(). This is potentially expensive and may consume the contents
+// for streaming layers.
+func UncompressedSize(l v1.Layer) (int64, error) {
+	// If the layer implements UncompressedSize itself, return that.
+	if wus, ok := l.(withUncompressedSize); ok {
+		return wus.UncompressedSize()
+	}
+
+	// Otherwise, try to unwrap any partial implementations to see
+	// if the wrapped struct implements UncompressedSize.
+	if ule, ok := l.(*uncompressedLayerExtender); ok {
+		if wus, ok := ule.UncompressedLayer.(withUncompressedSize); ok {
+			return wus.UncompressedSize()
+		}
+	}
+	if cle, ok := l.(*compressedLayerExtender); ok {
+		if wus, ok := cle.CompressedLayer.(withUncompressedSize); ok {
+			return wus.UncompressedSize()
+		}
+	}
+
+	// The layer doesn't implement UncompressedSize, we need to compute it.
+	rc, err := l.Uncompressed()
+	if err != nil {
+		return -1, err
+	}
+	defer rc.Close()
+
+	return io.Copy(ioutil.Discard, rc)
 }

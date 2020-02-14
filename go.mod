@@ -7,7 +7,7 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/fsnotify/fsnotify v1.4.7
 	github.com/google/go-cmp v0.3.0
-	github.com/google/go-containerregistry v0.0.0-20200115190719-e8e9aa676278
+	github.com/google/go-containerregistry v0.0.0-20200212224832-c629a66d7231
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
 	github.com/spf13/cobra v0.0.5
