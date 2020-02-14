@@ -72,6 +72,10 @@ func (f *fixedPublish) Publish(_ v1.Image, s string) (name.Reference, error) {
 	return &d, nil
 }
 
+func (f *fixedPublish) Close() error {
+	return nil
+}
+
 func ComputeDigest(base name.Repository, ref string, h v1.Hash) string {
 	d, err := name.NewDigest(fmt.Sprintf("%s/%s@%s", base, ref, h))
 	if err != nil {

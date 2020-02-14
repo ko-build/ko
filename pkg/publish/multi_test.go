@@ -56,4 +56,8 @@ func TestMulti(t *testing.T) {
 	if _, err := p.Publish(img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	}
+
+	if err := p.Close(); err != nil {
+		t.Errorf("Close() = %v", err)
+	}
 }
