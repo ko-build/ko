@@ -66,6 +66,7 @@ func addPublish(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
+			defer publisher.Close()
 			ctx := createCancellableContext()
 			images, err := publishImages(ctx, args, publisher, builder)
 			if err != nil {

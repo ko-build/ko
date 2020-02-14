@@ -43,3 +43,12 @@ func (p *multiPublisher) Publish(img v1.Image, s string) (ref name.Reference, er
 
 	return
 }
+
+func (p *multiPublisher) Close() (err error) {
+	for _, pub := range p.publishers {
+		if perr := pub.Close(); perr != nil {
+			err = perr
+		}
+	}
+	return
+}

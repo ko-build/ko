@@ -78,3 +78,7 @@ func (d *demon) Publish(img v1.Image, s string) (name.Reference, error) {
 
 	return &digestTag, nil
 }
+
+func (d *demon) Close() error {
+	return nil
+}

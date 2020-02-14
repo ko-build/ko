@@ -77,6 +77,7 @@ func addCreate(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
+			defer publisher.Close()
 			// Create a set of ko-specific flags to ignore when passing through
 			// kubectl global flags.
 			ignoreSet := make(map[string]struct{})

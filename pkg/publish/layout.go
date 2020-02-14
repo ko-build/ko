@@ -60,3 +60,7 @@ func (l *LayoutPublisher) Publish(img v1.Image, s string) (name.Reference, error
 
 	return dig, nil
 }
+
+func (l *LayoutPublisher) Close() error {
+	return nil
+}

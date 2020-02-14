@@ -71,6 +71,7 @@ func addRun(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
+			defer publisher.Close()
 
 			if len(os.Args) < 3 {
 				log.Fatalf("usage: %s run <package>", os.Args[0])

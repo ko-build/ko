@@ -140,3 +140,7 @@ func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
 	log.Printf("Published %v", dig)
 	return &dig, nil
 }
+
+func (d *defalt) Close() error {
+	return nil
+}

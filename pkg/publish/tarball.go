@@ -29,11 +29,18 @@ type TarballPublisher struct {
 	base  string
 	namer Namer
 	tags  []string
+	refs  map[name.Reference]v1.Image
 }
 
 // NewTarball returns a new publish.Interface that saves images to a tarball.
 func NewTarball(file, base string, namer Namer, tags []string) *TarballPublisher {
-	return &TarballPublisher{file, base, namer, tags}
+	return &TarballPublisher{
+		file:  file,
+		base:  base,
+		namer: namer,
+		tags:  tags,
+		refs:  make(map[name.Reference]v1.Image),
+	}
 }
 
 // Publish implements publish.Interface.
@@ -41,13 +48,12 @@ func (t *TarballPublisher) Publish(img v1.Image, s string) (name.Reference, erro
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
-	refs := make(map[name.Reference]v1.Image)
 	for _, tagName := range t.tags {
 		tag, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", t.base, t.namer(s), tagName))
 		if err != nil {
 			return nil, err
 		}
-		refs[tag] = img
+		t.refs[tag] = img
 	}
 
 	h, err := img.Digest()
@@ -60,7 +66,7 @@ func (t *TarballPublisher) Publish(img v1.Image, s string) (name.Reference, erro
 		if err != nil {
 			return nil, err
 		}
-		refs[ref] = img
+		t.refs[ref] = img
 	}
 
 	ref := fmt.Sprintf("%s/%s@%s", t.base, t.namer(s), h)
@@ -74,11 +80,16 @@ func (t *TarballPublisher) Publish(img v1.Image, s string) (name.Reference, erro
 		return nil, err
 	}
 
-	log.Printf("Saving %v", dig)
-	if err := tarball.MultiRefWriteToFile(t.file, refs); err != nil {
-		return nil, err
-	}
-	log.Printf("Saved %v", dig)
-
 	return &dig, nil
+}
+
+func (t *TarballPublisher) Close() error {
+	log.Printf("Saving %v", t.file)
+	if err := tarball.MultiRefWriteToFile(t.file, t.refs); err != nil {
+		// Bad practice, but we log  this here because right now we just defer the Close.
+		log.Printf("failed to save %q: %v", t.file, err)
+		return err
+	}
+	log.Printf("Saved %v", t.file)
+	return nil
 }
