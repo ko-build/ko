@@ -74,3 +74,7 @@ func (c *caching) Publish(img v1.Image, ref string) (name.Reference, error) {
 
 	return f.Get()
 }
+
+func (c *caching) Close() error {
+	return c.inner.Close()
+}

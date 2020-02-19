@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright 2019 The original author or authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package options
+package layout
 
-import (
-	"github.com/spf13/cobra"
-)
+import "path/filepath"
 
-// PublishOptions represents options for the ko binary.
-type PublishOptions struct {
-	// Path is the import path of the binary to publish.
-	Path string
-}
+// Path represents an OCI image layout rooted in a file system path
+type Path string
 
-func AddImageArg(cmd *cobra.Command, lo *PublishOptions) {
-	cmd.Flags().StringVarP(&lo.Path, "image", "i", lo.Path,
-		"The import path of the binary to publish.")
+func (l Path) path(elem ...string) string {
+	complete := []string{string(l)}
+	return filepath.Join(append(complete, elem...)...)
 }

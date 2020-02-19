@@ -24,9 +24,7 @@ import (
 
 // addPublish augments our CLI surface with publish.
 func addPublish(topLevel *cobra.Command) {
-	lo := &options.LocalOptions{}
-	no := &options.NameOptions{}
-	ta := &options.TagsOptions{}
+	po := &options.PublishOptions{}
 	bo := &options.BuildOptions{}
 
 	publish := &cobra.Command{
@@ -64,10 +62,11 @@ func addPublish(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
-			publisher, err := makePublisher(no, lo, ta)
+			publisher, err := makePublisher(po)
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
+			defer publisher.Close()
 			ctx := createCancellableContext()
 			images, err := publishImages(ctx, args, publisher, builder)
 			if err != nil {
@@ -78,9 +77,7 @@ func addPublish(topLevel *cobra.Command) {
 			}
 		},
 	}
-	options.AddLocalArg(publish, lo)
-	options.AddNamingArgs(publish, no)
-	options.AddTagsArg(publish, ta)
+	options.AddPublishArg(publish, po)
 	options.AddBuildOptions(publish, bo)
 	topLevel.AddCommand(publish)
 }

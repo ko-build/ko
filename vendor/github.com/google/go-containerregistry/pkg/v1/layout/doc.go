@@ -12,21 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package publish
-
-import (
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-)
-
-// Interface abstracts different methods for publishing images.
-type Interface interface {
-	// Publish uploads the given v1.Image to a registry incorporating the
-	// provided string into the image's repository name.  Returns the digest
-	// of the published image.
-	Publish(v1.Image, string) (name.Reference, error)
-
-	// Close exists for the tarball implementation so we can
-	// do the whole thing in one write.
-	Close() error
-}
+// Package layout provides facilities for reading/writing artifacts from/to
+// an OCI image layout on disk, see:
+//
+// https://github.com/opencontainers/image-spec/blob/master/image-layout.md
+package layout

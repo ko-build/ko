@@ -12,22 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package options
+package layout
 
 import (
-	"github.com/spf13/cobra"
+	"io"
+	"io/ioutil"
+	"os"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-// LocalOptions represents options for the ko binary.
-type LocalOptions struct {
-	// Local publishes images to a local docker daemon.
-	Local            bool
-	InsecureRegistry bool
+// Blob returns a blob with the given hash from the Path.
+func (l Path) Blob(h v1.Hash) (io.ReadCloser, error) {
+	return os.Open(l.blobPath(h))
 }
 
-func AddLocalArg(cmd *cobra.Command, lo *LocalOptions) {
-	cmd.Flags().BoolVarP(&lo.Local, "local", "L", lo.Local,
-		"Whether to publish images to a local docker daemon vs. a registry.")
-	cmd.Flags().BoolVar(&lo.InsecureRegistry, "insecure-registry", lo.InsecureRegistry,
-		"Whether to skip TLS verification on the registry")
+// Bytes is a convenience function to return a blob from the Path as
+// a byte slice.
+func (l Path) Bytes(h v1.Hash) ([]byte, error) {
+	return ioutil.ReadFile(l.blobPath(h))
+}
+
+func (l Path) blobPath(h v1.Hash) string {
+	return l.path("blobs", h.Algorithm, h.Hex)
 }

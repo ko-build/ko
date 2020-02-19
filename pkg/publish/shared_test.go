@@ -30,17 +30,21 @@ type slowpublish struct {
 // slowpublish implements Interface
 var _ Interface = (*slowpublish)(nil)
 
-func (sb *slowpublish) Publish(img v1.Image, ref string) (name.Reference, error) {
-	time.Sleep(sb.sleep)
+func (sp *slowpublish) Publish(img v1.Image, ref string) (name.Reference, error) {
+	time.Sleep(sp.sleep)
 	return makeRef()
+}
+
+func (sp *slowpublish) Close() error {
+	return nil
 }
 
 func TestCaching(t *testing.T) {
 	duration := 100 * time.Millisecond
 	ref := "foo"
 
-	sb := &slowpublish{duration}
-	cb, _ := NewCaching(sb)
+	sp := &slowpublish{duration}
+	cb, _ := NewCaching(sp)
 
 	previousDigest := "not-a-digest"
 	// Each iteration, we test that the first publish is slow and subsequent

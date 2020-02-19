@@ -27,9 +27,7 @@ import (
 
 // addRun augments our CLI surface with run.
 func addRun(topLevel *cobra.Command) {
-	lo := &options.LocalOptions{}
-	no := &options.NameOptions{}
-	ta := &options.TagsOptions{}
+	po := &options.PublishOptions{}
 	bo := &options.BuildOptions{}
 
 	run := &cobra.Command{
@@ -69,10 +67,11 @@ func addRun(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
-			publisher, err := makePublisher(no, lo, ta)
+			publisher, err := makePublisher(po)
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
+			defer publisher.Close()
 
 			if len(os.Args) < 3 {
 				log.Fatalf("usage: %s run <package>", os.Args[0])
@@ -137,9 +136,7 @@ func addRun(topLevel *cobra.Command) {
 			UnknownFlags: true,
 		},
 	}
-	options.AddLocalArg(run, lo)
-	options.AddNamingArgs(run, no)
-	options.AddTagsArg(run, ta)
+	options.AddPublishArg(run, po)
 	options.AddBuildOptions(run, bo)
 
 	topLevel.AddCommand(run)

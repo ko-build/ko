@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright 2019 The original author or authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package options
+package layout
 
 import (
-	"github.com/spf13/cobra"
+	"os"
+	"path/filepath"
 )
 
-// TagsOptions holds the list of tags to tag the built image
-type TagsOptions struct {
-	Tags []string
-}
+// FromPath reads an OCI image layout at path and constructs a layout.Path.
+func FromPath(path string) (Path, error) {
+	// TODO: check oci-layout exists
 
-func AddTagsArg(cmd *cobra.Command, ta *TagsOptions) {
-	cmd.Flags().StringSliceVarP(&ta.Tags, "tags", "t", []string{"latest"},
-		"Which tags to use for the produced image instead of the default 'latest' tag.")
+	_, err := os.Stat(filepath.Join(path, "index.json"))
+	if err != nil {
+		return "", err
+	}
+
+	return Path(path), nil
 }

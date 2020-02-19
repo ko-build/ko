@@ -23,18 +23,43 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NameOptions represents options for the ko binary.
-type NameOptions struct {
+// PublishOptions encapsulates options when publishing.
+type PublishOptions struct {
+	Tags []string
+
+	// Push publishes images to a registry.
+	Push bool
+
+	// Local publishes images to a local docker daemon.
+	Local            bool
+	InsecureRegistry bool
+
+	OCILayoutPath string
+	TarballFile   string
+
 	// PreserveImportPaths preserves the full import path after KO_DOCKER_REPO.
 	PreserveImportPaths bool
 	// BaseImportPaths uses the base path without MD5 hash after KO_DOCKER_REPO.
 	BaseImportPaths bool
 }
 
-func AddNamingArgs(cmd *cobra.Command, no *NameOptions) {
-	cmd.Flags().BoolVarP(&no.PreserveImportPaths, "preserve-import-paths", "P", no.PreserveImportPaths,
+func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
+	cmd.Flags().StringSliceVarP(&po.Tags, "tags", "t", []string{"latest"},
+		"Which tags to use for the produced image instead of the default 'latest' tag.")
+
+	cmd.Flags().BoolVar(&po.Push, "push", true, "Push images to KO_DOCKER_REPO")
+
+	cmd.Flags().BoolVarP(&po.Local, "local", "L", po.Local,
+		"Load into images to local docker daemon.")
+	cmd.Flags().BoolVar(&po.InsecureRegistry, "insecure-registry", po.InsecureRegistry,
+		"Whether to skip TLS verification on the registry")
+
+	cmd.Flags().StringVar(&po.OCILayoutPath, "oci-layout-path", "", "Path to save the OCI image layout of the built images")
+	cmd.Flags().StringVar(&po.TarballFile, "tarball", "", "File to save images tarballs")
+
+	cmd.Flags().BoolVarP(&po.PreserveImportPaths, "preserve-import-paths", "P", po.PreserveImportPaths,
 		"Whether to preserve the full import path after KO_DOCKER_REPO.")
-	cmd.Flags().BoolVarP(&no.BaseImportPaths, "base-import-paths", "B", no.BaseImportPaths,
+	cmd.Flags().BoolVarP(&po.BaseImportPaths, "base-import-paths", "B", po.BaseImportPaths,
 		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO.")
 }
 
@@ -52,10 +77,10 @@ func baseImportPaths(importpath string) string {
 	return filepath.Base(importpath)
 }
 
-func MakeNamer(no *NameOptions) publish.Namer {
-	if no.PreserveImportPaths {
+func MakeNamer(po *PublishOptions) publish.Namer {
+	if po.PreserveImportPaths {
 		return preserveImportPath
-	} else if no.BaseImportPaths {
+	} else if po.BaseImportPaths {
 		return baseImportPaths
 	}
 	return packageWithMD5
