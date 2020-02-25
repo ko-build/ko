@@ -17,6 +17,7 @@ package publish
 import (
 	"log"
 	"net/http"
+	"path"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -48,14 +49,12 @@ func WithAuthFromKeychain(keys authn.Keychain) Option {
 		// means that docker.io/mattmoor actually gets interpreted as
 		// docker.io/library/mattmoor, which gets tricky when we start
 		// appending things to it in the publisher.
-		repo, err := name.NewRepository(i.base)
+		//
+		// We append a fake path "ko" to KO_DOCKER_REPO in order to
+		// make parsing out the registry easier.
+		repo, err := name.NewRepository(path.Join(i.base, "ko"))
 		if err != nil {
-			// Workaround for localhost:5000 as KO_DOCKER_REPO.
-			reg, err := name.NewRegistry(i.base)
-			if err != nil {
-				return err
-			}
-			repo = name.Repository{Registry: reg}
+			return err
 		}
 		auth, err := keys.Resolve(repo.Registry)
 		if err != nil {
