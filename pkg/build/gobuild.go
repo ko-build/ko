@@ -129,25 +129,19 @@ func (g *gobuild) IsSupportedReference(s string) bool {
 	return p.IsCommand()
 }
 
-var moduleErr = errors.New("unmatched importPackage with gomodules")
-
 // importPackage wraps go/build.Import to handle go modules.
 //
 // Note that we will fall back to GOPATH if the project isn't using go modules.
 func (g *gobuild) importPackage(s string) (*gb.Package, error) {
-	if g.mod == nil {
-		return gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
-	}
-
 	// If we're inside a go modules project, try to use the module's directory
 	// as our source root to import:
 	// * paths that match module path prefix (they should be in this project)
 	// * relative paths (they should also be in this project)
-	if strings.HasPrefix(s, g.mod.Path) || gb.IsLocalImport(s) {
+	if g.mod != nil && (strings.HasPrefix(s, g.mod.Path) || gb.IsLocalImport(s)) {
 		return gb.Import(s, g.mod.Dir, gb.ImportComment)
 	}
 
-	return nil, moduleErr
+	return gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
 }
 
 func build(ctx context.Context, ip string, platform v1.Platform, disableOptimizations bool) (string, error) {

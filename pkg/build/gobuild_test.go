@@ -94,7 +94,6 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	for _, importpath := range []string{
 		"github.com/google/ko/pkg/build",       // not a command.
 		"github.com/google/ko/pkg/nonexistent", // does not exist.
-		"github.com/google/ko/cmd/ko",          // not in this module.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if ng.IsSupportedReference(importpath) {
