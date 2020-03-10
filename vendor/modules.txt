@@ -9,7 +9,7 @@ github.com/PuerkitoBio/urlesc
 github.com/containerd/containerd/errdefs
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
-# github.com/docker/cli v0.0.0-20191017083524-a8ff7f821017
+# github.com/docker/cli v0.0.0-20200303162255-7d407207c304
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
 github.com/docker/cli/cli/config/credentials
@@ -84,7 +84,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.0.0-20200212224832-c629a66d7231
+# github.com/google/go-containerregistry v0.0.0-20200310013544-4fe717a9b4cb
 github.com/google/go-containerregistry/pkg/authn
 github.com/google/go-containerregistry/pkg/internal/retry
 github.com/google/go-containerregistry/pkg/internal/retry/wait
@@ -156,7 +156,7 @@ github.com/opencontainers/image-spec/specs-go/v1
 github.com/pelletier/go-toml
 # github.com/peterbourgon/diskv v2.0.1+incompatible
 github.com/peterbourgon/diskv
-# github.com/pkg/errors v0.8.1
+# github.com/pkg/errors v0.9.1
 github.com/pkg/errors
 # github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
@@ -187,7 +187,7 @@ golang.org/x/net/proxy
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/internal
-# golang.org/x/sync v0.0.0-20190423024810-112230192c58
+# golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20191010194322-b09406accb47
@@ -207,14 +207,12 @@ golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # golang.org/x/time v0.0.0-20190308202827-9d24e82272b4
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20200115192306-3ded1b734dda
+# golang.org/x/tools v0.0.0-20200210192313-1ace956b0e17
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/gcimporter
 golang.org/x/tools/go/internal/packagesdriver
 golang.org/x/tools/go/packages
-golang.org/x/tools/internal/fastwalk
-golang.org/x/tools/internal/gopathwalk
-golang.org/x/tools/internal/semver
+golang.org/x/tools/internal/packagesinternal
 # google.golang.org/appengine v1.5.0
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/base
