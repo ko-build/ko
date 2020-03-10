@@ -19,6 +19,7 @@ require (
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	golang.org/x/tools v0.0.0-20200210192313-1ace956b0e17
 	gopkg.in/yaml.v3 v3.0.0-20191026110619-0b21df46bc1d
+	gotest.tools/v3 v3.0.2 // indirect
 	k8s.io/apimachinery v0.17.1
 	k8s.io/cli-runtime v0.17.0
 	k8s.io/client-go v0.17.1 // indirect
