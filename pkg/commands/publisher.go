@@ -51,10 +51,6 @@ func publishImages(ctx context.Context, importpaths []string, pub publish.Interf
 			}
 		}
 
-		if !b.IsSupportedReference(importpath) {
-			return nil, fmt.Errorf("importpath %q is not supported", importpath)
-		}
-
 		img, err := b.Build(ctx, importpath)
 		if err != nil {
 			return nil, fmt.Errorf("error building %q: %v", importpath, err)
