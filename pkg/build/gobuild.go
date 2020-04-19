@@ -124,7 +124,6 @@ func NewGo(options ...Option) (Interface, error) {
 func (g *gobuild) IsSupportedReference(s string) bool {
 	p, err := g.importPackage(s)
 	if err != nil {
-		log.Printf("ERROR: %v", err)
 		return false
 	}
 	return p.IsCommand()
