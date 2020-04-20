@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -37,7 +38,13 @@ var (
 )
 
 func getBaseImage(s string) (v1.Image, error) {
-	ref, ok := baseImageOverrides[s]
+	// Viper configuration file keys are case insensitive, and are
+	// returned as all lowercase.  This means that import paths with
+	// uppercase must be normalized for matching here, e.g.
+	//    github.com/GoogleCloudPlatform/foo/cmd/bar
+	// comes through as:
+	//    github.com/googlecloudplatform/foo/cmd/bar
+	ref, ok := baseImageOverrides[strings.ToLower(s)]
 	if !ok {
 		ref = defaultBaseImage
 	}
