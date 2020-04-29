@@ -25,6 +25,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/ko/pkg/build"
 	kotesting "github.com/google/ko/pkg/internal/testing"
 	"gopkg.in/yaml.v3"
 )
@@ -249,8 +250,8 @@ func TestYAMLObject(t *testing.T) {
 
 func TestStrict(t *testing.T) {
 	refs := []string{
-		"ko://" + fooRef,
-		"ko://" + barRef,
+		build.StrictScheme + fooRef,
+		build.StrictScheme + barRef,
 	}
 	buf := bytes.NewBuffer(nil)
 	encoder := yaml.NewEncoder(buf)
@@ -270,7 +271,7 @@ func TestStrict(t *testing.T) {
 }
 
 func TestNoStrictKoPrefixRemains(t *testing.T) {
-	ref := "ko://" + fooRef
+	ref := build.StrictScheme + fooRef
 
 	buf := bytes.NewBuffer(nil)
 	encoder := yaml.NewEncoder(buf)

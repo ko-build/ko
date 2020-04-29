@@ -17,6 +17,7 @@ package testing
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -36,12 +37,14 @@ func NewFixedBuild(entries map[string]v1.Image) build.Interface {
 
 // IsSupportedReference implements build.Interface
 func (f *fixedBuild) IsSupportedReference(s string) bool {
+	s = strings.TrimPrefix(s, build.StrictScheme)
 	_, ok := f.entries[s]
 	return ok
 }
 
 // Build implements build.Interface
 func (f *fixedBuild) Build(_ context.Context, s string) (v1.Image, error) {
+	s = strings.TrimPrefix(s, build.StrictScheme)
 	if img, ok := f.entries[s]; ok {
 		return img, nil
 	}
@@ -61,6 +64,7 @@ func NewFixedPublish(base name.Repository, entries map[string]v1.Hash) publish.I
 
 // Publish implements publish.Interface
 func (f *fixedPublish) Publish(_ v1.Image, s string) (name.Reference, error) {
+	s = strings.TrimPrefix(s, build.StrictScheme)
 	h, ok := f.entries[s]
 	if !ok {
 		return nil, fmt.Errorf("unsupported importpath: %q", s)
