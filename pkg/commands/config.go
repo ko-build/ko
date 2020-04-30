@@ -16,56 +16,15 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
-	"strconv"
-	"strings"
 	"syscall"
-	"time"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/ko/pkg/build"
 	"github.com/spf13/viper"
 )
-
-var (
-	defaultBaseImage   name.Reference
-	baseImageOverrides map[string]name.Reference
-)
-
-func getBaseImage(s string) (v1.Image, error) {
-	// Viper configuration file keys are case insensitive, and are
-	// returned as all lowercase.  This means that import paths with
-	// uppercase must be normalized for matching here, e.g.
-	//    github.com/GoogleCloudPlatform/foo/cmd/bar
-	// comes through as:
-	//    github.com/googlecloudplatform/foo/cmd/bar
-	ref, ok := baseImageOverrides[strings.ToLower(s)]
-	if !ok {
-		ref = defaultBaseImage
-	}
-	log.Printf("Using base %s for %s", ref, s)
-	return remote.Image(ref,
-		remote.WithTransport(defaultTransport()),
-		remote.WithAuthFromKeychain(authn.DefaultKeychain))
-}
-
-func getCreationTime() (*v1.Time, error) {
-	epoch := os.Getenv("SOURCE_DATE_EPOCH")
-	if epoch == "" {
-		return nil, nil
-	}
-
-	seconds, err := strconv.ParseInt(epoch, 10, 64)
-	if err != nil {
-		return nil, fmt.Errorf("the environment variable SOURCE_DATE_EPOCH should be the number of seconds since January 1st 1970, 00:00 UTC, got: %v", err)
-	}
-	return &v1.Time{time.Unix(seconds, 0)}, nil
-}
 
 func createCancellableContext() context.Context {
 	signals := make(chan os.Signal)
@@ -119,15 +78,15 @@ func init() {
 	if err != nil {
 		log.Fatalf("'defaultBaseImage': error parsing %q as image reference: %v", ref, err)
 	}
-	defaultBaseImage = dbi
+	build.DefaultBaseImage = dbi
 
-	baseImageOverrides = make(map[string]name.Reference)
+	build.BaseImageOverrides = make(map[string]name.Reference)
 	overrides := viper.GetStringMapString("baseImageOverrides")
 	for k, v := range overrides {
 		bi, err := name.ParseReference(v)
 		if err != nil {
 			log.Fatalf("'baseImageOverrides': error parsing %q as image reference: %v", v, err)
 		}
-		baseImageOverrides[k] = bi
+		build.BaseImageOverrides[k] = bi
 	}
 }

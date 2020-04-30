@@ -16,6 +16,7 @@ package build
 
 import (
 	"context"
+	"runtime/debug"
 	"sync"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -77,4 +78,19 @@ func (c *Caching) Invalidate(ip string) {
 	defer c.m.Unlock()
 
 	delete(c.results, ip)
+}
+
+// Version provided by govvv in compile-time
+var Version string
+
+// GetVersion returns the build version or the one provided by govvv during compile-time
+func GetVersion() string {
+	if Version == "" {
+		i, ok := debug.ReadBuildInfo()
+		if !ok {
+			return ""
+		}
+		Version = i.Main.Version
+	}
+	return Version
 }

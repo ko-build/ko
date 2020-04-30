@@ -19,31 +19,12 @@ import (
 	"encoding/hex"
 	"path/filepath"
 
+	"github.com/google/ko/pkg/parameters"
 	"github.com/google/ko/pkg/publish"
 	"github.com/spf13/cobra"
 )
 
-// PublishOptions encapsulates options when publishing.
-type PublishOptions struct {
-	Tags []string
-
-	// Push publishes images to a registry.
-	Push bool
-
-	// Local publishes images to a local docker daemon.
-	Local            bool
-	InsecureRegistry bool
-
-	OCILayoutPath string
-	TarballFile   string
-
-	// PreserveImportPaths preserves the full import path after KO_DOCKER_REPO.
-	PreserveImportPaths bool
-	// BaseImportPaths uses the base path without MD5 hash after KO_DOCKER_REPO.
-	BaseImportPaths bool
-}
-
-func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
+func AddPublishArg(cmd *cobra.Command, po *parameters.PublishParameters) {
 	cmd.Flags().StringSliceVarP(&po.Tags, "tags", "t", []string{"latest"},
 		"Which tags to use for the produced image instead of the default 'latest' tag.")
 
@@ -77,7 +58,7 @@ func baseImportPaths(importpath string) string {
 	return filepath.Base(importpath)
 }
 
-func MakeNamer(po *PublishOptions) publish.Namer {
+func MakeNamer(po *parameters.PublishParameters) publish.Namer {
 	if po.PreserveImportPaths {
 		return preserveImportPath
 	} else if po.BaseImportPaths {

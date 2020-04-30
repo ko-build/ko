@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// CompletionFlags marks completion code for valid shells
 type CompletionFlags struct {
 	Zsh bool
 }

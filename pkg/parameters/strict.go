@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright 2020 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,14 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package options
+package parameters
 
-import (
-	"github.com/google/ko/pkg/parameters"
-	"github.com/spf13/cobra"
-)
-
-func AddSelectorArg(cmd *cobra.Command, so *parameters.SelectorParameters) {
-	cmd.Flags().StringVarP(&so.Selector, "selector", "l", "",
-		"Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)")
+// StrictParameters holds parameters to require strict references.
+type StrictParameters struct {
+	Strict bool
 }

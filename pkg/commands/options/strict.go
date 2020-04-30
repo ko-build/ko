@@ -15,15 +15,11 @@
 package options
 
 import (
+	"github.com/google/ko/pkg/parameters"
 	"github.com/spf13/cobra"
 )
 
-// StrictOptions holds options to require strict references.
-type StrictOptions struct {
-	Strict bool
-}
-
-func AddStrictArg(cmd *cobra.Command, so *StrictOptions) {
+func AddStrictArg(cmd *cobra.Command, so *parameters.StrictParameters) {
 	cmd.Flags().BoolVarP(&so.Strict, "strict", "", so.Strict,
 		`If true, require package references to be explicitly prefixed with "ko://"`)
 }

@@ -17,16 +17,11 @@ package options
 import (
 	"runtime"
 
+	"github.com/google/ko/pkg/parameters"
 	"github.com/spf13/cobra"
 )
 
-// BuildOptions represents options for the ko builder.
-type BuildOptions struct {
-	ConcurrentBuilds     int
-	DisableOptimizations bool
-}
-
-func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
+func AddBuildOptions(cmd *cobra.Command, bo *parameters.BuildParameters) {
 	cmd.Flags().IntVarP(&bo.ConcurrentBuilds, "jobs", "j", runtime.GOMAXPROCS(0),
 		"The maximum number of concurrent builds")
 	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,

@@ -18,14 +18,16 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/parameters"
 	"github.com/spf13/cobra"
 )
 
 // addPublish augments our CLI surface with publish.
 func addPublish(topLevel *cobra.Command) {
-	po := &options.PublishOptions{}
-	bo := &options.BuildOptions{}
+	po := &parameters.PublishParameters{}
+	bo := &parameters.BuildParameters{}
 
 	publish := &cobra.Command{
 		Use:   "publish IMPORTPATH...",
@@ -58,11 +60,11 @@ func addPublish(topLevel *cobra.Command) {
   ko publish --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
 		Args: cobra.MinimumNArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			builder, err := makeBuilder(bo)
+			builder, err := build.MakeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
-			publisher, err := makePublisher(po)
+			publisher, err := build.MakePublisher(po)
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}

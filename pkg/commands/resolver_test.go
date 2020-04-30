@@ -27,8 +27,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/ko/pkg/commands/options"
 	kotesting "github.com/google/ko/pkg/internal/testing"
+	"github.com/google/ko/pkg/parameters"
+	"github.com/google/ko/pkg/resolve"
 	"gopkg.in/yaml.v3"
 )
 
@@ -64,13 +65,13 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 
 	inputYAML := buf.Bytes()
 
-	outYAML, err := resolveFile(
+	outYAML, err := resolve.ResolveFile(
 		context.Background(),
 		yamlToTmpFile(t, buf.Bytes()),
 		testBuilder,
 		kotesting.NewFixedPublish(base, testHashes),
-		&options.SelectorOptions{},
-		&options.StrictOptions{})
+		&parameters.SelectorParameters{},
+		&parameters.StrictParameters{})
 
 	if err != nil {
 		t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
@@ -118,15 +119,15 @@ kind: Bar
 	inputYAML := []byte(fmt.Sprintf("%s---\n%s---", passesSelector, failsSelector))
 	base := mustRepository("gcr.io/multi-pass")
 
-	outputYAML, err := resolveFile(
+	outputYAML, err := resolve.ResolveFile(
 		context.Background(),
 		yamlToTmpFile(t, inputYAML),
 		testBuilder,
 		kotesting.NewFixedPublish(base, testHashes),
-		&options.SelectorOptions{
+		&parameters.SelectorParameters{
 			Selector: "qux=baz",
 		},
-		&options.StrictOptions{})
+		&parameters.StrictParameters{})
 	if err != nil {
 		t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 	}

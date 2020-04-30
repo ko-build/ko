@@ -20,17 +20,11 @@ import (
 	"path/filepath"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/google/ko/pkg/parameters"
 	"github.com/spf13/cobra"
 )
 
-// FilenameOptions is from pkg/kubectl.
-type FilenameOptions struct {
-	Filenames []string
-	Recursive bool
-	Watch     bool
-}
-
-func AddFileArg(cmd *cobra.Command, fo *FilenameOptions) {
+func AddFileArg(cmd *cobra.Command, fo *parameters.FilenameParameters) {
 	// From pkg/kubectl
 	cmd.Flags().StringSliceVarP(&fo.Filenames, "filename", "f", fo.Filenames,
 		"Filename, directory, or URL to files to use to create the resource")
@@ -41,7 +35,7 @@ func AddFileArg(cmd *cobra.Command, fo *FilenameOptions) {
 }
 
 // Based heavily on pkg/kubectl
-func EnumerateFiles(fo *FilenameOptions) chan string {
+func EnumerateFiles(fo *parameters.FilenameParameters) chan string {
 	files := make(chan string)
 	go func() {
 		// When we're done enumerating files, close the channel

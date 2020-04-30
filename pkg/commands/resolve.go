@@ -18,17 +18,20 @@ import (
 	"log"
 	"os"
 
+	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/parameters"
+	"github.com/google/ko/pkg/resolve"
 	"github.com/spf13/cobra"
 )
 
 // addResolve augments our CLI surface with resolve.
 func addResolve(topLevel *cobra.Command) {
-	po := &options.PublishOptions{}
-	fo := &options.FilenameOptions{}
-	so := &options.SelectorOptions{}
-	sto := &options.StrictOptions{}
-	bo := &options.BuildOptions{}
+	po := &parameters.PublishParameters{}
+	fo := &parameters.FilenameParameters{}
+	so := &parameters.SelectorParameters{}
+	sto := &parameters.StrictParameters{}
+	bo := &parameters.BuildParameters{}
 
 	resolve := &cobra.Command{
 		Use:   "resolve -f FILENAME",
@@ -56,17 +59,17 @@ func addResolve(topLevel *cobra.Command) {
   ko resolve --local -f config/`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			builder, err := makeBuilder(bo)
+			builder, err := build.MakeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
-			publisher, err := makePublisher(po)
+			publisher, err := build.MakePublisher(po)
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
 			defer publisher.Close()
 			ctx := createCancellableContext()
-			if err := resolveFilesToWriter(ctx, builder, publisher, fo, so, sto, os.Stdout); err != nil {
+			if err := resolve.ResolveFilesToWriter(ctx, builder, publisher, fo, so, sto, os.Stdout); err != nil {
 				log.Fatal(err)
 			}
 		},

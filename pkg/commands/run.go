@@ -21,14 +21,16 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/parameters"
 	"github.com/spf13/cobra"
 )
 
 // addRun augments our CLI surface with run.
 func addRun(topLevel *cobra.Command) {
-	po := &options.PublishOptions{}
-	bo := &options.BuildOptions{}
+	po := &parameters.PublishParameters{}
+	bo := &parameters.BuildParameters{}
 
 	run := &cobra.Command{
 		Use:   "run IMPORTPATH",
@@ -63,11 +65,11 @@ func addRun(topLevel *cobra.Command) {
 				kubectlArgs = os.Args[dashes:]
 			}
 
-			builder, err := makeBuilder(bo)
+			builder, err := build.MakeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
-			publisher, err := makePublisher(po)
+			publisher, err := build.MakePublisher(po)
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}

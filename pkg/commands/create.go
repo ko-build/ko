@@ -20,7 +20,10 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/parameters"
+	"github.com/google/ko/pkg/resolve"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"golang.org/x/sync/errgroup"
@@ -30,11 +33,11 @@ import (
 // addCreate augments our CLI surface with apply.
 func addCreate(topLevel *cobra.Command) {
 	koCreateFlags := []string{}
-	po := &options.PublishOptions{}
-	fo := &options.FilenameOptions{}
-	so := &options.SelectorOptions{}
-	sto := &options.StrictOptions{}
-	bo := &options.BuildOptions{}
+	po := &parameters.PublishParameters{}
+	fo := &parameters.FilenameParameters{}
+	so := &parameters.SelectorParameters{}
+	sto := &parameters.StrictParameters{}
+	bo := &parameters.BuildParameters{}
 	create := &cobra.Command{
 		Use:   "create -f FILENAME",
 		Short: "Create the input files with image references resolved to built/pushed image digests.",
@@ -69,11 +72,11 @@ func addCreate(topLevel *cobra.Command) {
 				return
 			}
 
-			builder, err := makeBuilder(bo)
+			builder, err := build.MakeBuilder(bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
-			publisher, err := makePublisher(po)
+			publisher, err := build.MakePublisher(po)
 			if err != nil {
 				log.Fatalf("error creating publisher: %v", err)
 			}
@@ -128,7 +131,7 @@ func addCreate(topLevel *cobra.Command) {
 					stdin.Write([]byte("---\n"))
 				}
 				// Once primed kick things off.
-				return resolveFilesToWriter(ctx, builder, publisher, fo, so, sto, stdin)
+				return resolve.ResolveFilesToWriter(ctx, builder, publisher, fo, so, sto, stdin)
 			})
 
 			g.Go(func() error {

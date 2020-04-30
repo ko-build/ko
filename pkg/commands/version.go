@@ -16,13 +16,10 @@ package commands
 
 import (
 	"fmt"
-	"runtime/debug"
 
+	"github.com/google/ko/pkg/build"
 	"github.com/spf13/cobra"
 )
-
-// provided by govvv in compile-time
-var Version string
 
 // addVersion augments our CLI surface with version.
 func addVersion(topLevel *cobra.Command) {
@@ -30,7 +27,7 @@ func addVersion(topLevel *cobra.Command) {
 		Use:   "version",
 		Short: `Print ko version.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			v := version()
+			v := build.GetVersion()
 			if v == "" {
 				fmt.Println("could not determine build information")
 			} else {
@@ -38,15 +35,4 @@ func addVersion(topLevel *cobra.Command) {
 			}
 		},
 	})
-}
-
-func version() string {
-	if Version == "" {
-		i, ok := debug.ReadBuildInfo()
-		if !ok {
-			return ""
-		}
-		Version = i.Main.Version
-	}
-	return Version
 }
