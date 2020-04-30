@@ -27,8 +27,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const koPrefix = "ko://"
-
 // ImageReferences resolves supported references to images within the input yaml
 // to published image digests.
 //
@@ -42,10 +40,9 @@ func ImageReferences(ctx context.Context, docs []*yaml.Node, strict bool, builde
 
 		for node, ok := it(); ok; node, ok = it() {
 			ref := strings.TrimSpace(node.Value)
-			tref := strings.TrimPrefix(ref, koPrefix)
 
-			if builder.IsSupportedReference(tref) {
-				refs[tref] = append(refs[tref], node)
+			if builder.IsSupportedReference(ref) {
+				refs[ref] = append(refs[ref], node)
 			} else if strict {
 				return fmt.Errorf("found strict reference but %s is not a valid import path", ref)
 			}
@@ -96,7 +93,7 @@ func refsFromDoc(doc *yaml.Node, strict bool) yit.Iterator {
 		Filter(yit.StringValue)
 
 	if strict {
-		return it.Filter(yit.WithPrefix(koPrefix))
+		return it.Filter(yit.WithPrefix(build.StrictScheme))
 	}
 
 	return it
