@@ -122,32 +122,38 @@ func NewGo(options ...Option) (Interface, error) {
 // Only valid importpaths that provide commands (i.e., are "package main") are
 // supported.
 func (g *gobuild) IsSupportedReference(s string) bool {
-	p, err := g.importPackage(s)
-	if err != nil {
+	ref := newRef(s)
+	if p, err := g.importPackage(ref); err != nil {
+		if ref.IsStrict() {
+			log.Fatalf("%q is not supported: %v", ref.String(), err)
+		}
 		return false
+	} else if p.IsCommand() {
+		return true
+	} else if ref.IsStrict() {
+		log.Fatalf(`%q does not have "package main"`, ref.String())
 	}
-	return p.IsCommand()
+	return false
 }
-
-var moduleErr = errors.New("unmatched importPackage with gomodules")
 
 // importPackage wraps go/build.Import to handle go modules.
 //
 // Note that we will fall back to GOPATH if the project isn't using go modules.
-func (g *gobuild) importPackage(s string) (*gb.Package, error) {
+func (g *gobuild) importPackage(ref reference) (*gb.Package, error) {
 	if g.mod == nil {
-		return gb.Import(s, gb.Default.GOPATH, gb.ImportComment)
+		return gb.Import(ref.Path(), gb.Default.GOPATH, gb.ImportComment)
 	}
 
 	// If we're inside a go modules project, try to use the module's directory
 	// as our source root to import:
+	// * any strict reference we get
 	// * paths that match module path prefix (they should be in this project)
 	// * relative paths (they should also be in this project)
-	if strings.HasPrefix(s, g.mod.Path) || gb.IsLocalImport(s) {
-		return gb.Import(s, g.mod.Dir, gb.ImportComment)
+	if ref.IsStrict() || strings.HasPrefix(ref.Path(), g.mod.Path) || gb.IsLocalImport(ref.Path()) {
+		return gb.Import(ref.Path(), g.mod.Dir, gb.ImportComment)
 	}
 
-	return nil, moduleErr
+	return nil, fmt.Errorf("unmatched importPackage %q with gomodules", ref.String())
 }
 
 func build(ctx context.Context, ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
@@ -273,8 +279,8 @@ func tarBinary(name, binary string) (*bytes.Buffer, error) {
 	return buf, nil
 }
 
-func (g *gobuild) kodataPath(s string) (string, error) {
-	p, err := g.importPackage(s)
+func (g *gobuild) kodataPath(ref reference) (string, error) {
+	p, err := g.importPackage(ref)
 	if err != nil {
 		return "", err
 	}
@@ -348,7 +354,7 @@ func walkRecursive(tw *tar.Writer, root, chroot string) error {
 	})
 }
 
-func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
+func (g *gobuild) tarKoData(ref reference) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	// Compress this before calling tarball.LayerFromOpener, since it eagerly
 	// calculates digests and diffids. This prevents us from double compressing
@@ -360,7 +366,7 @@ func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	root, err := g.kodataPath(importpath)
+	root, err := g.kodataPath(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -370,8 +376,10 @@ func (g *gobuild) tarKoData(importpath string) (*bytes.Buffer, error) {
 
 // Build implements build.Interface
 func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
+	ref := newRef(s)
+
 	// Determine the appropriate base image for this import path.
-	base, err := gb.getBase(s)
+	base, err := gb.getBase(ref.Path())
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +393,7 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 	}
 
 	// Do the build into a temporary file.
-	file, err := gb.build(ctx, s, platform, gb.disableOptimizations)
+	file, err := gb.build(ctx, ref.Path(), platform, gb.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}
@@ -393,7 +401,7 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 
 	var layers []mutate.Addendum
 	// Create a layer from the kodata directory under this import path.
-	dataLayerBuf, err := gb.tarKoData(s)
+	dataLayerBuf, err := gb.tarKoData(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -408,12 +416,12 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 		Layer: dataLayer,
 		History: v1.History{
 			Author:    "ko",
-			CreatedBy: "ko publish " + s,
+			CreatedBy: "ko publish " + ref.String(),
 			Comment:   "kodata contents, at $KO_DATA_PATH",
 		},
 	})
 
-	appPath := path.Join(appDir, appFilename(s))
+	appPath := path.Join(appDir, appFilename(ref.Path()))
 
 	// Construct a tarball with the binary and produce a layer.
 	binaryLayerBuf, err := tarBinary(appPath, file)
@@ -431,7 +439,7 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 		Layer: binaryLayer,
 		History: v1.History{
 			Author:    "ko",
-			CreatedBy: "ko publish " + s,
+			CreatedBy: "ko publish " + ref.String(),
 			Comment:   "go build output, at " + appPath,
 		},
 	})
