@@ -461,7 +461,7 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 	}
 
 	// Do the build into a temporary file.
-	file, err := gb.build(ctx, pkg.ImportPath, platform, gb.disableOptimizations)
+	file, err := gb.build(ctx, pkg.Dir, platform, gb.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}
