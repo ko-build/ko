@@ -17,6 +17,7 @@ package build
 import (
 	"archive/tar"
 	"context"
+	gb "go/build"
 	"io"
 	"io/ioutil"
 	"path"
@@ -69,12 +70,31 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
 	}
-	mod := &modInfo{
-		Path: "github.com/google/ko/cmd/ko/test",
-		Dir:  ".",
+
+	mods := &modules{
+		main: &modInfo{
+			Path: "github.com/google/ko/cmd/ko/test",
+			Dir:  ".",
+		},
+		deps: map[string]*modInfo{
+			"github.com/some/module/cmd": &modInfo{
+				Path: "github.com/some/module/cmd",
+				Dir:  ".",
+			},
+		},
 	}
 
-	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }), withModuleInfo(mod))
+	opts := []Option{
+		WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
+		withModuleInfo(mods),
+		withBuildContext(stubBuildContext{
+			// make all referenced deps commands
+			"github.com/google/ko/cmd/ko/test": &gb.Package{Name: "main"},
+			"github.com/some/module/cmd":       &gb.Package{Name: "main"},
+		}),
+	}
+
+	ng, err := NewGo(opts...)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}
@@ -82,6 +102,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	// Supported import paths.
 	for _, importpath := range []string{
 		"github.com/google/ko/cmd/ko/test", // ko can build the test package.
+		"github.com/some/module/cmd",       // ko can build commands in dependent modules
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if !ng.IsSupportedReference(importpath) {
@@ -375,4 +396,10 @@ func TestGoBuild(t *testing.T) {
 			t.Errorf("created = %v, want %v", actual, creationTime)
 		}
 	})
+}
+
+type stubBuildContext map[string]*gb.Package
+
+func (s stubBuildContext) Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error) {
+	return s[path], nil
 }
