@@ -200,8 +200,21 @@ func (g *gobuild) importPackage(ref reference) (*gb.Package, error) {
 	// * path is a module
 
 	_, isDep := g.mod.deps[ref.Path()]
-	if ref.IsStrict() || strings.HasPrefix(ref.Path(), g.mod.main.Path) || gb.IsLocalImport(ref.Path()) || isDep {
-		return g.buildContext.Import(ref.Path(), g.mod.main.Dir, gb.ImportComment)
+
+	path := ref.Path()
+	if strings.HasPrefix(path, g.mod.main.Path) {
+		// make it a local import so go/build package doesn't
+		// complain if we're referencing a vendored module
+		// using an absolute path
+		//
+		// ie. github.com/repo/vendor/github.com/something/else/cmd
+		//     becomes
+		//     ./vendor/github.com/something/else/cmd
+		path = strings.Replace(path, g.mod.main.Path, ".", 1)
+	}
+
+	if ref.IsStrict() || gb.IsLocalImport(path) || isDep {
+		return g.buildContext.Import(path, g.mod.main.Dir, gb.ImportComment)
 	}
 
 	return nil, fmt.Errorf("unmatched importPackage %q with gomodules", ref.String())
@@ -428,6 +441,10 @@ func (g *gobuild) tarKoData(ref reference) (*bytes.Buffer, error) {
 // Build implements build.Interface
 func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 	ref := newRef(s)
+	pkg, err := gb.importPackage(ref)
+	if err != nil {
+		return nil, fmt.Errorf("unable to read package properties: %w", err)
+	}
 
 	// Determine the appropriate base image for this import path.
 	base, err := gb.getBase(ref.Path())
@@ -444,7 +461,7 @@ func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
 	}
 
 	// Do the build into a temporary file.
-	file, err := gb.build(ctx, ref.Path(), platform, gb.disableOptimizations)
+	file, err := gb.build(ctx, pkg.Dir, platform, gb.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}

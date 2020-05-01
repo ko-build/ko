@@ -17,6 +17,7 @@ package build
 import (
 	"archive/tar"
 	"context"
+	"errors"
 	gb "go/build"
 	"io"
 	"io/ioutil"
@@ -73,13 +74,14 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 
 	mods := &modules{
 		main: &modInfo{
-			Path: "github.com/google/ko/cmd/ko/test",
-			Dir:  ".",
+			Path: "github.com/google/ko",
 		},
 		deps: map[string]*modInfo{
 			"github.com/some/module/cmd": &modInfo{
 				Path: "github.com/some/module/cmd",
-				Dir:  ".",
+			},
+			"a/different/module": &modInfo{
+				Path: "a/different/module",
 			},
 		},
 	}
@@ -88,9 +90,17 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 		WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
 		withModuleInfo(mods),
 		withBuildContext(stubBuildContext{
-			// make all referenced deps commands
-			"github.com/google/ko/cmd/ko/test": &gb.Package{Name: "main"},
-			"github.com/some/module/cmd":       &gb.Package{Name: "main"},
+			importStubs: map[string]importStub{
+				// references that use the main module path as a prefix
+				// should be rewritten as a local import
+				//
+				// make all dependent modules commands (ie. package name = "main")
+				"./vendor/a/different/module": {&gb.Package{Name: "main"}, nil},
+				"./pkg/build":                 {&gb.Package{Name: "build"}, nil},
+				"./pkg/nonexistent":           {nil, errors.New("module not found")},
+				"./cmd/ko/test":               {&gb.Package{Name: "main"}, nil},
+				"github.com/some/module/cmd":  {&gb.Package{Name: "main"}, nil},
+			},
 		}),
 	}
 
@@ -103,6 +113,10 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	for _, importpath := range []string{
 		"github.com/google/ko/cmd/ko/test", // ko can build the test package.
 		"github.com/some/module/cmd",       // ko can build commands in dependent modules
+
+		// ko can build commands in dependent modules which are referenced
+		// using the vendored path
+		"github.com/google/ko/vendor/a/different/module",
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if !ng.IsSupportedReference(importpath) {
@@ -115,7 +129,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	for _, importpath := range []string{
 		"github.com/google/ko/pkg/build",       // not a command.
 		"github.com/google/ko/pkg/nonexistent", // does not exist.
-		"github.com/google/ko/cmd/ko",          // not in this module.
+		"github.com/google/notko/cmd/ko",       // not in this module.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if ng.IsSupportedReference(importpath) {
@@ -398,8 +412,19 @@ func TestGoBuild(t *testing.T) {
 	})
 }
 
-type stubBuildContext map[string]*gb.Package
+type importStub struct {
+	pkg *gb.Package
+	err error
+}
+
+type stubBuildContext struct {
+	importStubs map[string]importStub
+}
 
 func (s stubBuildContext) Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error) {
-	return s[path], nil
+	is, ok := s.importStubs[path]
+	if !ok {
+		panic("stub value not supplied for: " + path)
+	}
+	return is.pkg, is.err
 }
