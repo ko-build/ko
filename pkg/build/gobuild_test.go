@@ -151,7 +151,7 @@ func writeTempFile(_ context.Context, s string, _ v1.Platform, _ bool) (string, 
 		return "", err
 	}
 	defer file.Close()
-	if _, err := file.WriteString(filepath.ToSlash(s)); err != nil {
+	if _, err := file.WriteString(filepath.Base(s)); err != nil {
 		return "", err
 	}
 	return file.Name(), nil
@@ -197,7 +197,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 	t.Run("check determinism", func(t *testing.T) {
 		expectedHash := v1.Hash{
 			Algorithm: "sha256",
-			Hex:       "fb82c95fc73eaf26d0b18b1bc2d23ee32059e46806a83a313e738aac4d039492",
+			Hex:       "090bf776407c6aea609b6db5f1e1cf9b23dd755e21d5a7155f652c1f0ad29be8",
 		}
 		appLayer := ls[baseLayers+1]
 
@@ -277,7 +277,7 @@ func TestGoBuild(t *testing.T) {
 	t.Run("check determinism", func(t *testing.T) {
 		expectedHash := v1.Hash{
 			Algorithm: "sha256",
-			Hex:       "4c7f97dda30576670c3a8967424f7dea023030bb3df74fc4bd10329bcb266fc2",
+			Hex:       "aa059d9574c7ad90f32869ece7f1539f6b6eea617f03f3b6a9997fe22a8ead90",
 		}
 		appLayer := ls[baseLayers+1]
 
