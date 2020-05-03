@@ -35,8 +35,8 @@ paths like `github.com/google/ko/cmd`.
 
 **One of the goals of `ko` is to make containers invisible infrastructure.**
 Simply replace image references in your Kubernetes yaml with the import path for
-your Go binary, and `ko` will handle containerizing and publishing that
-container image as needed.
+your Go binary prefixed with `ko://`, and `ko` will handle containerizing and
+publishing that container image as needed.
 
 For example, you might use the following in a Kubernetes `Deployment` resource:
 
@@ -58,26 +58,19 @@ spec:
       containers:
       - name: hello-world
         # This is the import path for the Go binary to build and run.
-        image: github.com/mattmoor/examples/http/cmd/helloworld
+        image: ko://github.com/mattmoor/examples/http/cmd/helloworld
         ports:
         - containerPort: 8080
 ```
 
-### Determining supported import paths
+### What gets built?
 
-Similar to other tooling in the Go ecosystem, `ko` expects to execute in the
-context of your `$GOPATH`. This is used to determine what package(s) `ko`
-is expected to build.
+`ko` will attempt to containerize and build any string within the yaml prefixed
+with `ko://`.
 
-Suppose `GOPATH` is `~/gopath` and the current directory is
-`~/gopath/src/github.com/mattmoor/examples`. `ko` will deduce the base import
-path to be `github.com/mattmoor/examples`, and any references to subpackages
-of this will be built, containerized and published.
+The legacy behavior of detecting import paths is deprecated and will be removed
+in a coming release.
 
-For example, any of the following would be matched:
-* `github.com/mattmoor/examples`
-* `github.com/mattmoor/examples/cmd/foo`
-* `github.com/mattmoor/examples/bar`
 
 ### Results
 
