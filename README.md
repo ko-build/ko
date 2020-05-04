@@ -35,8 +35,8 @@ paths like `github.com/google/ko/cmd`.
 
 **One of the goals of `ko` is to make containers invisible infrastructure.**
 Simply replace image references in your Kubernetes yaml with the import path for
-your Go binary prefixed with `ko://`, and `ko` will handle containerizing and
-publishing that container image as needed.
+your Go binary prefixed with `ko://` (e.g. `ko://github.com/google/ko/cmd/ko`),
+and `ko` will handle containerizing and publishing that container image as needed.
 
 For example, you might use the following in a Kubernetes `Deployment` resource:
 
