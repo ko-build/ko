@@ -26,6 +26,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/ko/pkg/build"
 )
 
 func TestDefault(t *testing.T) {
@@ -77,7 +78,7 @@ func TestDefault(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewDefault() = %v", err)
 	}
-	if d, err := def.Publish(img, importpath); err != nil {
+	if d, err := def.Publish(img, build.StrictScheme+importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if !strings.HasPrefix(d.String(), tag.Repository.String()) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -141,7 +142,7 @@ func TestDefaultWithCustomNamer(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewDefault() = %v", err)
 	}
-	if d, err := def.Publish(img, importpath); err != nil {
+	if d, err := def.Publish(img, build.StrictScheme+importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if !strings.HasPrefix(d.String(), repoName) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -205,7 +206,7 @@ func TestDefaultWithTags(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewDefault() = %v", err)
 	}
-	if d, err := def.Publish(img, importpath); err != nil {
+	if d, err := def.Publish(img, build.StrictScheme+importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if !strings.HasPrefix(d.String(), repoName) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -278,7 +279,7 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewDefault() = %v", err)
 	}
-	if d, err := def.Publish(img, importpath); err != nil {
+	if d, err := def.Publish(img, build.StrictScheme+importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if !strings.HasPrefix(d.String(), repoName) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)

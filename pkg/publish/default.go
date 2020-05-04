@@ -24,6 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/ko/pkg/build"
 )
 
 // defalt is intentionally misspelled to avoid keyword collision (and drive Jon nuts).
@@ -95,6 +96,7 @@ func NewDefault(base string, options ...Option) (Interface, error) {
 
 // Publish implements publish.Interface
 func (d *defalt) Publish(img v1.Image, s string) (name.Reference, error) {
+	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
