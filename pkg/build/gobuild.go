@@ -165,6 +165,20 @@ func NewGo(options ...Option) (Interface, error) {
 	return gbo.Open()
 }
 
+const Deprecation158 = `NOTICE!
+-----------------------------------------------------------------
+We will start requiring ko:// in a coming release.  Please prefix
+the following import path for things to continue working:
+
+   %s
+
+For more information see:
+
+   https://github.com/google/ko/issues/158
+
+-----------------------------------------------------------------
+`
+
 // IsSupportedReference implements build.Interface
 //
 // Only valid importpaths that provide commands (i.e., are "package main") are
@@ -177,6 +191,9 @@ func (g *gobuild) IsSupportedReference(s string) bool {
 		}
 		return false
 	} else if p.IsCommand() {
+		if !ref.IsStrict() {
+			log.Printf(Deprecation158, s)
+		}
 		return true
 	} else if ref.IsStrict() {
 		log.Fatalf(`%q does not have "package main"`, ref.String())
