@@ -130,19 +130,9 @@ func createCancellableContext() context.Context {
 	return ctx
 }
 
-const Deprecation160 = `NOTICE!
------------------------------------------------------------------
-We are changing the default base image in a subsequent release.
-
-For more information (including how to suppress this message):
-
-   https://github.com/google/ko/issues/160
-
------------------------------------------------------------------
-`
-
 func init() {
 	// If omitted, use this base image.
+	viper.SetDefault("defaultBaseImage", "gcr.io/distroless/static:nonroot")
 	viper.SetConfigName(".ko") // .yaml is implicit
 	viper.SetEnvPrefix("KO")
 	viper.AutomaticEnv()
@@ -157,11 +147,6 @@ func init() {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			log.Fatalf("error reading config file: %v", err)
 		}
-	}
-
-	if !viper.IsSet("defaultBaseImage") {
-		viper.Set("defaultBaseImage", "gcr.io/distroless/static:latest")
-		log.Print(Deprecation160)
 	}
 
 	ref := viper.GetString("defaultBaseImage")
