@@ -22,6 +22,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/ko/pkg/build"
 )
 
 type TarballPublisher struct {
@@ -45,6 +46,7 @@ func NewTarball(file, base string, namer Namer, tags []string) *TarballPublisher
 
 // Publish implements publish.Interface.
 func (t *TarballPublisher) Publish(img v1.Image, s string) (name.Reference, error) {
+	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
