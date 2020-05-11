@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	gb "go/build"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/ko/pkg/build"
@@ -49,6 +50,9 @@ func publishImages(ctx context.Context, importpaths []string, pub publish.Interf
 			if err != nil {
 				return nil, err
 			}
+		}
+		if !strings.HasPrefix(importpath, build.StrictScheme) {
+			importpath = build.StrictScheme + importpath
 		}
 
 		if !b.IsSupportedReference(importpath) {

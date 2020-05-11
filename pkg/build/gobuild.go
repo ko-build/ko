@@ -46,12 +46,17 @@ const (
 type GetBase func(string) (v1.Image, error)
 type builder func(context.Context, string, v1.Platform, bool) (string, error)
 
+type buildContext interface {
+	Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error)
+}
+
 type gobuild struct {
 	getBase              GetBase
 	creationTime         v1.Time
 	build                builder
 	disableOptimizations bool
-	mod                  *modInfo
+	mod                  *modules
+	buildContext         buildContext
 }
 
 // Option is a functional option for NewGo.
@@ -62,7 +67,8 @@ type gobuildOpener struct {
 	creationTime         v1.Time
 	build                builder
 	disableOptimizations bool
-	mod                  *modInfo
+	mod                  *modules
+	buildContext         buildContext
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -75,38 +81,80 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
 		mod:                  gbo.mod,
+		buildContext:         gbo.buildContext,
 	}, nil
 }
 
 // https://golang.org/pkg/cmd/go/internal/modinfo/#ModulePublic
+type modules struct {
+	main *modInfo
+	deps map[string]*modInfo
+}
+
 type modInfo struct {
 	Path string
 	Dir  string
+	Main bool
 }
 
 // moduleInfo returns the module path and module root directory for a project
 // using go modules, otherwise returns nil.
 //
 // Related: https://github.com/golang/go/issues/26504
-func moduleInfo() *modInfo {
-	output, err := exec.Command("go", "list", "-mod=readonly", "-m", "-json").Output()
+func moduleInfo() (*modules, error) {
+	modules := modules{
+		deps: make(map[string]*modInfo),
+	}
+
+	// TODO we read all the output as a single byte array - it may
+	// be possible & more efficient to stream it
+	output, err := exec.Command("go", "list", "-mod=readonly", "-json", "-m", "all").Output()
 	if err != nil {
-		return nil
+		return nil, nil
 	}
-	var info modInfo
-	if err := json.Unmarshal(output, &info); err != nil {
-		return nil
+
+	dec := json.NewDecoder(bytes.NewReader(output))
+
+	for {
+		var info modInfo
+
+		err := dec.Decode(&info)
+		if err == io.EOF {
+			// all done
+			break
+		}
+
+		modules.deps[info.Path] = &info
+
+		if info.Main {
+			modules.main = &info
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("error reading module data %w", err)
+		}
 	}
-	return &info
+
+	if modules.main == nil {
+		return nil, fmt.Errorf("couldn't find main module")
+	}
+
+	return &modules, nil
 }
 
 // NewGo returns a build.Interface implementation that:
 //  1. builds go binaries named by importpath,
 //  2. containerizes the binary on a suitable base,
 func NewGo(options ...Option) (Interface, error) {
+	module, err := moduleInfo()
+	if err != nil {
+		return nil, err
+	}
+
 	gbo := &gobuildOpener{
-		build: build,
-		mod:   moduleInfo(),
+		build:        build,
+		mod:          module,
+		buildContext: &gb.Default,
 	}
 
 	for _, option := range options {
@@ -116,6 +164,20 @@ func NewGo(options ...Option) (Interface, error) {
 	}
 	return gbo.Open()
 }
+
+const Deprecation158 = `NOTICE!
+-----------------------------------------------------------------
+We will start requiring ko:// in a coming release.  Please prefix
+the following import path for things to continue working:
+
+   %s
+
+For more information see:
+
+   https://github.com/google/ko/issues/158
+
+-----------------------------------------------------------------
+`
 
 // IsSupportedReference implements build.Interface
 //
@@ -129,6 +191,9 @@ func (g *gobuild) IsSupportedReference(s string) bool {
 		}
 		return false
 	} else if p.IsCommand() {
+		if !ref.IsStrict() {
+			log.Printf(Deprecation158, s)
+		}
 		return true
 	} else if ref.IsStrict() {
 		log.Fatalf(`%q does not have "package main"`, ref.String())
@@ -141,7 +206,7 @@ func (g *gobuild) IsSupportedReference(s string) bool {
 // Note that we will fall back to GOPATH if the project isn't using go modules.
 func (g *gobuild) importPackage(ref reference) (*gb.Package, error) {
 	if g.mod == nil {
-		return gb.Import(ref.Path(), gb.Default.GOPATH, gb.ImportComment)
+		return g.buildContext.Import(ref.Path(), gb.Default.GOPATH, gb.ImportComment)
 	}
 
 	// If we're inside a go modules project, try to use the module's directory
@@ -149,8 +214,11 @@ func (g *gobuild) importPackage(ref reference) (*gb.Package, error) {
 	// * any strict reference we get
 	// * paths that match module path prefix (they should be in this project)
 	// * relative paths (they should also be in this project)
-	if ref.IsStrict() || strings.HasPrefix(ref.Path(), g.mod.Path) || gb.IsLocalImport(ref.Path()) {
-		return gb.Import(ref.Path(), g.mod.Dir, gb.ImportComment)
+	// * path is a module
+
+	_, isDep := g.mod.deps[ref.Path()]
+	if ref.IsStrict() || strings.HasPrefix(ref.Path(), g.mod.main.Path) || gb.IsLocalImport(ref.Path()) || isDep {
+		return g.buildContext.Import(ref.Path(), g.mod.main.Dir, gb.ImportComment)
 	}
 
 	return nil, fmt.Errorf("unmatched importPackage %q with gomodules", ref.String())
