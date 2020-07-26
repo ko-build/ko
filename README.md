@@ -41,7 +41,7 @@ and `ko` will handle containerizing and publishing that container image as neede
 For example, you might use the following in a Kubernetes `Deployment` resource:
 
 ```yaml
-apiVersion: apps/v1beta1
+apiVersion: apps/v1 
 kind: Deployment
 metadata:
   name: hello-world
