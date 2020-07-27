@@ -1,6 +1,5 @@
 package hack
 
 import (
-  "github.com/go-training/helloworld"
+	_ "github.com/go-training/helloworld"
 )
-

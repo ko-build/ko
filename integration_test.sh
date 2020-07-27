@@ -44,7 +44,7 @@ RESULT="$(GO111MODULE=off ./ko publish github.com/go-training/helloworld 2>1 | g
 if [[ "$RESULT" != *"Hello World"** ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
-  echo "test PASSED"
+  echo "Test PASSED"
 fi
 
 echo "2. Go module auto mode should create an image that outputs 'Hello World' when run outside the module."
@@ -99,3 +99,5 @@ GO111MODULE=on ./ko/ko publish github.com/go-training/helloworld && exit 1
 popd || exit 1
 popd || exit 1
 popd || exit 1
+
+export GOPATH="$ORIGINAL_GOPATH"
