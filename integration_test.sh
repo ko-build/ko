@@ -40,7 +40,7 @@ echo "Beginning scenarios."
 FILTER="[^ ].*@sha256[^ ]*"
 
 echo "1. GOPATH mode should always create an image that outputs 'Hello World'"
-RESULT="$(GO111MODULE=off ./ko publish github.com/go-training/helloworld 2>1 | grep "$FILTER" | xargs -I% docker run %)"
+RESULT="$(GO111MODULE=off ./ko publish github.com/go-training/helloworld  | grep "$FILTER" | xargs -I% docker run %)"
 if [[ "$RESULT" != *"Hello World"** ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
@@ -50,7 +50,7 @@ fi
 echo "2. Go module auto mode should create an image that outputs 'Hello World' when run outside the module."
 
 pushd .. || exit 1
-RESULT="$(GO111MODULE=auto GOFLAGS="-mod=vendor" ./ko/ko publish github.com/go-training/helloworld 2>1 | grep "$FILTER" | xargs -I% docker run %)"
+RESULT="$(GO111MODULE=auto GOFLAGS="-mod=vendor" ./ko/ko publish github.com/go-training/helloworld  | grep "$FILTER" | xargs -I% docker run %)"
 if [[ "$RESULT" != *"Hello World"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
@@ -61,7 +61,7 @@ popd || exit 1
 
 echo "3. Auto inside the module with vendoring should output TEST"
 
-RESULT="$(GO111MODULE=auto GOFLAGS="-mod=vendor" ./ko publish github.com/go-training/helloworld 2>1 | grep "$FILTER" | xargs -I% docker run %)"
+RESULT="$(GO111MODULE=auto GOFLAGS="-mod=vendor" ./ko publish github.com/go-training/helloworld  | grep "$FILTER" | xargs -I% docker run %)"
 if [[ "$RESULT" != *"TEST"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
@@ -69,7 +69,7 @@ else
 fi
 
 echo "4. Auto inside the module without vendoring should output Hello World"
-RESULT="$(GO111MODULE=auto GOFLAGS="" ./ko publish github.com/go-training/helloworld 2>1 | grep "$FILTER" | xargs -I% docker run %)"
+RESULT="$(GO111MODULE=auto GOFLAGS="" ./ko publish github.com/go-training/helloworld  | grep "$FILTER" | xargs -I% docker run %)"
 if [[ "$RESULT" != *"Hello World"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
@@ -77,7 +77,7 @@ else
 fi
 
 echo "5. On inside the module with vendor should output TEST."
-RESULT="$(GO111MODULE=on GOFLAGS="-mod=vendor" ./ko publish github.com/go-training/helloworld 2>1 | grep "$FILTER" | xargs -I% docker run %)"
+RESULT="$(GO111MODULE=on GOFLAGS="-mod=vendor" ./ko publish github.com/go-training/helloworld  | grep "$FILTER" | xargs -I% docker run %)"
 if [[ "$RESULT" != *"TEST"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
@@ -85,7 +85,7 @@ else
 fi
 
 echo "6. On inside the module without vendor should output Hello World"
-RESULT="$(GO111MODULE=on GOFLAGS="" ./ko publish github.com/go-training/helloworld 2>1 | grep "$FILTER" | xargs -I% docker run %)"
+RESULT="$(GO111MODULE=on GOFLAGS="" ./ko publish github.com/go-training/helloworld  | grep "$FILTER" | xargs -I% docker run %)"
 if [[ "$RESULT" != *"Hello World"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
