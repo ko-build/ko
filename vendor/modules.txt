@@ -66,6 +66,8 @@ github.com/go-openapi/jsonreference
 github.com/go-openapi/spec
 # github.com/go-openapi/swag v0.19.5
 github.com/go-openapi/swag
+# github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
+github.com/go-training/helloworld
 # github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d
 github.com/gogo/protobuf/proto
 github.com/gogo/protobuf/sortkeys

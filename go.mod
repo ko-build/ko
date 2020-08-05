@@ -7,6 +7,7 @@ require (
 	github.com/docker/docker v1.4.2-0.20190924003213-a8608b5b67c7
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/fsnotify/fsnotify v1.4.7
+	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/google/go-cmp v0.3.0
 	github.com/google/go-containerregistry v0.0.0-20200310013544-4fe717a9b4cb
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
