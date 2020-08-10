@@ -261,7 +261,7 @@ func TestStrict(t *testing.T) {
 		}
 	}
 	base := mustRepository("gcr.io/multi-pass")
-	doc := strToYAML(t, string(buf.Bytes()))
+	doc := strToYAML(t, buf.String())
 
 	err := ImageReferences(context.Background(), []*yaml.Node{doc}, true, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 	if err != nil {
@@ -280,7 +280,7 @@ func TestNoStrictKoPrefixRemains(t *testing.T) {
 	}
 
 	base := mustRepository("gcr.io/multi-pass")
-	doc := strToYAML(t, string(buf.Bytes()))
+	doc := strToYAML(t, buf.String())
 
 	noMatchBuilder := kotesting.NewFixedBuild(nil)
 

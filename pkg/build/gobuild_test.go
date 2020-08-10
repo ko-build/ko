@@ -151,7 +151,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 	}
 	importpath := "github.com/google/ko"
 
-	creationTime := v1.Time{time.Unix(5000, 0)}
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		WithCreationTime(creationTime),
 		WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
@@ -231,7 +231,7 @@ func TestGoBuild(t *testing.T) {
 	}
 	importpath := "github.com/google/ko"
 
-	creationTime := v1.Time{time.Unix(5000, 0)}
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		WithCreationTime(creationTime),
 		WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
