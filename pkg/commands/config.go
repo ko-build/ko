@@ -64,7 +64,7 @@ func getCreationTime() (*v1.Time, error) {
 	if err != nil {
 		return nil, fmt.Errorf("the environment variable SOURCE_DATE_EPOCH should be the number of seconds since January 1st 1970, 00:00 UTC, got: %v", err)
 	}
-	return &v1.Time{time.Unix(seconds, 0)}, nil
+	return &v1.Time{Time: time.Unix(seconds, 0)}, nil
 }
 
 func createCancellableContext() context.Context {
