@@ -25,7 +25,7 @@ import (
 	"github.com/google/ko/pkg/build"
 )
 
-type TarballPublisher struct {
+type tar struct {
 	file  string
 	base  string
 	namer Namer
@@ -34,8 +34,8 @@ type TarballPublisher struct {
 }
 
 // NewTarball returns a new publish.Interface that saves images to a tarball.
-func NewTarball(file, base string, namer Namer, tags []string) *TarballPublisher {
-	return &TarballPublisher{
+func NewTarball(file, base string, namer Namer, tags []string) Interface {
+	return &tar{
 		file:  file,
 		base:  base,
 		namer: namer,
@@ -45,7 +45,7 @@ func NewTarball(file, base string, namer Namer, tags []string) *TarballPublisher
 }
 
 // Publish implements publish.Interface.
-func (t *TarballPublisher) Publish(img v1.Image, s string) (name.Reference, error) {
+func (t *tar) Publish(img v1.Image, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
@@ -85,7 +85,7 @@ func (t *TarballPublisher) Publish(img v1.Image, s string) (name.Reference, erro
 	return &dig, nil
 }
 
-func (t *TarballPublisher) Close() error {
+func (t *tar) Close() error {
 	log.Printf("Saving %v", t.file)
 	if err := tarball.MultiRefWriteToFile(t.file, t.refs); err != nil {
 		// Bad practice, but we log  this here because right now we just defer the Close.
