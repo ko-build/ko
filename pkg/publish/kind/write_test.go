@@ -29,8 +29,6 @@ import (
 )
 
 func TestWrite(t *testing.T) {
-	resetGlobals(t)
-
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -65,8 +63,6 @@ func TestWrite(t *testing.T) {
 }
 
 func TestTag(t *testing.T) {
-	resetGlobals(t)
-
 	oldTag, err := name.NewTag("kind.local/test:test")
 	if err != nil {
 		t.Fatalf("name.NewTag() = %v", err)
@@ -101,8 +97,6 @@ func TestTag(t *testing.T) {
 }
 
 func TestFailWithNoNodes(t *testing.T) {
-	resetGlobals(t)
-
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		panic(err)
@@ -131,8 +125,6 @@ func TestFailWithNoNodes(t *testing.T) {
 }
 
 func TestFailCommands(t *testing.T) {
-	resetGlobals(t)
-
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		panic(err)
@@ -162,14 +154,6 @@ func TestFailCommands(t *testing.T) {
 	if err := Tag(oldTag, newTag); !errors.Is(err, errTest) {
 		t.Fatalf("Write() = %v, want %v", err, errTest)
 	}
-}
-
-// resetGlobals resets the GetProvider global function at the end of the test.
-func resetGlobals(t *testing.T) {
-	bkp := GetProvider
-	t.Cleanup(func() {
-		GetProvider = bkp
-	})
 }
 
 // fakeProvider
