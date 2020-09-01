@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -196,6 +197,10 @@ type fakeCmd struct {
 }
 
 func (f *fakeCmd) Run() error {
+	if f.stdin != nil {
+		// Consume the entire stdin to move the image publish forward.
+		ioutil.ReadAll(f.stdin)
+	}
 	return f.err
 }
 

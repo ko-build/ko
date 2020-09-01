@@ -19,6 +19,8 @@ import (
 	"io"
 	"os"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -55,14 +57,21 @@ func Tag(src, dest name.Tag) error {
 func Write(tag name.Tag, img v1.Image) error {
 	return onEachNode(func(n nodes.Node) error {
 		pr, pw := io.Pipe()
-		go func() {
-			pw.CloseWithError(tarball.Write(tag, img, pw))
-		}()
+
+		grp := errgroup.Group{}
+		grp.Go(func() error {
+			return pw.CloseWithError(tarball.Write(tag, img, pw))
+		})
 
 		cmd := n.Command("ctr", "--namespace=k8s.io", "images", "import", "-").SetStdin(pr)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to load image to node %q: %w", n, err)
 		}
+
+		if err := grp.Wait(); err != nil {
+			return fmt.Errorf("failed to write intermediate tarball representation: %w", err)
+		}
+
 		return nil
 	})
 }
