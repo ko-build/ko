@@ -11,7 +11,9 @@ ROOT_DIR="$(pwd)"
 
 echo "Running smoke test."
 go install ./cmd/ko
-ko apply -f ./cmd/ko/test -L
+# Travis runs this against a kind cluster so properly use the kind publisher.
+KO_DOCKER_REPO=kind.local ko apply -f ./cmd/ko/test
+kubectl wait --timeout=10s --for=condition=Ready pod/kodata
 
 echo "Moving GOPATH into /tmp/ to test modules behavior."
 export ORIGINAL_GOPATH="$GOPATH"

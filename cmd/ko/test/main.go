@@ -18,7 +18,9 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 )
 
 func main() {
@@ -35,5 +37,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading %q: %v", file, err)
 	}
-	log.Print(string(bytes))
+	log.Printf(string(bytes))
+
+	// Cause the pod to "hang" to allow us to check for a readiness state.
+	sigs := make(chan os.Signal)
+	signal.Notify(sigs, syscall.SIGTERM)
+	<-sigs
 }

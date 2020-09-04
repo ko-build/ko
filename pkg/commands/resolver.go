@@ -123,6 +123,9 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			// not be true.
 			return publish.NewDaemon(namer, po.Tags), nil
 		}
+		if repoName == publish.KindDomain {
+			return publish.NewKindPublisher(namer, po.Tags), nil
+		}
 
 		if repoName == "" {
 			return nil, errors.New("KO_DOCKER_REPO environment variable is unset")
