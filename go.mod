@@ -21,7 +21,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20200121175148-a6ecf24a6d71
 	gotest.tools/v3 v3.0.2 // indirect
 	k8s.io/apimachinery v0.18.8
-	k8s.io/cli-runtime v0.17.1
+	k8s.io/cli-runtime v0.18.8
 	sigs.k8s.io/kind v0.8.1
 )
 
