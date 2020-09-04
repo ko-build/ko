@@ -1,6 +1,6 @@
 module github.com/google/ko
 
-go 1.12
+go 1.14
 
 require (
 	github.com/docker/cli v0.0.0-20200303162255-7d407207c304 // indirect

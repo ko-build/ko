@@ -70,9 +70,9 @@ else
   echo "Test PASSED"
 fi
 
-echo "4. Auto inside the module without vendoring should output Hello World"
+echo "4. Auto inside the module without vendoring should output TEST"
 RESULT="$(GO111MODULE=auto GOFLAGS="" ./ko publish --local github.com/go-training/helloworld  | grep "$FILTER" | xargs -I% docker run %)"
-if [[ "$RESULT" != *"Hello World"* ]]; then
+if [[ "$RESULT" != *"TEST"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
   echo "Test PASSED"
@@ -86,9 +86,9 @@ else
   echo "Test PASSED"
 fi
 
-echo "6. On inside the module without vendor should output Hello World"
+echo "6. On inside the module without vendor should output TEST"
 RESULT="$(GO111MODULE=on GOFLAGS="" ./ko publish --local github.com/go-training/helloworld  | grep "$FILTER" | xargs -I% docker run %)"
-if [[ "$RESULT" != *"Hello World"* ]]; then
+if [[ "$RESULT" != *"TEST"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
   echo "Test PASSED"
