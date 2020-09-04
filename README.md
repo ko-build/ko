@@ -117,6 +117,10 @@ However, these same commands can be directed to operate locally as well via the
 `--local` or `-L` command (or setting `KO_DOCKER_REPO=ko.local`). See the
 [`minikube` section](./README.md#with-minikube) for more detail.
 
+`ko` can also be used with `kind` directly by setting
+`KO_DOCKER_REPO=kind.local`. See [the relevant section](./README.md#with-kind)
+for more detail.
+
 ### `ko publish`
 
 `ko publish` simply builds and publishes images for each import path passed as
@@ -310,6 +314,33 @@ contexts.
 Images will appear in the Docker daemon as
 `ko.local/import.path.com/foo/cmd/bar`. With `--local` import paths are always
 preserved (see `--preserve-import-paths`).
+
+## With `kind`
+
+Likewise, you can use `ko` with `kind` to aid in rapid local iteration both
+locally and in small CI environments. To instruct `ko` to publish images into
+your `kind` cluster, the `KO_DOCKER_REPO` variable must be set to `kind.local`.
+
+This would look something like:
+
+```shell
+# Create a kind cluster
+kind create cluster
+
+# Deploy to minikube w/o registry.
+KO_DOCKER_REPO=kind.local ko apply -L -f config/
+```
+
+Like with `minikube` above, a caveat of this approach is that it will not work
+if your container is configured with `imagePullPolicy: Always` because despite
+having the image locally, a pull is performed to ensure we have the latest
+version, it still exists, and that access hasn't been revoked. A workaround for
+this is to use `imagePullPolicy: IfNotPresent`, which should work well with `ko`
+in all contexts.
+
+Note that images will not appear in the Docker daemon running `kind` as the
+cluster itself is running in a container that is running `containerd` inside.
+The images are loaded into the respective `containerd` daemon.
 
 ## Configuration via `.ko.yaml`
 
