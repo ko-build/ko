@@ -263,7 +263,7 @@ gopkg.in/yaml.v2
 gopkg.in/yaml.v3
 # gotest.tools/v3 v3.0.2
 ## explicit
-# k8s.io/api v0.18.8
+# k8s.io/api v0.18.8 => k8s.io/api v0.18.8
 k8s.io/api/admissionregistration/v1
 k8s.io/api/admissionregistration/v1beta1
 k8s.io/api/apps/v1
@@ -464,6 +464,7 @@ sigs.k8s.io/kustomize/pkg/types
 sigs.k8s.io/structured-merge-diff/v3/value
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
+# k8s.io/api => k8s.io/api v0.18.8
 # k8s.io/apimachinery => k8s.io/apimachinery v0.18.8
 # k8s.io/cli-runtime => k8s.io/cli-runtime v0.18.8
 # k8s.io/client-go => k8s.io/client-go v0.18.8
