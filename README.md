@@ -30,13 +30,14 @@ import (
 )
 ```
 
-Similarly (as you can see above), Go binaries can be referenced via import
-paths like `github.com/google/ko/cmd`.
+Similarly (as you can see above), Go binaries can be referenced via import paths
+like `github.com/google/ko/cmd`.
 
 **One of the goals of `ko` is to make containers invisible infrastructure.**
 Simply replace image references in your Kubernetes yaml with the import path for
 your Go binary prefixed with `ko://` (e.g. `ko://github.com/google/ko/cmd/ko`),
-and `ko` will handle containerizing and publishing that container image as needed.
+and `ko` will handle containerizing and publishing that container image as
+needed.
 
 For example, you might use the following in a Kubernetes `Deployment` resource:
 
@@ -56,11 +57,11 @@ spec:
         foo: bar
     spec:
       containers:
-      - name: hello-world
-        # This is the import path for the Go binary to build and run.
-        image: ko://github.com/mattmoor/examples/http/cmd/helloworld
-        ports:
-        - containerPort: 8080
+        - name: hello-world
+          # This is the import path for the Go binary to build and run.
+          image: ko://github.com/mattmoor/examples/http/cmd/helloworld
+          ports:
+            - containerPort: 8080
 ```
 
 ### What gets built?
@@ -71,14 +72,13 @@ with `ko://`.
 The legacy behavior of detecting import paths is deprecated and will be removed
 in a coming release.
 
-
 ### Results
 
 Employing this convention enables `ko` to have effectively zero configuration
 and enables very fast development iteration. For
-[warm-image](https://github.com/mattmoor/warm-image), `ko` is able to
-build, containerize, and redeploy a non-trivial Kubernetes controller app in
-seconds (dominated by two `go build`s).
+[warm-image](https://github.com/mattmoor/warm-image), `ko` is able to build,
+containerize, and redeploy a non-trivial Kubernetes controller app in seconds
+(dominated by two `go build`s).
 
 ```shell
 $ ko apply -f config/
@@ -105,22 +105,23 @@ customresourcedefinition.apiextensions.k8s.io/warmimages.mattmoor.io configured
 
 ## Usage
 
-`ko` has four commands, most of which build and publish images as part of
-their execution.  By default, `ko` publishes images to a Docker Registry
-specified via `KO_DOCKER_REPO`.
+`ko` has four commands, most of which build and publish images as part of their
+execution. By default, `ko` publishes images to a Docker Registry specified via
+`KO_DOCKER_REPO`.
 
-**Note**: You'll need to be authenticated with your `KO_DOCKER_REPO` before pushing
-images. Run `gcloud auth configure-docker` if you are using Google Container
-Registry or `docker login` if you are using Docker Hub.
+**Note**: You'll need to be authenticated with your `KO_DOCKER_REPO` before
+pushing images. Run `gcloud auth configure-docker` if you are using Google
+Container Registry or `docker login` if you are using Docker Hub.
 
-However, these same commands can be directed to operate locally as well via
-the `--local` or `-L` command (or setting `KO_DOCKER_REPO=ko.local`).  See
-the [`minikube` section](./README.md#with-minikube) for more detail.
+However, these same commands can be directed to operate locally as well via the
+`--local` or `-L` command (or setting `KO_DOCKER_REPO=ko.local`). See the
+[`minikube` section](./README.md#with-minikube) for more detail.
 
 ### `ko publish`
 
 `ko publish` simply builds and publishes images for each import path passed as
-an argument. It prints the images' published digests after each image is published.
+an argument. It prints the images' published digests after each image is
+published.
 
 ```shell
 $ ko publish github.com/mattmoor/warm-image/cmd/sleeper
@@ -133,7 +134,8 @@ $ ko publish github.com/mattmoor/warm-image/cmd/sleeper
 2018/07/19 14:57:36 Published us.gcr.io/my-project/sleeper-ebdb8b8b13d4bbe1d3592de055016d37@sha256:6c7b96a294cad3ce613aac23c8aca5f9dd12a894354ab276c157fb5c1c2e3326
 ```
 
-`ko publish` also supports relative import paths, when in the context of a repo on `GOPATH`.
+`ko publish` also supports relative import paths, when in the context of a repo
+on `GOPATH`.
 
 ```shell
 $ ko publish ./cmd/sleeper
@@ -148,13 +150,12 @@ $ ko publish ./cmd/sleeper
 
 ### `ko resolve`
 
-`ko resolve` takes Kubernetes yaml files in the style of `kubectl apply`
-and (based on the [model above](#the-ko-model)) determines the set of
-Go import paths to build, containerize, and publish.
+`ko resolve` takes Kubernetes yaml files in the style of `kubectl apply` and
+(based on the [model above](#the-ko-model)) determines the set of Go import
+paths to build, containerize, and publish.
 
-The output of `ko resolve` is the concatenated yaml with import paths
-replaced with published image digests. Following the example above,
-this would be:
+The output of `ko resolve` is the concatenated yaml with import paths replaced
+with published image digests. Following the example above, this would be:
 
 ```shell
 # Command
@@ -179,10 +180,10 @@ spec:
         - containerPort: 8080
 ```
 
-Some Docker Registries (e.g. gcr.io) support multi-level repository names.  For
+Some Docker Registries (e.g. gcr.io) support multi-level repository names. For
 these registries, it is often useful for discoverability and provenance to
-preserve the full import path, for this we expose `--preserve-import-paths`,
-or `-P` for short.
+preserve the full import path, for this we expose `--preserve-import-paths`, or
+`-P` for short.
 
 ```shell
 # Command
@@ -211,24 +212,27 @@ spec:
 It is notable that this is not the default (anymore) because certain popular
 registries (including Docker Hub) do not support multi-level repository names.
 
-`ko resolve`, `ko apply`, and `ko create` accept an optional `--selector` or `-l`
-flag,  similar to `kubectl`, which can be used to filter the resources from the
-input Kubernetes YAMLs by their `metadata.labels`.
+`ko resolve`, `ko apply`, and `ko create` accept an optional `--selector` or
+`-l` flag, similar to `kubectl`, which can be used to filter the resources from
+the input Kubernetes YAMLs by their `metadata.labels`.
 
-In the case of `ko resolve`, `--selector` will render only the resources that are selected by the provided selector.
+In the case of `ko resolve`, `--selector` will render only the resources that
+are selected by the provided selector.
 
-See [the documentation on Kubernetes selectors](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/) for more information on using label selectors.
+See
+[the documentation on Kubernetes selectors](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/)
+for more information on using label selectors.
 
 ### `ko apply`
 
 `ko apply` is intended to parallel `kubectl apply`, but acts on the same
 resolved output as `ko resolve` emits. It is expected that `ko apply` will act
 as the vehicle for rapid iteration during development. As changes are made to a
-particular application, you can run: `ko apply -f unit.yaml` to rapidly
-rebuild, repush, and redeploy their changes.
+particular application, you can run: `ko apply -f unit.yaml` to rapidly rebuild,
+repush, and redeploy their changes.
 
-`ko apply` will invoke `kubectl apply` under the hood, and therefore apply
-to whatever `kubectl` context is active.
+`ko apply` will invoke `kubectl apply` under the hood, and therefore apply to
+whatever `kubectl` context is active.
 
 ### `ko apply --watch` (EXPERIMENTAL)
 
@@ -239,9 +243,10 @@ that are affected.
 
 For example, if I edit `github.com/foo/bar/pkg/baz/blah.go`, the tool sees that
 the `github.com/foo/bar/pkg/baz` package has changed, and perhaps both
-`github.com/foo/bar/cmd/one` and `github.com/foo/bar/cmd/two` consume that library
-and were referenced by `config/one-deploy.yaml` and `config/two-deploy.yaml`.
-The edit would effectively result in a re-application of:
+`github.com/foo/bar/cmd/one` and `github.com/foo/bar/cmd/two` consume that
+library and were referenced by `config/one-deploy.yaml` and
+`config/two-deploy.yaml`. The edit would effectively result in a re-application
+of:
 
 ```
 ko apply -f config/one-deploy.yaml -f config/two-deploy.yaml
@@ -256,25 +261,26 @@ of convenience for cleaning up resources created through `ko apply`.
 
 ### `ko version`
 
-`ko version` prints version of ko. For not released binaries it will print hash of latest commit in current git tree.
+`ko version` prints version of ko. For not released binaries it will print hash
+of latest commit in current git tree.
 
 ### Strict Mode
 
 It can be difficult for `ko` to determine whether a string in a YAML file is
 intended to be an import path, due to typos, non-`package main` packages, and
-conflicts between import paths and common strings (e.g., a package whose
-import path is `busybox`). To solve this, `ko` supports "Strict Mode".
+conflicts between import paths and common strings (e.g., a package whose import
+path is `busybox`). To solve this, `ko` supports "Strict Mode".
 
-When referencing an import path in the YAML file, prefix the string with
-the string `ko://` (e.g., `ko://github.com/my/repo/cmd/foo`). Then, when
-calling `ko apply` or `ko resolve`, pass `--strict`. If a string
-with the `ko://` prefix is not determined to be a valid import path, the
-command will fail, rather than passing it through to the resolved YAML.
+When referencing an import path in the YAML file, prefix the string with the
+string `ko://` (e.g., `ko://github.com/my/repo/cmd/foo`). Then, when calling
+`ko apply` or `ko resolve`, pass `--strict`. If a string with the `ko://` prefix
+is not determined to be a valid import path, the command will fail, rather than
+passing it through to the resolved YAML.
 
 ## With `minikube`
 
 You can use `ko` with `minikube` via a Docker Registry, but this involves
-publishing images only to pull them back down to your machine again.  To avoid
+publishing images only to pull them back down to your machine again. To avoid
 this, `ko` exposes `--local` or `-L` options to instead publish the images to
 the local machine's Docker daemon.
 
@@ -297,12 +303,13 @@ KO_DOCKER_REPO=ko.local ko apply -f config/
 A caveat of this approach is that it will not work if your container is
 configured with `imagePullPolicy: Always` because despite having the image
 locally, a pull is performed to ensure we have the latest version, it still
-exists, and that access hasn't been revoked. A workaround for this is to
-use `imagePullPolicy: IfNotPresent`, which should work well with `ko` in
-all contexts.
+exists, and that access hasn't been revoked. A workaround for this is to use
+`imagePullPolicy: IfNotPresent`, which should work well with `ko` in all
+contexts.
 
-Images will appear in the Docker daemon as `ko.local/import.path.com/foo/cmd/bar`.
-With `--local` import paths are always preserved (see `--preserve-import-paths`).
+Images will appear in the Docker daemon as
+`ko.local/import.path.com/foo/cmd/bar`. With `--local` import paths are always
+preserved (see `--preserve-import-paths`).
 
 ## Configuration via `.ko.yaml`
 
@@ -317,14 +324,15 @@ If neither is present, then `ko` will rely on its default behaviors.
 ### Overriding the default base image
 
 > Notice: the use of `:latest` will be deprecated in favor of `:nonroot` in a
-> coming release.  See https://github.com/google/ko/issues/160 for more info.
+> coming release. See https://github.com/google/ko/issues/160 for more info.
 
-By default, `ko` makes use of `gcr.io/distroless/static:latest` as the base image
-for containers. There are a wide array of scenarios in which overriding this
-makes sense, for example:
+By default, `ko` makes use of `gcr.io/distroless/static:latest` as the base
+image for containers. There are a wide array of scenarios in which overriding
+this makes sense, for example:
+
 1. Pinning to a particular digest of this image for repeatable builds,
 1. Replacing this streamlined base image with another with better debugging
-  tools (e.g. a shell, like `docker.io/library/ubuntu`).
+   tools (e.g. a shell, like `docker.io/library/ubuntu`).
 
 The default base image `ko` uses can be changed by simply adding the following
 line to `.ko.yaml`:
@@ -335,8 +343,8 @@ defaultBaseImage: gcr.io/another-project/another-image@sha256:deadbeef
 
 ### Overriding the base for particular imports
 
-Some of your binaries may have requirements that are a more unique, and you
-may want to direct `ko` to use a particular base image for just those binaries.
+Some of your binaries may have requirements that are a more unique, and you may
+want to direct `ko` to use a particular base image for just those binaries.
 
 The base image `ko` uses can be changed by adding the following to `.ko.yaml`:
 
@@ -347,8 +355,8 @@ baseImageOverrides:
 
 ### Why isn't `KO_DOCKER_REPO` part of `.ko.yaml`?
 
-Once introduced to `.ko.yaml`, you may find yourself wondering: Why does it
-not hold the value of `$KO_DOCKER_REPO`?
+Once introduced to `.ko.yaml`, you may find yourself wondering: Why does it not
+hold the value of `$KO_DOCKER_REPO`?
 
 The answer is that `.ko.yaml` is expected to sit in the root of a repository,
 and get checked in and versioned alongside your source code. This also means
@@ -356,15 +364,14 @@ that the configured values will be shared across developers on a project, which
 for `KO_DOCKER_REPO` is actually undesirable because each developer is (likely)
 using their own docker repository and cluster.
 
-
 ## Including static assets
 
 A question that often comes up after using `ko` for a while is: "How do I
 include static assets in images produced with `ko`?".
 
-For this, `ko` builds around an idiom similar to `go test` and `testdata/`.
-`ko` will include all of the data under `<import path>/kodata/...` in the
-images it produces.
+For this, `ko` builds around an idiom similar to `go test` and `testdata/`. `ko`
+will include all of the data under `<import path>/kodata/...` in the images it
+produces.
 
 These files are placed under `/var/run/ko/...`, but the appropriate mechanism
 for referencing them should be through the `KO_DATA_PATH` environment variable.
@@ -408,19 +415,23 @@ kubectl logs kodata
 ## Enable Autocompletion
 
 To generate an bash completion script, you can run:
+
 ```
 ko completion
 ```
 
-To use the completion script, you can copy the script in your bash_completion directory (e.g. /usr/local/etc/bash_completion.d/):
+To use the completion script, you can copy the script in your bash_completion
+directory (e.g. /usr/local/etc/bash_completion.d/):
+
 ```
 ko completion > /usr/local/etc/bash_completion.d/ko
 ```
- or source it in your shell by running:
+
+or source it in your shell by running:
+
 ```
 source <(ko completion)
 ```
-
 
 ## Relevance to Release Management
 
@@ -451,11 +462,16 @@ kubectl apply -f release.yaml
 
 ### Why are my images all created in 1970?
 
-In order to support [reproducible builds](https://reproducible-builds.org), `ko` doesn't embed timestamps in the images it produces by default; however, `ko` does respect the [`SOURCE_DATE_EPOCH`](https://reproducible-builds.org/docs/source-date-epoch/) environment variable.
+In order to support [reproducible builds](https://reproducible-builds.org), `ko`
+doesn't embed timestamps in the images it produces by default; however, `ko`
+does respect the
+[`SOURCE_DATE_EPOCH`](https://reproducible-builds.org/docs/source-date-epoch/)
+environment variable.
 
 For example, you can set this to the current timestamp by executing:
 
     export SOURCE_DATE_EPOCH=$(date +%s)
+
 or to the latest git commit's timestamp with:
 
     export SOURCE_DATE_EPOCH=$(git log -1 --format='%ct')
