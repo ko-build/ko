@@ -257,7 +257,7 @@ func build(ctx context.Context, ip string, platform v1.Platform, disableOptimiza
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s", ip)
+	log.Printf("Building %s for %s", ip, platform.Architecture)
 	if err := cmd.Run(); err != nil {
 		os.RemoveAll(tmpDir)
 		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
@@ -593,6 +593,7 @@ func (gb *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	}
 }
 
+// TODO(#192): Do these in parallel?
 func (gb *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v1.ImageIndex, error) {
 	im, err := base.IndexManifest()
 	if err != nil {
@@ -602,7 +603,11 @@ func (gb *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (
 	// Build an image for each child from the base and append it to a new index to produce the result.
 	adds := []mutate.IndexAddendum{}
 	for _, desc := range im.Manifests {
-		// TODO(jonjohnsonjr): This would fail for a nested index, which is exceedingly rare.
+		// Nested index is pretty rare. We could support this in theory, but return an error for now.
+		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
+			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, s)
+		}
+
 		base, err := base.Image(desc.Digest)
 		if err != nil {
 			return nil, err

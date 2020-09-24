@@ -34,6 +34,7 @@ func (r *Recorder) IsSupportedReference(ip string) bool {
 	return r.Builder.IsSupportedReference(ip)
 }
 
+// Build implements Interface
 func (r *Recorder) Build(ctx context.Context, ip string) (Result, error) {
 	func() {
 		r.m.Lock()

@@ -41,3 +41,7 @@ type Result interface {
 	Digest() (v1.Hash, error)
 	RawManifest() ([]byte, error)
 }
+
+// Assert that Image and ImageIndex implement Result.
+var _ Result = (v1.Image)(nil)
+var _ Result = (v1.ImageIndex)(nil)

@@ -27,6 +27,8 @@ import (
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 )
 
@@ -499,4 +501,35 @@ func TestGoBuildIndex(t *testing.T) {
 			t.Errorf("Digest mismatch: %s != %s", d1, d2)
 		}
 	})
+}
+
+func TestNestedIndex(t *testing.T) {
+	baseLayers := int64(3)
+	images := int64(2)
+	base, err := random.Index(1024, baseLayers, images)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	nestedBase := mutate.AppendManifests(empty.Index, mutate.IndexAddendum{Add: base})
+
+	creationTime := v1.Time{time.Unix(5000, 0)}
+	ng, err := NewGo(
+		WithCreationTime(creationTime),
+		WithBaseImages(func(string) (Result, error) { return nestedBase, nil }),
+		withBuilder(writeTempFile),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	_, err = ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+	if err == nil {
+		t.Fatal("Build() expected err")
+	}
+
+	if !strings.Contains(err.Error(), "unexpected mediaType") {
+		t.Errorf("Build() expected unexpected mediaType error, got: %s", err)
+	}
 }

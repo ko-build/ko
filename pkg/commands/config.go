@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -40,6 +41,16 @@ var (
 )
 
 func getBaseImage(platform string) build.GetBase {
+	// Default to linux/amd64 unless GOOS and GOARCH are set.
+	if platform == "" {
+		platform = "linux/amd64"
+
+		goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+		if goos != "" && goarch != "" {
+			platform = path.Join(goos, goarch)
+		}
+	}
+
 	return func(s string) (build.Result, error) {
 		// Viper configuration file keys are case insensitive, and are
 		// returned as all lowercase.  This means that import paths with
@@ -69,6 +80,9 @@ func getBaseImage(platform string) build.GetBase {
 			}
 			if len(parts) > 2 {
 				p.Variant = parts[2]
+			}
+			if len(parts) > 3 {
+				return nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
 			}
 			ropt = append(ropt, remote.WithPlatform(p))
 		}
