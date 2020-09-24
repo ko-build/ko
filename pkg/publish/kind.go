@@ -44,10 +44,16 @@ func NewKindPublisher(namer Namer, tags []string) Interface {
 }
 
 // Publish implements publish.Interface.
-func (t *kindPublisher) Publish(img v1.Image, s string) (name.Reference, error) {
+func (t *kindPublisher) Publish(br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
+
+	// There's no way to write an index to a kind, so attempt to downcast it to an image.
+	img, ok := br.(v1.Image)
+	if !ok {
+		return nil, fmt.Errorf("failed to interpret %s result as image: %v", s, br)
+	}
 
 	h, err := img.Digest()
 	if err != nil {
