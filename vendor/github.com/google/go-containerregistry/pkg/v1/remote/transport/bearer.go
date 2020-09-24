@@ -92,6 +92,12 @@ func (bt *bearerTransport) refresh() error {
 	if err != nil {
 		return err
 	}
+
+	if auth.RegistryToken != "" {
+		bt.bearer.RegistryToken = auth.RegistryToken
+		return nil
+	}
+
 	var content []byte
 	if auth.IdentityToken != "" {
 		// If the secret being stored is an identity token,
@@ -232,10 +238,10 @@ func (bt *bearerTransport) refreshBasic() ([]byte, error) {
 	}
 	client := http.Client{Transport: b}
 
-	u.RawQuery = url.Values{
-		"scope":   bt.scopes,
-		"service": []string{bt.service},
-	}.Encode()
+	v := u.Query()
+	v["scope"] = bt.scopes
+	v.Set("service", bt.service)
+	u.RawQuery = v.Encode()
 
 	resp, err := client.Get(u.String())
 	if err != nil {
