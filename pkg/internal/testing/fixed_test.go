@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/ko/pkg/build"
 )
 
 func TestFixedPublish(t *testing.T) {
@@ -62,7 +63,7 @@ func TestFixedPublish(t *testing.T) {
 
 func TestFixedBuild(t *testing.T) {
 	testImage, _ := random.Image(1024, 5)
-	f := NewFixedBuild(map[string]v1.Image{
+	f := NewFixedBuild(map[string]build.Result{
 		"asdf": testImage,
 	})
 

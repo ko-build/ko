@@ -16,7 +16,7 @@ package publish
 
 import (
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/ko/pkg/build"
 )
 
 // MultiPublisher creates a publisher that publishes to all
@@ -33,9 +33,9 @@ type multiPublisher struct {
 }
 
 // Publish implements publish.Interface.
-func (p *multiPublisher) Publish(img v1.Image, s string) (ref name.Reference, err error) {
+func (p *multiPublisher) Publish(br build.Result, s string) (ref name.Reference, err error) {
 	for _, pub := range p.publishers {
-		ref, err = pub.Publish(img, s)
+		ref, err = pub.Publish(br, s)
 		if err != nil {
 			return
 		}

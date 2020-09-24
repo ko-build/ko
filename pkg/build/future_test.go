@@ -17,15 +17,14 @@ package build
 import (
 	"testing"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 )
 
-func makeImage() (v1.Image, error) {
-	return random.Image(256, 8)
+func makeImage() (Result, error) {
+	return random.Index(256, 8, 1)
 }
 
-func digest(t *testing.T, img v1.Image) string {
+func digest(t *testing.T, img Result) string {
 	d, err := img.Digest()
 	if err != nil {
 		t.Fatalf("Digest() = %v", err)

@@ -20,6 +20,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path"
 	"strconv"
 	"strings"
 	"syscall"
@@ -29,6 +30,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/google/ko/pkg/build"
 	"github.com/spf13/viper"
 )
 
@@ -37,21 +40,68 @@ var (
 	baseImageOverrides map[string]name.Reference
 )
 
-func getBaseImage(s string) (v1.Image, error) {
-	// Viper configuration file keys are case insensitive, and are
-	// returned as all lowercase.  This means that import paths with
-	// uppercase must be normalized for matching here, e.g.
-	//    github.com/GoogleCloudPlatform/foo/cmd/bar
-	// comes through as:
-	//    github.com/googlecloudplatform/foo/cmd/bar
-	ref, ok := baseImageOverrides[strings.ToLower(s)]
-	if !ok {
-		ref = defaultBaseImage
+func getBaseImage(platform string) build.GetBase {
+	// Default to linux/amd64 unless GOOS and GOARCH are set.
+	if platform == "" {
+		platform = "linux/amd64"
+
+		goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+		if goos != "" && goarch != "" {
+			platform = path.Join(goos, goarch)
+		}
 	}
-	log.Printf("Using base %s for %s", ref, s)
-	return remote.Image(ref,
-		remote.WithTransport(defaultTransport()),
-		remote.WithAuthFromKeychain(authn.DefaultKeychain))
+
+	return func(s string) (build.Result, error) {
+		// Viper configuration file keys are case insensitive, and are
+		// returned as all lowercase.  This means that import paths with
+		// uppercase must be normalized for matching here, e.g.
+		//    github.com/GoogleCloudPlatform/foo/cmd/bar
+		// comes through as:
+		//    github.com/googlecloudplatform/foo/cmd/bar
+		ref, ok := baseImageOverrides[strings.ToLower(s)]
+		if !ok {
+			ref = defaultBaseImage
+		}
+		ropt := []remote.Option{
+			remote.WithAuthFromKeychain(authn.DefaultKeychain),
+			remote.WithTransport(defaultTransport()),
+		}
+
+		// Using --platform=all will use an image index for the base,
+		// otherwise we'll resolve it to the appropriate platform.
+		var p v1.Platform
+		if platform != "" && platform != "all" {
+			parts := strings.Split(platform, "/")
+			if len(parts) > 0 {
+				p.OS = parts[0]
+			}
+			if len(parts) > 1 {
+				p.Architecture = parts[1]
+			}
+			if len(parts) > 2 {
+				p.Variant = parts[2]
+			}
+			if len(parts) > 3 {
+				return nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
+			}
+			ropt = append(ropt, remote.WithPlatform(p))
+		}
+
+		log.Printf("Using base %s for %s", ref, s)
+		desc, err := remote.Get(ref, ropt...)
+		if err != nil {
+			return nil, err
+		}
+		switch desc.MediaType {
+		case types.OCIImageIndex, types.DockerManifestList:
+			if platform == "all" {
+				return desc.ImageIndex()
+			}
+			return desc.Image()
+		default:
+			return desc.Image()
+		}
+	}
 }
 
 func getCreationTime() (*v1.Time, error) {

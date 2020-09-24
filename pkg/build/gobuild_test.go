@@ -27,6 +27,8 @@ import (
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 )
 
@@ -36,7 +38,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	ng, err := NewGo(WithBaseImages(func(string) (v1.Image, error) { return base, nil }))
+	ng, err := NewGo(WithBaseImages(func(string) (Result, error) { return base, nil }))
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}
@@ -85,7 +87,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	}
 
 	opts := []Option{
-		WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
+		WithBaseImages(func(string) (Result, error) { return base, nil }),
 		withModuleInfo(mods),
 		withBuildContext(stubBuildContext{
 			// make all referenced deps commands
@@ -154,16 +156,21 @@ func TestGoBuildNoKoData(t *testing.T) {
 	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		WithCreationTime(creationTime),
-		WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
+		WithBaseImages(func(string) (Result, error) { return base, nil }),
 		withBuilder(writeTempFile),
 	)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	img, err := ng.Build(context.Background(), path.Join(importpath, "cmd", "ko"))
+	result, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(v1.Image)
+	if !ok {
+		t.Fatalf("Build() not an image: %v", result)
 	}
 
 	ls, err := img.Layers()
@@ -181,16 +188,22 @@ func TestGoBuildNoKoData(t *testing.T) {
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
-		expectedHash := v1.Hash{
-			Algorithm: "sha256",
-			Hex:       "fb82c95fc73eaf26d0b18b1bc2d23ee32059e46806a83a313e738aac4d039492",
+		result2, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko"))
+		if err != nil {
+			t.Fatalf("Build() = %v", err)
 		}
-		appLayer := ls[baseLayers+1]
 
-		if got, err := appLayer.Digest(); err != nil {
-			t.Errorf("Digest() = %v", err)
-		} else if got != expectedHash {
-			t.Errorf("Digest() = %v, want %v", got, expectedHash)
+		d1, err := result.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+		d2, err := result2.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+
+		if d1 != d2 {
+			t.Errorf("Digest mismatch: %s != %s", d1, d2)
 		}
 	})
 
@@ -223,28 +236,8 @@ func TestGoBuildNoKoData(t *testing.T) {
 	})
 }
 
-func TestGoBuild(t *testing.T) {
-	baseLayers := int64(3)
-	base, err := random.Image(1024, baseLayers)
-	if err != nil {
-		t.Fatalf("random.Image() = %v", err)
-	}
-	importpath := "github.com/google/ko"
-
-	creationTime := v1.Time{Time: time.Unix(5000, 0)}
-	ng, err := NewGo(
-		WithCreationTime(creationTime),
-		WithBaseImages(func(string) (v1.Image, error) { return base, nil }),
-		withBuilder(writeTempFile),
-	)
-	if err != nil {
-		t.Fatalf("NewGo() = %v", err)
-	}
-
-	img, err := ng.Build(context.Background(), path.Join(importpath, "cmd", "ko", "test"))
-	if err != nil {
-		t.Fatalf("Build() = %v", err)
-	}
+func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1.Time) {
+	t.Helper()
 
 	ls, err := img.Layers()
 	if err != nil {
@@ -256,21 +249,6 @@ func TestGoBuild(t *testing.T) {
 		// We get a layer for the go binary and a layer for the kodata/
 		if got, want := int64(len(ls)), baseLayers+2; got != want {
 			t.Fatalf("len(Layers()) = %v, want %v", got, want)
-		}
-	})
-
-	// Check that rebuilding the image again results in the same image digest.
-	t.Run("check determinism", func(t *testing.T) {
-		expectedHash := v1.Hash{
-			Algorithm: "sha256",
-			Hex:       "4c7f97dda30576670c3a8967424f7dea023030bb3df74fc4bd10329bcb266fc2",
-		}
-		appLayer := ls[baseLayers+1]
-
-		if got, err := appLayer.Digest(); err != nil {
-			t.Errorf("Digest() = %v", err)
-		} else if got != expectedHash {
-			t.Errorf("Digest() = %v, want %v", got, expectedHash)
 		}
 	})
 
@@ -402,4 +380,156 @@ type stubBuildContext map[string]*gb.Package
 
 func (s stubBuildContext) Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error) {
 	return s[path], nil
+}
+
+func TestGoBuild(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{time.Unix(5000, 0)}
+	ng, err := NewGo(
+		WithCreationTime(creationTime),
+		WithBaseImages(func(string) (Result, error) { return base, nil }),
+		withBuilder(writeTempFile),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(v1.Image)
+	if !ok {
+		t.Fatalf("Build() not an image: %v", result)
+	}
+
+	validateImage(t, img, baseLayers, creationTime)
+
+	// Check that rebuilding the image again results in the same image digest.
+	t.Run("check determinism", func(t *testing.T) {
+		result2, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+		if err != nil {
+			t.Fatalf("Build() = %v", err)
+		}
+
+		d1, err := result.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+		d2, err := result2.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+
+		if d1 != d2 {
+			t.Errorf("Digest mismatch: %s != %s", d1, d2)
+		}
+	})
+
+}
+
+func TestGoBuildIndex(t *testing.T) {
+	baseLayers := int64(3)
+	images := int64(2)
+	base, err := random.Index(1024, baseLayers, images)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{time.Unix(5000, 0)}
+	ng, err := NewGo(
+		WithCreationTime(creationTime),
+		WithBaseImages(func(string) (Result, error) { return base, nil }),
+		withBuilder(writeTempFile),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	idx, ok := result.(v1.ImageIndex)
+	if !ok {
+		t.Fatalf("Build() not an image: %v", result)
+	}
+
+	im, err := idx.IndexManifest()
+	if err != nil {
+		t.Fatalf("IndexManifest() = %v", err)
+	}
+
+	for _, desc := range im.Manifests {
+		img, err := idx.Image(desc.Digest)
+		if err != nil {
+			t.Fatalf("idx.Image(%s) = %v", desc.Digest, err)
+		}
+		validateImage(t, img, baseLayers, creationTime)
+	}
+
+	if want, got := images, int64(len(im.Manifests)); want != got {
+		t.Fatalf("len(Manifests()) = %v, want %v", got, want)
+	}
+
+	// Check that rebuilding the image again results in the same image digest.
+	t.Run("check determinism", func(t *testing.T) {
+		result2, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+		if err != nil {
+			t.Fatalf("Build() = %v", err)
+		}
+
+		d1, err := result.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+		d2, err := result2.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+
+		if d1 != d2 {
+			t.Errorf("Digest mismatch: %s != %s", d1, d2)
+		}
+	})
+}
+
+func TestNestedIndex(t *testing.T) {
+	baseLayers := int64(3)
+	images := int64(2)
+	base, err := random.Index(1024, baseLayers, images)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	nestedBase := mutate.AppendManifests(empty.Index, mutate.IndexAddendum{Add: base})
+
+	creationTime := v1.Time{time.Unix(5000, 0)}
+	ng, err := NewGo(
+		WithCreationTime(creationTime),
+		WithBaseImages(func(string) (Result, error) { return nestedBase, nil }),
+		withBuilder(writeTempFile),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	_, err = ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+	if err == nil {
+		t.Fatal("Build() expected err")
+	}
+
+	if !strings.Contains(err.Error(), "unexpected mediaType") {
+		t.Errorf("Build() expected unexpected mediaType error, got: %s", err)
+	}
 }

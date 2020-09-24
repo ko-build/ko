@@ -33,8 +33,10 @@ import (
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 const (
@@ -42,8 +44,9 @@ const (
 	defaultAppFilename = "ko-app"
 )
 
-// GetBase takes an importpath and returns a base v1.Image.
-type GetBase func(string) (v1.Image, error)
+// GetBase takes an importpath and returns a base image.
+type GetBase func(string) (Result, error)
+
 type builder func(context.Context, string, v1.Platform, bool) (string, error)
 
 type buildContext interface {
@@ -254,7 +257,7 @@ func build(ctx context.Context, ip string, platform v1.Platform, disableOptimiza
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s", ip)
+	log.Printf("Building %s for %s", ip, platform.Architecture)
 	if err := cmd.Run(); err != nil {
 		os.RemoveAll(tmpDir)
 		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
@@ -442,15 +445,9 @@ func (g *gobuild) tarKoData(ref reference) (*bytes.Buffer, error) {
 	return buf, walkRecursive(tw, root, kodataRoot)
 }
 
-// Build implements build.Interface
-func (gb *gobuild) Build(ctx context.Context, s string) (v1.Image, error) {
+func (gb *gobuild) buildOne(ctx context.Context, s string, base v1.Image) (v1.Image, error) {
 	ref := newRef(s)
 
-	// Determine the appropriate base image for this import path.
-	base, err := gb.getBase(ref.Path())
-	if err != nil {
-		return nil, err
-	}
 	cf, err := base.ConfigFile()
 	if err != nil {
 		return nil, err
@@ -562,4 +559,78 @@ func updatePath(cf *v1.ConfigFile) {
 
 	// If we get here, we never saw PATH.
 	cf.Config.Env = append(cf.Config.Env, "PATH="+appDir)
+}
+
+// Build implements build.Interface
+func (gb *gobuild) Build(ctx context.Context, s string) (Result, error) {
+	// Determine the appropriate base image for this import path.
+	base, err := gb.getBase(s)
+	if err != nil {
+		return nil, err
+	}
+
+	// Determine what kind of base we have and if we should publish an image or an index.
+	mt, err := base.MediaType()
+	if err != nil {
+		return nil, err
+	}
+
+	switch mt {
+	case types.OCIImageIndex, types.DockerManifestList:
+		base, ok := base.(v1.ImageIndex)
+		if !ok {
+			return nil, fmt.Errorf("failed to interpret base as index: %v", base)
+		}
+		return gb.buildAll(ctx, s, base)
+	case types.OCIManifestSchema1, types.DockerManifestSchema2:
+		base, ok := base.(v1.Image)
+		if !ok {
+			return nil, fmt.Errorf("failed to interpret base as image: %v", base)
+		}
+		return gb.buildOne(ctx, s, base)
+	default:
+		return nil, fmt.Errorf("base image media type: %s", mt)
+	}
+}
+
+// TODO(#192): Do these in parallel?
+func (gb *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v1.ImageIndex, error) {
+	im, err := base.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	// Build an image for each child from the base and append it to a new index to produce the result.
+	adds := []mutate.IndexAddendum{}
+	for _, desc := range im.Manifests {
+		// Nested index is pretty rare. We could support this in theory, but return an error for now.
+		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
+			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, s)
+		}
+
+		base, err := base.Image(desc.Digest)
+		if err != nil {
+			return nil, err
+		}
+		img, err := gb.buildOne(ctx, s, base)
+		if err != nil {
+			return nil, err
+		}
+		adds = append(adds, mutate.IndexAddendum{
+			Add: img,
+			Descriptor: v1.Descriptor{
+				URLs:        desc.URLs,
+				MediaType:   desc.MediaType,
+				Annotations: desc.Annotations,
+				Platform:    desc.Platform,
+			},
+		})
+	}
+
+	baseType, err := base.MediaType()
+	if err != nil {
+		return nil, err
+	}
+
+	return mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType), nil
 }

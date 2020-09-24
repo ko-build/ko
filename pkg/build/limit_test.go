@@ -19,7 +19,6 @@ import (
 	"testing"
 	"time"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -33,7 +32,7 @@ func (r *sleeper) IsSupportedReference(ip string) bool {
 }
 
 // Build implements Interface
-func (r *sleeper) Build(_ context.Context, ip string) (v1.Image, error) {
+func (r *sleeper) Build(_ context.Context, ip string) (Result, error) {
 	time.Sleep(50 * time.Millisecond)
 	return nil, nil
 }

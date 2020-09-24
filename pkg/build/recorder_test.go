@@ -18,14 +18,12 @@ import (
 	"context"
 	"testing"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-
 	"github.com/google/go-cmp/cmp"
 )
 
 type fake struct {
 	isr func(string) bool
-	b   func(string) (v1.Image, error)
+	b   func(string) (Result, error)
 }
 
 var _ Interface = (*fake)(nil)
@@ -36,7 +34,7 @@ func (r *fake) IsSupportedReference(ip string) bool {
 }
 
 // Build implements Interface
-func (r *fake) Build(_ context.Context, ip string) (v1.Image, error) {
+func (r *fake) Build(_ context.Context, ip string) (Result, error) {
 	return r.b(ip)
 }
 
@@ -104,7 +102,7 @@ func TestBuildRecording(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			inner := &fake{
-				b: func(ip string) (v1.Image, error) {
+				b: func(ip string) (Result, error) {
 					return nil, nil
 				},
 			}

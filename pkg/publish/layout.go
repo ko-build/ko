@@ -22,6 +22,8 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/google/ko/pkg/build"
 )
 
 type LayoutPublisher struct {
@@ -40,15 +42,39 @@ func NewLayout(path string) (Interface, error) {
 	return &LayoutPublisher{p}, nil
 }
 
+func (l *LayoutPublisher) writeResult(br build.Result) error {
+	mt, err := br.MediaType()
+	if err != nil {
+		return err
+	}
+
+	switch mt {
+	case types.OCIImageIndex, types.DockerManifestList:
+		idx, ok := br.(v1.ImageIndex)
+		if !ok {
+			return fmt.Errorf("failed to interpret result as index: %v", br)
+		}
+		return l.p.AppendIndex(idx)
+	case types.OCIManifestSchema1, types.DockerManifestSchema2:
+		img, ok := br.(v1.Image)
+		if !ok {
+			return fmt.Errorf("failed to interpret result as image: %v", br)
+		}
+		return l.p.AppendImage(img)
+	default:
+		return fmt.Errorf("result image media type: %s", mt)
+	}
+}
+
 // Publish implements publish.Interface.
-func (l *LayoutPublisher) Publish(img v1.Image, s string) (name.Reference, error) {
+func (l *LayoutPublisher) Publish(br build.Result, s string) (name.Reference, error) {
 	log.Printf("Saving %v", s)
-	if err := l.p.AppendImage(img); err != nil {
+	if err := l.writeResult(br); err != nil {
 		return nil, err
 	}
 	log.Printf("Saved %v", s)
 
-	h, err := img.Digest()
+	h, err := br.Digest()
 	if err != nil {
 		return nil, err
 	}
