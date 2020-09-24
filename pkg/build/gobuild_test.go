@@ -17,6 +17,7 @@ package build
 import (
 	"archive/tar"
 	"context"
+	"fmt"
 	gb "go/build"
 	"io"
 	"io/ioutil"
@@ -45,7 +46,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		"github.com/google/ko/cmd/ko", // ko can build itself.
+		"ko://github.com/google/ko/cmd/ko", // ko can build itself.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if !ng.IsSupportedReference(importpath) {
@@ -56,8 +57,8 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Unsupported import paths.
 	for _, importpath := range []string{
-		"github.com/google/ko/pkg/build",       // not a command.
-		"github.com/google/ko/pkg/nonexistent", // does not exist.
+		"ko://github.com/google/ko/pkg/build",       // not a command.
+		"ko://github.com/google/ko/pkg/nonexistent", // does not exist.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if ng.IsSupportedReference(importpath) {
@@ -93,6 +94,8 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 			// make all referenced deps commands
 			"github.com/google/ko/cmd/ko/test": &gb.Package{Name: "main"},
 			"github.com/some/module/cmd":       &gb.Package{Name: "main"},
+
+			"github.com/google/ko/pkg/build": &gb.Package{Name: "build"},
 		}),
 	}
 
@@ -103,8 +106,8 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		"github.com/google/ko/cmd/ko/test", // ko can build the test package.
-		"github.com/some/module/cmd",       // ko can build commands in dependent modules
+		"ko://github.com/google/ko/cmd/ko/test", // ko can build the test package.
+		"ko://github.com/some/module/cmd",       // ko can build commands in dependent modules
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if !ng.IsSupportedReference(importpath) {
@@ -115,9 +118,9 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 
 	// Unsupported import paths.
 	for _, importpath := range []string{
-		"github.com/google/ko/pkg/build",       // not a command.
-		"github.com/google/ko/pkg/nonexistent", // does not exist.
-		"github.com/google/ko/cmd/ko",          // not in this module.
+		"ko://github.com/google/ko/pkg/build",       // not a command.
+		"ko://github.com/google/ko/pkg/nonexistent", // does not exist.
+		"ko://github.com/google/ko/cmd/ko",          // not in this module.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if ng.IsSupportedReference(importpath) {
@@ -163,7 +166,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	result, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko"))
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -188,7 +191,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
-		result2, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko"))
+		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko"))
 		if err != nil {
 			t.Fatalf("Build() = %v", err)
 		}
@@ -379,7 +382,11 @@ func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1
 type stubBuildContext map[string]*gb.Package
 
 func (s stubBuildContext) Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error) {
-	return s[path], nil
+	p, ok := s[path]
+	if ok {
+		return p, nil
+	}
+	return nil, fmt.Errorf("not found: %s", path)
 }
 
 func TestGoBuild(t *testing.T) {
@@ -400,7 +407,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	result, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -414,7 +421,7 @@ func TestGoBuild(t *testing.T) {
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
-		result2, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
 		if err != nil {
 			t.Fatalf("Build() = %v", err)
 		}
@@ -454,7 +461,7 @@ func TestGoBuildIndex(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	result, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -483,7 +490,7 @@ func TestGoBuildIndex(t *testing.T) {
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
-		result2, err := ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
 		if err != nil {
 			t.Fatalf("Build() = %v", err)
 		}
@@ -524,7 +531,7 @@ func TestNestedIndex(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	_, err = ng.Build(context.Background(), filepath.Join(importpath, "cmd", "ko", "test"))
+	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
 	if err == nil {
 		t.Fatal("Build() expected err")
 	}

@@ -69,9 +69,6 @@ spec:
 `ko` will attempt to containerize and build any string within the yaml prefixed
 with `ko://`.
 
-The legacy behavior of detecting import paths is deprecated and will be removed
-in a coming release.
-
 ### Results
 
 Employing this convention enables `ko` to have effectively zero configuration
@@ -82,14 +79,14 @@ containerize, and redeploy a non-trivial Kubernetes controller app in seconds
 
 ```shell
 $ ko apply -f config/
-2018/07/19 14:56:41 Using base gcr.io/distroless/static:latest for github.com/mattmoor/warm-image/cmd/sleeper
+2018/07/19 14:56:41 Using base gcr.io/distroless/static:nonroot for github.com/mattmoor/warm-image/cmd/sleeper
 2018/07/19 14:56:42 Publishing us.gcr.io/my-project/sleeper-ebdb8b8b13d4bbe1d3592de055016d37:latest
 2018/07/19 14:56:43 mounted blob: sha256:57752e7f9593cbfb7101af994b136a369ecc8174332866622db32a264f3fbefd
 2018/07/19 14:56:43 mounted blob: sha256:59df9d5b488aea2753ab7774ae41a9a3e96903f87ac699f3505960e744f36f7d
 2018/07/19 14:56:43 mounted blob: sha256:739b3deec2edb17c512f507894c55c2681f9724191d820cdc01f668330724ca7
 2018/07/19 14:56:44 us.gcr.io/my-project/sleeper-ebdb8b8b13d4bbe1d3592de055016d37:latest: digest: sha256:6c7b96a294cad3ce613aac23c8aca5f9dd12a894354ab276c157fb5c1c2e3326 size: 592
 2018/07/19 14:56:44 Published us.gcr.io/my-project/sleeper-ebdb8b8b13d4bbe1d3592de055016d37@sha256:6c7b96a294cad3ce613aac23c8aca5f9dd12a894354ab276c157fb5c1c2e3326
-2018/07/19 14:56:45 Using base gcr.io/distroless/static:latest for github.com/mattmoor/warm-image/cmd/controller
+2018/07/19 14:56:45 Using base gcr.io/distroless/static:nonroot for github.com/mattmoor/warm-image/cmd/controller
 2018/07/19 14:56:46 Publishing us.gcr.io/my-project/controller-9e91872fd7c48124dbe6ea83944b87e9:latest
 2018/07/19 14:56:46 mounted blob: sha256:007782ba6738188a59bf21b4d8e974f218615ee948c6357535d07e7248b2a560
 2018/07/19 14:56:46 mounted blob: sha256:57752e7f9593cbfb7101af994b136a369ecc8174332866622db32a264f3fbefd
@@ -129,7 +126,7 @@ published.
 
 ```shell
 $ ko publish github.com/mattmoor/warm-image/cmd/sleeper
-2018/07/19 14:57:34 Using base gcr.io/distroless/static:latest for github.com/mattmoor/warm-image/cmd/sleeper
+2018/07/19 14:57:34 Using base gcr.io/distroless/static:nonroot for github.com/mattmoor/warm-image/cmd/sleeper
 2018/07/19 14:57:35 Publishing us.gcr.io/my-project/sleeper-ebdb8b8b13d4bbe1d3592de055016d37:latest
 2018/07/19 14:57:35 mounted blob: sha256:739b3deec2edb17c512f507894c55c2681f9724191d820cdc01f668330724ca7
 2018/07/19 14:57:35 mounted blob: sha256:57752e7f9593cbfb7101af994b136a369ecc8174332866622db32a264f3fbefd
@@ -143,7 +140,7 @@ on `GOPATH`.
 
 ```shell
 $ ko publish ./cmd/sleeper
-2018/07/19 14:58:16 Using base gcr.io/distroless/static:latest for github.com/mattmoor/warm-image/cmd/sleeper
+2018/07/19 14:58:16 Using base gcr.io/distroless/static:nonroot for github.com/mattmoor/warm-image/cmd/sleeper
 2018/07/19 14:58:16 Publishing us.gcr.io/my-project/sleeper-ebdb8b8b13d4bbe1d3592de055016d37:latest
 2018/07/19 14:58:17 mounted blob: sha256:59df9d5b488aea2753ab7774ae41a9a3e96903f87ac699f3505960e744f36f7d
 2018/07/19 14:58:17 mounted blob: sha256:739b3deec2edb17c512f507894c55c2681f9724191d820cdc01f668330724ca7
@@ -354,12 +351,9 @@ If neither is present, then `ko` will rely on its default behaviors.
 
 ### Overriding the default base image
 
-> Notice: the use of `:latest` will be deprecated in favor of `:nonroot` in a
-> coming release. See https://github.com/google/ko/issues/160 for more info.
-
-By default, `ko` makes use of `gcr.io/distroless/static:latest` as the base
-image for containers. There are a wide array of scenarios in which overriding
-this makes sense, for example:
+By default, `ko` makes use of `gcr.io/distroless/static:nonroot` as the base image
+for containers. There are a wide array of scenarios in which overriding this
+makes sense, for example:
 
 1. Pinning to a particular digest of this image for repeatable builds,
 1. Replacing this streamlined base image with another with better debugging
@@ -417,7 +411,7 @@ This produces identical output to being run within the container locally:
 
 ```shell
 ko publish -L ./cmd/test
-2018/07/19 23:36:11 Using base gcr.io/distroless/static:latest for github.com/google/ko/cmd/test
+2018/07/19 23:36:11 Using base gcr.io/distroless/static:nonroot for github.com/google/ko/cmd/test
 2018/07/19 23:36:12 Loading ko.local/github.com/google/ko/cmd/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
 2018/07/19 23:36:13 Loaded ko.local/github.com/google/ko/cmd/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
 
@@ -429,7 +423,7 @@ docker run -ti --rm ko.local/github.com/google/ko/cmd/test:703c205bf2f405af520b4
 
 ```shell
 ko apply -f cmd/ko/test/test.yaml
-2018/07/19 23:38:24 Using base gcr.io/distroless/static:latest for github.com/google/ko/cmd/test
+2018/07/19 23:38:24 Using base gcr.io/distroless/static:nonroot for github.com/google/ko/cmd/test
 2018/07/19 23:38:25 Publishing us.gcr.io/my-project/test-294a7bdc57d85dc6ddeef5ba38a59fe9:latest
 2018/07/19 23:38:26 mounted blob: sha256:988abcba36b5948da8baa1e3616b94c0b56da814b8f6ff3ae3ac316e375e093a
 2018/07/19 23:38:26 mounted blob: sha256:57752e7f9593cbfb7101af994b136a369ecc8174332866622db32a264f3fbefd
