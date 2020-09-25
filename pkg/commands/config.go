@@ -58,7 +58,7 @@ func getBaseImage(platform string) build.GetBase {
 		//    github.com/GoogleCloudPlatform/foo/cmd/bar
 		// comes through as:
 		//    github.com/googlecloudplatform/foo/cmd/bar
-		ref, ok := baseImageOverrides[strings.ToLower(s)]
+		ref, ok := baseImageOverrides[strings.ToLower(strings.TrimPrefix(s, build.StrictScheme))]
 		if !ok {
 			ref = defaultBaseImage
 		}
