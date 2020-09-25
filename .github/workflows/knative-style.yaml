@@ -1,0 +1,228 @@
+# Copyright 2020 The Knative Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This file is automagically synced here from github.com/knative-sandbox/.github
+# repo by knobots: https://github.com/mattmoor/knobots and will be overwritten.
+
+name: Code Style
+
+on:
+  pull_request:
+    branches: [ 'master', 'release-*' ]
+
+jobs:
+
+  autoformat:
+    name: Auto-format and Check
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Set up Go 1.15.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+        id: go
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install Dependencies
+        run: |
+          cd $(mktemp -d)
+          GO111MODULE=on go get golang.org/x/tools/cmd/goimports
+
+      # Run this last because it alters the workspace.
+      # TODO: add prettier step
+      - name: Go Imports
+        shell: bash
+        run: |
+          goimports -w $(find -path './vendor' -prune -o -path './third_party' -prune -o -name '*.pb.go' -prune -o -type f -name '*.go' -print)
+          echo "::set-env name=FMT_TOOL::goimports"
+      - name: Verify goimport
+        shell: bash
+        run: |
+          if [[ $(git diff-index --name-only HEAD --) ]]; then
+              echo "Found diffs in:"
+              git diff-index --name-only HEAD --
+              echo "${{ github.repository }} is out of style. Please run $FMT_TOOL."
+              exit 1
+          fi
+          echo "${{ github.repository }} is formatted correctly."
+
+      - name: Go Format
+        shell: bash
+        run: |
+          gofmt -s -w $(find -path './vendor' -prune -o -path './third_party' -prune -o -name '*.pb.go' -prune -o -type f -name '*.go' -print)
+          echo "::set-env name=FMT_TOOL::gofmt"
+      - name: Verify gofmt
+        shell: bash
+        # TODO(mattmoor): combine with above via anchors when actions support it.
+        run: |
+          if [[ $(git diff-index --name-only HEAD --) ]]; then
+              echo "Found diffs in:"
+              git diff-index --name-only HEAD --
+              echo "${{ github.repository }} is out of style. Please run $FMT_TOOL."
+              exit 1
+          fi
+          echo "${{ github.repository }} is formatted correctly."
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up Go 1.15.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+        id: go
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install Tools
+        run: |
+          TEMP_PATH="$(mktemp -d)"
+          cd $TEMP_PATH
+
+          echo '::group::🐶 Installing reviewdog ... https://github.com/reviewdog/reviewdog'
+          curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b "${TEMP_PATH}" 2>&1
+          echo '::endgroup::'
+
+          echo '::group:: Installing misspell ... https://github.com/client9/misspell'
+          go get github.com/client9/misspell/cmd/misspell
+          echo '::endgroup::'
+
+          echo '::group:: Installing woke ... https://github.com/get-woke/woke'
+          curl -sfL https://raw.githubusercontent.com/get-woke/woke/main/install.sh | sh -s -- -b "${TEMP_PATH}" "${WOKE_VERSION}" 2>&1
+          echo '::endgroup::'
+
+          echo "::add-path::${TEMP_PATH}"
+
+      - id: golangci_configuration
+        uses: andstor/file-existence-action@v1
+        with:
+          files: .golangci.yaml
+      - name: Go Lint
+        if: steps.golangci_configuration.outputs.files_exists == 'true'
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.30
+          only-new-issues: true # for initial defensiveness
+
+      - name: misspell
+        shell: bash
+        if: ${{ always() }}
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd "${GITHUB_WORKSPACE}" || exit 1
+
+          echo '::group:: Running github.com/client9/misspell with reviewdog 🐶 ...'
+          # Don't fail because of misspell
+          set +o pipefail
+          find . -type f -not -path './vendor/*' -not -path './third_party/*' -not -path './.git/*' |
+          xargs misspell -error |
+          reviewdog -efm="%f:%l:%c: %m" \
+                -name="github.com/client9/misspell" \
+                -reporter="github-pr-check" \
+                -filter-mode="added" \
+                -fail-on-error="true" \
+                -level="error"
+
+          echo '::endgroup::'
+
+      - name: trailing whitespace
+        shell: bash
+        if: ${{ always() }}
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd "${GITHUB_WORKSPACE}" || exit 1
+
+          echo '::group:: Flagging trailing whitespace with reviewdog 🐶 ...'
+          # Don't fail because of grep
+          set +o pipefail
+          find . -type f -not -path './vendor/*' -not -path './third_party/*' -not -path './.git/*' |
+          xargs grep -nE " +$" |
+          reviewdog -efm="%f:%l:%m" \
+                -name="trailing whitespace" \
+                -reporter="github-pr-check" \
+                -filter-mode="added" \
+                -fail-on-error="true" \
+                -level="error"
+
+          echo '::endgroup::'
+
+      - name: EOF newline
+        shell: bash
+        if: ${{ always() }}
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd "${GITHUB_WORKSPACE}" || exit 1
+
+          echo '::group:: Flagging missing EOF newlines with reviewdog 🐶 ...'
+          # Don't fail because of misspell
+          set +o pipefail
+          for x in $(find . -type f -not -path './vendor/*' -not -path './third_party/*' -not -path './.git/*'); do
+            # Based on https://stackoverflow.com/questions/34943632/linux-check-if-there-is-an-empty-line-at-the-end-of-a-file
+            if [[ -f $x && ! ( -s "$x" && -z "$(tail -c 1 $x)" ) ]]; then
+              # We add 1 to `wc -l` here because of this limitation (from the man page):
+              # Characters beyond the final <newline> character will not be included in the line count.
+              echo $x:$((1 + $(wc -l $x | tr -s ' ' | cut -d' ' -f 1))): Missing newline
+            fi
+          done |
+          reviewdog -efm="%f:%l: %m" \
+                -name="EOF Newline" \
+                -reporter="github-pr-check" \
+                -filter-mode="added" \
+                -fail-on-error="true" \
+                -level="error"
+
+          echo '::endgroup::'
+
+      # This is mostly copied from https://github.com/get-woke/woke-action-reviewdog/blob/main/entrypoint.sh
+      # since their action is not yet released under a stable version.
+      - name: Language
+        if: ${{ always() && github.event_name == 'pull_request' }}
+        shell: bash
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+          WOKE_VERSION: v0.1.11
+        run: |
+          set -e
+          cd "${GITHUB_WORKSPACE}" || exit 1
+
+          # Create a minimal .wokeignore if none already exist.
+          if [ ! -f .wokeignore ]; then
+            cat > .wokeignore <<EOF
+            vendor/*
+            third_party/*
+          EOF
+          fi
+
+          echo '::group:: Running woke with reviewdog 🐶 ...'
+          woke --output simple \
+            | reviewdog -efm="%f:%l:%c: %m" \
+                -name="woke" \
+                -reporter="github-pr-check" \
+                -filter-mode="added" \
+                -fail-on-error="true" \
+                -level="error"
+          echo '::endgroup::'
