@@ -68,8 +68,6 @@ github.com/evanphx/json-patch/v5
 github.com/fsnotify/fsnotify
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
-# github.com/go-logr/logr v0.2.1
-## explicit
 # github.com/go-openapi/jsonpointer v0.19.3
 github.com/go-openapi/jsonpointer
 # github.com/go-openapi/jsonreference v0.19.3
@@ -170,8 +168,6 @@ github.com/mailru/easyjson/jwriter
 github.com/mattmoor/dep-notify/pkg/graph
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
-# github.com/maxbrunsfeld/counterfeiter/v6 v6.2.3
-## explicit
 # github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
@@ -446,14 +442,8 @@ k8s.io/client-go/util/homedir
 k8s.io/client-go/util/jsonpath
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/workqueue
-# k8s.io/code-generator v0.19.0-alpha.1
-## explicit
-# k8s.io/gengo v0.0.0-20200728071708-7794989d0000
-## explicit
 # k8s.io/klog v1.0.0
 k8s.io/klog
-# k8s.io/klog/v2 v2.3.0
-## explicit
 # k8s.io/kube-openapi v0.0.0-20200410145947-61e04a5be9a6
 k8s.io/kube-openapi/pkg/common
 k8s.io/kube-openapi/pkg/util/proto
@@ -522,8 +512,6 @@ sigs.k8s.io/kustomize/pkg/transformers/config/defaultconfig
 sigs.k8s.io/kustomize/pkg/types
 # sigs.k8s.io/structured-merge-diff/v3 v3.0.0
 sigs.k8s.io/structured-merge-diff/v3/value
-# sigs.k8s.io/structured-merge-diff/v4 v4.0.1
-## explicit
 # sigs.k8s.io/yaml v1.2.0
 sigs.k8s.io/yaml
 # k8s.io/api => k8s.io/api v0.18.8
