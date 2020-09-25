@@ -52,13 +52,14 @@ func getBaseImage(platform string) build.GetBase {
 	}
 
 	return func(s string) (build.Result, error) {
+		s = strings.TrimPrefix(s, build.StrictScheme)
 		// Viper configuration file keys are case insensitive, and are
 		// returned as all lowercase.  This means that import paths with
 		// uppercase must be normalized for matching here, e.g.
 		//    github.com/GoogleCloudPlatform/foo/cmd/bar
 		// comes through as:
 		//    github.com/googlecloudplatform/foo/cmd/bar
-		ref, ok := baseImageOverrides[strings.ToLower(strings.TrimPrefix(s, build.StrictScheme))]
+		ref, ok := baseImageOverrides[strings.ToLower(s)]
 		if !ok {
 			ref = defaultBaseImage
 		}
