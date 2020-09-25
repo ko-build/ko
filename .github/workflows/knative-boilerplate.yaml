@@ -1,0 +1,96 @@
+# Copyright 2020 The Knative Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This file is automagically synced here from github.com/knative-sandbox/.github
+# repo by knobots: https://github.com/mattmoor/knobots and will be overwritten.
+
+name: Boilerplate
+
+on:
+  pull_request:
+    branches: [ 'master', 'release-*' ]
+
+jobs:
+
+  check:
+    name: Boilerplate Check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Keep running if one leg fails.
+      matrix:
+        extension:
+        - go
+        - sh
+
+        # Map between extension and human-readable name.
+        include:
+        - extension: go
+          language: Go
+        - extension: sh
+          language: Bash
+
+    steps:
+
+      - name: Set up Go 1.15.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+        id: go
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Install Tools
+        run: |
+          TEMP_PATH="$(mktemp -d)"
+          cd $TEMP_PATH
+
+          echo '::group::🐶 Installing reviewdog ... https://github.com/reviewdog/reviewdog'
+          curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b "${TEMP_PATH}" 2>&1
+          echo '::endgroup::'
+
+          echo '::group:: Installing boilerplate-check ... https://github.com/mattmoor/boilerplate-check'
+          go get github.com/mattmoor/boilerplate-check/cmd/boilerplate-check
+          echo '::endgroup::'
+
+          echo "::add-path::${TEMP_PATH}"
+
+      - id: boilerplate_txt
+        uses: andstor/file-existence-action@v1
+        with:
+          files: ./hack/boilerplate/boilerplate.${{ matrix.extension }}.txt
+      - name: ${{ matrix.language }} license boilerplate
+        shell: bash
+        if: ${{ steps.boilerplate_txt.outputs.files_exists == 'true' }}
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd "${GITHUB_WORKSPACE}" || exit 1
+
+          echo '::group:: Running github.com/mattmoor/boilerplate-check for ${{ matrix.language }} with reviewdog 🐶 ...'
+          # Don't fail because of boilerplate-check
+          set +o pipefail
+          boilerplate-check check \
+            --boilerplate ./hack/boilerplate/boilerplate.${{ matrix.extension }}.txt \
+            --file-extension ${{ matrix.extension }} \
+            --exclude "(vendor|third_party)/" |
+          reviewdog -efm="%A%f:%l: %m" \
+                -efm="%C%.%#" \
+                -name="${{ matrix.language }} headers" \
+                -reporter="github-pr-check" \
+                -filter-mode="diff_context" \
+                -fail-on-error="true" \
+                -level="error"
+          echo '::endgroup::'
