@@ -237,7 +237,7 @@ func build(ctx context.Context, ip string, platform v1.Platform, disableOptimiza
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s for %s", ip, platform.Architecture)
+	log.Printf("Building %s for %s/%s", ip, platform.OS, platform.Architecture)
 	if err := cmd.Run(); err != nil {
 		os.RemoveAll(tmpDir)
 		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
