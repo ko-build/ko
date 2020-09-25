@@ -80,7 +80,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 			Dir:  ".",
 		},
 		deps: map[string]*modInfo{
-			"github.com/some/module/cmd": &modInfo{
+			"github.com/some/module/cmd": {
 				Path: "github.com/some/module/cmd",
 				Dir:  ".",
 			},
