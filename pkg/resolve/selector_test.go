@@ -140,10 +140,10 @@ func TestMatchesSelector(t *testing.T) {
 		selector: labels.Nothing(),
 		matches:  false,
 	}, {
-		desc: "null node",
-		input: "!!null",
+		desc:     "null node",
+		input:    "!!null",
 		selector: labels.Everything(),
-		matches: false,
+		matches:  false,
 	}}
 
 	for _, test := range tests {
