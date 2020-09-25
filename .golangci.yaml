@@ -1,0 +1,41 @@
+run:
+  timeout: 5m
+
+  build-tags:
+    - e2e
+    - performance
+    - probe
+    - preupgrade
+    - postupgrade
+    - postdowngrade
+    - istio
+
+  skip-dirs:
+    - pkg/client
+
+  skip-files:
+    - ".pb.go$"
+
+linters:
+  enable:
+    - asciicheck
+    - gosec
+    - prealloc
+    - stylecheck
+    - unconvert
+    - unparam
+  disable:
+    - errcheck
+
+issues:
+  exclude-rules:
+    - path: test # Excludes /test, *_test.go etc.
+      linters:
+        - gosec
+        - unparam
+
+    # Allow source and sink receivers in conversion code for clarity.
+    - path: _conversion\.go
+      text: "ST1016:"
+      linters:
+        - stylecheck
