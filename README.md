@@ -12,6 +12,8 @@
 
 `ko` can be installed and upgraded by running:
 
+**Note**: Golang version `1.12.0` or higher is required.
+
 ```shell
 GO111MODULE=on go get github.com/google/ko/cmd/ko
 ```
