@@ -17,6 +17,7 @@ package publish
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -50,8 +51,42 @@ func (t *kindPublisher) Publish(br build.Result, s string) (name.Reference, erro
 	s = strings.ToLower(s)
 
 	// There's no way to write an index to a kind, so attempt to downcast it to an image.
-	img, ok := br.(v1.Image)
-	if !ok {
+	var img v1.Image
+	switch i := br.(type) {
+	case v1.Image:
+		img = i
+	case v1.ImageIndex:
+		im, err := i.IndexManifest()
+		if err != nil {
+			return nil, err
+		}
+		goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
+		if goos == "" {
+			goos = "linux"
+		}
+		if goarch == "" {
+			goarch = "amd64"
+		}
+		for _, manifest := range im.Manifests {
+			if manifest.Platform == nil {
+				continue
+			}
+			if manifest.Platform.OS != goos {
+				continue
+			}
+			if manifest.Platform.Architecture != goarch {
+				continue
+			}
+			img, err = i.Image(manifest.Digest)
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+		if img == nil {
+			return nil, fmt.Errorf("failed to find %s/%s image in index for image: %v", goos, goarch, s)
+		}
+	default:
 		return nil, fmt.Errorf("failed to interpret %s result as image: %v", s, br)
 	}
 
