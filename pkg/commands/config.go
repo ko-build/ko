@@ -21,6 +21,8 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -142,7 +144,11 @@ func init() {
 		viper.AddConfigPath(override)
 	}
 
-	viper.AddConfigPath("./")
+	configPath := recursiveSearchConfigFile("./")
+	if configPath != "" {
+		viper.AddConfigPath(configPath)
+		log.Printf("reading ko config file from %s", configPath)
+	}
 
 	if err := viper.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
@@ -165,5 +171,42 @@ func init() {
 			log.Fatalf("'baseImageOverrides': error parsing %q as image reference: %v", v, err)
 		}
 		baseImageOverrides[k] = bi
+	}
+}
+
+// recursiveSearchConfigFile search for .ko.yaml file in startingPoint folder,
+// if not found, it will go up one level and continue searching until hitting a
+// dead-end (i.e. root folder).
+// Returns containing folder's absolute path upon .ko.yaml file found
+func recursiveSearchConfigFile(startingPoint string) string {
+	var lastTraversed string
+	targetPath := startingPoint
+	for {
+		currDir, err := filepath.Abs(targetPath)
+		if err != nil {
+			return ""
+		}
+		if lastTraversed == currDir {
+			return ""
+		}
+
+		lastTraversed = currDir
+		f, err := os.Open(lastTraversed)
+		if err != nil {
+			return ""
+		}
+		allFiles, err := f.Readdir(-1)
+		if err != nil {
+			return ""
+		}
+
+		koymlRegex := regexp.MustCompile(`^\.ko\.ya?ml$`)
+		for _, file := range allFiles {
+			if !file.IsDir() && koymlRegex.Match([]byte(file.Name())) {
+				return lastTraversed
+			}
+		}
+
+		targetPath += fmt.Sprintf("%s..", string(os.PathSeparator))
 	}
 }
