@@ -147,7 +147,6 @@ func addApply(topLevel *cobra.Command) {
 	options.AddPublishArg(apply, po)
 	options.AddFileArg(apply, fo)
 	options.AddSelectorArg(apply, so)
-	options.AddStrictArg(apply, sto)
 	options.AddBuildOptions(apply, bo)
 
 	// Collect the ko-specific apply flags before registering the kubectl global

@@ -74,7 +74,6 @@ func addResolve(topLevel *cobra.Command) {
 	options.AddPublishArg(resolve, po)
 	options.AddFileArg(resolve, fo)
 	options.AddSelectorArg(resolve, so)
-	options.AddStrictArg(resolve, sto)
 	options.AddBuildOptions(resolve, bo)
 	topLevel.AddCommand(resolve)
 }
