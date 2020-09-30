@@ -44,7 +44,7 @@ needed.
 For example, you might use the following in a Kubernetes `Deployment` resource:
 
 ```yaml
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world
@@ -167,7 +167,7 @@ export KO_DOCKER_REPO="gcr.io/${PROJECT_ID}"
 ko resolve -f deployment.yaml
 
 # Output
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world
@@ -195,7 +195,7 @@ export KO_DOCKER_REPO="gcr.io/${PROJECT_ID}"
 ko resolve -P -f deployment.yaml
 
 # Output
-apiVersion: apps/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: hello-world
