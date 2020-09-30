@@ -353,9 +353,9 @@ If neither is present, then `ko` will rely on its default behaviors.
 
 ### Overriding the default base image
 
-By default, `ko` makes use of `gcr.io/distroless/static:nonroot` as the base image
-for containers. There are a wide array of scenarios in which overriding this
-makes sense, for example:
+By default, `ko` makes use of `gcr.io/distroless/static:nonroot` as the base
+image for containers. There are a wide array of scenarios in which overriding
+this makes sense, for example:
 
 1. Pinning to a particular digest of this image for repeatable builds,
 1. Replacing this streamlined base image with another with better debugging
