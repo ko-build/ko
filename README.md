@@ -439,6 +439,25 @@ kubectl logs kodata
 2018/07/19 23:38:29 Hello there
 ```
 
+## Multi-Platform Images
+
+If `ko` is invoked with `--platform=all`, for any image that it builds that is
+based on a multi-architecture image (e.g., the default
+`gcr.io/distroless/static:nonroot`, `busybox`, `alpine`, etc.), `ko` will
+attempt to build the Go binary using Go's cross-compilation support and produce
+a multi-architecture [image
+index](https://github.com/opencontainers/image-spec/blob/master/image-index.md)
+(aka "manifest list"), with support for each OS and architecture pair supported
+by the base image.
+
+If `ko` is invoked with `--platform=<some-OS>/<some-platform>` (e.g.,
+`--platform=linux/amd64` or `--platform=linux/arm64`), then it will attempt to
+build an image for that OS and architecture only, assuming the base image
+supports it.
+
+When `--platform` is not provided, `ko` builds an image with the OS and
+architecture based on the build environment's `GOOS` and `GOARCH`.
+
 ## Enable Autocompletion
 
 To generate an bash completion script, you can run:
