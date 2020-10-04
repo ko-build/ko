@@ -313,7 +313,7 @@ This would look something like:
 # Create a kind cluster
 kind create cluster
 
-# Deploy to minikube w/o registry.
+# Deploy to kind w/o registry.
 KO_DOCKER_REPO=kind.local ko apply -L -f config/
 ```
 
