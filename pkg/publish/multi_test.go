@@ -61,3 +61,15 @@ func TestMulti(t *testing.T) {
 		t.Errorf("Close() = %v", err)
 	}
 }
+
+func TestMulti_Zero(t *testing.T) {
+	img, err := random.Image(1024, 1)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
+	p := MultiPublisher() // No publishers.
+	if _, err := p.Publish(img, "foo"); err == nil {
+		t.Errorf("Publish() got nil error")
+	}
+}

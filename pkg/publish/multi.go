@@ -15,6 +15,8 @@
 package publish
 
 import (
+	"errors"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/ko/pkg/build"
 )
@@ -34,13 +36,16 @@ type multiPublisher struct {
 
 // Publish implements publish.Interface.
 func (p *multiPublisher) Publish(br build.Result, s string) (ref name.Reference, err error) {
+	if len(p.publishers) == 0 {
+		return nil, errors.New("MultiPublisher configured with zero publishers")
+	}
+
 	for _, pub := range p.publishers {
 		ref, err = pub.Publish(br, s)
 		if err != nil {
 			return
 		}
 	}
-
 	return
 }
 
