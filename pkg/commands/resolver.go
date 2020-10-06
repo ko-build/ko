@@ -160,6 +160,16 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			}
 			publishers = append(publishers, dp)
 		}
+
+		// If not publishing, at least generate a digest to simulate
+		// publishing.
+		if len(publishers) == 0 {
+			publishers = append(publishers, nopPublisher{
+				repoName: repoName,
+				namer:    namer,
+			})
+		}
+
 		return publish.MultiPublisher(publishers...), nil
 	}()
 	if err != nil {
@@ -169,6 +179,23 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	// Wrap publisher in a memoizing publisher implementation.
 	return publish.NewCaching(innerPublisher)
 }
+
+// nopPublisher simulates publishing without actually publishing anything, to
+// provide fallback behavior when the user configures no push destinations.
+type nopPublisher struct {
+	repoName string
+	namer    publish.Namer
+}
+
+func (n nopPublisher) Publish(br build.Result, s string) (name.Reference, error) {
+	h, err := br.Digest()
+	if err != nil {
+		return nil, err
+	}
+	return name.NewDigest(fmt.Sprintf("%s/%s@%s", n.repoName, n.namer(s), h))
+}
+
+func (n nopPublisher) Close() error { return nil }
 
 // resolvedFuture represents a "future" for the bytes of a resolved file.
 type resolvedFuture chan []byte
