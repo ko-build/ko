@@ -303,9 +303,10 @@ preserved (see `--preserve-import-paths`).
 
 ## With `kind`
 
-Likewise, you can use `ko` with [kind](https://github.com/kubernetes-sigs/kind) to aid in rapid local iteration both
-locally and in small CI environments. To instruct `ko` to publish images into
-your `kind` cluster, the `KO_DOCKER_REPO` variable must be set to `kind.local`.
+Likewise, you can use `ko` with [kind](https://github.com/kubernetes-sigs/kind)
+to aid in rapid local iteration both locally and in small CI environments. To
+instruct `ko` to publish images into your `kind` cluster, the `KO_DOCKER_REPO`
+variable must be set to `kind.local`.
 
 This would look something like:
 
