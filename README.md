@@ -315,8 +315,12 @@ This would look something like:
 kind create cluster
 
 # Deploy to kind w/o registry.
-KO_DOCKER_REPO=kind.local ko apply -L -f config/
+KO_DOCKER_REPO=kind.local ko apply -f config/
 ```
+
+If you want to create a `kind` cluster with a non default name, you can set the
+`KIND_CLUSTER_NAME` variable to the respective name (which is also supported by
+[`kind` itself](https://github.com/kubernetes-sigs/kind/releases/tag/v0.8.0)).
 
 Like with `minikube` above, a caveat of this approach is that it will not work
 if your container is configured with `imagePullPolicy: Always` because despite
