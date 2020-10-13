@@ -17,7 +17,7 @@ package resolve
 import (
 	"errors"
 
-	. "github.com/dprotaso/go-yit"
+	. "github.com/dprotaso/go-yit" //nolint: stylecheck // Allow this dot import.
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/labels"
 )

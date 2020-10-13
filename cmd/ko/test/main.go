@@ -37,10 +37,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading %q: %v", file, err)
 	}
-	log.Printf(string(bytes))
+	log.Print(string(bytes))
 
 	// Cause the pod to "hang" to allow us to check for a readiness state.
-	sigs := make(chan os.Signal)
+	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGTERM)
 	<-sigs
 }

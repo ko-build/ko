@@ -15,7 +15,7 @@
 package options
 
 import (
-	"crypto/md5"
+	"crypto/md5" //nolint: gosec // No strong cryptography needed.
 	"encoding/hex"
 	"path/filepath"
 
@@ -64,7 +64,7 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 }
 
 func packageWithMD5(importpath string) string {
-	hasher := md5.New()
+	hasher := md5.New() //nolint: gosec // No strong cryptography needed.
 	hasher.Write([]byte(importpath))
 	return filepath.Base(importpath) + "-" + hex.EncodeToString(hasher.Sum(nil))
 }

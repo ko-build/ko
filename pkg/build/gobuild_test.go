@@ -397,7 +397,7 @@ func TestGoBuild(t *testing.T) {
 	}
 	importpath := "github.com/google/ko"
 
-	creationTime := v1.Time{time.Unix(5000, 0)}
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		WithCreationTime(creationTime),
 		WithBaseImages(func(string) (Result, error) { return base, nil }),
@@ -451,7 +451,7 @@ func TestGoBuildIndex(t *testing.T) {
 	}
 	importpath := "github.com/google/ko"
 
-	creationTime := v1.Time{time.Unix(5000, 0)}
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		WithCreationTime(creationTime),
 		WithBaseImages(func(string) (Result, error) { return base, nil }),
@@ -521,7 +521,7 @@ func TestNestedIndex(t *testing.T) {
 
 	nestedBase := mutate.AppendManifests(empty.Index, mutate.IndexAddendum{Add: base})
 
-	creationTime := v1.Time{time.Unix(5000, 0)}
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		WithCreationTime(creationTime),
 		WithBaseImages(func(string) (Result, error) { return nestedBase, nil }),
