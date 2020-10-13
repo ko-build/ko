@@ -425,7 +425,7 @@ func (g *gobuild) tarKoData(ref reference) (*bytes.Buffer, error) {
 	return buf, walkRecursive(tw, root, kodataRoot)
 }
 
-func (gb *gobuild) buildOne(ctx context.Context, s string, base v1.Image) (v1.Image, error) {
+func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image) (v1.Image, error) {
 	ref := newRef(s)
 
 	cf, err := base.ConfigFile()
@@ -438,7 +438,7 @@ func (gb *gobuild) buildOne(ctx context.Context, s string, base v1.Image) (v1.Im
 	}
 
 	// Do the build into a temporary file.
-	file, err := gb.build(ctx, ref.Path(), platform, gb.disableOptimizations)
+	file, err := g.build(ctx, ref.Path(), platform, g.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}
@@ -446,7 +446,7 @@ func (gb *gobuild) buildOne(ctx context.Context, s string, base v1.Image) (v1.Im
 
 	var layers []mutate.Addendum
 	// Create a layer from the kodata directory under this import path.
-	dataLayerBuf, err := gb.tarKoData(ref)
+	dataLayerBuf, err := g.tarKoData(ref)
 	if err != nil {
 		return nil, err
 	}
@@ -514,8 +514,8 @@ func (gb *gobuild) buildOne(ctx context.Context, s string, base v1.Image) (v1.Im
 	}
 
 	empty := v1.Time{}
-	if gb.creationTime != empty {
-		return mutate.CreatedAt(image, gb.creationTime)
+	if g.creationTime != empty {
+		return mutate.CreatedAt(image, g.creationTime)
 	}
 	return image, nil
 }
@@ -542,9 +542,9 @@ func updatePath(cf *v1.ConfigFile) {
 }
 
 // Build implements build.Interface
-func (gb *gobuild) Build(ctx context.Context, s string) (Result, error) {
+func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	// Determine the appropriate base image for this import path.
-	base, err := gb.getBase(s)
+	base, err := g.getBase(s)
 	if err != nil {
 		return nil, err
 	}
@@ -561,20 +561,20 @@ func (gb *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as index: %v", base)
 		}
-		return gb.buildAll(ctx, s, base)
+		return g.buildAll(ctx, s, base)
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		base, ok := base.(v1.Image)
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as image: %v", base)
 		}
-		return gb.buildOne(ctx, s, base)
+		return g.buildOne(ctx, s, base)
 	default:
 		return nil, fmt.Errorf("base image media type: %s", mt)
 	}
 }
 
 // TODO(#192): Do these in parallel?
-func (gb *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v1.ImageIndex, error) {
+func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v1.ImageIndex, error) {
 	im, err := base.IndexManifest()
 	if err != nil {
 		return nil, err
@@ -592,7 +592,7 @@ func (gb *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (
 		if err != nil {
 			return nil, err
 		}
-		img, err := gb.buildOne(ctx, s, base)
+		img, err := g.buildOne(ctx, s, base)
 		if err != nil {
 			return nil, err
 		}

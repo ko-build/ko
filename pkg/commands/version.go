@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// provided by govvv in compile-time
+// Version is provided by govvv at compile-time
 var Version string
 
 // addVersion augments our CLI surface with version.
