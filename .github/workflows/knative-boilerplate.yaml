@@ -64,7 +64,7 @@ jobs:
           go get github.com/mattmoor/boilerplate-check/cmd/boilerplate-check
           echo '::endgroup::'
 
-          echo "::add-path::${TEMP_PATH}"
+          echo "${TEMP_PATH}" >> $GITHUB_PATH
 
       - id: boilerplate_txt
         uses: andstor/file-existence-action@v1
