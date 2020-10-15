@@ -437,8 +437,8 @@ If `ko` is invoked with `--platform=all`, for any image that it builds that is
 based on a multi-architecture image (e.g., the default
 `gcr.io/distroless/static:nonroot`, `busybox`, `alpine`, etc.), `ko` will
 attempt to build the Go binary using Go's cross-compilation support and produce
-a multi-architecture [image
-index](https://github.com/opencontainers/image-spec/blob/master/image-index.md)
+a multi-architecture
+[image index](https://github.com/opencontainers/image-spec/blob/master/image-index.md)
 (aka "manifest list"), with support for each OS and architecture pair supported
 by the base image.
 
