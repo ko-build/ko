@@ -55,7 +55,7 @@ jobs:
 
       - if: steps.codecov-enabled.outputs.files_exists == 'true'
         name: Produce Go Coverage
-        run: echo '::set-env name=COVER_OPTS::-coverprofile=coverage.txt -covermode=atomic'
+        run: echo 'COVER_OPTS=-coverprofile=coverage.txt -covermode=atomic' >> $GITHUB_ENV
 
       - name: Test
         run: go test -race $COVER_OPTS ./...

@@ -26,9 +26,20 @@ jobs:
   autoformat:
     name: Auto-format and Check
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false # Keep running if one leg fails.
+      matrix:
+        tool:
+          - goimports
+          - gofmt
+
+        include:
+        - tool: gofmt
+          options: -s
+        - tool: goimports
+          importpath: golang.org/x/tools/cmd/goimports
 
     steps:
-
       - name: Set up Go 1.15.x
         uses: actions/setup-go@v2
         with:
@@ -39,41 +50,30 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Install Dependencies
+        if: ${{ matrix.importpath != '' }}
         run: |
           cd $(mktemp -d)
-          GO111MODULE=on go get golang.org/x/tools/cmd/goimports
+          GO111MODULE=on go get ${{ matrix.importpath }}
 
-      # Run this last because it alters the workspace.
-      # TODO: add prettier step
-      - name: Go Imports
+      - name: ${{ matrix.tool }} ${{ matrix.options }}
         shell: bash
         run: |
-          goimports -w $(find -path './vendor' -prune -o -path './third_party' -prune -o -name '*.pb.go' -prune -o -type f -name '*.go' -print)
-          echo "::set-env name=FMT_TOOL::goimports"
-      - name: Verify goimport
-        shell: bash
-        run: |
-          if [[ $(git diff-index --name-only HEAD --) ]]; then
-              echo "Found diffs in:"
-              git diff-index --name-only HEAD --
-              echo "${{ github.repository }} is out of style. Please run $FMT_TOOL."
-              exit 1
-          fi
-          echo "${{ github.repository }} is formatted correctly."
+          ${{ matrix.tool }} ${{ matrix.options }} -w $(find . -path './vendor' -prune -o -path './third_party' -prune -o -name '*.pb.go' -prune -o -type f -name '*.go' -print)
 
-      - name: Go Format
+      - name: Verify ${{ matrix.tool }}
         shell: bash
         run: |
-          gofmt -s -w $(find -path './vendor' -prune -o -path './third_party' -prune -o -name '*.pb.go' -prune -o -type f -name '*.go' -print)
-          echo "::set-env name=FMT_TOOL::gofmt"
-      - name: Verify gofmt
-        shell: bash
-        # TODO(mattmoor): combine with above via anchors when actions support it.
-        run: |
+          # From: https://backreference.org/2009/12/23/how-to-match-newlines-in-sed/
+          # This is to leverage this workaround:
+          # https://github.com/actions/toolkit/issues/193#issuecomment-605394935
+          function urlencode() {
+            sed ':begin;$!N;s/\n/%0A/;tbegin'
+          }
           if [[ $(git diff-index --name-only HEAD --) ]]; then
-              echo "Found diffs in:"
-              git diff-index --name-only HEAD --
-              echo "${{ github.repository }} is out of style. Please run $FMT_TOOL."
+              for x in $(git diff-index --name-only HEAD --); do
+                echo "::error file=$x::Please run ${{ matrix.tool }} ${{ matrix.options }}.%0A$(git diff $x | urlencode)"
+              done
+              echo "${{ github.repository }} is out of style. Please run ${{ matrix.tool }} ${{ matrix.options }}."
               exit 1
           fi
           echo "${{ github.repository }} is formatted correctly."
@@ -109,7 +109,7 @@ jobs:
           curl -sfL https://raw.githubusercontent.com/get-woke/woke/main/install.sh | sh -s -- -b "${TEMP_PATH}" "${WOKE_VERSION}" 2>&1
           echo '::endgroup::'
 
-          echo "::add-path::${TEMP_PATH}"
+          echo "${TEMP_PATH}" >> $GITHUB_PATH
 
       - id: golangci_configuration
         uses: andstor/file-existence-action@v1
@@ -120,7 +120,6 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.30
-          only-new-issues: true # for initial defensiveness
 
       - name: misspell
         shell: bash
@@ -180,7 +179,12 @@ jobs:
           echo '::group:: Flagging missing EOF newlines with reviewdog 🐶 ...'
           # Don't fail because of misspell
           set +o pipefail
-          for x in $(find . -type f -not -path './vendor/*' -not -path './third_party/*' -not -path './.git/*'); do
+          # Lint exclude rule:
+          #  - nothing in vendor/
+          #  - nothing in third_party
+          #  - nothing in .git/
+          #  - no *.ai (Adobe Illustrator) files.
+          for x in $(find . -type f -not -name '*.ai' -not -path './vendor/*' -not -path './third_party/*' -not -path './.git/*'); do
             # Based on https://stackoverflow.com/questions/34943632/linux-check-if-there-is-an-empty-line-at-the-end-of-a-file
             if [[ -f $x && ! ( -s "$x" && -z "$(tail -c 1 $x)" ) ]]; then
               # We add 1 to `wc -l` here because of this limitation (from the man page):
@@ -195,6 +199,52 @@ jobs:
                 -fail-on-error="true" \
                 -level="error"
 
+          echo '::endgroup::'
+
+      - name: Redundant Format
+        shell: bash
+        if: ${{ always() }}
+        env:
+          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          cd "${GITHUB_WORKSPACE}" || exit 1
+
+          echo '::group:: Flagging possibly unnecessary format calls for trailing argument with reviewdog 🐶 ...'
+          # Don't fail because of misspell
+          set +o pipefail
+          # For all look for formatting calls and extract the ones that
+          # have only a single formatting argument and that argument is in the last position.
+          # But exclude the `fmt.Errorf` calls since there's no `fmt.Error` and `errors.New` is not
+          # as versatile.
+          # Also ignore `%T` — to print the type and `%q` to quote the final string.
+          fn=$(find . -path './vendor' -prune -o -path './third_party' -prune -o -name '*.pb.go' -prune -o -type f -name '*.go' -print)
+          grep -nE '[^.]+\.(Fatalf|Errorf|Warnf|Infof|Debugf|Logf|Sprintf|Fprintf|Printf)[^\%]+%[^Tqx]",[^,]+' $fn | grep -v "fmt.Errorf" |
+            while read -r ent ; do
+              file=$(echo $ent | cut -d':' -f 1);
+              line=$(echo $ent | cut -d':' -f 2);
+              ch=$(echo $ent | cut -d':' -f3-);
+              err="Unknown printer tool, please file an issue in knative-sandbox/.github and assign to @vagababov: $ch"
+              if echo $ch | grep --quiet -E "^t.(Errorf|Fatalf|Logf)" ; then
+                err=$(echo $ch | sed  -E 's/([^.fm]+t\.)(Fatal|Error|Log)f([^\%]+)( %[^Tq]",)([^,]+)/\1\2\3",\5/')
+                # Not a test. Here we deal with various loggers and fmt helpers.
+              elif echo $ch | grep --quiet "log" ; then
+                # Capture (x)?log(er)?.
+                err=$(echo $ch | sed -E 's/(.*log.*\.)(Print|Fatal|Error|Info|Warn)f([^\%]+)(%[^Tq]",)([^,]+)/\1\2\3",\5/')
+              elif echo $ch | grep --quiet -E "fmt\.Sprintf" ; then
+                # Always space after sprintf
+                err=$(echo $ch | sed -E 's/(fmt\.)(Sprint)f([^%]+) (%s",)([^,]+)/\1\2\3 ",\5/')
+              elif echo $ch | grep --quiet -E "fmt\." ; then  # all other fmt. printers.
+                err=$(echo $ch | sed -E 's/(fmt\.)(Print|Fprint)f([^%]+) (%[^sTxq]",)([^,]+)/\1\2\3",\5/')
+              fi
+              echo "$file:$line: Please consider avoiding tail format like this:%0A$err"
+          done |
+          reviewdog -efm="%f:%l: %m" \
+                -name="Redundant Format" \
+                -reporter="github-pr-check" \
+                -filter-mode="added" \
+                -fail-on-error="true" \
+                -level="error"
           echo '::endgroup::'
 
       # This is mostly copied from https://github.com/get-woke/woke-action-reviewdog/blob/main/entrypoint.sh

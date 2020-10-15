@@ -63,12 +63,23 @@ jobs:
     - name: Verify
       shell: bash
       run: |
+        # From: https://backreference.org/2009/12/23/how-to-match-newlines-in-sed/
+        # This is to leverage this workaround:
+        # https://github.com/actions/toolkit/issues/193#issuecomment-605394935
+        function urlencode() {
+          sed ':begin;$!N;s/\n/%0A/;tbegin'
+        }
+
         pushd ./src/knative.dev/${{ github.event.repository.name }}
         if [[ -z "$(git status --porcelain)" ]]; then
             echo "${{ github.repository }} up to date."
         else
-            repoDiff=$(git diff-index --name-only HEAD --)
-            echo "Found diffs in: $repoDiff"
+            # Print it both ways because sometimes we haven't modified the file (e.g. zz_generated),
+            # and sometimes we have (e.g. configmap checksum).
+            echo "Found diffs in: $(git diff-index --name-only HEAD --)"
+            for x in $(git diff-index --name-only HEAD --); do
+                echo "::error file=$x::Please run ./hack/update-codegen.sh.%0A$(git diff $x | urlencode)"
+            done
             echo "${{ github.repository }} is out of date. Please run hack/update-codegen.sh"
             exit 1
         fi
