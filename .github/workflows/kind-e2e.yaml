@@ -126,7 +126,7 @@ jobs:
 
     - name: Wait for ready nodes
       run: |
-        kubectl wait --for=condition=Ready nodes --all
+        kubectl wait --timeout=2m --for=condition=Ready nodes --all
 
     - name: Run Smoke Test
       run: |
