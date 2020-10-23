@@ -2,7 +2,8 @@
 
 `ko` is a tool for building and deploying Golang applications to Kubernetes.
 
-[![Build Status](https://travis-ci.org/google/ko.svg?branch=master)](https://travis-ci.org/google/ko)
+[![Travis Build Status](https://travis-ci.org/google/ko.svg?branch=master)](https://travis-ci.org/google/ko)
+[![GitHub Actions Build Status](https://github.com/google/ko/workflows/Build/badge.svg)](https://github.com/google/ko/actions?query=workflow%3ABuild)
 [![GoDoc](https://godoc.org/github.com/google/ko?status.svg)](https://godoc.org/github.com/google/ko)
 [![Go Report Card](https://goreportcard.com/badge/google/ko)](https://goreportcard.com/report/google/ko)
 
