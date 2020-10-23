@@ -32,7 +32,7 @@ func main() {
 	}
 	log.Print(string(bytes))
 
-	file = filepath.Join(dp, "refs/heads/master")
+	file = filepath.Join(dp, "HEAD")
 	bytes, err = ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatalf("Error reading %q: %v", file, err)
