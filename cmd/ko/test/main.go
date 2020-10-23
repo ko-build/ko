@@ -15,6 +15,7 @@
 package main
 
 import (
+	"flag"
 	"io/ioutil"
 	"log"
 	"os"
@@ -23,7 +24,13 @@ import (
 	"syscall"
 )
 
+var (
+	wait = flag.Bool("wait", true, "Whether to wait for SIGTERM")
+)
+
 func main() {
+	flag.Parse()
+
 	dp := os.Getenv("KO_DATA_PATH")
 	file := filepath.Join(dp, "kenobi")
 	bytes, err := ioutil.ReadFile(file)
@@ -40,7 +47,9 @@ func main() {
 	log.Print(string(bytes))
 
 	// Cause the pod to "hang" to allow us to check for a readiness state.
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGTERM)
-	<-sigs
+	if *wait {
+		sigs := make(chan os.Signal, 1)
+		signal.Notify(sigs, syscall.SIGTERM)
+		<-sigs
+	}
 }

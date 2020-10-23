@@ -1,21 +1,59 @@
-sudo: required
-
-dist: trusty
-
-services:
-  - docker
-
-language:
-  - go
-
+dist: bionic
+language: go
 go:
-  - '1.14'
   - '1.15'
-
 git:
   depth: 1
 
-install: true # skipping the default go dependencies install step
+jobs:
+  include:
+   - arch: amd64
+   - arch: arm64
+   - arch: s390x
+   - arch: ppc64le
 
 script:
-  - bash integration_test.sh
+  # Make sure ko compiles for the right architecture.
+  - eval $(go env)
+  - go install -mod=vendor ./cmd/ko
+  # Try with all, and GOOS/GOARCH set.
+  - |
+    GOOS=${GOOS} GOARCH=${GOARCH} KO_DOCKER_REPO=ko.local ko publish --platform=all -B ./cmd/ko/test
+    OUTPUT=$(docker run -i ko.local/test -wait=false 2>&1)
+    if [[ ! "${OUTPUT}" =~ "$(cat ./cmd/ko/test/kodata/kenobi)" ]]; then
+      echo Mismatched output: ${OUTPUT}, wanted: $(cat ./cmd/ko/test/kodata/kenobi)
+      exit 1
+    fi
+    if [[ ! "${OUTPUT}" =~ "$(cat ./cmd/ko/test/kodata/HEAD)" ]]; then
+      echo Mismatched output: ${OUTPUT}, wanted: $(cat ./cmd/ko/test/kodata/HEAD)
+      exit 1
+    fi
+
+  # Try with the appropriate platform.
+  - |
+    KO_DOCKER_REPO=ko.local ko publish --platform=${GOOS}/${GOARCH} -B ./cmd/ko/test
+    OUTPUT=$(docker run -i ko.local/test -wait=false 2>&1)
+    if [[ ! "${OUTPUT}" =~ "$(cat ./cmd/ko/test/kodata/kenobi)" ]]; then
+      echo Mismatched output: ${OUTPUT}, wanted: $(cat ./cmd/ko/test/kodata/kenobi)
+      exit 1
+    fi
+    if [[ ! "${OUTPUT}" =~ "$(cat ./cmd/ko/test/kodata/HEAD)" ]]; then
+      echo Mismatched output: ${OUTPUT}, wanted: $(cat ./cmd/ko/test/kodata/HEAD)
+      exit 1
+    fi
+
+  # Try with just GOOS/GOARCH
+  - |
+    GOOS=${GOOS} GOARCH=${GOARCH} KO_DOCKER_REPO=ko.local ko publish -B ./cmd/ko/test
+    OUTPUT=$(docker run -i ko.local/test -wait=false 2>&1)
+    if [[ ! "${OUTPUT}" =~ "$(cat ./cmd/ko/test/kodata/kenobi)" ]]; then
+      echo Mismatched output: ${OUTPUT}, wanted: $(cat ./cmd/ko/test/kodata/kenobi)
+      exit 1
+    fi
+    if [[ ! "${OUTPUT}" =~ "$(cat ./cmd/ko/test/kodata/HEAD)" ]]; then
+      echo Mismatched output: ${OUTPUT}, wanted: $(cat ./cmd/ko/test/kodata/HEAD)
+      exit 1
+    fi
+
+notifications:
+  email: false
