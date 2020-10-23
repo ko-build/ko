@@ -17,21 +17,5 @@ git:
 
 install: true # skipping the default go dependencies install step
 
-before_script:
-  # Download and install kubectl
-  - curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
-  # Download and install KinD
-  - curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/v0.8.1/kind-$(uname)-amd64 && chmod +x ./kind && sudo mv kind /usr/local/bin/
-  # Create a new Kubernetes cluster using KinD
-  - kind create cluster
-
 script:
-  # Verify that all source files are correctly formatted.
-  - find . -name "*.go" | grep -v vendor/ | xargs gofmt -d -e -l
-
-  - go clean -i
-  - go test -v -race -coverprofile=coverage.txt -covermode=atomic ./...
   - bash integration_test.sh
-# TODO: Set up coverage.
-#after_success:
-#  - bash <(curl -s https://codecov.io/bash)
