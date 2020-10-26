@@ -1,0 +1,138 @@
+# Copyright 2020 The Knative Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This file is automagically synced here from github.com/knative-sandbox/.github
+# repo by knobots: https://github.com/mattmoor/knobots and will be overwritten.
+
+name: 'Releasability'
+
+on:
+  schedule:
+    - cron: '0 1 * * 1-5' # 6am Pacific, weekdays.
+
+  workflow_dispatch:      # Manual trigger.
+    inputs:
+      releaseFamily:
+        description: 'Release? (vX.Y)'
+      slackChannel:
+        description: 'Slack Channel? (release-#)'
+
+jobs:
+  releasability:
+    name: Releasability
+    runs-on: 'ubuntu-latest'
+
+    env:
+      #########################################
+      #   Update this section each release.   #
+      RELEASE: 'v0.18'
+      SLACK_CHANNEL: 'release-18'
+      #########################################
+
+    steps:
+      - name: Defaults
+        run: |
+          # If manual trigger sent releaseFamily and slackChannel, then override them
+          if [[ "${{ github.event.inputs.releaseFamily }}" != "" ]]; then
+            echo "RELEASE=${{ github.event.inputs.releaseFamily }}" >> $GITHUB_ENV
+          fi
+          if [[ "${{ github.event.inputs.slackChannel }}" != "" ]]; then
+            echo "SLACK_CHANNEL=${{ github.event.inputs.slackChannel }}" >> $GITHUB_ENV
+          fi
+
+      - name: Set up Go 1.15.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15.x
+
+      - name: Install Dependencies
+        run: GO111MODULE=on go get knative.dev/test-infra/buoy@master
+
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Exists
+        id: exists
+        run: |
+          EXISTS=0
+          buoy exists go.mod --release ${RELEASE} --verbose || EXISTS=$?
+          if [[ "$EXISTS" -eq "0" ]]; then
+            EXISTS=true
+          else
+            EXISTS=false
+          fi
+          echo ::set-output name=release-branch::${EXISTS}
+
+      - name: Check
+        if: steps.exists.outputs.release-branch == 'false'
+        run: |
+          # The following pushes the stdout of buoy into $CHECK_MESSAGE
+          CHECK=0
+          echo 'CHECK_MESSAGE<<EOF' >> $GITHUB_ENV
+          buoy check go.mod --release ${RELEASE} --domain knative.dev --verbose >> $GITHUB_ENV || CHECK=$?
+          echo 'EOF' >> $GITHUB_ENV
+
+          # We just captured the return code of the buoy call, test it to see
+          # if we should continue validating. The next steps short circuit if
+          # we already know we are not ready for a release.
+          if [[ "$CHECK" -eq "0"  ]]; then
+            echo 'current=true' >> $GITHUB_ENV
+          else
+            echo 'current=false' >> $GITHUB_ENV
+          fi
+
+      - name: Upgrade
+        if: steps.exists.outputs.release-branch == 'false' && env.current == 'true'
+        run: |
+          # if update deps returns un-successful, then mark current to false.
+          if ! ./hack/update-deps.sh --release ${RELEASE} --upgrade; then
+            echo "VERIFY_MESSAGE=Unable to update deps for ${{ github.repository }}." >> $GITHUB_ENV
+            echo 'current=false' >> $GITHUB_ENV
+          fi
+
+      - name: Verify
+        if: steps.exists.outputs.release-branch == 'false' && env.current == 'true'
+        run: |
+          # If we see no changes after the upgrade, then we are up to date.
+          if [[ -z "$(git status --porcelain)" ]]; then
+              echo "VERIFY_MESSAGE=${{ github.repository }} up to date." >> $GITHUB_ENV
+          else
+              echo "VERIFY_MESSAGE=${{ github.repository }} is out of date." >> $GITHUB_ENV
+              echo 'current=false' >> $GITHUB_ENV
+          fi
+
+      - name: Status GO
+        if: steps.exists.outputs.release-branch == 'false' && env.current == 'true'
+        run: |
+          echo 'SLACK_COLOR=#098e00' >> $GITHUB_ENV
+          echo 'SLACK_TITLE=Releasability for ${{ github.repository }} @ ${{ env.RELEASE }} is GO!' >> $GITHUB_ENV
+
+      - name: Status NO-GO
+        if: steps.exists.outputs.release-branch == 'false' && env.current == 'false'
+        run: |
+          echo 'SLACK_COLOR=#8E1600' >> $GITHUB_ENV
+          echo 'SLACK_TITLE=Releasability for ${{ github.repository }} @ ${{ env.RELEASE }} is NO-GO!' >> $GITHUB_ENV
+
+      - name: Post status to Slack
+        if: steps.exists.outputs.release-branch == 'false'
+        uses: rtCamp/action-slack-notify@v2.1.0
+        env:
+          SLACK_ICON: http://github.com/knative.png?size=48
+          SLACK_USERNAME: github-actions
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          MSG_MINIMAL: 'true'
+          SLACK_MESSAGE: |
+            ${{ env.CHECK_MESSAGE }}
+            ${{ env.VERIFY_MESSAGE }}
+            For detailed logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
