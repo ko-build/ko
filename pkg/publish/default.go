@@ -143,7 +143,7 @@ func tagImages(idx v1.ImageIndex, tag name.Tag, opt []remote.Option) error {
 			return err
 		}
 
-		log.Printf("Tagging %v", itag)
+		log.Print("Tagging ", itag)
 		if err := remote.Tag(itag, img, opt...); err != nil {
 			return err
 		}
@@ -170,12 +170,12 @@ func (d *defalt) Publish(br build.Result, s string) (name.Reference, error) {
 		}
 
 		if i == 0 {
-			log.Printf("Publishing %v", tag)
+			log.Print("Publishing ", tag)
 			if err := pushResult(tag, br, ro); err != nil {
 				return nil, err
 			}
 		} else {
-			log.Printf("Tagging %v", tag)
+			log.Print("Tagging ", tag)
 			if err := remote.Tag(tag, br, ro...); err != nil {
 				return nil, err
 			}
@@ -201,7 +201,7 @@ func (d *defalt) Publish(br build.Result, s string) (name.Reference, error) {
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Published %v", dig)
+	log.Print("Published", dig)
 	return &dig, nil
 }
 
