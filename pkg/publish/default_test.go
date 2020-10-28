@@ -59,18 +59,18 @@ func TestDefault(t *testing.T) {
 	}
 	tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo))
 	if err != nil {
-		t.Fatalf("NewTag() = %v", err)
+		t.Fatal("NewTag() =", err)
 	}
 
 	repoName := fmt.Sprintf("%s/%s", u.Host, base)
 	def, err := NewDefault(repoName)
 	if err != nil {
-		t.Errorf("NewDefault() = %v", err)
+		t.Error("NewDefault() =", err)
 	}
 
 	for _, br := range []build.Result{img, idx} {
 		if d, err := def.Publish(br, build.StrictScheme+importpath); err != nil {
-			t.Errorf("Publish() = %v", err)
+			t.Error("Publish() =", err)
 		} else if !strings.HasPrefix(d.String(), tag.Repository.String()) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
 		}
@@ -79,12 +79,12 @@ func TestDefault(t *testing.T) {
 	// Check that the image within the index was also tagged with :latest-$os-$arch.
 	idig, err := img.Digest()
 	if err != nil {
-		t.Fatalf("img.Digest: %v", err)
+		t.Fatal("img.Digest:", err)
 	}
 	itag := fmt.Sprintf("%s/%s:latest-os-arch", u.Host, expectedRepo)
 	got, err := crane.Digest(itag)
 	if err != nil {
-		t.Fatalf("crane.Digest: %v", err)
+		t.Fatal("crane.Digest:", err)
 	}
 	if idig.String() != got {
 		t.Errorf("tagging didn't work: %s != %s", idig, got)
@@ -111,19 +111,19 @@ func TestDefaultWithCustomNamer(t *testing.T) {
 	}
 	tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo))
 	if err != nil {
-		t.Fatalf("NewTag() = %v", err)
+		t.Fatal("NewTag() =", err)
 	}
 
 	repoName := fmt.Sprintf("%s/%s", u.Host, base)
 
 	def, err := NewDefault(repoName, WithNamer(md5Hash))
 	if err != nil {
-		t.Errorf("NewDefault() = %v", err)
+		t.Error("NewDefault() =", err)
 	}
 
 	for _, br := range []build.Result{img, idx} {
 		if d, err := def.Publish(br, build.StrictScheme+importpath); err != nil {
-			t.Errorf("Publish() = %v", err)
+			t.Error("Publish() =", err)
 		} else if !strings.HasPrefix(d.String(), repoName) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
 		} else if !strings.HasSuffix(d.Context().String(), md5Hash(strings.ToLower(importpath))) {
@@ -145,19 +145,19 @@ func TestDefaultWithTags(t *testing.T) {
 	}
 	tag, err := name.NewTag(fmt.Sprintf("%s/%s:notLatest", u.Host, expectedRepo))
 	if err != nil {
-		t.Fatalf("NewTag() = %v", err)
+		t.Fatal("NewTag() =", err)
 	}
 
 	repoName := fmt.Sprintf("%s/%s", u.Host, base)
 
 	def, err := NewDefault(repoName, WithTags([]string{"notLatest", "v1.2.3"}))
 	if err != nil {
-		t.Errorf("NewDefault() = %v", err)
+		t.Error("NewDefault() =", err)
 	}
 
 	for _, br := range []build.Result{img, idx} {
 		if d, err := def.Publish(br, build.StrictScheme+importpath); err != nil {
-			t.Errorf("Publish() = %v", err)
+			t.Error("Publish() =", err)
 		} else if !strings.HasPrefix(d.String(), repoName) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
 		} else if !strings.HasSuffix(d.Context().String(), strings.ToLower(importpath)) {
@@ -184,7 +184,7 @@ func TestDefaultWithTags(t *testing.T) {
 	for _, tt := range []string{"notLatest", "v1.2.3"} {
 		itag := fmt.Sprintf("%s/%s:%s-os-arch", u.Host, expectedRepo, tt)
 		if _, err := crane.Digest(itag); err != nil {
-			t.Fatalf("crane.Digest: %v", err)
+			t.Fatal("crane.Digest:", err)
 		}
 	}
 }
@@ -192,7 +192,7 @@ func TestDefaultWithTags(t *testing.T) {
 func TestDefaultWithReleaseTag(t *testing.T) {
 	img, err := random.Image(1024, 1)
 	if err != nil {
-		t.Fatalf("random.Image() = %v", err)
+		t.Fatal("random.Image() =", err)
 	}
 	base := "blah"
 	releaseTag := "v1.2.3"
@@ -226,7 +226,7 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 
 			http.Error(w, "Created", http.StatusCreated)
 		default:
-			t.Fatalf("Unexpected path: %v", r.URL.Path)
+			t.Fatal("Unexpected path:", r.URL.Path)
 		}
 	}))
 	defer server.Close()
@@ -236,17 +236,17 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 	}
 	tag, err := name.NewTag(fmt.Sprintf("%s/%s:notLatest", u.Host, expectedRepo))
 	if err != nil {
-		t.Fatalf("NewTag() = %v", err)
+		t.Fatal("NewTag() =", err)
 	}
 
 	repoName := fmt.Sprintf("%s/%s", u.Host, base)
 
 	def, err := NewDefault(repoName, WithTags([]string{releaseTag}))
 	if err != nil {
-		t.Errorf("NewDefault() = %v", err)
+		t.Error("NewDefault() =", err)
 	}
 	if d, err := def.Publish(img, build.StrictScheme+importpath); err != nil {
-		t.Errorf("Publish() = %v", err)
+		t.Error("Publish() =", err)
 	} else if !strings.HasPrefix(d.String(), repoName) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
 	} else if !strings.HasSuffix(d.Context().String(), strings.ToLower(importpath)) {
@@ -256,6 +256,6 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 	}
 
 	if _, ok := createdTags["v1.2.3"]; !ok {
-		t.Errorf("Tag v1.2.3 was not created.")
+		t.Error("Tag v1.2.3 was not created.")
 	}
 }
