@@ -27,6 +27,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/ko/pkg/build"
 )
@@ -36,33 +38,56 @@ var (
 	idx, _ = random.Index(1024, 3, 3)
 )
 
+func init() {
+	idx = mutate.AppendManifests(idx, mutate.IndexAddendum{
+		Add: img,
+		Descriptor: v1.Descriptor{
+			Platform: &v1.Platform{OS: "os", Architecture: "arch"},
+		},
+	})
+}
+
 func TestDefault(t *testing.T) {
+	base := "blah"
+	importpath := "github.com/Google/go-containerregistry/cmd/crane"
+	expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
+	server := httptest.NewServer(registry.New())
+	defer server.Close()
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse(%v) = %v", server.URL, err)
+	}
+	tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo))
+	if err != nil {
+		t.Fatalf("NewTag() = %v", err)
+	}
+
+	repoName := fmt.Sprintf("%s/%s", u.Host, base)
+	def, err := NewDefault(repoName)
+	if err != nil {
+		t.Errorf("NewDefault() = %v", err)
+	}
+
 	for _, br := range []build.Result{img, idx} {
-		base := "blah"
-		importpath := "github.com/Google/go-containerregistry/cmd/crane"
-		expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
-
-		server := httptest.NewServer(registry.New())
-		defer server.Close()
-		u, err := url.Parse(server.URL)
-		if err != nil {
-			t.Fatalf("url.Parse(%v) = %v", server.URL, err)
-		}
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo))
-		if err != nil {
-			t.Fatalf("NewTag() = %v", err)
-		}
-
-		repoName := fmt.Sprintf("%s/%s", u.Host, base)
-		def, err := NewDefault(repoName)
-		if err != nil {
-			t.Errorf("NewDefault() = %v", err)
-		}
 		if d, err := def.Publish(br, build.StrictScheme+importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), tag.Repository.String()) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
 		}
+	}
+
+	// Check that the image within the index was also tagged with :latest-$os-$arch.
+	idig, err := img.Digest()
+	if err != nil {
+		t.Fatalf("img.Digest: %v", err)
+	}
+	itag := fmt.Sprintf("%s/%s:latest-os-arch", u.Host, expectedRepo)
+	got, err := crane.Digest(itag)
+	if err != nil {
+		t.Fatalf("crane.Digest: %v", err)
+	}
+	if idig.String() != got {
+		t.Errorf("tagging didn't work: %s != %s", idig, got)
 	}
 }
 
@@ -74,28 +99,29 @@ func md5Hash(s string) string {
 }
 
 func TestDefaultWithCustomNamer(t *testing.T) {
+	base := "blah"
+	importpath := "github.com/Google/go-containerregistry/cmd/crane"
+	expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
+
+	server := httptest.NewServer(registry.New())
+	defer server.Close()
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse(%v) = %v", server.URL, err)
+	}
+	tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo))
+	if err != nil {
+		t.Fatalf("NewTag() = %v", err)
+	}
+
+	repoName := fmt.Sprintf("%s/%s", u.Host, base)
+
+	def, err := NewDefault(repoName, WithNamer(md5Hash))
+	if err != nil {
+		t.Errorf("NewDefault() = %v", err)
+	}
+
 	for _, br := range []build.Result{img, idx} {
-		base := "blah"
-		importpath := "github.com/Google/go-containerregistry/cmd/crane"
-		expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
-
-		server := httptest.NewServer(registry.New())
-		defer server.Close()
-		u, err := url.Parse(server.URL)
-		if err != nil {
-			t.Fatalf("url.Parse(%v) = %v", server.URL, err)
-		}
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo))
-		if err != nil {
-			t.Fatalf("NewTag() = %v", err)
-		}
-
-		repoName := fmt.Sprintf("%s/%s", u.Host, base)
-
-		def, err := NewDefault(repoName, WithNamer(md5Hash))
-		if err != nil {
-			t.Errorf("NewDefault() = %v", err)
-		}
 		if d, err := def.Publish(br, build.StrictScheme+importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), repoName) {
@@ -105,29 +131,31 @@ func TestDefaultWithCustomNamer(t *testing.T) {
 		}
 	}
 }
+
 func TestDefaultWithTags(t *testing.T) {
+	base := "blah"
+	importpath := "github.com/Google/go-containerregistry/cmd/crane"
+	expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
+
+	server := httptest.NewServer(registry.New())
+	defer server.Close()
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse(%v) = %v", server.URL, err)
+	}
+	tag, err := name.NewTag(fmt.Sprintf("%s/%s:notLatest", u.Host, expectedRepo))
+	if err != nil {
+		t.Fatalf("NewTag() = %v", err)
+	}
+
+	repoName := fmt.Sprintf("%s/%s", u.Host, base)
+
+	def, err := NewDefault(repoName, WithTags([]string{"notLatest", "v1.2.3"}))
+	if err != nil {
+		t.Errorf("NewDefault() = %v", err)
+	}
+
 	for _, br := range []build.Result{img, idx} {
-		base := "blah"
-		importpath := "github.com/Google/go-containerregistry/cmd/crane"
-		expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
-
-		server := httptest.NewServer(registry.New())
-		defer server.Close()
-		u, err := url.Parse(server.URL)
-		if err != nil {
-			t.Fatalf("url.Parse(%v) = %v", server.URL, err)
-		}
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:notLatest", u.Host, expectedRepo))
-		if err != nil {
-			t.Fatalf("NewTag() = %v", err)
-		}
-
-		repoName := fmt.Sprintf("%s/%s", u.Host, base)
-
-		def, err := NewDefault(repoName, WithTags([]string{"notLatest", "v1.2.3"}))
-		if err != nil {
-			t.Errorf("NewDefault() = %v", err)
-		}
 		if d, err := def.Publish(br, build.StrictScheme+importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), repoName) {
@@ -149,6 +177,14 @@ func TestDefaultWithTags(t *testing.T) {
 
 		if first != second {
 			t.Errorf("tagging didn't work: %s != %s", second, first)
+		}
+	}
+
+	// Check that the image within the index was also tagged with :$tag-$os-$arch.
+	for _, tt := range []string{"notLatest", "v1.2.3"} {
+		itag := fmt.Sprintf("%s/%s:%s-os-arch", u.Host, expectedRepo, tt)
+		if _, err := crane.Digest(itag); err != nil {
+			t.Fatalf("crane.Digest: %v", err)
 		}
 	}
 }

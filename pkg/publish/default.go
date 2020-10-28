@@ -107,7 +107,11 @@ func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
 		if !ok {
 			return fmt.Errorf("failed to interpret result as index: %v", br)
 		}
-		return remote.WriteIndex(tag, idx, opt...)
+		if err := remote.WriteIndex(tag, idx, opt...); err != nil {
+			return err
+		}
+
+		return tagImages(idx, tag, opt)
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		img, ok := br.(v1.Image)
 		if !ok {
@@ -117,6 +121,34 @@ func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
 	default:
 		return fmt.Errorf("result image media type: %s", mt)
 	}
+}
+
+func tagImages(idx v1.ImageIndex, tag name.Tag, opt []remote.Option) error {
+	// Also tag constituent images with tags denoting os+arch.
+	mf, err := idx.IndexManifest()
+	if err != nil {
+		return err
+	}
+	for _, desc := range mf.Manifests {
+		if desc.Platform == nil {
+			continue
+		}
+
+		img, err := idx.Image(desc.Digest)
+		if err != nil {
+			return err
+		}
+		itag, err := name.NewTag(fmt.Sprintf("%s-%s-%s", tag, desc.Platform.OS, desc.Platform.Architecture))
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Tagging %v", itag)
+		if err := remote.Tag(itag, img, opt...); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Publish implements publish.Interface
@@ -146,6 +178,11 @@ func (d *defalt) Publish(br build.Result, s string) (name.Reference, error) {
 			log.Printf("Tagging %v", tag)
 			if err := remote.Tag(tag, br, ro...); err != nil {
 				return nil, err
+			}
+			if idx, ok := br.(v1.ImageIndex); ok {
+				if err := tagImages(idx, tag, ro); err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
