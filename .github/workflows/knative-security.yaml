@@ -13,11 +13,14 @@
 # limitations under the License.
 
 # This file is automagically synced here from github.com/knative-sandbox/.github
-# repo by knobots: https://github.com/mattmoor/knobots and will be overwritten.
+# repo by knobots: https://github.com/knative-sandbox/knobots and will be overwritten.
 
 name: 'Security'
 
 on:
+  push:
+    branches: [ 'master', 'release-*' ]
+
   pull_request:
     branches: [ 'master', 'release-*' ]
 
