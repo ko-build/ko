@@ -24,10 +24,11 @@ import (
 // Interface abstracts different methods for turning a supported importpath
 // reference into a v1.Image.
 type Interface interface {
-	// IsSupportedReference determines whether the given reference is to an importpath reference
-	// that Ko supports building.
+	// IsSupportedReference determines whether the given reference is to an
+	// importpath reference that Ko supports building, returning an error
+	// if it is not.
 	// TODO(mattmoor): Verify that some base repo: foo.io/bar can be suffixed with this reference and parsed.
-	IsSupportedReference(string) bool
+	IsSupportedReference(string) error
 
 	// Build turns the given importpath reference into a v1.Image containing the Go binary
 	// (or a set of images as a v1.ImageIndex).

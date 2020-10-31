@@ -29,9 +29,7 @@ type slowbuild struct {
 // slowbuild implements Interface
 var _ Interface = (*slowbuild)(nil)
 
-func (sb *slowbuild) IsSupportedReference(string) bool {
-	return true
-}
+func (sb *slowbuild) IsSupportedReference(string) error { return nil }
 
 func (sb *slowbuild) Build(context.Context, string) (Result, error) {
 	time.Sleep(sb.sleep)
@@ -45,8 +43,8 @@ func TestCaching(t *testing.T) {
 	sb := &slowbuild{duration}
 	cb, _ := NewCaching(sb)
 
-	if !cb.IsSupportedReference(ip) {
-		t.Errorf("ISR(%q) = false, wanted true", ip)
+	if err := cb.IsSupportedReference(ip); err != nil {
+		t.Errorf("ISR(%q) = (%v), wanted nil", err, ip)
 	}
 
 	previousDigest := "not-a-digest"

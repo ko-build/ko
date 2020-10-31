@@ -65,7 +65,7 @@ func (c *Caching) Build(ctx context.Context, ip string) (Result, error) {
 }
 
 // IsSupportedReference implements Interface
-func (c *Caching) IsSupportedReference(ip string) bool {
+func (c *Caching) IsSupportedReference(ip string) error {
 	return c.inner.IsSupportedReference(ip)
 }
 

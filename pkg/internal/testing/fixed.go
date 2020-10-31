@@ -16,6 +16,7 @@ package testing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -36,10 +37,12 @@ func NewFixedBuild(entries map[string]build.Result) build.Interface {
 }
 
 // IsSupportedReference implements build.Interface
-func (f *fixedBuild) IsSupportedReference(s string) bool {
+func (f *fixedBuild) IsSupportedReference(s string) error {
 	s = strings.TrimPrefix(s, build.StrictScheme)
-	_, ok := f.entries[s]
-	return ok
+	if _, ok := f.entries[s]; !ok {
+		return errors.New("importpath is not supported")
+	}
+	return nil
 }
 
 // Build implements build.Interface

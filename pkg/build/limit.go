@@ -30,7 +30,7 @@ type Limiter struct {
 var _ Interface = (*Recorder)(nil)
 
 // IsSupportedReference implements Interface
-func (l *Limiter) IsSupportedReference(ip string) bool {
+func (l *Limiter) IsSupportedReference(ip string) error {
 	return l.Builder.IsSupportedReference(ip)
 }
 

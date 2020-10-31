@@ -22,21 +22,17 @@ import (
 )
 
 type fake struct {
-	isr func(string) bool
+	isr func(string) error
 	b   func(string) (Result, error)
 }
 
 var _ Interface = (*fake)(nil)
 
 // IsSupportedReference implements Interface
-func (r *fake) IsSupportedReference(ip string) bool {
-	return r.isr(ip)
-}
+func (r *fake) IsSupportedReference(ip string) error { return r.isr(ip) }
 
 // Build implements Interface
-func (r *fake) Build(_ context.Context, ip string) (Result, error) {
-	return r.b(ip)
-}
+func (r *fake) Build(_ context.Context, ip string) (Result, error) { return r.b(ip) }
 
 func TestISRPassThrough(t *testing.T) {
 	tests := []struct {
@@ -53,12 +49,12 @@ func TestISRPassThrough(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			called := false
 			inner := &fake{
-				isr: func(ip string) bool {
+				isr: func(ip string) error {
 					called = true
 					if ip != test.input {
 						t.Errorf("ISR = %v, wanted %v", ip, test.input)
 					}
-					return true
+					return nil
 				},
 			}
 			rec := &Recorder{
