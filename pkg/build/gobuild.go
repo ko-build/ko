@@ -172,16 +172,19 @@ func NewGo(options ...Option) (Interface, error) {
 //
 // Only valid importpaths that provide commands (i.e., are "package main") are
 // supported.
-func (g *gobuild) IsSupportedReference(s string) bool {
+func (g *gobuild) IsSupportedReference(s string) error {
 	ref := newRef(s)
 	if !ref.IsStrict() {
-		return false
+		return errors.New("importpath does not start with ko://")
 	}
 	p, err := g.importPackage(ref)
 	if err != nil {
-		return false
+		return err
 	}
-	return p.IsCommand()
+	if !p.IsCommand() {
+		return errors.New("importpath is not `package main`")
+	}
+	return nil
 }
 
 // importPackage wraps go/build.Import to handle go modules.

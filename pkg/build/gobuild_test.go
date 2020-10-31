@@ -49,8 +49,8 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 		"ko://github.com/google/ko/cmd/ko", // ko can build itself.
 	} {
 		t.Run(importpath, func(t *testing.T) {
-			if !ng.IsSupportedReference(importpath) {
-				t.Errorf("IsSupportedReference(%q) = false, want true", importpath)
+			if err := ng.IsSupportedReference(importpath); err != nil {
+				t.Errorf("IsSupportedReference(%q) = (%v), want nil", importpath, err)
 			}
 		})
 	}
@@ -61,8 +61,8 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 		"ko://github.com/google/ko/pkg/nonexistent", // does not exist.
 	} {
 		t.Run(importpath, func(t *testing.T) {
-			if ng.IsSupportedReference(importpath) {
-				t.Errorf("IsSupportedReference(%v) = true, want false", importpath)
+			if err := ng.IsSupportedReference(importpath); err == nil {
+				t.Errorf("IsSupportedReference(%v) = nil, want error", importpath)
 			}
 		})
 	}
@@ -110,8 +110,8 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 		"ko://github.com/some/module/cmd",       // ko can build commands in dependent modules
 	} {
 		t.Run(importpath, func(t *testing.T) {
-			if !ng.IsSupportedReference(importpath) {
-				t.Errorf("IsSupportedReference(%q) = false, want true", importpath)
+			if err := ng.IsSupportedReference(importpath); err != nil {
+				t.Errorf("IsSupportedReference(%q) = (%v), want nil", err, importpath)
 			}
 		})
 	}
@@ -123,8 +123,8 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 		"ko://github.com/google/ko/cmd/ko",          // not in this module.
 	} {
 		t.Run(importpath, func(t *testing.T) {
-			if ng.IsSupportedReference(importpath) {
-				t.Errorf("IsSupportedReference(%v) = true, want false", importpath)
+			if err := ng.IsSupportedReference(importpath); err == nil {
+				t.Errorf("IsSupportedReference(%v) = nil, want error", importpath)
 			}
 		})
 	}

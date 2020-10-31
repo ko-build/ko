@@ -67,8 +67,8 @@ func TestFixedBuild(t *testing.T) {
 		"asdf": testImage,
 	})
 
-	if got, want := f.IsSupportedReference("asdf"), true; got != want {
-		t.Errorf("IsSupportedReference(asdf) = %v, want %v", got, want)
+	if got := f.IsSupportedReference("asdf"); got != nil {
+		t.Errorf("IsSupportedReference(asdf) = (%v), want nil", got)
 	}
 	if got, err := f.Build(context.Background(), "asdf"); err != nil {
 		t.Errorf("Build(asdf) = %v, want %v", err, testImage)
@@ -76,8 +76,8 @@ func TestFixedBuild(t *testing.T) {
 		t.Errorf("Build(asdf) = %v, want %v", got, testImage)
 	}
 
-	if got, want := f.IsSupportedReference("blah"), false; got != want {
-		t.Errorf("IsSupportedReference(blah) = %v, want %v", got, want)
+	if got := f.IsSupportedReference("blah"); got == nil {
+		t.Error("IsSupportedReference(blah) = nil, want error")
 	}
 	if got, err := f.Build(context.Background(), "blah"); err == nil {
 		t.Errorf("Build(blah) = %v, want error", got)
