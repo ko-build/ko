@@ -63,18 +63,18 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO.")
 }
 
-func packageWithMD5(importpath string) string {
+func packageWithMD5(base, importpath string) string {
 	hasher := md5.New() //nolint: gosec // No strong cryptography needed.
 	hasher.Write([]byte(importpath))
-	return filepath.Base(importpath) + "-" + hex.EncodeToString(hasher.Sum(nil))
+	return filepath.Join(base, filepath.Base(importpath)+"-"+hex.EncodeToString(hasher.Sum(nil)))
 }
 
-func preserveImportPath(importpath string) string {
-	return importpath
+func preserveImportPath(base, importpath string) string {
+	return filepath.Join(base, importpath)
 }
 
-func baseImportPaths(importpath string) string {
-	return filepath.Base(importpath)
+func baseImportPaths(base, importpath string) string {
+	return filepath.Join(base, filepath.Base(importpath))
 }
 
 func MakeNamer(po *PublishOptions) publish.Namer {

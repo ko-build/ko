@@ -93,7 +93,7 @@ func (d *demon) Publish(br build.Result, s string) (name.Reference, error) {
 		return nil, err
 	}
 
-	digestTag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", LocalDomain, d.namer(s), h.Hex))
+	digestTag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(LocalDomain, s), h.Hex))
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (d *demon) Publish(br build.Result, s string) (name.Reference, error) {
 
 	for _, tagName := range d.tags {
 		log.Printf("Adding tag %v", tagName)
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", LocalDomain, d.namer(s), tagName))
+		tag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(LocalDomain, s), tagName))
 		if err != nil {
 			return nil, err
 		}

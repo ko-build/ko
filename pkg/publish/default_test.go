@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -66,11 +67,11 @@ func TestDefault(t *testing.T) {
 	}
 }
 
-func md5Hash(s string) string {
+func md5Hash(base, s string) string {
 	// md5 as hex.
 	hasher := md5.New()
 	hasher.Write([]byte(s))
-	return hex.EncodeToString(hasher.Sum(nil))
+	return filepath.Join(base, hex.EncodeToString(hasher.Sum(nil)))
 }
 
 func TestDefaultWithCustomNamer(t *testing.T) {
@@ -100,8 +101,8 @@ func TestDefaultWithCustomNamer(t *testing.T) {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), repoName) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
-		} else if !strings.HasSuffix(d.Context().String(), md5Hash(strings.ToLower(importpath))) {
-			t.Errorf("Publish() = %v, wanted suffix %v", d.Context(), md5Hash(importpath))
+		} else if !strings.HasSuffix(d.Context().String(), md5Hash("", strings.ToLower(importpath))) {
+			t.Errorf("Publish() = %v, wanted suffix %v", d.Context(), md5Hash("", importpath))
 		}
 	}
 }
@@ -133,7 +134,7 @@ func TestDefaultWithTags(t *testing.T) {
 		} else if !strings.HasPrefix(d.String(), repoName) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
 		} else if !strings.HasSuffix(d.Context().String(), strings.ToLower(importpath)) {
-			t.Errorf("Publish() = %v, wanted suffix %v", d.Context(), md5Hash(importpath))
+			t.Errorf("Publish() = %v, wanted suffix %v", d.Context(), md5Hash("", importpath))
 		}
 
 		otherTag := fmt.Sprintf("%s/%s:v1.2.3", u.Host, expectedRepo)
@@ -214,7 +215,7 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 	} else if !strings.HasPrefix(d.String(), repoName) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
 	} else if !strings.HasSuffix(d.Context().String(), strings.ToLower(importpath)) {
-		t.Errorf("Publish() = %v, wanted suffix %v", d.Context(), md5Hash(importpath))
+		t.Errorf("Publish() = %v, wanted suffix %v", d.Context(), md5Hash("", importpath))
 	} else if !strings.Contains(d.String(), releaseTag) {
 		t.Errorf("Publish() = %v, wanted tag included: %v", d.String(), releaseTag)
 	}

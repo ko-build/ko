@@ -57,7 +57,7 @@ func (t *tar) Publish(br build.Result, s string) (name.Reference, error) {
 	}
 
 	for _, tagName := range t.tags {
-		tag, err := name.ParseReference(fmt.Sprintf("%s/%s:%s", t.base, t.namer(s), tagName))
+		tag, err := name.ParseReference(fmt.Sprintf("%s:%s", t.namer(t.base, s), tagName))
 		if err != nil {
 			return nil, err
 		}
@@ -70,18 +70,18 @@ func (t *tar) Publish(br build.Result, s string) (name.Reference, error) {
 	}
 
 	if len(t.tags) == 0 {
-		ref, err := name.ParseReference(fmt.Sprintf("%s/%s@%s", t.base, t.namer(s), h))
+		ref, err := name.ParseReference(fmt.Sprintf("%s@%s", t.namer(t.base, s), h))
 		if err != nil {
 			return nil, err
 		}
 		t.refs[ref] = img
 	}
 
-	ref := fmt.Sprintf("%s/%s@%s", t.base, t.namer(s), h)
+	ref := fmt.Sprintf("%s@%s", t.namer(t.base, s), h)
 	if len(t.tags) == 1 && t.tags[0] != defaultTags[0] {
 		// If a single tag is explicitly set (not latest), then this
 		// is probably a release, so include the tag in the reference.
-		ref = fmt.Sprintf("%s/%s:%s@%s", t.base, t.namer(s), t.tags[0], h)
+		ref = fmt.Sprintf("%s:%s@%s", t.namer(t.base, s), t.tags[0], h)
 	}
 	dig, err := name.NewDigest(ref)
 	if err != nil {

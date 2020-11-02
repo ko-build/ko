@@ -57,7 +57,7 @@ func TestDaemon(t *testing.T) {
 	def := NewDaemon(md5Hash, []string{})
 	if d, err := def.Publish(img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
-	} else if got, want := d.String(), "ko.local/"+md5Hash(importpath); !strings.HasPrefix(got, want) {
+	} else if got, want := d.String(), md5Hash("ko.local", importpath); !strings.HasPrefix(got, want) {
 		t.Errorf("Publish() = %v, wanted prefix %v", got, want)
 	}
 }
@@ -74,7 +74,7 @@ func TestDaemonTags(t *testing.T) {
 	def := NewDaemon(md5Hash, []string{"v2.0.0", "v1.2.3", "production"})
 	if d, err := def.Publish(img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
-	} else if got, want := d.String(), "ko.local/"+md5Hash(importpath); !strings.HasPrefix(got, want) {
+	} else if got, want := d.String(), md5Hash("ko.local", importpath); !strings.HasPrefix(got, want) {
 		t.Errorf("Publish() = %v, wanted prefix %v", got, want)
 	}
 

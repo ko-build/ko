@@ -192,7 +192,7 @@ func (n nopPublisher) Publish(br build.Result, s string) (name.Reference, error)
 	if err != nil {
 		return nil, err
 	}
-	return name.NewDigest(fmt.Sprintf("%s/%s@%s", n.repoName, n.namer(s), h))
+	return name.NewDigest(fmt.Sprintf("%s@%s", n.namer(n.repoName, s), h))
 }
 
 func (n nopPublisher) Close() error { return nil }

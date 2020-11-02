@@ -40,7 +40,7 @@ func TestTarball(t *testing.T) {
 	defer fp.Close()
 	defer os.Remove(fp.Name())
 
-	expectedRepo := fmt.Sprintf("%s/%s", base, md5Hash(strings.ToLower(importpath)))
+	expectedRepo := md5Hash(base, strings.ToLower(importpath))
 
 	tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", "example.com", expectedRepo))
 	if err != nil {
