@@ -41,6 +41,8 @@ type PublishOptions struct {
 	PreserveImportPaths bool
 	// BaseImportPaths uses the base path without MD5 hash after KO_DOCKER_REPO.
 	BaseImportPaths bool
+	// Naked uses a tag on the KO_DOCKER_REPO without anything additional.
+	Naked bool
 }
 
 func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
@@ -61,6 +63,8 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 		"Whether to preserve the full import path after KO_DOCKER_REPO.")
 	cmd.Flags().BoolVarP(&po.BaseImportPaths, "base-import-paths", "B", po.BaseImportPaths,
 		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO.")
+	cmd.Flags().BoolVarP(&po.Naked, "naked", "N", po.Naked,
+		"Whether to just use KO_DOCKER_REPO without additional context.")
 }
 
 func packageWithMD5(base, importpath string) string {
@@ -77,11 +81,17 @@ func baseImportPaths(base, importpath string) string {
 	return filepath.Join(base, filepath.Base(importpath))
 }
 
+func nakedDockerRepo(base, _ string) string {
+	return base
+}
+
 func MakeNamer(po *PublishOptions) publish.Namer {
 	if po.PreserveImportPaths {
 		return preserveImportPath
 	} else if po.BaseImportPaths {
 		return baseImportPaths
+	} else if po.Naked {
+		return nakedDockerRepo
 	}
 	return packageWithMD5
 }
