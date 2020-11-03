@@ -41,13 +41,14 @@ type PublishOptions struct {
 	PreserveImportPaths bool
 	// BaseImportPaths uses the base path without MD5 hash after KO_DOCKER_REPO.
 	BaseImportPaths bool
-	// Naked uses a tag on the KO_DOCKER_REPO without anything additional.
-	Naked bool
+	// Base uses a tag on the KO_DOCKER_REPO without anything additional.
+	Bare bool
 }
 
 func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 	cmd.Flags().StringSliceVarP(&po.Tags, "tags", "t", []string{"latest"},
-		"Which tags to use for the produced image instead of the default 'latest' tag.")
+		"Which tags to use for the produced image instead of the default 'latest' tag "+
+			"(may not work properly with --base-import-paths or --bare).")
 
 	cmd.Flags().BoolVar(&po.Push, "push", true, "Push images to KO_DOCKER_REPO")
 
@@ -62,9 +63,9 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 	cmd.Flags().BoolVarP(&po.PreserveImportPaths, "preserve-import-paths", "P", po.PreserveImportPaths,
 		"Whether to preserve the full import path after KO_DOCKER_REPO.")
 	cmd.Flags().BoolVarP(&po.BaseImportPaths, "base-import-paths", "B", po.BaseImportPaths,
-		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO.")
-	cmd.Flags().BoolVarP(&po.Naked, "naked", "N", po.Naked,
-		"Whether to just use KO_DOCKER_REPO without additional context.")
+		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).")
+	cmd.Flags().BoolVar(&po.Bare, "bare", po.Bare,
+		"Whether to just use KO_DOCKER_REPO without additional context (will not work properly with --tags).")
 }
 
 func packageWithMD5(base, importpath string) string {
@@ -81,7 +82,7 @@ func baseImportPaths(base, importpath string) string {
 	return filepath.Join(base, filepath.Base(importpath))
 }
 
-func nakedDockerRepo(base, _ string) string {
+func bareDockerRepo(base, _ string) string {
 	return base
 }
 
@@ -90,8 +91,8 @@ func MakeNamer(po *PublishOptions) publish.Namer {
 		return preserveImportPath
 	} else if po.BaseImportPaths {
 		return baseImportPaths
-	} else if po.Naked {
-		return nakedDockerRepo
+	} else if po.Bare {
+		return bareDockerRepo
 	}
 	return packageWithMD5
 }
