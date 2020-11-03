@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"path/filepath"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -52,13 +53,13 @@ type defaultOpener struct {
 
 // Namer is a function from a supported import path to the portion of the resulting
 // image name that follows the "base" repository name.
-type Namer func(string) string
+type Namer func(string, string) string
 
 // identity is the default namer, so import paths are affixed as-is under the repository
 // name for maximum clarity, e.g.
 //   gcr.io/foo/github.com/bar/baz/cmd/blah
 //   ^--base--^ ^-------import path-------^
-func identity(in string) string { return in }
+func identity(base, in string) string { return filepath.Join(base, in) }
 
 // As some registries do not support pushing an image by digest, the default tag for pushing
 // is the 'latest' tag.
@@ -132,7 +133,7 @@ func (d *defalt) Publish(br build.Result, s string) (name.Reference, error) {
 	}
 
 	for i, tagName := range d.tags {
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", d.base, d.namer(s), tagName), no...)
+		tag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(d.base, s), tagName), no...)
 		if err != nil {
 			return nil, err
 		}
@@ -154,11 +155,11 @@ func (d *defalt) Publish(br build.Result, s string) (name.Reference, error) {
 	if err != nil {
 		return nil, err
 	}
-	ref := fmt.Sprintf("%s/%s@%s", d.base, d.namer(s), h)
+	ref := fmt.Sprintf("%s@%s", d.namer(d.base, s), h)
 	if len(d.tags) == 1 && d.tags[0] != defaultTags[0] {
 		// If a single tag is explicitly set (not latest), then this
 		// is probably a release, so include the tag in the reference.
-		ref = fmt.Sprintf("%s/%s:%s@%s", d.base, d.namer(s), d.tags[0], h)
+		ref = fmt.Sprintf("%s:%s@%s", d.namer(d.base, s), d.tags[0], h)
 	}
 	dig, err := name.NewDigest(ref)
 	if err != nil {

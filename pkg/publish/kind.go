@@ -95,7 +95,7 @@ func (t *kindPublisher) Publish(br build.Result, s string) (name.Reference, erro
 		return nil, err
 	}
 
-	digestTag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", KindDomain, t.namer(s), h.Hex))
+	digestTag, err := name.NewTag(fmt.Sprintf("%s:%s", t.namer(KindDomain, s), h.Hex))
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (t *kindPublisher) Publish(br build.Result, s string) (name.Reference, erro
 
 	for _, tagName := range t.tags {
 		log.Printf("Adding tag %v", tagName)
-		tag, err := name.NewTag(fmt.Sprintf("%s/%s:%s", KindDomain, t.namer(s), tagName))
+		tag, err := name.NewTag(fmt.Sprintf("%s:%s", t.namer(KindDomain, s), tagName))
 		if err != nil {
 			return nil, err
 		}
