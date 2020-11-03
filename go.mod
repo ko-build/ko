@@ -9,7 +9,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/google/go-cmp v0.4.1
-	github.com/google/go-containerregistry v0.1.3
+	github.com/google/go-containerregistry v0.1.5-0.20201103113008-5040388aee43
 	github.com/googleapis/gnostic v0.4.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/json-iterator/go v1.1.10 // indirect

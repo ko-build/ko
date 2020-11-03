@@ -29,4 +29,30 @@ type Interface interface {
 	// Close exists for the tarball implementation so we can
 	// do the whole thing in one write.
 	Close() error
+
+	// MultiPublish uploads the given build.Results to a registry
+	// incorporating the associated importpath string into the image's
+	// repository name. It returns a map of importpaths to digest
+	// references of published images.
+	//
+	// MultiPublish can be implemented naively using NaiveMultiPublish,
+	// which simply calls the implementation's Publish method for each item
+	// in the map.
+	MultiPublish(map[string]build.Result) (map[string]name.Reference, error)
+}
+
+// NaiveMultiPublish naively implements MultiPublish by calling the Interface
+// implementation's Publish method for each item in the map, not taking
+// advantage of any publisher-specific optimizations.
+func NaiveMultiPublish(i Interface, m map[string]build.Result) (map[string]name.Reference, error) {
+	// Fallback to naively publishing each image one at a time.
+	out := map[string]name.Reference{}
+	for k, v := range m {
+		r, err := i.Publish(v, k)
+		if err != nil {
+			return nil, err
+		}
+		out[k] = r
+	}
+	return out, nil
 }

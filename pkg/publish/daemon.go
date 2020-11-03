@@ -42,6 +42,10 @@ func NewDaemon(namer Namer, tags []string) Interface {
 	return &demon{namer, tags}
 }
 
+func (d *demon) MultiPublish(m map[string]build.Result) (map[string]name.Reference, error) {
+	return NaiveMultiPublish(d, m)
+}
+
 // Publish implements publish.Interface
 func (d *demon) Publish(br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)

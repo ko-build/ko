@@ -49,6 +49,10 @@ func NewCaching(inner Interface) (Interface, error) {
 	}, nil
 }
 
+func (c *caching) MultiPublish(m map[string]build.Result) (map[string]name.Reference, error) {
+	return NaiveMultiPublish(c, m)
+}
+
 // Publish implements Interface
 func (c *caching) Publish(br build.Result, ref string) (name.Reference, error) {
 	f := func() *future {

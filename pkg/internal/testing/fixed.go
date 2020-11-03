@@ -79,6 +79,10 @@ func (f *fixedPublish) Publish(_ build.Result, s string) (name.Reference, error)
 	return &d, nil
 }
 
+func (f *fixedPublish) MultiPublish(m map[string]build.Result) (map[string]name.Reference, error) {
+	return publish.NaiveMultiPublish(f, m)
+}
+
 func (f *fixedPublish) Close() error {
 	return nil
 }

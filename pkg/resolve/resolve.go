@@ -33,37 +33,33 @@ import (
 // If a reference can be built and pushed, its yaml.Node will be mutated.
 func ImageReferences(ctx context.Context, docs []*yaml.Node, strict bool, builder build.Interface, publisher publish.Interface) error {
 	// First, walk the input objects and collect a list of supported references
-	refs := make(map[string][]*yaml.Node)
+	importpaths := make(map[string][]*yaml.Node)
 
 	for _, doc := range docs {
-		it := refsFromDoc(doc, strict)
+		it := importPathsFromDoc(doc, strict)
 
 		for node, ok := it(); ok; node, ok = it() {
-			ref := strings.TrimSpace(node.Value)
+			ip := strings.TrimSpace(node.Value)
 
-			if err := builder.IsSupportedReference(ref); err == nil {
-				refs[ref] = append(refs[ref], node)
+			if err := builder.IsSupportedReference(ip); err == nil {
+				importpaths[ip] = append(importpaths[ip], node)
 			} else if strict {
-				return fmt.Errorf("found strict reference but %s is not a valid import path", ref)
+				return fmt.Errorf("found strict reference but %s is not a valid import path", ip)
 			}
 		}
 	}
 
 	// Next, perform parallel builds for each of the supported references.
-	var sm sync.Map
+	var sm sync.Map // importpath string -> build.Result
 	var errg errgroup.Group
-	for ref := range refs {
-		ref := ref
+	for ip := range importpaths {
+		ip := ip
 		errg.Go(func() error {
-			img, err := builder.Build(ctx, ref)
+			img, err := builder.Build(ctx, ip)
 			if err != nil {
 				return err
 			}
-			digest, err := publisher.Publish(img, ref)
-			if err != nil {
-				return err
-			}
-			sm.Store(ref, digest.String())
+			sm.Store(ip, img)
 			return nil
 		})
 	}
@@ -71,23 +67,34 @@ func ImageReferences(ctx context.Context, docs []*yaml.Node, strict bool, builde
 		return err
 	}
 
-	// Walk the tags and update them with their digest.
-	for ref, nodes := range refs {
-		digest, ok := sm.Load(ref)
+	// Publish all images.
+	m := map[string]build.Result{}
+	sm.Range(func(k, v interface{}) bool {
+		ip, br := k.(string), v.(build.Result)
+		m[ip] = br
+		return true
+	})
+	published, err := publisher.MultiPublish(m)
+	if err != nil {
+		return err
+	}
 
-		if !ok {
-			return fmt.Errorf("resolved reference to %q not found", ref)
+	// Walk the tags and update them with their digest.
+	for ip, nodes := range importpaths {
+		ref, found := published[ip]
+		if !found {
+			return fmt.Errorf("resolved reference to %q not found", ip)
 		}
 
 		for _, node := range nodes {
-			node.Value = digest.(string)
+			node.Value = ref.String()
 		}
 	}
 
 	return nil
 }
 
-func refsFromDoc(doc *yaml.Node, strict bool) yit.Iterator {
+func importPathsFromDoc(doc *yaml.Node, strict bool) yit.Iterator {
 	it := yit.FromNode(doc).
 		RecurseNodes().
 		Filter(yit.StringValue)

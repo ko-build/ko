@@ -35,6 +35,10 @@ func (sp *slowpublish) Publish(br build.Result, ref string) (name.Reference, err
 	return makeRef()
 }
 
+func (sp *slowpublish) MultiPublish(m map[string]build.Result) (map[string]name.Reference, error) {
+	return NaiveMultiPublish(sp, m)
+}
+
 func (sp *slowpublish) Close() error {
 	return nil
 }

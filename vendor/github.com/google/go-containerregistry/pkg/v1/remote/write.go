@@ -92,6 +92,7 @@ func Write(ref name.Reference, img v1.Image, options ...Option) error {
 			uploaded[h] = true
 		}
 
+		// TODO(#803): Pipe through remote.WithJobs and upload these in parallel.
 		g.Go(func() error {
 			return w.uploadOne(l)
 		})
@@ -501,6 +502,7 @@ func WriteIndex(ref name.Reference, ii v1.ImageIndex, options ...Option) error {
 		context: o.context,
 	}
 
+	// TODO(#803): Pipe through remote.WithJobs and upload these in parallel.
 	for _, desc := range index.Manifests {
 		ref := ref.Context().Digest(desc.Digest.String())
 		exists, err := w.checkExistingManifest(desc.Digest, desc.MediaType)

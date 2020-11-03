@@ -44,6 +44,10 @@ func NewKindPublisher(namer Namer, tags []string) Interface {
 	}
 }
 
+func (t *kindPublisher) MultiPublish(m map[string]build.Result) (map[string]name.Reference, error) {
+	return NaiveMultiPublish(t, m)
+}
+
 // Publish implements publish.Interface.
 func (t *kindPublisher) Publish(br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)

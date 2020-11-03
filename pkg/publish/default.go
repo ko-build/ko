@@ -120,6 +120,52 @@ func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
 	}
 }
 
+func (d *defalt) MultiPublish(in map[string]build.Result) (map[string]name.Reference, error) {
+	ro := []remote.Option{remote.WithAuth(d.auth), remote.WithTransport(d.t)}
+	no := []name.Option{}
+	if d.insecure {
+		no = append(no, name.Insecure)
+	}
+
+	out := map[string]name.Reference{}
+	m := map[name.Reference]remote.Taggable{}
+	for ip, br := range in {
+		// https://github.com/google/go-containerregistry/issues/212
+		sanitized := strings.TrimPrefix(strings.ToLower(ip), build.StrictScheme)
+		for _, tagName := range d.tags {
+			tag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(d.base, sanitized), tagName), no...)
+			if err != nil {
+				return nil, err
+			}
+			if err != nil {
+				return nil, err
+			}
+			m[tag] = br
+		}
+
+		h, err := br.Digest()
+		if err != nil {
+			return nil, err
+		}
+		ref := fmt.Sprintf("%s@%s", d.namer(d.base, sanitized), h)
+		if len(d.tags) == 1 && d.tags[0] != defaultTags[0] {
+			// If a single tag is explicitly set (not latest), then this
+			// is probably a release, so include the tag in the reference.
+			ref = fmt.Sprintf("%s:%s@%s", d.namer(d.base, sanitized), d.tags[0], h)
+		}
+		dig, err := name.NewDigest(ref)
+		if err != nil {
+			return nil, err
+		}
+		out[ip] = dig
+	}
+
+	if err := remote.MultiWrite(m, ro...); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Publish implements publish.Interface
 func (d *defalt) Publish(br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)

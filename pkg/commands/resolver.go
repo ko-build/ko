@@ -176,8 +176,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		return nil, err
 	}
 
-	// Wrap publisher in a memoizing publisher implementation.
-	return publish.NewCaching(innerPublisher)
+	return innerPublisher, nil
 }
 
 // nopPublisher simulates publishing without actually publishing anything, to
@@ -185,6 +184,10 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 type nopPublisher struct {
 	repoName string
 	namer    publish.Namer
+}
+
+func (n nopPublisher) MultiPublish(m map[string]build.Result) (map[string]name.Reference, error) {
+	return publish.NaiveMultiPublish(n, m)
 }
 
 func (n nopPublisher) Publish(br build.Result, s string) (name.Reference, error) {

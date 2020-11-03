@@ -34,11 +34,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/v1util"
 )
 
-var defaultPlatform = v1.Platform{
-	Architecture: "amd64",
-	OS:           "linux",
-}
-
 // ErrSchema1 indicates that we received a schema1 manifest from the registry.
 // This library doesn't have plans to support this legacy image format:
 // https://github.com/google/go-containerregistry/issues/377

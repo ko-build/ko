@@ -42,7 +42,7 @@ func qualifyLocalImport(importpath string) (string, error) {
 }
 
 func publishImages(ctx context.Context, importpaths []string, pub publish.Interface, b build.Interface) (map[string]name.Reference, error) {
-	imgs := make(map[string]name.Reference)
+	m := map[string]build.Result{}
 	for _, importpath := range importpaths {
 		if gb.IsLocalImport(importpath) {
 			var err error
@@ -63,11 +63,8 @@ func publishImages(ctx context.Context, importpaths []string, pub publish.Interf
 		if err != nil {
 			return nil, fmt.Errorf("error building %q: %v", importpath, err)
 		}
-		ref, err := pub.Publish(img, importpath)
-		if err != nil {
-			return nil, fmt.Errorf("error publishing %s: %v", importpath, err)
-		}
-		imgs[importpath] = ref
+		m[importpath] = img
 	}
-	return imgs, nil
+
+	return pub.MultiPublish(m)
 }

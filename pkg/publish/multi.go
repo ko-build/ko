@@ -49,6 +49,22 @@ func (p *multiPublisher) Publish(br build.Result, s string) (ref name.Reference,
 	return
 }
 
+func (p *multiPublisher) MultiPublish(m map[string]build.Result) (map[string]name.Reference, error) {
+	if len(p.publishers) == 0 {
+		return nil, errors.New("MultiPublisher configured with zero publishers")
+	}
+
+	out := map[string]name.Reference{}
+	for _, pub := range p.publishers {
+		var err error
+		out, err = pub.MultiPublish(m)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return out, nil
+}
+
 func (p *multiPublisher) Close() (err error) {
 	for _, pub := range p.publishers {
 		if perr := pub.Close(); perr != nil {

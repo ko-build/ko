@@ -36,5 +36,7 @@ func Push(img v1.Image, dst string, opt ...Option) error {
 	if err != nil {
 		return fmt.Errorf("parsing tag %q: %v", dst, err)
 	}
-	return remote.Write(tag, img, o.remote...)
+	return remote.MultiWrite(map[name.Reference]remote.Taggable{
+		tag: img,
+	}, o.remote...)
 }

@@ -28,16 +28,16 @@ import (
 // from a redirect. These redirects often included tokens or signed URLs.
 var paramWhitelist = map[string]struct{}{
 	// Token exchange
-	"scope":   struct{}{},
-	"service": struct{}{},
+	"scope":   {},
+	"service": {},
 	// Cross-repo mounting
-	"mount": struct{}{},
-	"from":  struct{}{},
+	"mount": {},
+	"from":  {},
 	// Layer PUT
-	"digest": struct{}{},
+	"digest": {},
 	// Listing tags and catalog
-	"n":    struct{}{},
-	"last": struct{}{},
+	"n":    {},
+	"last": {},
 }
 
 // Error implements error to support the following error specification:
@@ -153,8 +153,8 @@ const (
 
 // TODO: Include other error types.
 var temporaryErrorCodes = map[ErrorCode]struct{}{
-	BlobUploadInvalidErrorCode: struct{}{},
-	TooManyRequestsErrorCode:   struct{}{},
+	BlobUploadInvalidErrorCode: {},
+	TooManyRequestsErrorCode:   {},
 }
 
 // CheckError returns a structured error if the response status is not in codes.

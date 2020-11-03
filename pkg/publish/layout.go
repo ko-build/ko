@@ -66,6 +66,10 @@ func (l *LayoutPublisher) writeResult(br build.Result) error {
 	}
 }
 
+func (l *LayoutPublisher) MultiPublish(m map[string]build.Result) (map[string]name.Reference, error) {
+	return NaiveMultiPublish(l, m)
+}
+
 // Publish implements publish.Interface.
 func (l *LayoutPublisher) Publish(br build.Result, s string) (name.Reference, error) {
 	log.Printf("Saving %v", s)
