@@ -30,6 +30,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -210,6 +211,26 @@ func (g *gobuild) importPackage(ref reference) (*gb.Package, error) {
 	return nil, fmt.Errorf("unmatched importPackage %q with gomodules", ref.String())
 }
 
+func getGoarm(platform v1.Platform) (string, error) {
+	if !strings.HasPrefix(platform.Variant, "v") {
+		return "", fmt.Errorf("strange arm variant: %v", platform.Variant)
+	}
+
+	vs := strings.TrimPrefix(platform.Variant, "v")
+	variant, err := strconv.Atoi(vs)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse arm variant %q: %v", platform.Variant, err)
+	}
+	if variant >= 5 {
+		// TODO(golang/go#29373): Allow for 8 in later go versions if this is fixed.
+		if variant > 7 {
+			vs = "7"
+		}
+		return vs, nil
+	}
+	return "", nil
+}
+
 func build(ctx context.Context, ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
@@ -234,6 +255,17 @@ func build(ctx context.Context, ip string, platform v1.Platform, disableOptimiza
 		"GOOS=" + platform.OS,
 		"GOARCH=" + platform.Architecture,
 	}
+
+	if strings.HasPrefix(platform.Architecture, "arm") && platform.Variant != "" {
+		goarm, err := getGoarm(platform)
+		if err != nil {
+			return "", fmt.Errorf("goarm failure for %s: %v", ip, err)
+		}
+		if goarm != "" {
+			defaultEnv = append(defaultEnv, "GOARM="+goarm)
+		}
+	}
+
 	cmd.Env = append(defaultEnv, os.Environ()...)
 
 	var output bytes.Buffer
@@ -428,20 +460,23 @@ func (g *gobuild) tarKoData(ref reference) (*bytes.Buffer, error) {
 	return buf, walkRecursive(tw, root, kodataRoot)
 }
 
-func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image) (v1.Image, error) {
+func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platform *v1.Platform) (v1.Image, error) {
 	ref := newRef(s)
 
 	cf, err := base.ConfigFile()
 	if err != nil {
 		return nil, err
 	}
-	platform := v1.Platform{
-		OS:           cf.OS,
-		Architecture: cf.Architecture,
+	if platform == nil {
+		platform = &v1.Platform{
+			OS:           cf.OS,
+			Architecture: cf.Architecture,
+			OSVersion:    cf.OSVersion,
+		}
 	}
 
 	// Do the build into a temporary file.
-	file, err := g.build(ctx, ref.Path(), platform, g.disableOptimizations)
+	file, err := g.build(ctx, ref.Path(), *platform, g.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}
@@ -570,7 +605,7 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as image: %v", base)
 		}
-		return g.buildOne(ctx, s, base)
+		return g.buildOne(ctx, s, base, nil)
 	default:
 		return nil, fmt.Errorf("base image media type: %s", mt)
 	}
@@ -595,7 +630,7 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 		if err != nil {
 			return nil, err
 		}
-		img, err := g.buildOne(ctx, s, base)
+		img, err := g.buildOne(ctx, s, base, desc.Platform)
 		if err != nil {
 			return nil, err
 		}

@@ -540,3 +540,70 @@ func TestNestedIndex(t *testing.T) {
 		t.Errorf("Build() expected unexpected mediaType error, got: %s", err)
 	}
 }
+
+func TestGoarm(t *testing.T) {
+	// From golang@sha256:1ba0da74b20aad52b091877b0e0ece503c563f39e37aa6b0e46777c4d820a2ae
+	// and made up invalid cases.
+	for _, tc := range []struct {
+		platform v1.Platform
+		variant  string
+		err      bool
+	}{{
+		platform: v1.Platform{
+			Architecture: "arm",
+			OS:           "linux",
+			Variant:      "vnot-a-number",
+		},
+		err: true,
+	}, {
+		platform: v1.Platform{
+			Architecture: "arm",
+			OS:           "linux",
+			Variant:      "wrong-prefix",
+		},
+		err: true,
+	}, {
+		platform: v1.Platform{
+			Architecture: "arm64",
+			OS:           "linux",
+			Variant:      "v3",
+		},
+		variant: "",
+	}, {
+		platform: v1.Platform{
+			Architecture: "arm",
+			OS:           "linux",
+			Variant:      "v5",
+		},
+		variant: "5",
+	}, {
+		platform: v1.Platform{
+			Architecture: "arm",
+			OS:           "linux",
+			Variant:      "v7",
+		},
+		variant: "7",
+	}, {
+		platform: v1.Platform{
+			Architecture: "arm64",
+			OS:           "linux",
+			Variant:      "v8",
+		},
+		variant: "7",
+	},
+	} {
+		variant, err := getGoarm(tc.platform)
+		if tc.err {
+			if err == nil {
+				t.Errorf("getGoarm(%v) expected err", tc.platform)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("getGoarm failed for %v: %v", tc.platform, err)
+		}
+		if got, want := variant, tc.variant; got != want {
+			t.Errorf("wrong variant for %v: want %q got %q", tc.platform, want, got)
+		}
+	}
+}
