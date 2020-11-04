@@ -147,6 +147,7 @@ func addCreate(topLevel *cobra.Command) {
 	options.AddPublishArg(create, po)
 	options.AddFileArg(create, fo)
 	options.AddSelectorArg(create, so)
+	options.AddStrictArg(create, sto)
 	options.AddBuildOptions(create, bo)
 
 	// Collect the ko-specific apply flags before registering the kubectl global
