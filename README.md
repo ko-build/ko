@@ -268,6 +268,19 @@ of convenience for cleaning up resources created through `ko apply`.
 `ko version` prints version of ko. For not released binaries it will print hash
 of latest commit in current git tree.
 
+### Strict Mode
+
+It can be difficult for `ko` to determine whether a string in a YAML file is
+intended to be an import path, due to typos, non-`package main` packages, and
+conflicts between import paths and common strings (e.g., a package whose import
+path is `busybox`). To solve this, `ko` supports "Strict Mode".
+
+When referencing an import path in the YAML file, prefix the string with the
+string `ko://` (e.g., `ko://github.com/my/repo/cmd/foo`). Then, when calling
+`ko apply` or `ko resolve`, pass `--strict`. If a string with the `ko://` prefix
+is not determined to be a valid import path, the command will fail, rather than
+passing it through to the resolved YAML.
+
 ## With `minikube`
 
 You can use `ko` with `minikube` via a Docker Registry, but this involves
