@@ -57,8 +57,14 @@ jobs:
 
       - name: ${{ matrix.tool }} ${{ matrix.options }}
         shell: bash
-        run: |
-          ${{ matrix.tool }} ${{ matrix.options }} -w $(find . -path './vendor' -prune -o -path './third_party' -prune -o -name '*.pb.go' -prune -o -type f -name '*.go' -print)
+        run: >
+          ${{ matrix.tool }} ${{ matrix.options }} -w
+          $(find .
+          -path './vendor' -prune
+          -o -path './third_party' -prune
+          -o -name '*.pb.go' -prune
+          -o -name 'wire_gen.go' -prune
+          -o -type f -name '*.go' -print)
 
       - name: Verify ${{ matrix.tool }}
         shell: bash
@@ -239,7 +245,9 @@ jobs:
               elif echo $ch | grep --quiet -E "fmt\." ; then  # all other fmt. printers.
                 err=$(echo $ch | sed -E 's/(fmt\.)(Print|Fprint)f([^%]+) (%[^sTxq]",)([^,]+)/\1\2\3",\5/')
               fi
-              echo "$file:$line: Please consider avoiding tail format like this:%0A$err"
+              # Trim spaces.
+              ch=$(echo $ch | xargs)
+              echo "$file:$line: Please consider avoiding tail format like this:%0A- $ch%0A+ $err"
           done |
           reviewdog -efm="%f:%l: %m" \
                 -name="Redundant Format" \

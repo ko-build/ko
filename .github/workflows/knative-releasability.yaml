@@ -80,7 +80,7 @@ jobs:
           # The following pushes the stdout of buoy into $CHECK_MESSAGE
           CHECK=0
           echo 'CHECK_MESSAGE<<EOF' >> $GITHUB_ENV
-          buoy check go.mod --release ${RELEASE} --domain knative.dev --verbose >> $GITHUB_ENV || CHECK=$?
+          buoy check go.mod --release ${RELEASE} --domain knative.dev --verbose >> $GITHUB_ENV 2>&1 || CHECK=$?
           echo 'EOF' >> $GITHUB_ENV
 
           # We just captured the return code of the buoy call, test it to see
@@ -104,8 +104,25 @@ jobs:
       - name: Verify
         if: steps.exists.outputs.release-branch == 'false' && env.current == 'true'
         run: |
+          # If we don't run `git status` before the "git diff-index" it seems
+          # to list every file that's been touched by codegen.
+          git status
+          FOUND_DIFF=0
+          for x in $(git diff-index --name-only HEAD --); do
+            if [ "$(basename $x)" = "go.mod" ]; then
+              continue
+            elif [ "$(basename $x)" = "go.sum" ]; then
+              continue
+            elif [ "$(basename $x)" = "modules.txt" ]; then
+              continue
+            fi
+            echo "Found non-module diff: $x"
+            FOUND_DIFF=1
+            break
+          done
+
           # If we see no changes after the upgrade, then we are up to date.
-          if [[ -z "$(git status --porcelain)" ]]; then
+          if [[ "$FOUND_DIFF" -eq "0"  ]]; then
               echo "VERIFY_MESSAGE=${{ github.repository }} up to date." >> $GITHUB_ENV
           else
               echo "VERIFY_MESSAGE=${{ github.repository }} is out of date." >> $GITHUB_ENV
