@@ -21,6 +21,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/ko/pkg/commands"
 
+	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/spf13/cobra"
 )
 
@@ -37,6 +38,10 @@ func main() {
 		},
 	}
 	commands.AddKubeCommands(cmds)
+
+	// Also add the auth group from crane to facilitate logging into a
+	// registry.
+	cmds.AddCommand(cranecmd.NewCmdAuth())
 
 	if err := cmds.Execute(); err != nil {
 		log.Fatalf("error during command execution: %v", err)
