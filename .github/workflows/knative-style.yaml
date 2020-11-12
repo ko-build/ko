@@ -234,7 +234,7 @@ jobs:
               ch=$(echo $ent | cut -d':' -f3-);
               err="Unknown printer tool, please file an issue in knative-sandbox/.github and assign to @vagababov: $ch"
               if echo $ch | grep --quiet -E "^t.(Errorf|Fatalf|Logf)" ; then
-                err=$(echo $ch | sed  -E 's/([^.fm]+t\.)(Fatal|Error|Log)f([^\%]+)( %[^Tq]",)([^,]+)/\1\2\3",\5/')
+                err=$(echo $ch | sed  -E 's/(^t\.)(Fatal|Error|Log)f([^\%]+)( %[^Tqx]",)([^,]+)/\1\2\3",\5/')
                 # Not a test. Here we deal with various loggers and fmt helpers.
               elif echo $ch | grep --quiet "log" ; then
                 # Capture (x)?log(er)?.
