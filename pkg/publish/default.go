@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"path/filepath"
+	"path"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -59,7 +59,7 @@ type Namer func(string, string) string
 // name for maximum clarity, e.g.
 //   gcr.io/foo/github.com/bar/baz/cmd/blah
 //   ^--base--^ ^-------import path-------^
-func identity(base, in string) string { return filepath.Join(base, in) }
+func identity(base, in string) string { return path.Join(base, in) }
 
 // As some registries do not support pushing an image by digest, the default tag for pushing
 // is the 'latest' tag.
