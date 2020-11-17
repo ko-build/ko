@@ -17,7 +17,7 @@ package options
 import (
 	"crypto/md5" //nolint: gosec // No strong cryptography needed.
 	"encoding/hex"
-	"path/filepath"
+	"path"
 
 	"github.com/google/ko/pkg/publish"
 	"github.com/spf13/cobra"
@@ -71,15 +71,15 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 func packageWithMD5(base, importpath string) string {
 	hasher := md5.New() //nolint: gosec // No strong cryptography needed.
 	hasher.Write([]byte(importpath))
-	return filepath.Join(base, filepath.Base(importpath)+"-"+hex.EncodeToString(hasher.Sum(nil)))
+	return path.Join(base, path.Base(importpath)+"-"+hex.EncodeToString(hasher.Sum(nil)))
 }
 
 func preserveImportPath(base, importpath string) string {
-	return filepath.Join(base, importpath)
+	return path.Join(base, importpath)
 }
 
 func baseImportPaths(base, importpath string) string {
-	return filepath.Join(base, filepath.Base(importpath))
+	return path.Join(base, path.Base(importpath))
 }
 
 func bareDockerRepo(base, _ string) string {
