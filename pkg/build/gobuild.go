@@ -231,6 +231,14 @@ func getGoarm(platform v1.Platform) (string, error) {
 	return "", nil
 }
 
+// TODO(jonjohnsonjr): Upstream something like this.
+func platformToString(p v1.Platform) string {
+	if p.Variant != "" {
+		return fmt.Sprintf("%s/%s/%s", p.OS, p.Architecture, p.Variant)
+	}
+	return fmt.Sprintf("%s/%s", p.OS, p.Architecture)
+}
+
 func build(ctx context.Context, ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
@@ -272,7 +280,7 @@ func build(ctx context.Context, ip string, platform v1.Platform, disableOptimiza
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s for %s/%s", ip, platform.OS, platform.Architecture)
+	log.Printf("Building %s for %s", ip, platformToString(platform))
 	if err := cmd.Run(); err != nil {
 		os.RemoveAll(tmpDir)
 		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
