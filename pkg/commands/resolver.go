@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -232,9 +233,12 @@ func resolveFilesToWriter(
 				value := v.([]string)
 
 				for _, ip := range value {
+					// dep-notify doesn't understand the ko:// prefix
+					ip := strings.TrimPrefix(ip, build.StrictScheme)
 					if ss.Has(ip) {
 						// See the comment above about how "builder" works.
-						builder.Invalidate(ip)
+						// Always use ko:// for the builder.
+						builder.Invalidate(build.StrictScheme + ip)
 						fs <- key
 					}
 				}
@@ -309,13 +313,16 @@ func resolveFilesToWriter(
 				ch <- b
 				if fo.Watch {
 					for _, ip := range recordingBuilder.ImportPaths {
+						// dep-notify doesn't understand the ko:// prefix
+						ip := strings.TrimPrefix(ip, build.StrictScheme)
+
 						// Technically we never remove binary targets from the graph,
 						// which will increase our graph's watch load, but the
 						// notifications that they change will result in no affected
 						// yamls, and no new builds or deploys.
 						if err := g.Add(ip); err != nil {
 							// If we're in watch mode, just fail.
-							err := fmt.Errorf("adding importpath to dep graph: %v", err)
+							err := fmt.Errorf("adding importpath %q to dep graph: %v", ip, err)
 							errCh <- err
 							return err
 						}
