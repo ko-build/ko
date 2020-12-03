@@ -142,7 +142,7 @@ jobs:
           echo 'SLACK_TITLE=Releasability for ${{ github.repository }} @ ${{ env.RELEASE }} is NO-GO!' >> $GITHUB_ENV
 
       - name: Post status to Slack
-        if: steps.exists.outputs.release-branch == 'false'
+        if: ${{ secrets.SLACK_WEBHOOK != '' && steps.exists.outputs.release-branch == 'false' }}
         uses: rtCamp/action-slack-notify@v2.1.0
         env:
           SLACK_ICON: http://github.com/knative.png?size=48
