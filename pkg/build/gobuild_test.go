@@ -92,8 +92,8 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 		withModuleInfo(mods),
 		withBuildContext(stubBuildContext{
 			// make all referenced deps commands
-			"github.com/google/ko/test": &gb.Package{Name: "main"},
-			"github.com/some/module/cmd":       &gb.Package{Name: "main"},
+			"github.com/google/ko/test":  &gb.Package{Name: "main"},
+			"github.com/some/module/cmd": &gb.Package{Name: "main"},
 
 			"github.com/google/ko/pkg/build": &gb.Package{Name: "build"},
 		}),
@@ -106,8 +106,8 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		"ko://github.com/google/ko/test", // ko can build the test package.
-		"ko://github.com/some/module/cmd",       // ko can build commands in dependent modules
+		"ko://github.com/google/ko/test",  // ko can build the test package.
+		"ko://github.com/some/module/cmd", // ko can build commands in dependent modules
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if err := ng.IsSupportedReference(importpath); err != nil {
@@ -120,7 +120,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	for _, importpath := range []string{
 		"ko://github.com/google/ko/pkg/build",       // not a command.
 		"ko://github.com/google/ko/pkg/nonexistent", // does not exist.
-		"ko://github.com/google/ko",          // not in this module.
+		"ko://github.com/google/ko",                 // not in this module.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if err := ng.IsSupportedReference(importpath); err == nil {
