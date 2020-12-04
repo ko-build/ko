@@ -32,5 +32,5 @@ find vendor/ -type l -exec sh -c 'for x; do [ -e "$x" ] || rm "$x"; done' _ {} +
 
 
 # HACK HACK HACK:
-# Until we can cleanly remove it, copy root ko.go and move it to ./cmd/ko
-cp ${PROJECT_ROOT}/ko.go ${PROJECT_ROOT}/cmd/ko/main.go
+# Until we can cleanly remove it, copy root main.go and move it to ./cmd/ko
+cp ${PROJECT_ROOT}/main.go ${PROJECT_ROOT}/cmd/ko/
