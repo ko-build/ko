@@ -46,7 +46,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		"ko://github.com/google/ko/cmd/ko", // ko can build itself.
+		"ko://github.com/google/ko", // ko can build itself.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if err := ng.IsSupportedReference(importpath); err != nil {
@@ -76,7 +76,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 
 	mods := &modules{
 		main: &modInfo{
-			Path: "github.com/google/ko/cmd/ko/test",
+			Path: "github.com/google/ko/test",
 			Dir:  ".",
 		},
 		deps: map[string]*modInfo{
@@ -92,7 +92,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 		withModuleInfo(mods),
 		withBuildContext(stubBuildContext{
 			// make all referenced deps commands
-			"github.com/google/ko/cmd/ko/test": &gb.Package{Name: "main"},
+			"github.com/google/ko/test": &gb.Package{Name: "main"},
 			"github.com/some/module/cmd":       &gb.Package{Name: "main"},
 
 			"github.com/google/ko/pkg/build": &gb.Package{Name: "build"},
@@ -106,7 +106,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		"ko://github.com/google/ko/cmd/ko/test", // ko can build the test package.
+		"ko://github.com/google/ko/test", // ko can build the test package.
 		"ko://github.com/some/module/cmd",       // ko can build commands in dependent modules
 	} {
 		t.Run(importpath, func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	for _, importpath := range []string{
 		"ko://github.com/google/ko/pkg/build",       // not a command.
 		"ko://github.com/google/ko/pkg/nonexistent", // does not exist.
-		"ko://github.com/google/ko/cmd/ko",          // not in this module.
+		"ko://github.com/google/ko",          // not in this module.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if err := ng.IsSupportedReference(importpath); err == nil {
@@ -166,7 +166,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko"))
+	result, err := ng.Build(context.Background(), StrictScheme+importpath)
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -191,7 +191,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
-		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko"))
+		result2, err := ng.Build(context.Background(), StrictScheme+importpath)
 		if err != nil {
 			t.Fatalf("Build() = %v", err)
 		}
@@ -407,7 +407,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -421,7 +421,7 @@ func TestGoBuild(t *testing.T) {
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
-		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
+		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
 		if err != nil {
 			t.Fatalf("Build() = %v", err)
 		}
@@ -461,7 +461,7 @@ func TestGoBuildIndex(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
 	if err != nil {
 		t.Fatalf("Build() = %v", err)
 	}
@@ -490,7 +490,7 @@ func TestGoBuildIndex(t *testing.T) {
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
-		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
+		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
 		if err != nil {
 			t.Fatalf("Build() = %v", err)
 		}
@@ -531,7 +531,7 @@ func TestNestedIndex(t *testing.T) {
 		t.Fatalf("NewGo() = %v", err)
 	}
 
-	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "cmd", "ko", "test"))
+	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
 	if err == nil {
 		t.Fatal("Build() expected err")
 	}

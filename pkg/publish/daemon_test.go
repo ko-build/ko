@@ -48,7 +48,7 @@ func init() {
 }
 
 func TestDaemon(t *testing.T) {
-	importpath := "github.com/google/ko/cmd/ko"
+	importpath := "github.com/google/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -65,7 +65,7 @@ func TestDaemon(t *testing.T) {
 func TestDaemonTags(t *testing.T) {
 	Tags = nil
 
-	importpath := "github.com/google/ko/cmd/ko"
+	importpath := "github.com/google/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
