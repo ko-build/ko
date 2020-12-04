@@ -30,7 +30,3 @@ go mod vendor
 # From https://stackoverflow.com/questions/22097130/delete-all-broken-symbolic-links-with-a-line
 find vendor/ -type l -exec sh -c 'for x; do [ -e "$x" ] || rm "$x"; done' _ {} +
 
-
-# HACK HACK HACK:
-# Until we can cleanly remove it, copy root main.go and move it to ./cmd/ko
-cp ${PROJECT_ROOT}/main.go ${PROJECT_ROOT}/cmd/ko/

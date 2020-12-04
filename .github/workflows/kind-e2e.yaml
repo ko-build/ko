@@ -131,7 +131,7 @@ jobs:
     - name: Run Smoke Test
       run: |
         # Test with kind load
-        KO_DOCKER_REPO=kind.local ko apply --platform=all -f ./cmd/ko/test
+        KO_DOCKER_REPO=kind.local ko apply --platform=all -f ./test
         kubectl wait --timeout=10s --for=condition=Ready pod/kodata
         kubectl delete pod kodata
 
