@@ -13,10 +13,10 @@
 
 `ko` can be installed and upgraded by running:
 
-**Note**: Golang version `1.12.0` or higher is required.
+**Note**: Golang version `1.14.0` or higher is required.
 
 ```shell
-GO111MODULE=on go get github.com/google/ko
+go get github.com/google/ko
 ```
 
 ## Authenticating
