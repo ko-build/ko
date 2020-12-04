@@ -136,7 +136,7 @@ jobs:
         kubectl delete pod kodata
 
         # Test with registry
-        ko apply --platform=all -f ./cmd/ko/test
+        ko apply --platform=all -f ./test
         kubectl wait --timeout=60s --for=condition=Ready pod/kodata
         kubectl delete pod kodata
 

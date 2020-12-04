@@ -416,7 +416,7 @@ KO_DATA_PATH=$PWD/test/kodata go run ./test/*.go
 This produces identical output to being run within the container locally:
 
 ```shell
-ko publish -L ./cmd/test
+ko publish -L ./test
 2018/07/19 23:36:11 Using base gcr.io/distroless/static:nonroot for github.com/google/ko/test
 2018/07/19 23:36:12 Loading ko.local/github.com/google/ko/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
 2018/07/19 23:36:13 Loaded ko.local/github.com/google/ko/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
@@ -429,7 +429,7 @@ docker run -ti --rm ko.local/github.com/google/ko/test:703c205bf2f405af520b40536
 
 ```shell
 ko apply -f test/test.yaml
-2018/07/19 23:38:24 Using base gcr.io/distroless/static:nonroot for github.com/google/ko/cmd/test
+2018/07/19 23:38:24 Using base gcr.io/distroless/static:nonroot for github.com/google/ko/test
 2018/07/19 23:38:25 Publishing us.gcr.io/my-project/test-294a7bdc57d85dc6ddeef5ba38a59fe9:latest
 2018/07/19 23:38:26 mounted blob: sha256:988abcba36b5948da8baa1e3616b94c0b56da814b8f6ff3ae3ac316e375e093a
 2018/07/19 23:38:26 mounted blob: sha256:57752e7f9593cbfb7101af994b136a369ecc8174332866622db32a264f3fbefd
