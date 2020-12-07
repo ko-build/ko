@@ -33,6 +33,5 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,
 		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
 	cmd.Flags().StringVar(&bo.Platform, "platform", "",
-		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]]")
-
+		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 }

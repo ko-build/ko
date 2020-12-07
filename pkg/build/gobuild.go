@@ -61,6 +61,7 @@ type gobuild struct {
 	disableOptimizations bool
 	mod                  *modules
 	buildContext         buildContext
+	platform             string
 }
 
 // Option is a functional option for NewGo.
@@ -73,6 +74,7 @@ type gobuildOpener struct {
 	disableOptimizations bool
 	mod                  *modules
 	buildContext         buildContext
+	platform             string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -86,6 +88,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		disableOptimizations: gbo.disableOptimizations,
 		mod:                  gbo.mod,
 		buildContext:         gbo.buildContext,
+		platform:             gbo.platform,
 	}, nil
 }
 
@@ -623,6 +626,15 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, s)
 		}
 
+		matches, err := matchesPlatformSpec(desc.Platform, g.platform)
+		if err != nil {
+			return nil, err
+		}
+
+		if !matches {
+			continue
+		}
+
 		base, err := base.Image(desc.Digest)
 		if err != nil {
 			return nil, err
@@ -648,4 +660,41 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 	}
 
 	return mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType), nil
+}
+
+func matchesPlatformSpec(base *v1.Platform, spec string) (bool, error) {
+	if spec == "all" {
+		return true, nil
+	}
+
+	// Don't build anything without a platform field unless "all". Unclear what we should do here.
+	if base == nil {
+		return false, nil
+	}
+
+	// This should never happen because we default to linux/amd64.
+	if spec == "" {
+		return false, fmt.Errorf("platform was unexpectedly %q", "")
+	}
+
+	// TODO: Parse this once in Open() and match more efficiently.
+	for _, platform := range strings.Split(spec, ",") {
+		parts := strings.Split(platform, "/")
+		if len(parts) > 0 && base.OS != parts[0] {
+			continue
+		}
+		if len(parts) > 1 && base.Architecture != parts[1] {
+			continue
+		}
+		if len(parts) > 2 && base.Variant != parts[2] {
+			continue
+		}
+		if len(parts) > 3 {
+			return false, fmt.Errorf("too many slashes in platform spec: %s", platform)
+		}
+
+		return true, nil
+	}
+
+	return false, nil
 }

@@ -45,6 +45,19 @@ func WithDisabledOptimizations() Option {
 	}
 }
 
+// WithPlatforms is a functional option for building certain platforms for
+// multi-platform base images. To build everything from the base, use "all",
+// otherwise use a comma-separated list of platform specs, i.e.:
+//
+// platform = <os>[/<arch>[/<variant>]]
+// allowed = all | platform[,platform]*
+func WithPlatforms(platforms string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.platform = platforms
+		return nil
+	}
+}
+
 // withBuilder is a functional option for overriding the way go binaries
 // are built.
 func withBuilder(b builder) Option {

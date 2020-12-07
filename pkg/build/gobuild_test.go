@@ -458,6 +458,7 @@ func TestGoBuildIndex(t *testing.T) {
 		context.Background(),
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }),
+		WithPlatforms("all"),
 		withBuilder(writeTempFile),
 	)
 	if err != nil {
@@ -608,6 +609,83 @@ func TestGoarm(t *testing.T) {
 		}
 		if got, want := variant, tc.variant; got != want {
 			t.Errorf("wrong variant for %v: want %q got %q", tc.platform, want, got)
+		}
+	}
+}
+
+func TestMatchesPlatformSpec(t *testing.T) {
+	for _, tc := range []struct {
+		platform *v1.Platform
+		spec     string
+		result   bool
+		err      bool
+	}{{
+		platform: nil,
+		spec:     "all",
+		result:   true,
+	}, {
+		platform: nil,
+		spec:     "linux/amd64",
+		result:   false,
+	}, {
+		platform: &v1.Platform{
+			Architecture: "amd64",
+			OS:           "linux",
+		},
+		spec:   "all",
+		result: true,
+	}, {
+		platform: &v1.Platform{
+			Architecture: "amd64",
+			OS:           "windows",
+		},
+		spec:   "linux",
+		result: false,
+	}, {
+		platform: &v1.Platform{
+			Architecture: "arm64",
+			OS:           "linux",
+			Variant:      "v3",
+		},
+		spec:   "linux/amd64,linux/arm64",
+		result: true,
+	}, {
+		platform: &v1.Platform{
+			Architecture: "arm64",
+			OS:           "linux",
+			Variant:      "v3",
+		},
+		spec:   "linux/amd64,linux/arm64/v4",
+		result: false,
+	}, {
+		platform: &v1.Platform{
+			Architecture: "arm64",
+			OS:           "linux",
+			Variant:      "v3",
+		},
+		spec: "linux/amd64,linux/arm64/v3/z5",
+		err:  true,
+	}, {
+		spec: "",
+		platform: &v1.Platform{
+			Architecture: "amd64",
+			OS:           "linux",
+		},
+		err: true,
+	},
+	} {
+		matches, err := matchesPlatformSpec(tc.platform, tc.spec)
+		if tc.err {
+			if err == nil {
+				t.Errorf("matchesPlatformSpec(%v, %q) expected err", tc.platform, tc.spec)
+			}
+			continue
+		}
+		if err != nil {
+			t.Fatalf("matchesPlatformSpec failed for %v %q: %v", tc.platform, tc.spec, err)
+		}
+		if got, want := matches, tc.result; got != want {
+			t.Errorf("wrong result for %v %q: want %t got %t", tc.platform, tc.spec, want, got)
 		}
 	}
 }
