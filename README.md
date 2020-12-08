@@ -454,13 +454,25 @@ a multi-architecture
 (aka "manifest list"), with support for each OS and architecture pair supported
 by the base image.
 
-If `ko` is invoked with `--platform=<some-OS>/<some-platform>` (e.g.,
+If `ko` is invoked with `--platform=<some-OS>/<some-arch>` (e.g.,
 `--platform=linux/amd64` or `--platform=linux/arm64`), then it will attempt to
 build an image for that OS and architecture only, assuming the base image
 supports it.
 
-When `--platform` is not provided, `ko` builds an image with the OS and
-architecture based on the build environment's `GOOS` and `GOARCH`.
+If the base image is a manifest list with more platforms than you want to build,
+invoking `ko` with comma-separated list of platforms (e.g.
+`--platform=linux/amd64,linux/arm/v6`) will produce a manifest list
+containing only the provided platforms. Note that if the base image does not
+contain platforms that are provided by this flag, `ko` will be unable to build
+a corresponding image, and this is not an error. The resulting artifact will be
+a multi-platform image containing the intersection of platforms from the base
+image and the `--platform` flag. This is especially relevant for projects that
+use multiple base images, as you must ensure that every base image contains all
+the platforms that you'd like to build.
+
+When `--platform` is not provided, if both `GOOS` and `GOARCH` environment
+variables are set, `ko` will build an image for `${GOOS}/${GOARCH}`, otherwise
+`ko` will build a `linux/amd64` image.
 
 ## Enable Autocompletion
 
