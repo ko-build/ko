@@ -671,10 +671,10 @@ func TestMatchesPlatformSpec(t *testing.T) {
 			Architecture: "amd64",
 			OS:           "linux",
 		},
-		err: true,
+		result: false,
 	},
 	} {
-		matches, err := matchesPlatformSpec(tc.platform, tc.spec)
+		parsed, err := parseSpec(tc.spec)
 		if tc.err {
 			if err == nil {
 				t.Errorf("matchesPlatformSpec(%v, %q) expected err", tc.platform, tc.spec)
@@ -684,6 +684,7 @@ func TestMatchesPlatformSpec(t *testing.T) {
 		if err != nil {
 			t.Fatalf("matchesPlatformSpec failed for %v %q: %v", tc.platform, tc.spec, err)
 		}
+		matches := matchesPlatformSpec(tc.platform, tc.spec, parsed)
 		if got, want := matches, tc.result; got != want {
 			t.Errorf("wrong result for %v %q: want %t got %t", tc.platform, tc.spec, want, got)
 		}

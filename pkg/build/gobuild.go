@@ -62,6 +62,7 @@ type gobuild struct {
 	mod                  *modules
 	buildContext         buildContext
 	platform             string
+	parsedPlatform       []v1.Platform
 }
 
 // Option is a functional option for NewGo.
@@ -81,6 +82,10 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	if gbo.getBase == nil {
 		return nil, errors.New("a way of providing base images must be specified, see build.WithBaseImages")
 	}
+	parsed, err := parseSpec(gbo.platform)
+	if err != nil {
+		return nil, err
+	}
 	return &gobuild{
 		getBase:              gbo.getBase,
 		creationTime:         gbo.creationTime,
@@ -89,6 +94,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		mod:                  gbo.mod,
 		buildContext:         gbo.buildContext,
 		platform:             gbo.platform,
+		parsedPlatform:       parsed,
 	}, nil
 }
 
@@ -626,12 +632,7 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, s)
 		}
 
-		matches, err := matchesPlatformSpec(desc.Platform, g.platform)
-		if err != nil {
-			return nil, err
-		}
-
-		if !matches {
+		if !matchesPlatformSpec(desc.Platform, g.platform, g.parsedPlatform) {
 			continue
 		}
 
@@ -662,39 +663,57 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 	return mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType), nil
 }
 
-func matchesPlatformSpec(base *v1.Platform, spec string) (bool, error) {
+func parseSpec(spec string) ([]v1.Platform, error) {
+	// Don't bother parsing "all".
+	// "" should never happen because we default to linux/amd64.
+	platforms := []v1.Platform{}
+	if spec == "all" || spec == "" {
+		return platforms, nil
+	}
+
+	for _, platform := range strings.Split(spec, ",") {
+		var p v1.Platform
+		parts := strings.Split(strings.TrimSpace(platform), "/")
+		if len(parts) > 0 {
+			p.OS = parts[0]
+		}
+		if len(parts) > 1 {
+			p.Architecture = parts[1]
+		}
+		if len(parts) > 2 {
+			p.Variant = parts[2]
+		}
+		if len(parts) > 3 {
+			return nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
+		}
+		platforms = append(platforms, p)
+	}
+	return platforms, nil
+}
+
+func matchesPlatformSpec(base *v1.Platform, spec string, parsed []v1.Platform) bool {
 	if spec == "all" {
-		return true, nil
+		return true
 	}
 
 	// Don't build anything without a platform field unless "all". Unclear what we should do here.
 	if base == nil {
-		return false, nil
+		return false
 	}
 
-	// This should never happen because we default to linux/amd64.
-	if spec == "" {
-		return false, fmt.Errorf("platform was unexpectedly %q", "")
+	for _, p := range parsed {
+		if p.OS != "" && base.OS != p.OS {
+			continue
+		}
+		if p.Architecture != "" && base.Architecture != p.Architecture {
+			continue
+		}
+		if p.Variant != "" && base.Variant != p.Variant {
+			continue
+		}
+
+		return true
 	}
 
-	// TODO: Parse this once in Open() and match more efficiently.
-	for _, platform := range strings.Split(spec, ",") {
-		parts := strings.Split(platform, "/")
-		if len(parts) > 0 && base.OS != parts[0] {
-			continue
-		}
-		if len(parts) > 1 && base.Architecture != parts[1] {
-			continue
-		}
-		if len(parts) > 2 && base.Variant != parts[2] {
-			continue
-		}
-		if len(parts) > 3 {
-			return false, fmt.Errorf("too many slashes in platform spec: %s", platform)
-		}
-
-		return true, nil
-	}
-
-	return false, nil
+	return false
 }
