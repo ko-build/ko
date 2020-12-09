@@ -19,7 +19,7 @@ name: Do Not Submit
 
 on:
   pull_request:
-    branches: [ 'master', 'release-*' ]
+    branches: [ 'main', 'master', 'release-*' ]
 
 jobs:
 
