@@ -20,5 +20,13 @@ func Manifest(ref string, opt ...Option) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	o := makeOptions(opt...)
+	if o.platform != nil {
+		img, err := desc.Image()
+		if err != nil {
+			return nil, err
+		}
+		return img.RawManifest()
+	}
 	return desc.Manifest, nil
 }

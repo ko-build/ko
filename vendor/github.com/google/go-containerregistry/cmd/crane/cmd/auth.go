@@ -29,8 +29,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdAuth()) }
-
 // NewCmdAuth creates a new cobra.Command for the auth subcommand.
 func NewCmdAuth() *cobra.Command {
 	cmd := &cobra.Command{
@@ -63,11 +61,11 @@ func NewCmdAuthGet() *cobra.Command {
 			if err != nil {
 				log.Fatal(err)
 			}
-			auther, err := authn.DefaultKeychain.Resolve(reg)
+			authorizer, err := authn.DefaultKeychain.Resolve(reg)
 			if err != nil {
 				log.Fatal(err)
 			}
-			auth, err := auther.Authorization()
+			auth, err := authorizer.Authorization()
 			if err != nil {
 				log.Fatal(err)
 			}

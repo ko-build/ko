@@ -16,9 +16,11 @@ package crane
 
 import (
 	"fmt"
+	"os"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/stream"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
@@ -26,12 +28,32 @@ import (
 func Append(base v1.Image, paths ...string) (v1.Image, error) {
 	layers := make([]v1.Layer, 0, len(paths))
 	for _, path := range paths {
-		layer, err := tarball.LayerFromFile(path)
+		layer, err := getLayer(path)
 		if err != nil {
-			return nil, fmt.Errorf("reading tar %q: %v", path, err)
+			return nil, fmt.Errorf("reading layer %q: %v", path, err)
 		}
+
 		layers = append(layers, layer)
 	}
 
 	return mutate.AppendLayers(base, layers...)
+}
+
+func getLayer(path string) (v1.Layer, error) {
+	fi, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	// If we're dealing with a named pipe, trying to open it multiple times will
+	// fail, so we need to do a streaming upload.
+	if !fi.Mode().IsRegular() {
+		rc, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		return stream.NewLayer(rc), nil
+	}
+
+	return tarball.LayerFromFile(path)
 }

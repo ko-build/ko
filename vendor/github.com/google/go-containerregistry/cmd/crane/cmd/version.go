@@ -11,7 +11,15 @@ import (
 // -ldflags="-X 'github.com/google/go-containerregistry/cmd/crane/cmd.Version=$TAG'"
 var Version string
 
-func init() { Root.AddCommand(NewCmdVersion()) }
+func init() {
+	if Version == "" {
+		i, ok := debug.ReadBuildInfo()
+		if !ok {
+			return
+		}
+		Version = i.Main.Version
+	}
+}
 
 // NewCmdVersion creates a new cobra.Command for the version subcommand.
 func NewCmdVersion() *cobra.Command {
@@ -25,14 +33,10 @@ This could also be the go module version, if built with go modules (often "(deve
 		Args: cobra.NoArgs,
 		Run: func(_ *cobra.Command, _ []string) {
 			if Version == "" {
-				i, ok := debug.ReadBuildInfo()
-				if !ok {
-					fmt.Println("could not determine build information")
-					return
-				}
-				Version = i.Main.Version
+				fmt.Println("could not determine build information")
+			} else {
+				fmt.Println(Version)
 			}
-			fmt.Println(Version)
 		},
 	}
 }

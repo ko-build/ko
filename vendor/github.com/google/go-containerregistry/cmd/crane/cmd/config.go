@@ -22,16 +22,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdConfig()) }
-
 // NewCmdConfig creates a new cobra.Command for the config subcommand.
-func NewCmdConfig() *cobra.Command {
+func NewCmdConfig(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
 		Use:   "config IMAGE",
 		Short: "Get the config of an image",
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			cfg, err := crane.Config(args[0], options...)
+			cfg, err := crane.Config(args[0], *options...)
 			if err != nil {
 				log.Fatalf("fetching config: %v", err)
 			}

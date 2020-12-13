@@ -12,14 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1
+// Package redact contains a simple context signal for redacting requests.
+package redact
 
-// Update representation of an update of transfer progress. Some functions
-// in this module can take a channel to which updates will be sent while a
-// transfer is in progress.
-// +k8s:deepcopy-gen=false
-type Update struct {
-	Total    int64
-	Complete int64
-	Error    error
+import (
+	"context"
+)
+
+type contextKey string
+
+var redactKey = contextKey("redact")
+
+// NewContext creates a new ctx with the reason for redaction.
+func NewContext(ctx context.Context, reason string) context.Context {
+	return context.WithValue(ctx, redactKey, reason)
+}
+
+// FromContext returns the redaction reason, if any.
+func FromContext(ctx context.Context) (bool, string) {
+	reason, ok := ctx.Value(redactKey).(string)
+	return ok, reason
 }

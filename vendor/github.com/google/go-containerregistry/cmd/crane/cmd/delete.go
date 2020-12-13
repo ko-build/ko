@@ -21,17 +21,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdDelete()) }
-
 // NewCmdDelete creates a new cobra.Command for the delete subcommand.
-func NewCmdDelete() *cobra.Command {
+func NewCmdDelete(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
 		Use:   "delete IMAGE",
 		Short: "Delete an image reference from its registry",
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
 			ref := args[0]
-			if err := crane.Delete(ref, options...); err != nil {
+			if err := crane.Delete(ref, *options...); err != nil {
 				log.Fatalf("deleting %s: %v", ref, err)
 			}
 		},

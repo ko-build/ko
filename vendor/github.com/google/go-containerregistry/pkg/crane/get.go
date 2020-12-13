@@ -43,3 +43,12 @@ func getManifest(r string, opt ...Option) (*remote.Descriptor, error) {
 	}
 	return remote.Get(ref, o.remote...)
 }
+
+func head(r string, opt ...Option) (*v1.Descriptor, error) {
+	o := makeOptions(opt...)
+	ref, err := name.ParseReference(r, o.name...)
+	if err != nil {
+		return nil, err
+	}
+	return remote.Head(ref, o.remote...)
+}

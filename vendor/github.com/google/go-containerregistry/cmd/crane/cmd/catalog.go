@@ -22,17 +22,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdCatalog()) }
-
 // NewCmdCatalog creates a new cobra.Command for the repos subcommand.
-func NewCmdCatalog() *cobra.Command {
+func NewCmdCatalog(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
 		Use:   "catalog",
 		Short: "List the repos in a registry",
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
 			reg := args[0]
-			repos, err := crane.Catalog(reg, options...)
+			repos, err := crane.Catalog(reg, *options...)
 			if err != nil {
 				log.Fatalf("reading repos for %s: %v", reg, err)
 			}

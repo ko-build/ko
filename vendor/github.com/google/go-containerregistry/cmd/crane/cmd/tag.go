@@ -21,10 +21,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdTag()) }
-
 // NewCmdTag creates a new cobra.Command for the tag subcommand.
-func NewCmdTag() *cobra.Command {
+func NewCmdTag(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
 		Use:   "tag IMG TAG",
 		Short: "Efficiently tag a remote image",
@@ -42,7 +40,7 @@ crane tag ubuntu v1`,
 		Args: cobra.ExactArgs(2),
 		Run: func(_ *cobra.Command, args []string) {
 			img, tag := args[0], args[1]
-			if err := crane.Tag(img, tag, options...); err != nil {
+			if err := crane.Tag(img, tag, *options...); err != nil {
 				log.Fatal(err)
 			}
 		},
