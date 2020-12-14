@@ -22,16 +22,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdDigest()) }
-
 // NewCmdDigest creates a new cobra.Command for the digest subcommand.
-func NewCmdDigest() *cobra.Command {
+func NewCmdDigest(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
 		Use:   "digest IMAGE",
 		Short: "Get the digest of an image",
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			digest, err := crane.Digest(args[0], options...)
+			digest, err := crane.Digest(args[0], *options...)
 			if err != nil {
 				log.Fatalf("computing digest: %v", err)
 			}

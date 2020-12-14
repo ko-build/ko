@@ -1,9 +1,11 @@
 package cache
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
@@ -45,7 +47,7 @@ func (l *layer) create(h v1.Hash) (io.WriteCloser, error) {
 	if err := os.MkdirAll(l.path, 0700); err != nil {
 		return nil, err
 	}
-	return os.Create(filepath.Join(l.path, h.String()))
+	return os.Create(cachepath(l.path, h))
 }
 
 func (l *layer) Compressed() (io.ReadCloser, error) {
@@ -101,7 +103,7 @@ func (rc *readcloser) Close() error {
 }
 
 func (fs *fscache) Get(h v1.Hash) (v1.Layer, error) {
-	l, err := tarball.LayerFromFile(filepath.Join(fs.path, h.String()))
+	l, err := tarball.LayerFromFile(cachepath(fs.path, h))
 	if os.IsNotExist(err) {
 		return nil, ErrNotFound
 	}
@@ -116,9 +118,19 @@ func (fs *fscache) Get(h v1.Hash) (v1.Layer, error) {
 }
 
 func (fs *fscache) Delete(h v1.Hash) error {
-	err := os.Remove(filepath.Join(fs.path, h.String()))
+	err := os.Remove(cachepath(fs.path, h))
 	if os.IsNotExist(err) {
 		return ErrNotFound
 	}
 	return err
+}
+
+func cachepath(path string, h v1.Hash) string {
+	var file string
+	if runtime.GOOS == "windows" {
+		file = fmt.Sprintf("%s-%s", h.Algorithm, h.Hex)
+	} else {
+		file = h.String()
+	}
+	return filepath.Join(path, file)
 }

@@ -22,10 +22,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdExport()) }
-
 // NewCmdExport creates a new cobra.Command for the export subcommand.
-func NewCmdExport() *cobra.Command {
+func NewCmdExport(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
 		Use:   "export IMAGE TARBALL",
 		Short: "Export contents of a remote image as a tarball",
@@ -44,7 +42,7 @@ func NewCmdExport() *cobra.Command {
 			}
 			defer f.Close()
 
-			img, err := crane.Pull(src, options...)
+			img, err := crane.Pull(src, *options...)
 			if err != nil {
 				log.Fatal(err)
 			}

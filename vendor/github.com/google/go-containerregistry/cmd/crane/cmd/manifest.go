@@ -22,17 +22,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdManifest()) }
-
 // NewCmdManifest creates a new cobra.Command for the manifest subcommand.
-func NewCmdManifest() *cobra.Command {
+func NewCmdManifest(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
 		Use:   "manifest IMAGE",
 		Short: "Get the manifest of an image",
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
 			src := args[0]
-			manifest, err := crane.Manifest(src, options...)
+			manifest, err := crane.Manifest(src, *options...)
 			if err != nil {
 				log.Fatalf("fetching manifest %s: %v", src, err)
 			}

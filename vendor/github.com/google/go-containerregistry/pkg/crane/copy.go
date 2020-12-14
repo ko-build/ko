@@ -47,8 +47,15 @@ func Copy(src, dst string, opt ...Option) error {
 	switch desc.MediaType {
 	case types.OCIImageIndex, types.DockerManifestList:
 		// Handle indexes separately.
-		if err := copyIndex(desc, dstRef, o); err != nil {
-			return fmt.Errorf("failed to copy index: %v", err)
+		if o.platform != nil {
+			// If platform is explicitly set, don't copy the whole index, just the appropriate image.
+			if err := copyImage(desc, dstRef, o); err != nil {
+				return fmt.Errorf("failed to copy image: %v", err)
+			}
+		} else {
+			if err := copyIndex(desc, dstRef, o); err != nil {
+				return fmt.Errorf("failed to copy index: %v", err)
+			}
 		}
 	case types.DockerManifestSchema1, types.DockerManifestSchema1Signed:
 		// Handle schema 1 images separately.

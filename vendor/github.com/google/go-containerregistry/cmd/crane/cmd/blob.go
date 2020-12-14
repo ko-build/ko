@@ -22,10 +22,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdBlob()) }
-
 // NewCmdBlob creates a new cobra.Command for the blob subcommand.
-func NewCmdBlob() *cobra.Command {
+func NewCmdBlob(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
 		Use:     "blob BLOB",
 		Short:   "Read a blob from the registry",
@@ -33,7 +31,7 @@ func NewCmdBlob() *cobra.Command {
 		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			src := args[0]
-			layer, err := crane.PullLayer(src, options...)
+			layer, err := crane.PullLayer(src, *options...)
 			if err != nil {
 				log.Fatalf("pulling layer %s: %v", src, err)
 			}

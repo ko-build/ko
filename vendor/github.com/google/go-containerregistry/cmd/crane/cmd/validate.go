@@ -25,10 +25,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdValidate()) }
-
 // NewCmdValidate creates a new cobra.Command for the validate subcommand.
-func NewCmdValidate() *cobra.Command {
+func NewCmdValidate(options *[]crane.Option) *cobra.Command {
 	var tarballPath, remoteRef string
 
 	validateCmd := &cobra.Command{
@@ -43,7 +41,7 @@ func NewCmdValidate() *cobra.Command {
 				if flag == "" {
 					continue
 				}
-				img, err := maker(flag, options...)
+				img, err := maker(flag, *options...)
 				if err != nil {
 					log.Fatalf("failed to read image %s: %v", flag, err)
 				}

@@ -58,6 +58,8 @@ func CopySchema1(desc *remote.Descriptor, srcRef, dstRef name.Reference, srcAuth
 func putManifest(desc *remote.Descriptor, dstRef name.Reference, dstAuth authn.Authenticator) error {
 	reg := dstRef.Context().Registry
 	scopes := []string{dstRef.Scope(transport.PushScope)}
+
+	// TODO(jonjohnsonjr): Use NewWithContext.
 	tr, err := transport.New(reg, dstAuth, http.DefaultTransport, scopes)
 	if err != nil {
 		return err

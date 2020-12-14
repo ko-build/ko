@@ -70,9 +70,11 @@ func GunzipReadCloser(r io.ReadCloser) (io.ReadCloser, error) {
 	return &readAndCloser{
 		Reader: gr,
 		CloseFunc: func() error {
-			if err := gr.Close(); err != nil {
-				return err
-			}
+			// If the unzip fails, then this seems to return the same
+			// error as the read.  We don't want this to interfere with
+			// us closing the main ReadCloser, since this could leave
+			// an open file descriptor (fails on Windows).
+			gr.Close()
 			return r.Close()
 		},
 	}, nil

@@ -17,7 +17,6 @@ package build
 import (
 	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"context"
 	"encoding/json"
 	"errors"
@@ -328,14 +327,7 @@ func tarAddDirectories(tw *tar.Writer, dir string) error {
 
 func tarBinary(name, binary string) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
-	// Compress this before calling tarball.LayerFromOpener, since it eagerly
-	// calculates digests and diffids. This prevents us from double compressing
-	// the layer when we have to actually upload the blob.
-	//
-	// https://github.com/google/go-containerregistry/issues/413
-	gw, _ := gzip.NewWriterLevel(buf, gzip.BestSpeed)
-	defer gw.Close()
-	tw := tar.NewWriter(gw)
+	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
 	// write the parent directories to the tarball archive
@@ -450,14 +442,7 @@ func walkRecursive(tw *tar.Writer, root, chroot string) error {
 
 func (g *gobuild) tarKoData(ref reference) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
-	// Compress this before calling tarball.LayerFromOpener, since it eagerly
-	// calculates digests and diffids. This prevents us from double compressing
-	// the layer when we have to actually upload the blob.
-	//
-	// https://github.com/google/go-containerregistry/issues/413
-	gw, _ := gzip.NewWriterLevel(buf, gzip.BestSpeed)
-	defer gw.Close()
-	tw := tar.NewWriter(gw)
+	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
 	root, err := g.kodataPath(ref)
@@ -499,7 +484,7 @@ func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platfor
 	dataLayerBytes := dataLayerBuf.Bytes()
 	dataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 		return ioutil.NopCloser(bytes.NewBuffer(dataLayerBytes)), nil
-	})
+	}, tarball.WithCompressedCaching)
 	if err != nil {
 		return nil, err
 	}

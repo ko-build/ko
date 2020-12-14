@@ -22,17 +22,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdList()) }
-
 // NewCmdList creates a new cobra.Command for the ls subcommand.
-func NewCmdList() *cobra.Command {
+func NewCmdList(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
 		Use:   "ls REPO",
 		Short: "List the tags in a repo",
 		Args:  cobra.ExactArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
 			repo := args[0]
-			tags, err := crane.ListTags(repo, options...)
+			tags, err := crane.ListTags(repo, *options...)
 			if err != nil {
 				log.Fatalf("reading tags for %s: %v", repo, err)
 			}

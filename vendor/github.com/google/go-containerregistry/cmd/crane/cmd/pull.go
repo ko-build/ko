@@ -23,10 +23,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdPull()) }
-
 // NewCmdPull creates a new cobra.Command for the pull subcommand.
-func NewCmdPull() *cobra.Command {
+func NewCmdPull(options *[]crane.Option) *cobra.Command {
 	var cachePath, format string
 
 	cmd := &cobra.Command{
@@ -35,7 +33,7 @@ func NewCmdPull() *cobra.Command {
 		Args:  cobra.ExactArgs(2),
 		Run: func(_ *cobra.Command, args []string) {
 			src, path := args[0], args[1]
-			img, err := crane.Pull(src, options...)
+			img, err := crane.Pull(src, *options...)
 			if err != nil {
 				log.Fatal(err)
 			}

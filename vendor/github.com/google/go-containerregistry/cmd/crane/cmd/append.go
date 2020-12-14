@@ -24,10 +24,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func init() { Root.AddCommand(NewCmdAppend()) }
-
 // NewCmdAppend creates a new cobra.Command for the append subcommand.
-func NewCmdAppend() *cobra.Command {
+func NewCmdAppend(options *[]crane.Option) *cobra.Command {
 	var baseRef, newTag, outFile string
 	var newLayers []string
 
@@ -44,7 +42,7 @@ func NewCmdAppend() *cobra.Command {
 				base = empty.Image
 
 			} else {
-				base, err = crane.Pull(baseRef, options...)
+				base, err = crane.Pull(baseRef, *options...)
 				if err != nil {
 					log.Fatalf("pulling %s: %v", baseRef, err)
 				}
@@ -60,7 +58,7 @@ func NewCmdAppend() *cobra.Command {
 					log.Fatalf("writing output %q: %v", outFile, err)
 				}
 			} else {
-				if err := crane.Push(img, newTag, options...); err != nil {
+				if err := crane.Push(img, newTag, *options...); err != nil {
 					log.Fatalf("pushing image %s: %v", newTag, err)
 				}
 			}
