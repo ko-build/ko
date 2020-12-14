@@ -672,8 +672,7 @@ func TestMatchesPlatformSpec(t *testing.T) {
 			OS:           "linux",
 		},
 		result: false,
-	},
-	} {
+	}} {
 		parsed, err := parseSpec(tc.spec)
 		if tc.err {
 			if err == nil {
