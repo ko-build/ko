@@ -20,6 +20,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	gb "go/build"
@@ -32,6 +33,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/containerd/stargz-snapshotter/estargz"
@@ -39,6 +41,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/internal/sbom"
@@ -53,7 +56,13 @@ import (
 
 const (
 	defaultAppFilename = "ko-app"
+
+	// Currently guards spammy cache logs that compile out of the binary.
+	debug = false
 )
+
+type diffIDToDescriptor map[v1.Hash]v1.Descriptor
+type buildIDToDiffID map[string]v1.Hash
 
 // GetBase takes an importpath and returns a base image reference and base image (or index).
 type GetBase func(context.Context, string) (name.Reference, Result, error)
@@ -78,6 +87,8 @@ type gobuild struct {
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
+
+	cache *layerCache
 }
 
 // Option is a functional option for NewGo.
@@ -117,6 +128,10 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
 		platformMatcher:      matcher,
+		cache: &layerCache{
+			buildToDiff: map[string]buildIDToDiffID{},
+			diffToDesc:  map[string]diffIDToDescriptor{},
+		},
 	}, nil
 }
 
@@ -222,12 +237,6 @@ func platformToString(p v1.Platform) string {
 }
 
 func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
-	tmpDir, err := ioutil.TempDir("", "ko")
-	if err != nil {
-		return "", err
-	}
-	file := filepath.Join(tmpDir, "out")
-
 	buildArgs, err := createBuildArgs(config)
 	if err != nil {
 		return "", err
@@ -236,15 +245,31 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	args := make([]string, 0, 4+len(buildArgs))
 	args = append(args, "build")
 	args = append(args, buildArgs...)
-	args = append(args, "-o", file)
-	args = append(args, ip)
-	cmd := exec.CommandContext(ctx, "go", args...)
-	cmd.Dir = dir
 
 	env, err := buildEnv(platform, os.Environ(), config.Env)
 	if err != nil {
 		return "", fmt.Errorf("could not create env for %s: %w", ip, err)
 	}
+
+	tmpDir, err := ioutil.TempDir("", "ko")
+	if err != nil {
+		return "", err
+	}
+
+	if dir := os.Getenv("KOCACHE"); dir != "" {
+		// TODO(jonjohnsonjr): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
+		tmpDir = filepath.Join(dir, ip, platformToString(platform))
+		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+			return "", err
+		}
+	}
+
+	file := filepath.Join(tmpDir, "out")
+
+	args = append(args, "-o", file)
+	args = append(args, ip)
+	cmd := exec.CommandContext(ctx, "go", args...)
+	cmd.Dir = dir
 	cmd.Env = env
 
 	var output bytes.Buffer
@@ -253,7 +278,9 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	log.Printf("Building %s for %s", ip, platformToString(platform))
 	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
+		if os.Getenv("KOCACHE") == "" {
+			os.RemoveAll(tmpDir)
+		}
 		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
 		return "", err
 	}
@@ -643,7 +670,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(filepath.Dir(file))
+	if os.Getenv("KOCACHE") == "" {
+		defer os.RemoveAll(filepath.Dir(file))
+	}
 
 	var layers []mutate.Addendum
 
@@ -671,21 +700,36 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	appDir := "/ko-app"
 	appPath := path.Join(appDir, appFilename(ref.Path()))
 
-	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(appPath, file, v1.Time{}, platform)
-	if err != nil {
-		return nil, err
+	var binaryLayer v1.Layer
+	if os.Getenv("KOCACHE") != "" {
+		binaryLayer, err = g.cache.get(ctx, appPath, file, platform)
+		if err != nil {
+			if debug {
+				log.Printf("Cache miss: %s for %s: %v", ref.Path(), platformToString(*platform), err)
+			}
+
+			// Make typecheck below fail
+			binaryLayer = nil
+		} else if debug {
+			log.Printf("Cache hit: %s for %s", ref.Path(), platformToString(*platform))
+		}
 	}
-	binaryLayerBytes := binaryLayerBuf.Bytes()
-	binaryLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
-	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
-		// When using estargz, prioritize downloading the binary entrypoint.
-		appPath,
-	})))
-	if err != nil {
-		return nil, err
+
+	// Cache miss.
+	if _, ok := binaryLayer.(*lazyLayer); !ok {
+		binaryLayer, err = buildLayer(appPath, file, platform)
+		if err != nil {
+			return nil, err
+		}
+		if os.Getenv("KOCACHE") != "" {
+			if err := g.cache.put(ctx, file, binaryLayer); err != nil {
+				log.Printf("failed to cache metadata for %s: %v", ref.Path(), err)
+			} else if debug {
+				log.Printf("Cached %s for %s under %s", ref.Path(), platformToString(*platform), filepath.Dir(file))
+			}
+		}
 	}
+
 	layers = append(layers, mutate.Addendum{
 		Layer: binaryLayer,
 		History: v1.History{
@@ -757,6 +801,21 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 	}
 	return si, nil
+}
+
+func buildLayer(appPath, file string, platform *v1.Platform) (v1.Layer, error) {
+	// Construct a tarball with the binary and produce a layer.
+	binaryLayerBuf, err := tarBinary(appPath, file, v1.Time{}, platform)
+	if err != nil {
+		return nil, err
+	}
+	binaryLayerBytes := binaryLayerBuf.Bytes()
+	return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		return ioutil.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
+	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
+		// When using estargz, prioritize downloading the binary entrypoint.
+		appPath,
+	})))
 }
 
 // Append appPath to the PATH environment variable, if it exists. Otherwise,
@@ -938,4 +997,159 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 	}
 
 	return false
+}
+
+type layerCache struct {
+	buildToDiff map[string]buildIDToDiffID
+	diffToDesc  map[string]diffIDToDescriptor
+	sync.Mutex
+}
+
+func (c *layerCache) get(ctx context.Context, appPath, file string, platform *v1.Platform) (*lazyLayer, error) {
+	buildid, err := getBuildID(ctx, file)
+	if err != nil {
+		return nil, err
+	}
+
+	if buildid == "" {
+		return nil, fmt.Errorf("no buildid for %s", file)
+	}
+
+	btod, err := c.readBuildToDiff(file)
+	if err != nil {
+		return nil, err
+	}
+	dtod, err := c.readDiffToDesc(file)
+	if err != nil {
+		return nil, err
+	}
+
+	diffid, ok := btod[buildid]
+	if !ok {
+		return nil, fmt.Errorf("no diffid for %q", buildid)
+	}
+
+	desc, ok := dtod[diffid]
+	if !ok {
+		return nil, fmt.Errorf("no desc for %q", diffid)
+	}
+
+	return &lazyLayer{
+		diffid: diffid,
+		desc:   desc,
+		buildLayer: func() (v1.Layer, error) {
+			return buildLayer(appPath, file, platform)
+		},
+	}, nil
+}
+
+// Compute new layer metadata and cache it in-mem and on-disk.
+func (c *layerCache) put(ctx context.Context, file string, layer v1.Layer) error {
+	buildid, err := getBuildID(ctx, file)
+	if err != nil {
+		return err
+	}
+
+	desc, err := partial.Descriptor(layer)
+	if err != nil {
+		return err
+	}
+
+	diffid, err := layer.DiffID()
+	if err != nil {
+		return err
+	}
+
+	btod, ok := c.buildToDiff[file]
+	if !ok {
+		btod = buildIDToDiffID{}
+	}
+	btod[buildid] = diffid
+
+	dtod, ok := c.diffToDesc[file]
+	if !ok {
+		dtod = diffIDToDescriptor{}
+	}
+	dtod[diffid] = *desc
+
+	// TODO: Implement better per-file locking.
+	c.Lock()
+	defer c.Unlock()
+
+	btodf, err := os.OpenFile(filepath.Join(filepath.Dir(file), "buildid-to-diffid"), os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		return err
+	}
+	defer btodf.Close()
+
+	dtodf, err := os.OpenFile(filepath.Join(filepath.Dir(file), "diffid-to-descriptor"), os.O_RDWR|os.O_CREATE, 0755)
+	if err != nil {
+		return err
+	}
+	defer dtodf.Close()
+
+	enc := json.NewEncoder(btodf)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(&btod); err != nil {
+		return err
+	}
+
+	enc = json.NewEncoder(dtodf)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(&dtod); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *layerCache) readDiffToDesc(file string) (diffIDToDescriptor, error) {
+	if dtod, ok := c.diffToDesc[file]; ok {
+		return dtod, nil
+	}
+
+	dtodf, err := os.Open(filepath.Join(filepath.Dir(file), "diffid-to-descriptor"))
+	if err != nil {
+		return nil, err
+	}
+	defer dtodf.Close()
+
+	var dtod diffIDToDescriptor
+	if err := json.NewDecoder(dtodf).Decode(&dtod); err != nil {
+		return nil, err
+	}
+	c.diffToDesc[file] = dtod
+	return dtod, nil
+}
+
+func (c *layerCache) readBuildToDiff(file string) (buildIDToDiffID, error) {
+	if btod, ok := c.buildToDiff[file]; ok {
+		return btod, nil
+	}
+
+	btodf, err := os.Open(filepath.Join(filepath.Dir(file), "buildid-to-diffid"))
+	if err != nil {
+		return nil, err
+	}
+	defer btodf.Close()
+
+	var btod buildIDToDiffID
+	if err := json.NewDecoder(btodf).Decode(&btod); err != nil {
+		return nil, err
+	}
+	c.buildToDiff[file] = btod
+	return btod, nil
+}
+
+func getBuildID(ctx context.Context, file string) (string, error) {
+	cmd := exec.CommandContext(ctx, "go", "tool", "buildid", file)
+	var output bytes.Buffer
+	cmd.Stderr = &output
+	cmd.Stdout = &output
+
+	if err := cmd.Run(); err != nil {
+		log.Printf("Unexpected error running \"go tool buildid %s\": %v\n%v", err, file, output.String())
+		return "", err
+	}
+	return strings.TrimSpace(output.String()), nil
 }
