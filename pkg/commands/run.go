@@ -47,6 +47,8 @@ func addRun(topLevel *cobra.Command) {
   # You can also supply args and flags to the command.
   ko run ./cmd/baz -- -v arg1 arg2 --yes`,
 		Run: func(cmd *cobra.Command, args []string) {
+			ctx := createCancellableContext()
+
 			// Args after -- are for kubectl, so only consider importPaths before it.
 			importPaths := args
 			dashes := cmd.Flags().ArgsLenAtDash()
@@ -63,7 +65,7 @@ func addRun(topLevel *cobra.Command) {
 				kubectlArgs = os.Args[dashes:]
 			}
 
-			builder, err := makeBuilder(bo)
+			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
@@ -80,7 +82,6 @@ func addRun(topLevel *cobra.Command) {
 			if strings.HasPrefix(ip, "-") {
 				log.Fatalf("expected first arg to be positional, got %q", ip)
 			}
-			ctx := createCancellableContext()
 			imgs, err := publishImages(ctx, importPaths, publisher, builder)
 			if err != nil {
 				log.Fatalf("failed to publish images: %v", err)
@@ -115,7 +116,7 @@ func addRun(topLevel *cobra.Command) {
 				argv = append([]string{"run", pod}, argv...)
 
 				log.Printf("$ kubectl %s", strings.Join(argv, " "))
-				kubectlCmd := exec.Command("kubectl", argv...)
+				kubectlCmd := exec.CommandContext(ctx, "kubectl", argv...)
 
 				// Pass through our environment
 				kubectlCmd.Env = os.Environ()

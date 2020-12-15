@@ -56,7 +56,8 @@ func addResolve(topLevel *cobra.Command) {
   ko resolve --local -f config/`,
 		Args: cobra.NoArgs,
 		Run: func(cmd *cobra.Command, args []string) {
-			builder, err := makeBuilder(bo)
+			ctx := createCancellableContext()
+			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
@@ -65,7 +66,6 @@ func addResolve(topLevel *cobra.Command) {
 				log.Fatalf("error creating publisher: %v", err)
 			}
 			defer publisher.Close()
-			ctx := createCancellableContext()
 			if err := resolveFilesToWriter(ctx, builder, publisher, fo, so, sto, os.Stdout); err != nil {
 				log.Fatal(err)
 			}

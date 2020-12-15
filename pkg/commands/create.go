@@ -69,7 +69,10 @@ func addCreate(topLevel *cobra.Command) {
 				return
 			}
 
-			builder, err := makeBuilder(bo)
+			// Cancel on signals.
+			ctx := createCancellableContext()
+
+			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
@@ -97,7 +100,7 @@ func addCreate(topLevel *cobra.Command) {
 			// to which we will pipe the resolved files.
 			argv := []string{"create", "-f", "-"}
 			argv = append(argv, kubectlFlags...)
-			kubectlCmd := exec.Command("kubectl", argv...)
+			kubectlCmd := exec.CommandContext(ctx, "kubectl", argv...)
 
 			// Pass through our environment
 			kubectlCmd.Env = os.Environ()
@@ -110,9 +113,6 @@ func addCreate(topLevel *cobra.Command) {
 			if err != nil {
 				log.Fatalf("error piping to 'kubectl create': %v", err)
 			}
-
-			// Cancel on signals.
-			ctx := createCancellableContext()
 
 			// Make sure builds are cancelled if kubectl create fails.
 			g, ctx := errgroup.WithContext(ctx)

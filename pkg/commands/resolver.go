@@ -81,12 +81,12 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	return opts, nil
 }
 
-func makeBuilder(bo *options.BuildOptions) (*build.Caching, error) {
+func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching, error) {
 	opt, err := gobuildOptions(bo)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up builder options: %v", err)
 	}
-	innerBuilder, err := build.NewGo(opt...)
+	innerBuilder, err := build.NewGo(ctx, opt...)
 	if err != nil {
 		return nil, err
 	}

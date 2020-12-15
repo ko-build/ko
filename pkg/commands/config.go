@@ -51,7 +51,7 @@ func getBaseImage(platform string) build.GetBase {
 		}
 	}
 
-	return func(s string) (build.Result, error) {
+	return func(ctx context.Context, s string) (build.Result, error) {
 		s = strings.TrimPrefix(s, build.StrictScheme)
 		// Viper configuration file keys are case insensitive, and are
 		// returned as all lowercase.  This means that import paths with
@@ -66,6 +66,7 @@ func getBaseImage(platform string) build.GetBase {
 		ropt := []remote.Option{
 			remote.WithAuthFromKeychain(authn.DefaultKeychain),
 			remote.WithTransport(defaultTransport()),
+			remote.WithContext(ctx),
 		}
 
 		// Using --platform=all will use an image index for the base,

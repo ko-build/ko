@@ -34,9 +34,12 @@ func passthru(command string) runCmd {
 			return
 		}
 
+		// Cancel on signals.
+		ctx := createCancellableContext()
+
 		// Start building a command line invocation by passing
 		// through our arguments to command's CLI.
-		cmd := exec.Command(command, os.Args[1:]...)
+		cmd := exec.CommandContext(ctx, command, os.Args[1:]...)
 
 		// Pass through our environment
 		cmd.Env = os.Environ()
