@@ -240,6 +240,21 @@ func platformToString(p v1.Platform) string {
 	return fmt.Sprintf("%s/%s", p.OS, p.Architecture)
 }
 
+func hashInputs(args []string, env []string) string {
+	filtered := []string{}
+	for _, s := range env {
+		if !strings.HasPrefix(s, "KO") {
+
+			filtered = append(filtered, s)
+		}
+	}
+
+	hasher := md5.New() //nolint: gosec // No strong cryptography needed.
+	hasher.Write([]byte(strings.Join(args, " ") + " " + strings.Join(filtered, " ")))
+
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
 func build(ctx context.Context, ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
 	// Last one wins
 	defaultEnv := []string{
@@ -276,7 +291,7 @@ func build(ctx context.Context, ip string, platform v1.Platform, disableOptimiza
 		hasher := md5.New() //nolint: gosec // No strong cryptography needed.
 		hasher.Write([]byte(strings.Join(args, " ") + " " + strings.Join(defaultEnv, " ")))
 
-		tmpDir = filepath.Join(os.TempDir(), "ko", ip, hex.EncodeToString(hasher.Sum(nil)))
+		tmpDir = filepath.Join(os.TempDir(), "ko", ip, hashInputs(args, defaultEnv))
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 			return "", err
 		}
