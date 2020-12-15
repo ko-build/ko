@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -30,7 +31,7 @@ type slowpublish struct {
 // slowpublish implements Interface
 var _ Interface = (*slowpublish)(nil)
 
-func (sp *slowpublish) Publish(br build.Result, ref string) (name.Reference, error) {
+func (sp *slowpublish) Publish(_ context.Context, br build.Result, ref string) (name.Reference, error) {
 	time.Sleep(sp.sleep)
 	return makeRef()
 }
@@ -55,7 +56,7 @@ func TestCaching(t *testing.T) {
 		img, _ := random.Index(256, 8, 1)
 
 		start := time.Now()
-		ref1, err := cb.Publish(img, ref)
+		ref1, err := cb.Publish(context.Background(), img, ref)
 		if err != nil {
 			t.Errorf("Publish() = %v", err)
 		}
@@ -73,7 +74,7 @@ func TestCaching(t *testing.T) {
 		previousDigest = d1
 
 		start = time.Now()
-		ref2, err := cb.Publish(img, ref)
+		ref2, err := cb.Publish(context.Background(), img, ref)
 		if err != nil {
 			t.Errorf("Publish() = %v", err)
 		}

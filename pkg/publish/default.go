@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -121,12 +122,12 @@ func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
 }
 
 // Publish implements publish.Interface
-func (d *defalt) Publish(br build.Result, s string) (name.Reference, error) {
+func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
-	ro := []remote.Option{remote.WithAuth(d.auth), remote.WithTransport(d.t)}
+	ro := []remote.Option{remote.WithAuth(d.auth), remote.WithTransport(d.t), remote.WithContext(ctx)}
 	no := []name.Option{}
 	if d.insecure {
 		no = append(no, name.Insecure)

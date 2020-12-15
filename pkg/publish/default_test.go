@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -59,7 +60,7 @@ func TestDefault(t *testing.T) {
 		if err != nil {
 			t.Errorf("NewDefault() = %v", err)
 		}
-		if d, err := def.Publish(br, build.StrictScheme+importpath); err != nil {
+		if d, err := def.Publish(context.Background(), br, build.StrictScheme+importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), tag.Repository.String()) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -97,7 +98,7 @@ func TestDefaultWithCustomNamer(t *testing.T) {
 		if err != nil {
 			t.Errorf("NewDefault() = %v", err)
 		}
-		if d, err := def.Publish(br, build.StrictScheme+importpath); err != nil {
+		if d, err := def.Publish(context.Background(), br, build.StrictScheme+importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), repoName) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -129,7 +130,7 @@ func TestDefaultWithTags(t *testing.T) {
 		if err != nil {
 			t.Errorf("NewDefault() = %v", err)
 		}
-		if d, err := def.Publish(br, build.StrictScheme+importpath); err != nil {
+		if d, err := def.Publish(context.Background(), br, build.StrictScheme+importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), repoName) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -210,7 +211,7 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewDefault() = %v", err)
 	}
-	if d, err := def.Publish(img, build.StrictScheme+importpath); err != nil {
+	if d, err := def.Publish(context.Background(), img, build.StrictScheme+importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if !strings.HasPrefix(d.String(), repoName) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)

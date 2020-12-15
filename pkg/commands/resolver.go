@@ -188,7 +188,7 @@ type nopPublisher struct {
 	namer    publish.Namer
 }
 
-func (n nopPublisher) Publish(br build.Result, s string) (name.Reference, error) {
+func (n nopPublisher) Publish(_ context.Context, br build.Result, s string) (name.Reference, error) {
 	h, err := br.Digest()
 	if err != nil {
 		return nil, err

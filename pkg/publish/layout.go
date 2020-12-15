@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -67,7 +68,7 @@ func (l *LayoutPublisher) writeResult(br build.Result) error {
 }
 
 // Publish implements publish.Interface.
-func (l *LayoutPublisher) Publish(br build.Result, s string) (name.Reference, error) {
+func (l *LayoutPublisher) Publish(_ context.Context, br build.Result, s string) (name.Reference, error) {
 	log.Printf("Saving %v", s)
 	if err := l.writeResult(br); err != nil {
 		return nil, err

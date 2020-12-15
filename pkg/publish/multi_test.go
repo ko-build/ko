@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -53,7 +54,7 @@ func TestMulti(t *testing.T) {
 	}
 
 	p := MultiPublisher(lp, tp)
-	if _, err := p.Publish(img, importpath); err != nil {
+	if _, err := p.Publish(context.Background(), img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	}
 
@@ -69,7 +70,7 @@ func TestMulti_Zero(t *testing.T) {
 	}
 
 	p := MultiPublisher() // No publishers.
-	if _, err := p.Publish(img, "foo"); err == nil {
+	if _, err := p.Publish(context.Background(), img, "foo"); err == nil {
 		t.Errorf("Publish() got nil error")
 	}
 }

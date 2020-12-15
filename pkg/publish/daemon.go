@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -43,7 +44,7 @@ func NewDaemon(namer Namer, tags []string) Interface {
 }
 
 // Publish implements publish.Interface
-func (d *demon) Publish(br build.Result, s string) (name.Reference, error) {
+func (d *demon) Publish(_ context.Context, br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)

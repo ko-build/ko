@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -45,7 +46,7 @@ func NewKindPublisher(namer Namer, tags []string) Interface {
 }
 
 // Publish implements publish.Interface.
-func (t *kindPublisher) Publish(br build.Result, s string) (name.Reference, error) {
+func (t *kindPublisher) Publish(_ context.Context, br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)

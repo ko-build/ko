@@ -63,7 +63,7 @@ func publishImages(ctx context.Context, importpaths []string, pub publish.Interf
 		if err != nil {
 			return nil, fmt.Errorf("error building %q: %v", importpath, err)
 		}
-		ref, err := pub.Publish(img, importpath)
+		ref, err := pub.Publish(ctx, img, importpath)
 		if err != nil {
 			return nil, fmt.Errorf("error publishing %s: %v", importpath, err)
 		}

@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -40,7 +41,7 @@ func TestLayout(t *testing.T) {
 	if err != nil {
 		t.Errorf("NewLayout() = %v", err)
 	}
-	if d, err := lp.Publish(img, importpath); err != nil {
+	if d, err := lp.Publish(context.Background(), img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if !strings.HasPrefix(d.String(), tmp) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tmp)
