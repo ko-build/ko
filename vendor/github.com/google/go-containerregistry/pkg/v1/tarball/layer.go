@@ -22,7 +22,11 @@ import (
 	"os"
 	"sync"
 
+	"github.com/containerd/stargz-snapshotter/estargz"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/internal/and"
+	gestargz "github.com/google/go-containerregistry/pkg/v1/internal/estargz"
+	ggzip "github.com/google/go-containerregistry/pkg/v1/internal/gzip"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/go-containerregistry/pkg/v1/v1util"
 )
@@ -34,28 +38,50 @@ type layer struct {
 	compressedopener   Opener
 	uncompressedopener Opener
 	compression        int
+	annotations        map[string]string
+	estgzopts          []estargz.Option
 }
 
+// Descriptor implements partial.withDescriptor.
+func (l *layer) Descriptor() (*v1.Descriptor, error) {
+	digest, err := l.Digest()
+	if err != nil {
+		return nil, err
+	}
+	return &v1.Descriptor{
+		Size:        l.size,
+		Digest:      digest,
+		Annotations: l.annotations,
+		MediaType:   types.DockerLayer,
+	}, nil
+}
+
+// Digest implements v1.Layer
 func (l *layer) Digest() (v1.Hash, error) {
 	return l.digest, nil
 }
 
+// DiffID implements v1.Layer
 func (l *layer) DiffID() (v1.Hash, error) {
 	return l.diffID, nil
 }
 
+// Compressed implements v1.Layer
 func (l *layer) Compressed() (io.ReadCloser, error) {
 	return l.compressedopener()
 }
 
+// Uncompressed implements v1.Layer
 func (l *layer) Uncompressed() (io.ReadCloser, error) {
 	return l.uncompressedopener()
 }
 
+// Size implements v1.Layer
 func (l *layer) Size() (int64, error) {
 	return l.size, nil
 }
 
+// MediaType implements v1.Layer
 func (l *layer) MediaType() (types.MediaType, error) {
 	return types.DockerLayer, nil
 }
@@ -98,6 +124,15 @@ func WithCompressedCaching(l *layer) {
 	}
 }
 
+// WithEstargzOptions is a functional option that allow the caller to pass
+// through estargz.Options to the underlying compression layer.  This is
+// only meaningful when estargz is enabled.
+func WithEstargzOptions(opts ...estargz.Option) LayerOption {
+	return func(l *layer) {
+		l.estgzopts = opts
+	}
+}
+
 // LayerFromFile returns a v1.Layer given a tarball
 func LayerFromFile(path string, opts ...LayerOption) (v1.Layer, error) {
 	opener := func() (io.ReadCloser, error) {
@@ -123,19 +158,52 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 	}
 	defer rc.Close()
 
-	compressed, err := v1util.IsGzipped(rc)
+	compressed, err := ggzip.Is(rc)
 	if err != nil {
 		return nil, err
 	}
 
 	layer := &layer{
 		compression: gzip.BestSpeed,
+		annotations: make(map[string]string, 1),
 	}
 
 	if compressed {
 		layer.compressedopener = opener
 		layer.uncompressedopener = func() (io.ReadCloser, error) {
 			urc, err := opener()
+			if err != nil {
+				return nil, err
+			}
+			return ggzip.UnzipReadCloser(urc)
+		}
+	} else if estgz := os.Getenv("GGCR_EXPERIMENT_ESTARGZ"); estgz == "1" {
+		layer.compressedopener = func() (io.ReadCloser, error) {
+			crc, err := opener()
+			if err != nil {
+				return nil, err
+			}
+			eopts := append(layer.estgzopts, estargz.WithCompressionLevel(layer.compression))
+			rc, h, err := gestargz.ReadCloser(crc, eopts...)
+			if err != nil {
+				return nil, err
+			}
+			layer.annotations[estargz.TOCJSONDigestAnnotation] = h.String()
+			return &and.ReadCloser{
+				Reader: rc,
+				CloseFunc: func() error {
+					err := rc.Close()
+					if err != nil {
+						return err
+					}
+					// As an optimization, leverage the DiffID exposed by the estargz ReadCloser
+					layer.diffID, err = v1.NewHash(rc.DiffID().String())
+					return err
+				},
+			}, nil
+		}
+		layer.uncompressedopener = func() (io.ReadCloser, error) {
+			urc, err := layer.compressedopener()
 			if err != nil {
 				return nil, err
 			}
@@ -148,7 +216,7 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 			if err != nil {
 				return nil, err
 			}
-			return v1util.GzipReadCloserLevel(crc, layer.compression), nil
+			return ggzip.ReadCloserLevel(crc, layer.compression), nil
 		}
 	}
 
@@ -160,8 +228,11 @@ func LayerFromOpener(opener Opener, opts ...LayerOption) (v1.Layer, error) {
 		return nil, err
 	}
 
-	if layer.diffID, err = computeDiffID(layer.uncompressedopener); err != nil {
-		return nil, err
+	empty := v1.Hash{}
+	if layer.diffID == empty {
+		if layer.diffID, err = computeDiffID(layer.uncompressedopener); err != nil {
+			return nil, err
+		}
 	}
 
 	return layer, nil
