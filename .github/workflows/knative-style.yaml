@@ -209,54 +209,6 @@ jobs:
 
           echo '::endgroup::'
 
-      - name: Redundant Format
-        shell: bash
-        if: ${{ always() }}
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
-        run: |
-          set -e
-          cd "${GITHUB_WORKSPACE}" || exit 1
-
-          echo '::group:: Flagging possibly unnecessary format calls for trailing argument with reviewdog 🐶 ...'
-          # Don't fail because of misspell
-          set +o pipefail
-          # For all look for formatting calls and extract the ones that
-          # have only a single formatting argument and that argument is in the last position.
-          # But exclude the `fmt.Errorf` calls since there's no `fmt.Error` and `errors.New` is not
-          # as versatile.
-          # Also ignore `%T` — to print the type and `%q` to quote the final string.
-          fn=$(find . -path './vendor' -prune -o -path './third_party' -prune -o -name '*.pb.go' -prune -o -type f -name '*.go' -print)
-          grep -nE '[^.]+\.(Fatalf|Errorf|Warnf|Infof|Debugf|Logf|Sprintf|Fprintf|Printf)[^\%]+%[^Tqx]",[^,]+' $fn | grep -v "fmt.Errorf" |
-            while read -r ent ; do
-              file=$(echo $ent | cut -d':' -f 1);
-              line=$(echo $ent | cut -d':' -f 2);
-              ch=$(echo $ent | cut -d':' -f3-);
-              err="Unknown printer tool, please file an issue in knative-sandbox/.github and assign to @vagababov: $ch"
-              if echo $ch | grep --quiet -E "^t.(Errorf|Fatalf|Logf)" ; then
-                err=$(echo $ch | sed  -E 's/(^t\.)(Fatal|Error|Log)f([^\%]+)( %[^Tqx]",)([^,]+)/\1\2\3",\5/')
-                # Not a test. Here we deal with various loggers and fmt helpers.
-              elif echo $ch | grep --quiet "log" ; then
-                # Capture (x)?log(er)?.
-                err=$(echo $ch | sed -E 's/(.*log.*\.)(Print|Fatal|Error|Info|Warn)f([^\%]+)(%[^Tq]",)([^,]+)/\1\2\3",\5/')
-              elif echo $ch | grep --quiet -E "fmt\.Sprintf" ; then
-                # Always space after sprintf
-                err=$(echo $ch | sed -E 's/(fmt\.)(Sprint)f([^%]+) (%s",)([^,]+)/\1\2\3 ",\5/')
-              elif echo $ch | grep --quiet -E "fmt\." ; then  # all other fmt. printers.
-                err=$(echo $ch | sed -E 's/(fmt\.)(Print|Fprint)f([^%]+) (%[^sTxq]",)([^,]+)/\1\2\3",\5/')
-              fi
-              # Trim spaces.
-              ch=$(echo $ch | xargs)
-              echo "$file:$line: Please consider avoiding tail format like this:%0A- $ch%0A+ $err"
-          done |
-          reviewdog -efm="%f:%l: %m" \
-                -name="Redundant Format" \
-                -reporter="github-pr-check" \
-                -filter-mode="added" \
-                -fail-on-error="true" \
-                -level="error"
-          echo '::endgroup::'
-
       # This is mostly copied from https://github.com/get-woke/woke-action-reviewdog/blob/main/entrypoint.sh
       # since their action is not yet released under a stable version.
       - name: Language
