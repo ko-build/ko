@@ -32,6 +32,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/containerd/stargz-snapshotter/estargz"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -507,7 +508,10 @@ func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platfor
 	binaryLayerBytes := binaryLayerBuf.Bytes()
 	binaryLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 		return ioutil.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
-	})
+	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
+		// When using estargz, prioritize downloading the binary entrypoint.
+		appPath,
+	})))
 	if err != nil {
 		return nil, err
 	}
