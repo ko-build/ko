@@ -526,15 +526,14 @@ or to the latest git commit's timestamp with:
 
     export SOURCE_DATE_EPOCH=$(git log -1 --format='%ct')
 
-
 ## Experiments
 
-Over time, we will add new functionality under experimental environment variables listed here.
+Over time, we will add new functionality under experimental environment
+variables listed here.
 
-| Env Var | Value(s) | What is does |
-|---------|----------|--------------|
-| `GGCR_EXPERIMENT_ESTARGZ` | `"1"` | When enabled this experiment will	direct ko to emit [estargz](https://github.com/opencontainers/image-spec/issues/815) compatible layers, which enable them to be lazily loaded by an appropriately configured containerd. |
-
+| Env Var                   | Value(s) | What is does                                                                                                                                                                                                               |
+| ------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GGCR_EXPERIMENT_ESTARGZ` | `"1"`    | When enabled this experiment will direct ko to emit [estargz](https://github.com/opencontainers/image-spec/issues/815) compatible layers, which enable them to be lazily loaded by an appropriately configured containerd. |
 
 ## Acknowledgements
 
