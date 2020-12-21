@@ -24,7 +24,7 @@ GO111MODULE=on go get github.com/google/ko/cmd/ko
 The `ko` CLI makes extensive use of the container registry as a ubiquitous and
 standard object store. However, the typical model for authenticating with a
 container registry is via `docker login`, and `ko` does not require users to
-install `docker` locally. To facilitate logging in without `ko` we expose:
+install `docker` locally. To facilitate logging in without `docker` we expose:
 
 ```shell
 ko auth login my.registry.io -u username --password-stdin
