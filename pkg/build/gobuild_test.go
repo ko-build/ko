@@ -673,17 +673,17 @@ func TestMatchesPlatformSpec(t *testing.T) {
 		},
 		result: false,
 	}} {
-		parsed, err := parseSpec(tc.spec)
+		pm, err := parseSpec(tc.spec)
 		if tc.err {
 			if err == nil {
-				t.Errorf("matchesPlatformSpec(%v, %q) expected err", tc.platform, tc.spec)
+				t.Errorf("parseSpec(%v, %q) expected err", tc.platform, tc.spec)
 			}
 			continue
 		}
 		if err != nil {
-			t.Fatalf("matchesPlatformSpec failed for %v %q: %v", tc.platform, tc.spec, err)
+			t.Fatalf("parseSpec failed for %v %q: %v", tc.platform, tc.spec, err)
 		}
-		matches := matchesPlatformSpec(tc.platform, tc.spec, parsed)
+		matches := pm.matches(tc.platform)
 		if got, want := matches, tc.result; got != want {
 			t.Errorf("wrong result for %v %q: want %t got %t", tc.platform, tc.spec, want, got)
 		}

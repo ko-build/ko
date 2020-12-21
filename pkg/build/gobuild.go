@@ -54,6 +54,11 @@ type buildContext interface {
 	Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error)
 }
 
+type platformMatcher struct {
+	spec      string
+	platforms []v1.Platform
+}
+
 type gobuild struct {
 	getBase              GetBase
 	creationTime         v1.Time
@@ -61,8 +66,7 @@ type gobuild struct {
 	disableOptimizations bool
 	mod                  *modules
 	buildContext         buildContext
-	platform             string
-	parsedPlatform       []v1.Platform
+	platformMatcher      *platformMatcher
 }
 
 // Option is a functional option for NewGo.
@@ -82,7 +86,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	if gbo.getBase == nil {
 		return nil, errors.New("a way of providing base images must be specified, see build.WithBaseImages")
 	}
-	parsed, err := parseSpec(gbo.platform)
+	matcher, err := parseSpec(gbo.platform)
 	if err != nil {
 		return nil, err
 	}
@@ -93,8 +97,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		disableOptimizations: gbo.disableOptimizations,
 		mod:                  gbo.mod,
 		buildContext:         gbo.buildContext,
-		platform:             gbo.platform,
-		parsedPlatform:       parsed,
+		platformMatcher:      matcher,
 	}, nil
 }
 
@@ -632,7 +635,7 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, s)
 		}
 
-		if !matchesPlatformSpec(desc.Platform, g.platform, g.parsedPlatform) {
+		if !g.platformMatcher.matches(desc.Platform) {
 			continue
 		}
 
@@ -663,12 +666,12 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 	return mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType), nil
 }
 
-func parseSpec(spec string) ([]v1.Platform, error) {
+func parseSpec(spec string) (*platformMatcher, error) {
 	// Don't bother parsing "all".
 	// "" should never happen because we default to linux/amd64.
 	platforms := []v1.Platform{}
 	if spec == "all" || spec == "" {
-		return platforms, nil
+		return &platformMatcher{spec: spec}, nil
 	}
 
 	for _, platform := range strings.Split(spec, ",") {
@@ -688,11 +691,11 @@ func parseSpec(spec string) ([]v1.Platform, error) {
 		}
 		platforms = append(platforms, p)
 	}
-	return platforms, nil
+	return &platformMatcher{spec: spec, platforms: platforms}, nil
 }
 
-func matchesPlatformSpec(base *v1.Platform, spec string, parsed []v1.Platform) bool {
-	if spec == "all" {
+func (pm *platformMatcher) matches(base *v1.Platform) bool {
+	if pm.spec == "all" {
 		return true
 	}
 
@@ -701,7 +704,7 @@ func matchesPlatformSpec(base *v1.Platform, spec string, parsed []v1.Platform) b
 		return false
 	}
 
-	for _, p := range parsed {
+	for _, p := range pm.platforms {
 		if p.OS != "" && base.OS != p.OS {
 			continue
 		}
