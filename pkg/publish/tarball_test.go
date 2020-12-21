@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -60,7 +61,7 @@ func TestTarball(t *testing.T) {
 	}}
 	for _, tags := range tagss {
 		tp := NewTarball(fp.Name(), repoName, md5Hash, tags)
-		if d, err := tp.Publish(img, importpath); err != nil {
+		if d, err := tp.Publish(context.Background(), img, importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), tag.Repository.String()) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)

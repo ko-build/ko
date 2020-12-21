@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"context"
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -50,7 +51,7 @@ func NewCaching(inner Interface) (Interface, error) {
 }
 
 // Publish implements Interface
-func (c *caching) Publish(br build.Result, ref string) (name.Reference, error) {
+func (c *caching) Publish(ctx context.Context, br build.Result, ref string) (name.Reference, error) {
 	f := func() *future {
 		// Lock the map of futures.
 		c.m.Lock()
@@ -66,7 +67,7 @@ func (c *caching) Publish(br build.Result, ref string) (name.Reference, error) {
 		}
 		// Otherwise create and record a future for publishing "br" to "ref".
 		f := newFuture(func() (name.Reference, error) {
-			return c.inner.Publish(br, ref)
+			return c.inner.Publish(ctx, br, ref)
 		})
 		c.results[ref] = &entry{br: br, f: f}
 		return f

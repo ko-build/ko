@@ -59,7 +59,7 @@ func ImageReferences(ctx context.Context, docs []*yaml.Node, strict bool, builde
 			if err != nil {
 				return err
 			}
-			digest, err := publisher.Publish(img, ref)
+			digest, err := publisher.Publish(ctx, img, ref)
 			if err != nil {
 				return err
 			}

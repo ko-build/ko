@@ -39,7 +39,7 @@ func TestGoBuildIsSupportedRef(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	ng, err := NewGo(WithBaseImages(func(string) (Result, error) { return base, nil }))
+	ng, err := NewGo(context.Background(), WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }))
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}
@@ -88,7 +88,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	}
 
 	opts := []Option{
-		WithBaseImages(func(string) (Result, error) { return base, nil }),
+		WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }),
 		withModuleInfo(mods),
 		withBuildContext(stubBuildContext{
 			// make all referenced deps commands
@@ -99,7 +99,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 		}),
 	}
 
-	ng, err := NewGo(opts...)
+	ng, err := NewGo(context.Background(), opts...)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}
@@ -158,8 +158,9 @@ func TestGoBuildNoKoData(t *testing.T) {
 
 	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
+		context.Background(),
 		WithCreationTime(creationTime),
-		WithBaseImages(func(string) (Result, error) { return base, nil }),
+		WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }),
 		withBuilder(writeTempFile),
 	)
 	if err != nil {
@@ -399,8 +400,9 @@ func TestGoBuild(t *testing.T) {
 
 	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
+		context.Background(),
 		WithCreationTime(creationTime),
-		WithBaseImages(func(string) (Result, error) { return base, nil }),
+		WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }),
 		withBuilder(writeTempFile),
 	)
 	if err != nil {
@@ -453,8 +455,9 @@ func TestGoBuildIndex(t *testing.T) {
 
 	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
+		context.Background(),
 		WithCreationTime(creationTime),
-		WithBaseImages(func(string) (Result, error) { return base, nil }),
+		WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }),
 		withBuilder(writeTempFile),
 	)
 	if err != nil {
@@ -523,8 +526,9 @@ func TestNestedIndex(t *testing.T) {
 
 	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
+		context.Background(),
 		WithCreationTime(creationTime),
-		WithBaseImages(func(string) (Result, error) { return nestedBase, nil }),
+		WithBaseImages(func(context.Context, string) (Result, error) { return nestedBase, nil }),
 		withBuilder(writeTempFile),
 	)
 	if err != nil {

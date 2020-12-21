@@ -46,7 +46,7 @@ const (
 )
 
 // GetBase takes an importpath and returns a base image.
-type GetBase func(string) (Result, error)
+type GetBase func(context.Context, string) (Result, error)
 
 type builder func(context.Context, string, v1.Platform, bool) (string, error)
 
@@ -105,14 +105,14 @@ type modInfo struct {
 // using go modules, otherwise returns nil.
 //
 // Related: https://github.com/golang/go/issues/26504
-func moduleInfo() (*modules, error) {
+func moduleInfo(ctx context.Context) (*modules, error) {
 	modules := modules{
 		deps: make(map[string]*modInfo),
 	}
 
 	// TODO we read all the output as a single byte array - it may
 	// be possible & more efficient to stream it
-	output, err := exec.Command("go", "list", "-mod=readonly", "-json", "-m", "all").Output()
+	output, err := exec.CommandContext(ctx, "go", "list", "-mod=readonly", "-json", "-m", "all").Output()
 	if err != nil {
 		return nil, nil
 	}
@@ -149,8 +149,8 @@ func moduleInfo() (*modules, error) {
 // NewGo returns a build.Interface implementation that:
 //  1. builds go binaries named by importpath,
 //  2. containerizes the binary on a suitable base,
-func NewGo(options ...Option) (Interface, error) {
-	module, err := moduleInfo()
+func NewGo(ctx context.Context, options ...Option) (Interface, error) {
+	module, err := moduleInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -579,7 +579,7 @@ func updatePath(cf *v1.ConfigFile) {
 // Build implements build.Interface
 func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	// Determine the appropriate base image for this import path.
-	base, err := g.getBase(s)
+	base, err := g.getBase(ctx, s)
 	if err != nil {
 		return nil, err
 	}

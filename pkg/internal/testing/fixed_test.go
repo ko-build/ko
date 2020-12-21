@@ -39,7 +39,7 @@ func TestFixedPublish(t *testing.T) {
 		},
 	})
 
-	fooDigest, err := f.Publish(nil, "foo")
+	fooDigest, err := f.Publish(context.Background(), nil, "foo")
 	if err != nil {
 		t.Errorf("Publish(foo) = %v", err)
 	}
@@ -47,7 +47,7 @@ func TestFixedPublish(t *testing.T) {
 		t.Errorf("Publish(foo) = %q, want %q", got, want)
 	}
 
-	barDigest, err := f.Publish(nil, "bar")
+	barDigest, err := f.Publish(context.Background(), nil, "bar")
 	if err != nil {
 		t.Errorf("Publish(bar) = %v", err)
 	}
@@ -55,7 +55,7 @@ func TestFixedPublish(t *testing.T) {
 		t.Errorf("Publish(bar) = %q, want %q", got, want)
 	}
 
-	d, err := f.Publish(nil, "baz")
+	d, err := f.Publish(context.Background(), nil, "baz")
 	if err == nil {
 		t.Errorf("Publish(baz) = %v, want error", d)
 	}

@@ -58,7 +58,8 @@ func addPublish(topLevel *cobra.Command) {
   ko publish --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
 		Args: cobra.MinimumNArgs(1),
 		Run: func(_ *cobra.Command, args []string) {
-			builder, err := makeBuilder(bo)
+			ctx := createCancellableContext()
+			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				log.Fatalf("error creating builder: %v", err)
 			}
@@ -67,7 +68,6 @@ func addPublish(topLevel *cobra.Command) {
 				log.Fatalf("error creating publisher: %v", err)
 			}
 			defer publisher.Close()
-			ctx := createCancellableContext()
 			images, err := publishImages(ctx, args, publisher, builder)
 			if err != nil {
 				log.Fatalf("failed to publish images: %v", err)

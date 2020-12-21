@@ -66,7 +66,7 @@ func NewFixedPublish(base name.Repository, entries map[string]v1.Hash) publish.I
 }
 
 // Publish implements publish.Interface
-func (f *fixedPublish) Publish(_ build.Result, s string) (name.Reference, error) {
+func (f *fixedPublish) Publish(_ context.Context, _ build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	h, ok := f.entries[s]
 	if !ok {
