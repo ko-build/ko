@@ -471,8 +471,11 @@ use multiple base images, as you must ensure that every base image contains all
 the platforms that you'd like to build.
 
 When `--platform` is not provided, if both `GOOS` and `GOARCH` environment
-variables are set, `ko` will build an image for `${GOOS}/${GOARCH}`, otherwise
-`ko` will build a `linux/amd64` image.
+variables are set, `ko` will build an image for `${GOOS}/${GOARCH}[/v${GOARM}]`,
+otherwise `ko` will build a `linux/amd64` image.
+
+Note that using both `--platform` and GOOS/GOARCH will return an error, as it's
+unclear what platform should be used.
 
 ## Enable Autocompletion
 
