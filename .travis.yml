@@ -18,14 +18,9 @@ script:
   - go install -mod=vendor ./cmd/ko
   # Try with all, and GOOS/GOARCH set.
   - |
-    GOOS=${GOOS} GOARCH=${GOARCH} KO_DOCKER_REPO=ko.local ko publish --platform=all -B ./cmd/ko/test
-    OUTPUT=$(docker run -i ko.local/test -wait=false 2>&1)
-    if [[ ! "${OUTPUT}" =~ "$(cat ./cmd/ko/test/kodata/kenobi)" ]]; then
-      echo Mismatched output: ${OUTPUT}, wanted: $(cat ./cmd/ko/test/kodata/kenobi)
-      exit 1
-    fi
-    if [[ ! "${OUTPUT}" =~ "$(cat ./cmd/ko/test/kodata/HEAD)" ]]; then
-      echo Mismatched output: ${OUTPUT}, wanted: $(cat ./cmd/ko/test/kodata/HEAD)
+    OUTPUT=$(GOOS=${GOOS} GOARCH=${GOARCH} KO_DOCKER_REPO=ko.local ko publish --platform=all -B ./cmd/ko/test 2>&1)
+    if [[ ! "${OUTPUT}" =~ "cannot use --platform with GOOS=\"${GOOS}\"" ]]; then
+      echo Mismatched output: ${OUTPUT}, wanted: "cannot use --platform with GOOS=\"${GOOS}\""
       exit 1
     fi
 

@@ -24,6 +24,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"sync"
 
@@ -69,8 +70,34 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	platform := bo.Platform
+	if platform == "" {
+		platform = "linux/amd64"
+
+		goos, goarch, goarm := os.Getenv("GOOS"), os.Getenv("GOARCH"), os.Getenv("GOARM")
+
+		// Default to linux/amd64 unless GOOS and GOARCH are set.
+		if goos != "" && goarch != "" {
+			platform = path.Join(goos, goarch)
+		}
+
+		// Use GOARM for variant if it's set and GOARCH is arm.
+		if strings.Contains(goarch, "arm") && goarm != "" {
+			platform = path.Join(platform, "v"+goarm)
+		}
+	} else {
+		// Make sure these are all unset
+		for _, env := range []string{"GOOS", "GOARCH", "GOARM"} {
+			if s, ok := os.LookupEnv(env); ok {
+				return nil, fmt.Errorf("cannot use --platform with %s=%q", env, s)
+			}
+		}
+	}
+
 	opts := []build.Option{
-		build.WithBaseImages(getBaseImage(bo.Platform)),
+		build.WithBaseImages(getBaseImage(platform)),
+		build.WithPlatforms(platform),
 	}
 	if creationTime != nil {
 		opts = append(opts, build.WithCreationTime(*creationTime))

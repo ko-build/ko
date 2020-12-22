@@ -54,6 +54,11 @@ type buildContext interface {
 	Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error)
 }
 
+type platformMatcher struct {
+	spec      string
+	platforms []v1.Platform
+}
+
 type gobuild struct {
 	getBase              GetBase
 	creationTime         v1.Time
@@ -61,6 +66,7 @@ type gobuild struct {
 	disableOptimizations bool
 	mod                  *modules
 	buildContext         buildContext
+	platformMatcher      *platformMatcher
 }
 
 // Option is a functional option for NewGo.
@@ -73,11 +79,16 @@ type gobuildOpener struct {
 	disableOptimizations bool
 	mod                  *modules
 	buildContext         buildContext
+	platform             string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
 	if gbo.getBase == nil {
 		return nil, errors.New("a way of providing base images must be specified, see build.WithBaseImages")
+	}
+	matcher, err := parseSpec(gbo.platform)
+	if err != nil {
+		return nil, err
 	}
 	return &gobuild{
 		getBase:              gbo.getBase,
@@ -86,6 +97,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		disableOptimizations: gbo.disableOptimizations,
 		mod:                  gbo.mod,
 		buildContext:         gbo.buildContext,
+		platformMatcher:      matcher,
 	}, nil
 }
 
@@ -623,6 +635,10 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, s)
 		}
 
+		if !g.platformMatcher.matches(desc.Platform) {
+			continue
+		}
+
 		base, err := base.Image(desc.Digest)
 		if err != nil {
 			return nil, err
@@ -648,4 +664,59 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 	}
 
 	return mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType), nil
+}
+
+func parseSpec(spec string) (*platformMatcher, error) {
+	// Don't bother parsing "all".
+	// "" should never happen because we default to linux/amd64.
+	platforms := []v1.Platform{}
+	if spec == "all" || spec == "" {
+		return &platformMatcher{spec: spec}, nil
+	}
+
+	for _, platform := range strings.Split(spec, ",") {
+		var p v1.Platform
+		parts := strings.Split(strings.TrimSpace(platform), "/")
+		if len(parts) > 0 {
+			p.OS = parts[0]
+		}
+		if len(parts) > 1 {
+			p.Architecture = parts[1]
+		}
+		if len(parts) > 2 {
+			p.Variant = parts[2]
+		}
+		if len(parts) > 3 {
+			return nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
+		}
+		platforms = append(platforms, p)
+	}
+	return &platformMatcher{spec: spec, platforms: platforms}, nil
+}
+
+func (pm *platformMatcher) matches(base *v1.Platform) bool {
+	if pm.spec == "all" {
+		return true
+	}
+
+	// Don't build anything without a platform field unless "all". Unclear what we should do here.
+	if base == nil {
+		return false
+	}
+
+	for _, p := range pm.platforms {
+		if p.OS != "" && base.OS != p.OS {
+			continue
+		}
+		if p.Architecture != "" && base.Architecture != p.Architecture {
+			continue
+		}
+		if p.Variant != "" && base.Variant != p.Variant {
+			continue
+		}
+
+		return true
+	}
+
+	return false
 }
