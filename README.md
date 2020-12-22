@@ -461,11 +461,11 @@ supports it.
 
 If the base image is a manifest list with more platforms than you want to build,
 invoking `ko` with comma-separated list of platforms (e.g.
-`--platform=linux/amd64,linux/arm/v6`) will produce a manifest list
-containing only the provided platforms. Note that if the base image does not
-contain platforms that are provided by this flag, `ko` will be unable to build
-a corresponding image, and this is not an error. The resulting artifact will be
-a multi-platform image containing the intersection of platforms from the base
+`--platform=linux/amd64,linux/arm/v6`) will produce a manifest list containing
+only the provided platforms. Note that if the base image does not contain
+platforms that are provided by this flag, `ko` will be unable to build a
+corresponding image, and this is not an error. The resulting artifact will be a
+multi-platform image containing the intersection of platforms from the base
 image and the `--platform` flag. This is especially relevant for projects that
 use multiple base images, as you must ensure that every base image contains all
 the platforms that you'd like to build.
