@@ -525,6 +525,18 @@ This resulting configuration may then be installed onto Kubernetes clusters via:
 kubectl apply -f release.yaml
 ```
 
+### How can I set ldflags?
+
+[Using `-ldflags`](https://blog.cloudflare.com/setting-go-variables-at-compile-time/)
+is a common way to embed version info in go binaries. (In fact, [we do this for
+`ko`](https://github.com/google/ko/blob/c2b862d468505dea36ed86e724ca3d190c0d462d/.goreleaser.yml#L15-L16).)
+Unforunately, because `ko` wraps `go build`, it's not possible to use this
+flag directly; however, you can use the `GOFLAGS` environment variable instead:
+
+```
+GOFLAGS="-ldflags=-X=main.version=1.2.3" ko publish .
+```
+
 ### Why are my images all created in 1970?
 
 In order to support [reproducible builds](https://reproducible-builds.org), `ko`
