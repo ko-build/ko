@@ -41,7 +41,13 @@ func main() {
 
 	// Also add the auth group from crane to facilitate logging into a
 	// registry.
-	cmds.AddCommand(cranecmd.NewCmdAuth())
+	authCmd := cranecmd.NewCmdAuth("ko", "auth")
+	// That was a mistake, but just set it to Hidden so we don't break people.
+	authCmd.Hidden = true
+	cmds.AddCommand(authCmd)
+
+	// Just add a `ko login` command:
+	cmds.AddCommand(cranecmd.NewCmdAuthLogin())
 
 	if err := cmds.Execute(); err != nil {
 		log.Fatalf("error during command execution: %v", err)
