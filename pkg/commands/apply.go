@@ -33,7 +33,6 @@ func addApply(topLevel *cobra.Command) {
 	po := &options.PublishOptions{}
 	fo := &options.FilenameOptions{}
 	so := &options.SelectorOptions{}
-	sto := &options.StrictOptions{}
 	bo := &options.BuildOptions{}
 	apply := &cobra.Command{
 		Use:   "apply -f FILENAME",
@@ -128,7 +127,7 @@ func addApply(topLevel *cobra.Command) {
 					stdin.Write([]byte("---\n"))
 				}
 				// Once primed kick things off.
-				return resolveFilesToWriter(ctx, builder, publisher, fo, so, sto, stdin)
+				return resolveFilesToWriter(ctx, builder, publisher, fo, so, stdin)
 			})
 
 			g.Go(func() error {

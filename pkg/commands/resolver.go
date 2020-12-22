@@ -234,7 +234,6 @@ func resolveFilesToWriter(
 	publisher publish.Interface,
 	fo *options.FilenameOptions,
 	so *options.SelectorOptions,
-	sto *options.StrictOptions,
 	out io.WriteCloser) error {
 	defer out.Close()
 
@@ -324,7 +323,7 @@ func resolveFilesToWriter(
 				recordingBuilder := &build.Recorder{
 					Builder: builder,
 				}
-				b, err := resolveFile(ctx, f, recordingBuilder, publisher, so, sto)
+				b, err := resolveFile(ctx, f, recordingBuilder, publisher, so)
 				if err != nil {
 					// This error is sometimes expected during watch mode, so this
 					// isn't fatal. Just print it and keep the watch open.
@@ -386,8 +385,7 @@ func resolveFile(
 	f string,
 	builder build.Interface,
 	pub publish.Interface,
-	so *options.SelectorOptions,
-	sto *options.StrictOptions) (b []byte, err error) {
+	so *options.SelectorOptions) (b []byte, err error) {
 
 	var selector labels.Selector
 	if so.Selector != "" {
@@ -435,7 +433,7 @@ func resolveFile(
 
 	}
 
-	if err := resolve.ImageReferences(ctx, docNodes, sto.Strict, builder, pub); err != nil {
+	if err := resolve.ImageReferences(ctx, docNodes, builder, pub); err != nil {
 		return nil, fmt.Errorf("error resolving image references: %v", err)
 	}
 

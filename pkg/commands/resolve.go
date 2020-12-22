@@ -27,7 +27,6 @@ func addResolve(topLevel *cobra.Command) {
 	po := &options.PublishOptions{}
 	fo := &options.FilenameOptions{}
 	so := &options.SelectorOptions{}
-	sto := &options.StrictOptions{}
 	bo := &options.BuildOptions{}
 
 	resolve := &cobra.Command{
@@ -66,7 +65,7 @@ func addResolve(topLevel *cobra.Command) {
 				log.Fatalf("error creating publisher: %v", err)
 			}
 			defer publisher.Close()
-			if err := resolveFilesToWriter(ctx, builder, publisher, fo, so, sto, os.Stdout); err != nil {
+			if err := resolveFilesToWriter(ctx, builder, publisher, fo, so, os.Stdout); err != nil {
 				log.Fatal(err)
 			}
 		},
