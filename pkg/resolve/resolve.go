@@ -31,21 +31,21 @@ import (
 // to published image digests.
 //
 // If a reference can be built and pushed, its yaml.Node will be mutated.
-func ImageReferences(ctx context.Context, docs []*yaml.Node, strict bool, builder build.Interface, publisher publish.Interface) error {
+func ImageReferences(ctx context.Context, docs []*yaml.Node, builder build.Interface, publisher publish.Interface) error {
 	// First, walk the input objects and collect a list of supported references
 	refs := make(map[string][]*yaml.Node)
 
 	for _, doc := range docs {
-		it := refsFromDoc(doc, strict)
+		it := refsFromDoc(doc)
 
 		for node, ok := it(); ok; node, ok = it() {
 			ref := strings.TrimSpace(node.Value)
 
-			if err := builder.IsSupportedReference(ref); err == nil {
-				refs[ref] = append(refs[ref], node)
-			} else if strict {
+			if err := builder.IsSupportedReference(ref); err != nil {
 				return fmt.Errorf("found strict reference but %s is not a valid import path: %v", ref, err)
 			}
+
+			refs[ref] = append(refs[ref], node)
 		}
 	}
 
@@ -87,14 +87,10 @@ func ImageReferences(ctx context.Context, docs []*yaml.Node, strict bool, builde
 	return nil
 }
 
-func refsFromDoc(doc *yaml.Node, strict bool) yit.Iterator {
+func refsFromDoc(doc *yaml.Node) yit.Iterator {
 	it := yit.FromNode(doc).
 		RecurseNodes().
 		Filter(yit.StringValue)
 
-	if strict {
-		return it.Filter(yit.WithPrefix(build.StrictScheme))
-	}
-
-	return it
+	return it.Filter(yit.WithPrefix(build.StrictScheme))
 }

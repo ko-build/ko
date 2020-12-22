@@ -17,7 +17,6 @@ package resolve
 import (
 	"bytes"
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -82,14 +81,17 @@ func TestYAMLArrays(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-			inputStructured := test.refs
+			inputStructured := []string{}
+			for _, ref := range test.refs {
+				inputStructured = append(inputStructured, build.StrictScheme+ref)
+			}
 			inputYAML, err := yaml.Marshal(inputStructured)
 			if err != nil {
 				t.Fatalf("yaml.Marshal(%v) = %v", inputStructured, err)
 			}
 
 			doc := strToYAML(t, string(inputYAML))
-			err = ImageReferences(context.Background(), []*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(test.base, testHashes))
+			err = ImageReferences(context.Background(), []*yaml.Node{doc}, testBuilder, kotesting.NewFixedPublish(test.base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -124,17 +126,17 @@ func TestYAMLMaps(t *testing.T) {
 		expected map[string]string
 	}{{
 		desc:     "simple value",
-		input:    map[string]string{"image": fooRef},
+		input:    map[string]string{"image": build.StrictScheme + fooRef},
 		expected: map[string]string{"image": kotesting.ComputeDigest(base, fooRef, fooHash)},
 	}, {
 		desc:  "simple key",
-		input: map[string]string{bazRef: "blah"},
+		input: map[string]string{build.StrictScheme + bazRef: "blah"},
 		expected: map[string]string{
 			kotesting.ComputeDigest(base, bazRef, bazHash): "blah",
 		},
 	}, {
 		desc:  "key and value",
-		input: map[string]string{fooRef: barRef},
+		input: map[string]string{build.StrictScheme + fooRef: build.StrictScheme + barRef},
 		expected: map[string]string{
 			kotesting.ComputeDigest(base, fooRef, fooHash): kotesting.ComputeDigest(base, barRef, barHash),
 		},
@@ -145,8 +147,8 @@ func TestYAMLMaps(t *testing.T) {
 	}, {
 		desc: "multiple values",
 		input: map[string]string{
-			"arg1": fooRef,
-			"arg2": barRef,
+			"arg1": build.StrictScheme + fooRef,
+			"arg2": build.StrictScheme + barRef,
 		},
 		expected: map[string]string{
 			"arg1": kotesting.ComputeDigest(base, fooRef, fooHash),
@@ -163,7 +165,7 @@ func TestYAMLMaps(t *testing.T) {
 			}
 
 			doc := strToYAML(t, string(inputYAML))
-			err = ImageReferences(context.Background(), []*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(base, testHashes))
+			err = ImageReferences(context.Background(), []*yaml.Node{doc}, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -203,23 +205,23 @@ func TestYAMLObject(t *testing.T) {
 		expected: &object{},
 	}, {
 		desc:     "string field",
-		input:    &object{S: fooRef},
+		input:    &object{S: build.StrictScheme + fooRef},
 		expected: &object{S: kotesting.ComputeDigest(base, fooRef, fooHash)},
 	}, {
 		desc:     "map field",
-		input:    &object{M: map[string]object{"blah": {S: fooRef}}},
+		input:    &object{M: map[string]object{"blah": {S: build.StrictScheme + fooRef}}},
 		expected: &object{M: map[string]object{"blah": {S: kotesting.ComputeDigest(base, fooRef, fooHash)}}},
 	}, {
 		desc:     "array field",
-		input:    &object{A: []object{{S: fooRef}}},
+		input:    &object{A: []object{{S: build.StrictScheme + fooRef}}},
 		expected: &object{A: []object{{S: kotesting.ComputeDigest(base, fooRef, fooHash)}}},
 	}, {
 		desc:     "pointer field",
-		input:    &object{P: &object{S: fooRef}},
+		input:    &object{P: &object{S: build.StrictScheme + fooRef}},
 		expected: &object{P: &object{S: kotesting.ComputeDigest(base, fooRef, fooHash)}},
 	}, {
 		desc:     "deep field",
-		input:    &object{M: map[string]object{"blah": {A: []object{{P: &object{S: fooRef}}}}}},
+		input:    &object{M: map[string]object{"blah": {A: []object{{P: &object{S: build.StrictScheme + fooRef}}}}}},
 		expected: &object{M: map[string]object{"blah": {A: []object{{P: &object{S: kotesting.ComputeDigest(base, fooRef, fooHash)}}}}}},
 	}}
 
@@ -232,7 +234,7 @@ func TestYAMLObject(t *testing.T) {
 			}
 
 			doc := strToYAML(t, string(inputYAML))
-			err = ImageReferences(context.Background(), []*yaml.Node{doc}, false, testBuilder, kotesting.NewFixedPublish(base, testHashes))
+			err = ImageReferences(context.Background(), []*yaml.Node{doc}, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 			if err != nil {
 				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 			}
@@ -250,27 +252,27 @@ func TestYAMLObject(t *testing.T) {
 
 func TestStrict(t *testing.T) {
 	refs := []string{
-		build.StrictScheme + fooRef,
-		build.StrictScheme + barRef,
+		fooRef,
+		barRef,
 	}
 	buf := bytes.NewBuffer(nil)
 	encoder := yaml.NewEncoder(buf)
 	for _, input := range refs {
-		if err := encoder.Encode(input); err != nil {
+		if err := encoder.Encode(build.StrictScheme + input); err != nil {
 			t.Fatalf("Encode(%v) = %v", input, err)
 		}
 	}
 	base := mustRepository("gcr.io/multi-pass")
 	doc := strToYAML(t, buf.String())
 
-	err := ImageReferences(context.Background(), []*yaml.Node{doc}, true, testBuilder, kotesting.NewFixedPublish(base, testHashes))
+	err := ImageReferences(context.Background(), []*yaml.Node{doc}, testBuilder, kotesting.NewFixedPublish(base, testHashes))
 	if err != nil {
 		t.Fatalf("ImageReferences: %v", err)
 	}
 	t.Log(yamlToStr(t, doc))
 }
 
-func TestNoStrictKoPrefixRemains(t *testing.T) {
+func TestIsSupportedReferenceError(t *testing.T) {
 	ref := build.StrictScheme + fooRef
 
 	buf := bytes.NewBuffer(nil)
@@ -284,12 +286,9 @@ func TestNoStrictKoPrefixRemains(t *testing.T) {
 
 	noMatchBuilder := kotesting.NewFixedBuild(nil)
 
-	err := ImageReferences(context.Background(), []*yaml.Node{doc}, false, noMatchBuilder, kotesting.NewFixedPublish(base, testHashes))
-	if err != nil {
-		t.Fatalf("ImageReferences: %v", err)
-	}
-	if diff := cmp.Diff(ref, strings.TrimSpace(yamlToStr(t, doc))); diff != "" {
-		t.Errorf("expected the ko prefix to remain (-want,+got): %v", diff)
+	err := ImageReferences(context.Background(), []*yaml.Node{doc}, noMatchBuilder, kotesting.NewFixedPublish(base, testHashes))
+	if err == nil {
+		t.Fatal("ImageReferences should err, got nil")
 	}
 }
 

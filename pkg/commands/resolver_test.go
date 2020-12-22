@@ -58,7 +58,7 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 	buf := bytes.NewBuffer(nil)
 	encoder := yaml.NewEncoder(buf)
 	for _, input := range refs {
-		if err := encoder.Encode(input); err != nil {
+		if err := encoder.Encode(build.StrictScheme + input); err != nil {
 			t.Fatalf("Encode(%v) = %v", input, err)
 		}
 	}
@@ -70,8 +70,7 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 		yamlToTmpFile(t, buf.Bytes()),
 		testBuilder,
 		kotesting.NewFixedPublish(base, testHashes),
-		&options.SelectorOptions{},
-		&options.StrictOptions{})
+		&options.SelectorOptions{})
 
 	if err != nil {
 		t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
@@ -126,8 +125,7 @@ kind: Bar
 		kotesting.NewFixedPublish(base, testHashes),
 		&options.SelectorOptions{
 			Selector: "qux=baz",
-		},
-		&options.StrictOptions{})
+		})
 	if err != nil {
 		t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
 	}
