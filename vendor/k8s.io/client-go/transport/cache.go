@@ -47,8 +47,10 @@ type tlsCacheKey struct {
 	keyData            string
 	certFile           string
 	keyFile            string
+	getCert            string
 	serverName         string
 	nextProtos         string
+	dial               string
 	disableCompression bool
 }
 
@@ -57,24 +59,22 @@ func (t tlsCacheKey) String() string {
 	if len(t.keyData) > 0 {
 		keyText = "<redacted>"
 	}
-	return fmt.Sprintf("insecure:%v, caData:%#v, certData:%#v, keyData:%s, serverName:%s, disableCompression:%t", t.insecure, t.caData, t.certData, keyText, t.serverName, t.disableCompression)
+	return fmt.Sprintf("insecure:%v, caData:%#v, certData:%#v, keyData:%s, getCert: %s, serverName:%s, dial:%s disableCompression:%t", t.insecure, t.caData, t.certData, keyText, t.getCert, t.serverName, t.dial, t.disableCompression)
 }
 
 func (c *tlsTransportCache) get(config *Config) (http.RoundTripper, error) {
-	key, canCache, err := tlsConfigKey(config)
+	key, err := tlsConfigKey(config)
 	if err != nil {
 		return nil, err
 	}
 
-	if canCache {
-		// Ensure we only create a single transport for the given TLS options
-		c.mu.Lock()
-		defer c.mu.Unlock()
+	// Ensure we only create a single transport for the given TLS options
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-		// See if we already have a custom transport for this config
-		if t, ok := c.transports[key]; ok {
-			return t, nil
-		}
+	// See if we already have a custom transport for this config
+	if t, ok := c.transports[key]; ok {
+		return t, nil
 	}
 
 	// Get the TLS options for this client config
@@ -83,7 +83,7 @@ func (c *tlsTransportCache) get(config *Config) (http.RoundTripper, error) {
 		return nil, err
 	}
 	// The options didn't require a custom TLS config
-	if tlsConfig == nil && config.Dial == nil && config.Proxy == nil {
+	if tlsConfig == nil && config.Dial == nil {
 		return http.DefaultTransport, nil
 	}
 
@@ -104,45 +104,31 @@ func (c *tlsTransportCache) get(config *Config) (http.RoundTripper, error) {
 		go dynamicCertDialer.Run(wait.NeverStop)
 	}
 
-	proxy := http.ProxyFromEnvironment
-	if config.Proxy != nil {
-		proxy = config.Proxy
-	}
-
-	transport := utilnet.SetTransportDefaults(&http.Transport{
-		Proxy:               proxy,
+	// Cache a single transport for these options
+	c.transports[key] = utilnet.SetTransportDefaults(&http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
 		TLSHandshakeTimeout: 10 * time.Second,
 		TLSClientConfig:     tlsConfig,
 		MaxIdleConnsPerHost: idleConnsPerHost,
 		DialContext:         dial,
 		DisableCompression:  config.DisableCompression,
 	})
-
-	if canCache {
-		// Cache a single transport for these options
-		c.transports[key] = transport
-	}
-
-	return transport, nil
+	return c.transports[key], nil
 }
 
 // tlsConfigKey returns a unique key for tls.Config objects returned from TLSConfigFor
-func tlsConfigKey(c *Config) (tlsCacheKey, bool, error) {
+func tlsConfigKey(c *Config) (tlsCacheKey, error) {
 	// Make sure ca/key/cert content is loaded
 	if err := loadTLSFiles(c); err != nil {
-		return tlsCacheKey{}, false, err
+		return tlsCacheKey{}, err
 	}
-
-	if c.TLS.GetCert != nil || c.Dial != nil || c.Proxy != nil {
-		// cannot determine equality for functions
-		return tlsCacheKey{}, false, nil
-	}
-
 	k := tlsCacheKey{
 		insecure:           c.TLS.Insecure,
 		caData:             string(c.TLS.CAData),
+		getCert:            fmt.Sprintf("%p", c.TLS.GetCert),
 		serverName:         c.TLS.ServerName,
 		nextProtos:         strings.Join(c.TLS.NextProtos, ","),
+		dial:               fmt.Sprintf("%p", c.Dial),
 		disableCompression: c.DisableCompression,
 	}
 
@@ -154,5 +140,5 @@ func tlsConfigKey(c *Config) (tlsCacheKey, bool, error) {
 		k.keyData = string(c.TLS.KeyData)
 	}
 
-	return k, true, nil
+	return k, nil
 }

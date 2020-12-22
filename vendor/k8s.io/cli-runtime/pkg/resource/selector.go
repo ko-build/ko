@@ -32,17 +32,19 @@ type Selector struct {
 	Namespace     string
 	LabelSelector string
 	FieldSelector string
+	Export        bool
 	LimitChunks   int64
 }
 
 // NewSelector creates a resource selector which hides details of getting items by their label selector.
-func NewSelector(client RESTClient, mapping *meta.RESTMapping, namespace, labelSelector, fieldSelector string, limitChunks int64) *Selector {
+func NewSelector(client RESTClient, mapping *meta.RESTMapping, namespace, labelSelector, fieldSelector string, export bool, limitChunks int64) *Selector {
 	return &Selector{
 		Client:        client,
 		Mapping:       mapping,
 		Namespace:     namespace,
 		LabelSelector: labelSelector,
 		FieldSelector: fieldSelector,
+		Export:        export,
 		LimitChunks:   limitChunks,
 	}
 }
@@ -54,6 +56,7 @@ func (r *Selector) Visit(fn VisitorFunc) error {
 		list, err := NewHelper(r.Client, r.Mapping).List(
 			r.Namespace,
 			r.ResourceMapping().GroupVersionKind.GroupVersion().String(),
+			r.Export,
 			&metav1.ListOptions{
 				LabelSelector: r.LabelSelector,
 				FieldSelector: r.FieldSelector,
