@@ -13,10 +13,10 @@
 
 `ko` can be installed and upgraded by running:
 
-**Note**: Golang version `1.12.0` or higher is required.
+**Note**: Golang version `1.14.0` or higher is required.
 
 ```shell
-GO111MODULE=on go get github.com/google/ko/cmd/ko
+go get github.com/google/ko
 ```
 
 ## Authenticating
@@ -49,7 +49,7 @@ like `github.com/google/ko/cmd`.
 
 **One of the goals of `ko` is to make containers invisible infrastructure.**
 Simply replace image references in your Kubernetes yaml with the import path for
-your Go binary prefixed with `ko://` (e.g. `ko://github.com/google/ko/cmd/ko`),
+your Go binary prefixed with `ko://` (e.g. `ko://github.com/google/ko/test`),
 and `ko` will handle containerizing and publishing that container image as
 needed.
 
@@ -409,27 +409,27 @@ for referencing them should be through the `KO_DATA_PATH` environment variable.
 The intent of this is to enable users to test things outside of `ko` as follows:
 
 ```shell
-KO_DATA_PATH=$PWD/cmd/ko/test/kodata go run ./cmd/ko/test/*.go
+KO_DATA_PATH=$PWD/test/kodata go run ./test/*.go
 2018/07/19 23:35:20 Hello there
 ```
 
 This produces identical output to being run within the container locally:
 
 ```shell
-ko publish -L ./cmd/test
-2018/07/19 23:36:11 Using base gcr.io/distroless/static:nonroot for github.com/google/ko/cmd/test
-2018/07/19 23:36:12 Loading ko.local/github.com/google/ko/cmd/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
-2018/07/19 23:36:13 Loaded ko.local/github.com/google/ko/cmd/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
+ko publish -L ./test
+2018/07/19 23:36:11 Using base gcr.io/distroless/static:nonroot for github.com/google/ko/test
+2018/07/19 23:36:12 Loading ko.local/github.com/google/ko/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
+2018/07/19 23:36:13 Loaded ko.local/github.com/google/ko/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
 
-docker run -ti --rm ko.local/github.com/google/ko/cmd/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
+docker run -ti --rm ko.local/github.com/google/ko/test:703c205bf2f405af520b40536b87aafadcf181562b8faa6690fd2992084c8577
 2018/07/19 23:36:25 Hello there
 ```
 
 ... or on cluster:
 
 ```shell
-ko apply -f cmd/ko/test/test.yaml
-2018/07/19 23:38:24 Using base gcr.io/distroless/static:nonroot for github.com/google/ko/cmd/test
+ko apply -f test/test.yaml
+2018/07/19 23:38:24 Using base gcr.io/distroless/static:nonroot for github.com/google/ko/test
 2018/07/19 23:38:25 Publishing us.gcr.io/my-project/test-294a7bdc57d85dc6ddeef5ba38a59fe9:latest
 2018/07/19 23:38:26 mounted blob: sha256:988abcba36b5948da8baa1e3616b94c0b56da814b8f6ff3ae3ac316e375e093a
 2018/07/19 23:38:26 mounted blob: sha256:57752e7f9593cbfb7101af994b136a369ecc8174332866622db32a264f3fbefd

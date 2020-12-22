@@ -48,7 +48,7 @@ func init() {
 }
 
 func TestDaemon(t *testing.T) {
-	importpath := "github.com/google/ko/cmd/ko"
+	importpath := "github.com/google/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -65,7 +65,7 @@ func TestDaemon(t *testing.T) {
 func TestDaemonTags(t *testing.T) {
 	Tags = nil
 
-	importpath := "github.com/google/ko/cmd/ko"
+	importpath := "github.com/google/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -78,7 +78,7 @@ func TestDaemonTags(t *testing.T) {
 		t.Errorf("Publish() = %v, wanted prefix %v", got, want)
 	}
 
-	expected := []string{"ko.local/099ba5bcefdead87f92606265fb99ac0:v2.0.0", "ko.local/099ba5bcefdead87f92606265fb99ac0:v1.2.3", "ko.local/099ba5bcefdead87f92606265fb99ac0:production"}
+	expected := []string{"ko.local/98b8c7facdad74510a7cae0cd368eb4e:v2.0.0", "ko.local/98b8c7facdad74510a7cae0cd368eb4e:v1.2.3", "ko.local/98b8c7facdad74510a7cae0cd368eb4e:production"}
 
 	for i, v := range expected {
 		if Tags[i] != v {

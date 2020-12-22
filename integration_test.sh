@@ -29,7 +29,7 @@ sed -i 's/Hello World/TEST/g' ./vendor/github.com/go-training/helloworld/main.go
 
 echo "Building ko"
 
-RESULT="$(GO111MODULE="on" GOFLAGS="-mod=vendor" go build ./cmd/ko)"
+RESULT="$(GO111MODULE="on" GOFLAGS="-mod=vendor" go build .)"
 
 echo "Beginning scenarios."
 

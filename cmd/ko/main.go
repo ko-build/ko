@@ -14,6 +14,10 @@
 
 package main
 
+// HEY! YOU! This file has moved to the root of the project.
+// !! PLEASE DO NOT ADD NEW FEATURES HERE !!
+// Only sync with the root/main.go.
+
 import (
 	"log"
 	"os"
@@ -24,6 +28,15 @@ import (
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/spf13/cobra"
 )
+
+const Deprecation258 = `NOTICE!
+-----------------------------------------------------------------
+Please install ko from github.com/google/ko.
+
+For more information see:
+   https://github.com/google/ko/issues/258
+-----------------------------------------------------------------
+`
 
 func main() {
 	logs.Warn.SetOutput(os.Stderr)
@@ -48,6 +61,8 @@ func main() {
 
 	// Just add a `ko login` command:
 	cmds.AddCommand(cranecmd.NewCmdAuthLogin())
+
+	log.Print(Deprecation258)
 
 	if err := cmds.Execute(); err != nil {
 		log.Fatalf("error during command execution: %v", err)
