@@ -17,6 +17,7 @@ package cmd
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -30,7 +31,7 @@ import (
 )
 
 // NewCmdAuth creates a new cobra.Command for the auth subcommand.
-func NewCmdAuth() *cobra.Command {
+func NewCmdAuth(argv ...string) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "auth",
 		Short: "Log in or access credentials",
@@ -39,19 +40,25 @@ func NewCmdAuth() *cobra.Command {
 			cmd.Usage()
 		},
 	}
-	cmd.AddCommand(NewCmdAuthGet(), NewCmdAuthLogin())
+	cmd.AddCommand(NewCmdAuthGet(argv...), NewCmdAuthLogin(argv...))
 	return cmd
 }
 
 // NewCmdAuthGet creates a new `crane auth get` command.
-func NewCmdAuthGet() *cobra.Command {
+func NewCmdAuthGet(argv ...string) *cobra.Command {
+	if len(argv) == 0 {
+		argv = []string{os.Args[0]}
+	}
+
+	eg := fmt.Sprintf(`  # Read configured credentials for reg.example.com
+  echo "reg.example.com" | %s get
+  {"username":"AzureDiamond","password":"hunter2"}`, strings.Join(argv, " "))
+
 	return &cobra.Command{
-		Use:   "get",
-		Short: "Implements a credential helper",
-		Example: `  # Read configured credentials for reg.example.com
-  echo "reg.example.com" | crane auth get
-  {"username":"AzureDiamond","password":"hunter2"}`,
-		Args: cobra.NoArgs,
+		Use:     "get",
+		Short:   "Implements a credential helper",
+		Example: eg,
+		Args:    cobra.NoArgs,
 		Run: func(_ *cobra.Command, args []string) {
 			b, err := ioutil.ReadAll(os.Stdin)
 			if err != nil {
@@ -77,15 +84,21 @@ func NewCmdAuthGet() *cobra.Command {
 }
 
 // NewCmdAuthLogin creates a new `crane auth login` command.
-func NewCmdAuthLogin() *cobra.Command {
+func NewCmdAuthLogin(argv ...string) *cobra.Command {
 	var opts loginOptions
 
+	if len(argv) == 0 {
+		argv = []string{os.Args[0]}
+	}
+
+	eg := fmt.Sprintf(`  # Log in to reg.example.com
+  %s login reg.example.com -u AzureDiamond -p hunter2`, strings.Join(argv, " "))
+
 	cmd := &cobra.Command{
-		Use:   "login [OPTIONS] [SERVER]",
-		Short: "Log in to a registry",
-		Example: `  # Log in to reg.example.com
-  crane auth login reg.example.com -u AzureDiamond -p hunter2`,
-		Args: cobra.ExactArgs(1),
+		Use:     "login [OPTIONS] [SERVER]",
+		Short:   "Log in to a registry",
+		Example: eg,
+		Args:    cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			reg, err := name.NewRegistry(args[0])
 			if err != nil {
@@ -145,5 +158,9 @@ func login(opts loginOptions) error {
 		return err
 	}
 
-	return cf.Save()
+	if err := cf.Save(); err != nil {
+		return err
+	}
+	log.Printf("logged in via %s", cf.Filename)
+	return nil
 }
