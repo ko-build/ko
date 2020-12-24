@@ -45,7 +45,9 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        go get github.com/google/ko/cmd/ko
+        curl -L https://github.com/google/ko/releases/download/v0.6.0/ko_0.6.0_Linux_x86_64.tar.gz | tar xzf - ko
+        chmod +x ./ko
+        sudo mv ko /usr/local/bin
         go get github.com/google/go-licenses
 
     - name: Check out code onto GOPATH
