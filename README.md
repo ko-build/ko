@@ -27,7 +27,7 @@ container registry is via `docker login`, and `ko` does not require users to
 install `docker` locally. To facilitate logging in without `docker` we expose:
 
 ```shell
-ko login my.registry.io -u username --password-stdin
+ko auth login my.registry.io -u username --password-stdin
 ```
 
 ## The `ko` Model

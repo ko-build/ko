@@ -59,7 +59,7 @@ func main() {
 	authCmd.Hidden = true
 	cmds.AddCommand(authCmd)
 
-	// Just add a `ko login` command:
+	// Just add a `ko auth login` command:
 	cmds.AddCommand(cranecmd.NewCmdAuthLogin())
 
 	log.Print(Deprecation258)
