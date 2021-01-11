@@ -11,12 +11,14 @@
 
 ## Installation
 
-`ko` can be installed and upgraded by running:
+`ko` can be installed and upgraded from our [releases](https://github.com/ko/releases) by choosing
+a particular version (the example shows v0.7.0 for x86_64) from that list and then running:
 
 **Note**: Golang version `1.14.0` or higher is required.
 
 ```shell
-go get github.com/google/ko
+curl -L https://github.com/google/ko/releases/download/v0.7.0/ko_0.7.0_Linux_x86_64.tar.gz | tar xzf - ko
+chmod +x ./ko
 ```
 
 ## Authenticating
