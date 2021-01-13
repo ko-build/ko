@@ -12,8 +12,8 @@
 ## Installation
 
 `ko` can be installed and upgraded from our
-[releases](https://github.com/ko/releases) by choosing a particular version (the
-example shows v0.7.0 for x86_64) from that list and then running:
+[releases](https://github.com/google/ko/releases) by choosing a particular
+version (the example shows v0.7.0 for x86_64) from that list and then running:
 
 **Note**: Golang version `1.14.0` or higher is required.
 
