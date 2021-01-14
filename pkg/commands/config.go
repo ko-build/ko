@@ -54,7 +54,7 @@ func getBaseImage(platform string) build.GetBase {
 		}
 		ropt := []remote.Option{
 			remote.WithAuthFromKeychain(authn.DefaultKeychain),
-			remote.WithTransport(defaultTransport()),
+			remote.WithUserAgent(ua()),
 			remote.WithContext(ctx),
 		}
 

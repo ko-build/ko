@@ -32,24 +32,26 @@ import (
 
 // defalt is intentionally misspelled to avoid keyword collision (and drive Jon nuts).
 type defalt struct {
-	base     string
-	t        http.RoundTripper
-	auth     authn.Authenticator
-	namer    Namer
-	tags     []string
-	insecure bool
+	base      string
+	t         http.RoundTripper
+	userAgent string
+	auth      authn.Authenticator
+	namer     Namer
+	tags      []string
+	insecure  bool
 }
 
 // Option is a functional option for NewDefault.
 type Option func(*defaultOpener) error
 
 type defaultOpener struct {
-	base     string
-	t        http.RoundTripper
-	auth     authn.Authenticator
-	namer    Namer
-	tags     []string
-	insecure bool
+	base      string
+	t         http.RoundTripper
+	userAgent string
+	auth      authn.Authenticator
+	namer     Namer
+	tags      []string
+	insecure  bool
 }
 
 // Namer is a function from a supported import path to the portion of the resulting
@@ -68,12 +70,13 @@ var defaultTags = []string{"latest"}
 
 func (do *defaultOpener) Open() (Interface, error) {
 	return &defalt{
-		base:     do.base,
-		t:        do.t,
-		auth:     do.auth,
-		namer:    do.namer,
-		tags:     do.tags,
-		insecure: do.insecure,
+		base:      do.base,
+		t:         do.t,
+		userAgent: do.userAgent,
+		auth:      do.auth,
+		namer:     do.namer,
+		tags:      do.tags,
+		insecure:  do.insecure,
 	}, nil
 }
 
@@ -81,11 +84,12 @@ func (do *defaultOpener) Open() (Interface, error) {
 // repository using the default keychain to authenticate and the default naming scheme.
 func NewDefault(base string, options ...Option) (Interface, error) {
 	do := &defaultOpener{
-		base:  base,
-		t:     http.DefaultTransport,
-		auth:  authn.Anonymous,
-		namer: identity,
-		tags:  defaultTags,
+		base:      base,
+		t:         http.DefaultTransport,
+		userAgent: "ko",
+		auth:      authn.Anonymous,
+		namer:     identity,
+		tags:      defaultTags,
 	}
 
 	for _, option := range options {
@@ -127,7 +131,7 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
-	ro := []remote.Option{remote.WithAuth(d.auth), remote.WithTransport(d.t), remote.WithContext(ctx)}
+	ro := []remote.Option{remote.WithAuth(d.auth), remote.WithTransport(d.t), remote.WithContext(ctx), remote.WithUserAgent(d.userAgent)}
 	no := []name.Option{}
 	if d.insecure {
 		no = append(no, name.Insecure)
