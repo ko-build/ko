@@ -11,7 +11,7 @@ github.com/PuerkitoBio/urlesc
 github.com/alessio/shellescape
 # github.com/containerd/containerd v1.3.0
 github.com/containerd/containerd/errdefs
-# github.com/containerd/stargz-snapshotter/estargz v0.0.0-20201217071531-2b97b583765b
+# github.com/containerd/stargz-snapshotter/estargz v0.0.0-20201223015020-a9a0c2d64694
 ## explicit
 github.com/containerd/stargz-snapshotter/estargz
 github.com/containerd/stargz-snapshotter/estargz/errorutil
@@ -103,7 +103,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.3.0
+# github.com/google/go-containerregistry v0.4.0
 ## explicit
 github.com/google/go-containerregistry/cmd/crane/cmd
 github.com/google/go-containerregistry/pkg/authn
@@ -136,11 +136,11 @@ github.com/google/go-containerregistry/pkg/v1/remote/transport
 github.com/google/go-containerregistry/pkg/v1/stream
 github.com/google/go-containerregistry/pkg/v1/tarball
 github.com/google/go-containerregistry/pkg/v1/types
-github.com/google/go-containerregistry/pkg/v1/v1util
 github.com/google/go-containerregistry/pkg/v1/validate
 # github.com/google/gofuzz v1.1.0
 github.com/google/gofuzz
 # github.com/googleapis/gnostic v0.2.2
+## explicit
 github.com/googleapis/gnostic/OpenAPIv2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
@@ -221,11 +221,13 @@ github.com/spf13/viper
 # github.com/stretchr/testify v1.6.1
 ## explicit
 # golang.org/x/crypto v0.0.0-20201002170205-7f63de1d35b0
+## explicit
 golang.org/x/crypto/ssh/terminal
 # golang.org/x/mod v0.4.0
 ## explicit
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20201021035429-f5854403a974
+# golang.org/x/net v0.0.0-20201026091529-146b70c837a4
+## explicit
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -260,7 +262,7 @@ golang.org/x/text/unicode/norm
 golang.org/x/text/width
 # golang.org/x/time v0.0.0-20200416051211-89c76fbcd5d1
 golang.org/x/time/rate
-# golang.org/x/tools v0.0.0-20201221201019-196535612888
+# golang.org/x/tools v0.0.0-20210113180300-f96436850f18
 ## explicit
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/gcimporter
@@ -538,3 +540,4 @@ sigs.k8s.io/yaml
 # k8s.io/apimachinery => k8s.io/apimachinery v0.18.8
 # k8s.io/cli-runtime => k8s.io/cli-runtime v0.18.8
 # k8s.io/client-go => k8s.io/client-go v0.18.8
+# k8s.io/code-generator => k8s.io/code-generator v0.18.8
