@@ -32,6 +32,15 @@ func WithTransport(t http.RoundTripper) Option {
 	}
 }
 
+// WithUserAgent is a functional option for overriding the User-Agent
+// on a default publisher.
+func WithUserAgent(ua string) Option {
+	return func(i *defaultOpener) error {
+		i.userAgent = ua
+		return nil
+	}
+}
+
 // WithAuth is a functional option for overriding the default authenticator
 // on a default publisher.
 func WithAuth(auth authn.Authenticator) Option {

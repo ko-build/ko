@@ -22,7 +22,6 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -40,29 +39,11 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
-func defaultTransport() http.RoundTripper {
-	return &useragentTransport{
-		inner:     http.DefaultTransport,
-		useragent: ua(),
-	}
-}
-
-type useragentTransport struct {
-	useragent string
-	inner     http.RoundTripper
-}
-
 func ua() string {
 	if v := version(); v != "" {
 		return "ko/" + v
 	}
 	return "ko"
-}
-
-// RoundTrip implements http.RoundTripper
-func (ut *useragentTransport) RoundTrip(in *http.Request) (*http.Response, error) {
-	in.Header.Set("User-Agent", ut.useragent)
-	return ut.inner.RoundTrip(in)
 }
 
 func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
@@ -178,7 +159,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		}
 		if po.Push {
 			dp, err := publish.NewDefault(repoName,
-				publish.WithTransport(defaultTransport()),
+				publish.WithUserAgent(ua()),
 				publish.WithAuthFromKeychain(authn.DefaultKeychain),
 				publish.WithNamer(namer),
 				publish.WithTags(po.Tags),
