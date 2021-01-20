@@ -14,6 +14,11 @@ builds:
   - -trimpath
   ldflags:
   - "-s -w -X github.com/google/ko/pkg/commands.Version={{.Version}}"
+  goarch:
+  - amd64
+  - arm64
+  - s390x
+  - 386
 archives:
 - replacements:
     darwin: Darwin
