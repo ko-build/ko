@@ -22,6 +22,14 @@ curl -L https://github.com/google/ko/releases/download/v0.7.0/ko_0.7.0_Linux_x86
 chmod +x ./ko
 ```
 
+### Install via brew
+
+If you're macOS user and using [Homebrew](https://brew.sh/), you can install via brew command:
+
+```sh
+$ brew install ko
+```
+
 ## Authenticating
 
 The `ko` CLI makes extensive use of the container registry as a ubiquitous and
