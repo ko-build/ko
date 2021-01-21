@@ -141,7 +141,12 @@ jobs:
           echo '::group:: Running github.com/client9/misspell with reviewdog 🐶 ...'
           # Don't fail because of misspell
           set +o pipefail
-          find . -type f -not -path './vendor/*' -not -path './third_party/*' -not -path './.git/*' |
+          # Exclude generated and vendored files, plus some legacy
+          # paths until we update all .gitattributes
+          git ls-files |
+          git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          grep -Ev '^(vendor/|third_party/|.git)' |
           xargs misspell -error |
           reviewdog -efm="%f:%l:%c: %m" \
                 -name="github.com/client9/misspell" \
@@ -164,7 +169,13 @@ jobs:
           echo '::group:: Flagging trailing whitespace with reviewdog 🐶 ...'
           # Don't fail because of grep
           set +o pipefail
-          find . -type f -not -path './vendor/*' -not -path './third_party/*' -not -path './.git/*' |
+          
+          # Exclude generated and vendored files, plus some legacy
+          # paths until we update all .gitattributes
+          git ls-files |
+          git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          grep -Ev '^(vendor/|third_party/|.git)' |
           xargs grep -nE " +$" |
           reviewdog -efm="%f:%l:%m" \
                 -name="trailing whitespace" \
@@ -192,7 +203,13 @@ jobs:
           #  - nothing in third_party
           #  - nothing in .git/
           #  - no *.ai (Adobe Illustrator) files.
-          for x in $(find . -type f -not -name '*.ai' -not -path './vendor/*' -not -path './third_party/*' -not -path './.git/*'); do
+          LINT_FILES=$(git ls-files |
+          git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
+          grep -Ev '^(vendor/|third_party/|.git)' |
+          grep -v '\.ai$')
+
+          for x in $LINT_FILES; do
             # Based on https://stackoverflow.com/questions/34943632/linux-check-if-there-is-an-empty-line-at-the-end-of-a-file
             if [[ -f $x && ! ( -s "$x" && -z "$(tail -c 1 $x)" ) ]]; then
               # We add 1 to `wc -l` here because of this limitation (from the man page):
