@@ -24,7 +24,8 @@ chmod +x ./ko
 
 ### Install via brew
 
-If you're macOS user and using [Homebrew](https://brew.sh/), you can install via brew command:
+If you're macOS user and using [Homebrew](https://brew.sh/), you can install via
+brew command:
 
 ```sh
 $ brew install ko
