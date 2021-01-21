@@ -36,8 +36,8 @@ jobs:
     env:
       #########################################
       #   Update this section each release.   #
-      RELEASE: 'v0.19'
-      SLACK_CHANNEL: 'release-19'
+      RELEASE: 'v0.20'
+      SLACK_CHANNEL: 'release-20'
       #########################################
 
     steps:
@@ -49,6 +49,9 @@ jobs:
           fi
           if [[ "${{ github.event.inputs.slackChannel }}" != "" ]]; then
             echo "SLACK_CHANNEL=${{ github.event.inputs.slackChannel }}" >> $GITHUB_ENV
+          fi
+          if [[ "${{ secrets.SLACK_WEBHOOK }}" != "" ]]; then
+            echo "SLACK_WEBHOOK=exists" >> $GITHUB_ENV
           fi
 
       - name: Set up Go 1.15.x
@@ -142,7 +145,8 @@ jobs:
           echo 'SLACK_TITLE=Releasability for ${{ github.repository }} @ ${{ env.RELEASE }} is NO-GO!' >> $GITHUB_ENV
 
       - name: Post status to Slack
-        if: ${{ secrets.SLACK_WEBHOOK != '' && steps.exists.outputs.release-branch == 'false' }}
+        # Note: using env.SLACK_WEBHOOK here because secrets are not allowed in the if block.
+        if: env.SLACK_WEBHOOK != '' && steps.exists.outputs.release-branch == 'false'
         uses: rtCamp/action-slack-notify@v2.1.0
         env:
           SLACK_ICON: http://github.com/knative.png?size=48
