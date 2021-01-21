@@ -43,6 +43,22 @@ import (
 const (
 	appDir             = "/ko-app"
 	defaultAppFilename = "ko-app"
+
+	gorootWarningTemplate = `NOTICE!
+-----------------------------------------------------------------
+ko and go have mismatched GOROOT:
+    go/build.Default.GOROOT = %q
+    $(go env GOROOT) = %q
+
+Inferring GOROOT=%q
+
+Run this to remove this warning:
+    export GOROOT=$(go env GOROOT)
+
+For more information see:
+    https://github.com/google/ko/issues/106
+-----------------------------------------------------------------
+`
 )
 
 // GetBase takes an importpath and returns a base image.
@@ -158,19 +174,51 @@ func moduleInfo(ctx context.Context) (*modules, error) {
 	return &modules, nil
 }
 
+// getGoroot shells out to `go env GOROOT` to determine
+// the GOROOT for the installed version of go so that we
+// can set it in our buildContext. By default, the GOROOT
+// of our buildContext is set to the GOROOT at install
+// time for `ko`, which means that we break when certain
+// package managers update go or when using a pre-built
+// `ko` binary that expects a different GOROOT.
+//
+// See https://github.com/google/ko/issues/106
+func getGoroot(ctx context.Context) (string, error) {
+	output, err := exec.CommandContext(ctx, "go", "env", "GOROOT").Output()
+	return strings.TrimSpace(string(output)), err
+}
+
 // NewGo returns a build.Interface implementation that:
 //  1. builds go binaries named by importpath,
 //  2. containerizes the binary on a suitable base,
 func NewGo(ctx context.Context, options ...Option) (Interface, error) {
+	// TODO: We could do moduleInfo() and getGoroot() concurrently.
 	module, err := moduleInfo(ctx)
 	if err != nil {
 		return nil, err
 	}
 
+	goroot, err := getGoroot(ctx)
+	if err != nil {
+		// On error, print the output and set goroot to "" to avoid using it later.
+		log.Printf("Unexpected error running \"go env GOROOT\": %v\n%v", err, goroot)
+		goroot = ""
+	} else if goroot == "" {
+		log.Printf(`Unexpected: $(go env GOROOT) == ""`)
+	}
+
+	// If $(go env GOROOT) successfully returns a non-empty string that differs from
+	// the default build context GOROOT, print a warning and use $(go env GOROOT).
+	bc := gb.Default
+	if goroot != "" && bc.GOROOT != goroot {
+		log.Printf(gorootWarningTemplate, bc.GOROOT, goroot, goroot)
+		bc.GOROOT = goroot
+	}
+
 	gbo := &gobuildOpener{
 		build:        build,
 		mod:          module,
-		buildContext: &gb.Default,
+		buildContext: &bc,
 	}
 
 	for _, option := range options {
@@ -178,6 +226,7 @@ func NewGo(ctx context.Context, options ...Option) (Interface, error) {
 			return nil, err
 		}
 	}
+
 	return gbo.Open()
 }
 
