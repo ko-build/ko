@@ -19,6 +19,7 @@ builds:
   - arm64
   - s390x
   - 386
+  - mips64le
 archives:
 - replacements:
     darwin: Darwin
