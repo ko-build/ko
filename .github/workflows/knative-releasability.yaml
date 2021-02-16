@@ -157,3 +157,11 @@ jobs:
             ${{ env.CHECK_MESSAGE }}
             ${{ env.VERIFY_MESSAGE }}
             For detailed logs: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Fail if NO-GO
+        if: steps.exists.outputs.release-branch == 'false' && env.current == 'false'
+        run: |
+          # When we have figured out that things are NO-GO, we intentionally fail the job
+          # so that the status badge shows up red and we can use the badges to create a
+          # releasability dashboard for all of the repos.
+          exit 1
