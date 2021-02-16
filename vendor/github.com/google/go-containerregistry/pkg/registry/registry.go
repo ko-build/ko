@@ -44,6 +44,9 @@ func (r *registry) v2(resp http.ResponseWriter, req *http.Request) *regError {
 	if isManifest(req) {
 		return r.manifests.handle(resp, req)
 	}
+	if isTags(req) {
+		return r.manifests.handleTags(resp, req)
+	}
 	resp.Header().Set("Docker-Distribution-API-Version", "registry/2.0")
 	if req.URL.Path != "/v2/" && req.URL.Path != "/v2" {
 		return &regError{
