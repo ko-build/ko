@@ -11,6 +11,7 @@ jobs:
    - arch: arm64
    - arch: s390x
    - arch: ppc64le
+   - arch: mips64le
 
 script:
   # Make sure ko compiles for the right architecture.
