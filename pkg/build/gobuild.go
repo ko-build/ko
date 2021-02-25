@@ -463,25 +463,25 @@ func walkRecursive(tw *tar.Writer, root, chroot string) error {
 		}
 		newPath := path.Join(chroot, filepath.ToSlash(hostPath[len(root):]))
 
-		hostPath, err = filepath.EvalSymlinks(hostPath)
+		evalPath, err := filepath.EvalSymlinks(hostPath)
 		if err != nil {
 			return fmt.Errorf("filepath.EvalSymlinks(%q): %w", hostPath, err)
 		}
 
 		// Chase symlinks.
-		info, err = os.Stat(hostPath)
+		info, err = os.Stat(evalPath)
 		if err != nil {
-			return fmt.Errorf("os.Stat(%q): %w", hostPath, err)
+			return fmt.Errorf("os.Stat(%q): %w", evalPath, err)
 		}
 		// Skip other directories.
 		if info.Mode().IsDir() {
-			return walkRecursive(tw, hostPath, newPath)
+			return walkRecursive(tw, evalPath, newPath)
 		}
 
 		// Open the file to copy it into the tarball.
-		file, err := os.Open(hostPath)
+		file, err := os.Open(evalPath)
 		if err != nil {
-			return fmt.Errorf("os.Open(%q): %w", hostPath, err)
+			return fmt.Errorf("os.Open(%q): %w", evalPath, err)
 		}
 		defer file.Close()
 
@@ -498,7 +498,7 @@ func walkRecursive(tw *tar.Writer, root, chroot string) error {
 			return fmt.Errorf("tar.Writer.WriteHeader(%q): %w", newPath, err)
 		}
 		if _, err := io.Copy(tw, file); err != nil {
-			return fmt.Errorf("io.Copy(%q, %q): %w", newPath, hostPath, err)
+			return fmt.Errorf("io.Copy(%q, %q): %w", newPath, evalPath, err)
 		}
 		return nil
 	})
