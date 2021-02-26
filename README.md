@@ -9,11 +9,16 @@
 
 `ko` is a simple, fast container image builder for Go applications.
 
-It's ideal for use cases where your image contains a single Go application without any/many dependencies on the OS base image (e.g., no cgo, no OS package dependencies).
+It's ideal for use cases where your image contains a single Go application
+without any/many dependencies on the OS base image (e.g., no cgo, no OS package
+dependencies).
 
-`ko` builds images by effectively executing `go build` on your local machine, and as such doesn't require `docker` to be installed. This can make it a good fit for lightweight CI/CD use cases.
+`ko` builds images by effectively executing `go build` on your local machine,
+and as such doesn't require `docker` to be installed. This can make it a good
+fit for lightweight CI/CD use cases.
 
-`ko` also includes support for simple YAML templating which makes it a powerful tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
+`ko` also includes support for simple YAML templating which makes it a powerful
+tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
 
 - [Setup](#setup)
   - [Install](#install)
@@ -72,20 +77,28 @@ go install github.com/google/ko
 
 ## Authenticate
 
-`ko` depends on the authentication configured in your Docker config (typically `~/.docker/config.json`). If you can push an image with `docker push`, you are already authenticated for `ko`.
+`ko` depends on the authentication configured in your Docker config (typically
+`~/.docker/config.json`). If you can push an image with `docker push`, you are
+already authenticated for `ko`.
 
-Since `ko` doesn't require `docker`, `ko login` also provides a surface for logging in to a container image registry with a username and password, similar to [`docker login`](https://docs.docker.com/engine/reference/commandline/login/).
+Since `ko` doesn't require `docker`, `ko login` also provides a surface for
+logging in to a container image registry with a username and password, similar
+to
+[`docker login`](https://docs.docker.com/engine/reference/commandline/login/).
 
 ## Choose Destination
 
-`ko` depends on an environment variable, `KO_DOCKER_REPO`, to identify where it should push images that it builds. Typically this will be a remote registry, e.g.:
+`ko` depends on an environment variable, `KO_DOCKER_REPO`, to identify where it
+should push images that it builds. Typically this will be a remote registry,
+e.g.:
 
 - `KO_DOCKER_REPO=gcr.io/my-project`, or
 - `KO_DOCKER_REPO=my-dockerhub-user`
 
 # Build an Image
 
-`ko publish ./cmd/app` builds and pushes a container image, and prints the resulting image digest to stdout.
+`ko publish ./cmd/app` builds and pushes a container image, and prints the
+resulting image digest to stdout.
 
 ```
 ko publish ./cmd/app
@@ -93,14 +106,17 @@ ko publish ./cmd/app
 gcr.io/my-project/app-099ba5bcefdead87f92606265fb99ac0@sha256:6e398316742b7aa4a93161dce4a23bc5c545700b862b43347b941000b112ec3e
 ```
 
-Because the output of `ko publish` is an image reference, you can easily pass it to other tools that expect to take an image reference:
+Because the output of `ko publish` is an image reference, you can easily pass it
+to other tools that expect to take an image reference:
 
 To run the container:
+
 ```
 docker run -p 8080:8080 $(ko publish ./cmd/app)
 ```
 
-Or, for example, to deploy it to other services like [Cloud Run](https://cloud.google.com/run):
+Or, for example, to deploy it to other services like
+[Cloud Run](https://cloud.google.com/run):
 
 ```
 gcloud run deploy --image=$(ko publish ./cmd/app)
@@ -108,15 +124,19 @@ gcloud run deploy --image=$(ko publish ./cmd/app)
 
 ## Configuration
 
-Aside from `KO_DOCKER_REPO`, you can configure `ko`'s behavior using a `.ko.yaml` file. The location of this file can be overridden with `KO_CONFIG_PATH`.
+Aside from `KO_DOCKER_REPO`, you can configure `ko`'s behavior using a
+`.ko.yaml` file. The location of this file can be overridden with
+`KO_CONFIG_PATH`.
 
 ### Overriding Base Images
 
-By default, `ko` bases images on `gcr.io/distroless/static:nonroot`. This is a small image that provides the bare necessities to run your Go binary.
+By default, `ko` bases images on `gcr.io/distroless/static:nonroot`. This is a
+small image that provides the bare necessities to run your Go binary.
 
 You can override this base image in two ways:
 
-1. To override the base image for all images `ko` builds, add this line to your `.ko.yaml` file:
+1. To override the base image for all images `ko` builds, add this line to your
+   `.ko.yaml` file:
 
 ```yaml
 defaultBaseImage: registry.example.com/base/image
@@ -132,35 +152,51 @@ baseImageOverrides:
 
 ## Naming Images
 
-`ko` provides a few different strategies for naming the image it pushes, to workaround certain registry limitations and user preferences:
+`ko` provides a few different strategies for naming the image it pushes, to
+workaround certain registry limitations and user preferences:
 
-Given `KO_DOCKER_REPO=registry.example.com/repo`, by default, `ko publish ./cmd/app` will produce an image named like `registry.example.com/repo/app-<md5>`, which includes the MD5 hash of the full import path, to avoid collisions.
+Given `KO_DOCKER_REPO=registry.example.com/repo`, by default,
+`ko publish ./cmd/app` will produce an image named like
+`registry.example.com/repo/app-<md5>`, which includes the MD5 hash of the full
+import path, to avoid collisions.
 
-- `--preserve-import-path` (`-P`) will include the entire importpath: `registry.example.com/repo/github.com/my-user/my-repo/cmd/app`
+- `--preserve-import-path` (`-P`) will include the entire importpath:
+  `registry.example.com/repo/github.com/my-user/my-repo/cmd/app`
 - `--base` (`-B`) will omit the MD5 portion: `registry.example.com/repo/app`
 - `--bare` will only include the `KO_DOCKER_REPO`: `registry.example.com/repo`
 
 ## Local Publishing Options
 
-`ko` is normally used to publish images to container image registries, identified by `KO_DOCKER_REPO`.
+`ko` is normally used to publish images to container image registries,
+identified by `KO_DOCKER_REPO`.
 
-`ko` can also publish images to a local Docker daemon, if available, by setting `KO_DOCKER_REPO=ko.local`, or by passing the `--local` (`-L`) flag.
+`ko` can also publish images to a local Docker daemon, if available, by setting
+`KO_DOCKER_REPO=ko.local`, or by passing the `--local` (`-L`) flag.
 
-`ko` can also publish images to a local [KinD](https://kind.sigs.k8s.io) cluster, if available, by setting `KO_DOCKER_REPO=kind.local`.
+`ko` can also publish images to a local [KinD](https://kind.sigs.k8s.io)
+cluster, if available, by setting `KO_DOCKER_REPO=kind.local`.
 
 ## Multi-Platform Images
 
-Because Go supports cross-compilation to other CPU architectures and operating systems, `ko` excels at producing multi-platform images.
+Because Go supports cross-compilation to other CPU architectures and operating
+systems, `ko` excels at producing multi-platform images.
 
-To build and push an image for all platforms supported by the configured base image, simply add `--platform=all`. This will instruct `ko` to look up all the supported platforms in the base image, execute `GOOS=<os> GOARCH=<arch> GOARM=<variant> go build` for each platform, and produce a manifest list containing an image for each platform.
+To build and push an image for all platforms supported by the configured base
+image, simply add `--platform=all`. This will instruct `ko` to look up all the
+supported platforms in the base image, execute
+`GOOS=<os> GOARCH=<arch> GOARM=<variant> go build` for each platform, and
+produce a manifest list containing an image for each platform.
 
-You can also select specific platforms, for example, `--platform=linux/amd64,linux/arm64`
+You can also select specific platforms, for example,
+`--platform=linux/amd64,linux/arm64`
 
 ## Static Assets
 
 `ko` can also bundle static assets into the images it produces.
 
-By convention, any contents of a directory named `<importpath>/kodata/` will be bundled into the image, and the path where it's available in the image will be identified by the environment variable `KO_DATA_PATH`.
+By convention, any contents of a directory named `<importpath>/kodata/` will be
+bundled into the image, and the path where it's available in the image will be
+identified by the environment variable `KO_DATA_PATH`.
 
 As an example, you can bundle and serve static contents in your image:
 
@@ -174,6 +210,7 @@ cmd/
 ```
 
 Then, in your `main.go`:
+
 ```go
 func main() {
     http.Handle("/", http.FileServer(http.Dir(os.Getenv("KO_DATA_PATH"))))
@@ -181,13 +218,15 @@ func main() {
 }
 ```
 
-You can simulate `ko`'s behavior outside of the container image by setting the `KO_DATA_PATH` environment variable yourself:
+You can simulate `ko`'s behavior outside of the container image by setting the
+`KO_DATA_PATH` environment variable yourself:
 
 ```
 KO_DATA_PATH=cmd/app/kodata/ go run ./cmd/app
 ```
 
-**Tip:** Symlinks in `kodata` are followed and included as well. For example, you can include Git commit information in your image with:
+**Tip:** Symlinks in `kodata` are followed and included as well. For example,
+you can include Git commit information in your image with:
 
 ```
 ln -s -r .git/HEAD ./cmd/app/kodata/
@@ -197,11 +236,14 @@ ln -s -r .git/HEAD ./cmd/app/kodata/
 
 You could stop at just building and pushing images.
 
-But, because building images is so _easy_ with `ko`, and because building with `ko` only requires a string importpath to identify the image, we can integrate this with YAML generation to make Kubernetes use cases much simpler.
+But, because building images is so _easy_ with `ko`, and because building with
+`ko` only requires a string importpath to identify the image, we can integrate
+this with YAML generation to make Kubernetes use cases much simpler.
 
 ## YAML Changes
 
-Traditionally, you might have a Kubernetes deployment, defined in a YAML file, that runs an image:
+Traditionally, you might have a Kubernetes deployment, defined in a YAML file,
+that runs an image:
 
 ```yaml
 apiVersion: apps/v1
@@ -224,7 +266,8 @@ spec:
 kubectl apply -f deployment.yaml
 ```
 
-With `ko`, you can instead reference your Go binary by its importpath, prefixed with `ko://`:
+With `ko`, you can instead reference your Go binary by its importpath, prefixed
+with `ko://`:
 
 ```yaml
     ...
@@ -236,17 +279,20 @@ With `ko`, you can instead reference your Go binary by its importpath, prefixed 
 
 ## `ko resolve`
 
-With this small change, running `ko resolve -f deployment.yaml` will instruct `ko` to:
+With this small change, running `ko resolve -f deployment.yaml` will instruct
+`ko` to:
 
 1. scan the YAML file(s) for values with the `ko://` prefix,
-2. for each unique `ko://`-prefixed string, execute `ko publish <importpath>` to build and push an image,
-3. replace `ko://`-prefixed string(s) in the input YAML with the fully-specified image reference of the built image(s), for example:
+2. for each unique `ko://`-prefixed string, execute `ko publish <importpath>` to
+   build and push an image,
+3. replace `ko://`-prefixed string(s) in the input YAML with the fully-specified
+   image reference of the built image(s), for example:
 
-```yaml    ...
-    spec:
-      containers:
-      - name: my-app
-        image: registry.example.com/github.com/my-user/my-repo/cmd/app@sha256:deadb33f...
+```yaml ...
+spec:
+  containers:
+    - name: my-app
+      image: registry.example.com/github.com/my-user/my-repo/cmd/app@sha256:deadb33f...
 ```
 
 4. Print the resulting resolved YAML to stdout.
@@ -257,17 +303,21 @@ The result can be redirected to a file, to distribute to others:
 ko resolve -f config/ > release.yaml
 ```
 
-Taken together, `ko resolve` aims to make packaging, pushing, and referencing container images an invisible implementation detail of your Kubernetes deployment, and let you focus on writing code in Go.
+Taken together, `ko resolve` aims to make packaging, pushing, and referencing
+container images an invisible implementation detail of your Kubernetes
+deployment, and let you focus on writing code in Go.
 
 ## `ko apply`
 
-To apply the resulting resolved YAML config, you can redirect the output of `ko resolve` to `kubectl apply`:
+To apply the resulting resolved YAML config, you can redirect the output of
+`ko resolve` to `kubectl apply`:
 
 ```
 ko resolve -f config/ | kubectl apply -f -
 ```
 
-Since this is a relatively common use case, the same functionality is available using `ko apply`:
+Since this is a relatively common use case, the same functionality is available
+using `ko apply`:
 
 ```
 ko apply -f config/
@@ -283,13 +333,18 @@ To teardown resources applied using `ko apply`, you can run `ko delete`:
 ko delete -f config/
 ```
 
-This is purely a convenient alias for `kubectl delete`, and doesn't perform any builds, or delete any previously built images.
+This is purely a convenient alias for `kubectl delete`, and doesn't perform any
+builds, or delete any previously built images.
 
 # Frequently Asked Questions
 
 ## How can I set `ldflags`?
 
-[Using -ldflags](https://blog.cloudflare.com/setting-go-variables-at-compile-time/) is a common way to embed version info in go binaries (In fact, we do this for `ko`!). Unforunately, because `ko` wraps `go build`, it's not possible to use this flag directly; however, you can use the `GOFLAGS` environment variable instead:
+[Using -ldflags](https://blog.cloudflare.com/setting-go-variables-at-compile-time/)
+is a common way to embed version info in go binaries (In fact, we do this for
+`ko`!). Unforunately, because `ko` wraps `go build`, it's not possible to use
+this flag directly; however, you can use the `GOFLAGS` environment variable
+instead:
 
 ```
 GOFLAGS="-ldflags=-X=main.version=1.2.3" ko publish .
@@ -297,7 +352,11 @@ GOFLAGS="-ldflags=-X=main.version=1.2.3" ko publish .
 
 ## Why are my images all created in 1970?
 
-In order to support [reproducible builds](https://reproducible-builds.org), `ko` doesn't embed timestamps in the images it produces by default; however, `ko` does respect the [`SOURCE_DATE_EPOCH`](https://reproducible-builds.org/docs/source-date-epoch/) environment variable.
+In order to support [reproducible builds](https://reproducible-builds.org), `ko`
+doesn't embed timestamps in the images it produces by default; however, `ko`
+does respect the
+[`SOURCE_DATE_EPOCH`](https://reproducible-builds.org/docs/source-date-epoch/)
+environment variable.
 
 For example, you can set this to the current timestamp by executing:
 
@@ -313,11 +372,13 @@ export SOURCE_DATE_EPOCH=$(git log -1 --format='%ct')
 
 ## Can I optimize images for [eStargz support](https://github.com/containerd/stargz-snapshotter/blob/v0.2.0/docs/stargz-estargz.md)?
 
-Yes! Set the environment variable `GGCR_EXPERIMENT_ESTARGZ=1` to produce eStargz-optimized images.
+Yes! Set the environment variable `GGCR_EXPERIMENT_ESTARGZ=1` to produce
+eStargz-optimized images.
 
 ## Does `ko` support autocompletion?
 
-Yes! `ko completion` generates a Bash completion script, which you can add to your `bash_completion` directory:
+Yes! `ko completion` generates a Bash completion script, which you can add to
+your `bash_completion` directory:
 
 ```
 ko completion > /usr/local/etc/bash_completion.d/ko
@@ -331,7 +392,8 @@ source <(ko completion)
 
 ## Does `ko` work with [Kustomize](https://kustomize.io/)?
 
-Yes! `ko resolve -f -` will read and process input from stdin, so you can have `ko` easily process the output of the `kustomize` command.
+Yes! `ko resolve -f -` will read and process input from stdin, so you can have
+`ko` easily process the output of the `kustomize` command.
 
 ```
 kustomize build config | ko resolve -f -
@@ -339,4 +401,8 @@ kustomize build config | ko resolve -f -
 
 # Acknowledgements
 
-This work is based heavily on learnings from having built the [Docker](https://github.com/bazelbuild/rules_docker) and [Kubernetes](https://github.com/bazelbuild/rules_k8s) support for [Bazel](https://bazel.build). That work was presented [here](https://www.youtube.com/watch?v=RS1aiQqgUTA).
+This work is based heavily on learnings from having built the
+[Docker](https://github.com/bazelbuild/rules_docker) and
+[Kubernetes](https://github.com/bazelbuild/rules_k8s) support for
+[Bazel](https://bazel.build). That work was presented
+[here](https://www.youtube.com/watch?v=RS1aiQqgUTA).
