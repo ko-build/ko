@@ -25,6 +25,7 @@ type BuildOptions struct {
 	ConcurrentBuilds     int
 	DisableOptimizations bool
 	Platform             string
+	Labels               []string
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -34,4 +35,6 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
 	cmd.Flags().StringVar(&bo.Platform, "platform", "",
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
+	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
+		"Which labels (key=value) to add to the image.")
 }

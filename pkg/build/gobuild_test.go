@@ -27,6 +27,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -404,6 +405,8 @@ func TestGoBuild(t *testing.T) {
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }),
 		withBuilder(writeTempFile),
+		WithLabel("foo", "bar"),
+		WithLabel("hello", "world"),
 	)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
@@ -442,6 +445,21 @@ func TestGoBuild(t *testing.T) {
 		}
 	})
 
+	t.Run("check labels", func(t *testing.T) {
+		cfg, err := img.ConfigFile()
+		if err != nil {
+			t.Fatalf("ConfigFile() = %v", err)
+		}
+
+		want := map[string]string{
+			"foo":   "bar",
+			"hello": "world",
+		}
+		got := cfg.Config.Labels
+		if d := cmp.Diff(got, want); d != "" {
+			t.Fatalf("Labels diff (-got,+want): %s", d)
+		}
+	})
 }
 
 func TestGoBuildIndex(t *testing.T) {

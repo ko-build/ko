@@ -86,6 +86,13 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	if bo.DisableOptimizations {
 		opts = append(opts, build.WithDisabledOptimizations())
 	}
+	for _, lf := range bo.Labels {
+		parts := strings.SplitN(lf, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid label flag: %s", lf)
+		}
+		opts = append(opts, build.WithLabel(parts[0], parts[1]))
+	}
 	return opts, nil
 }
 
