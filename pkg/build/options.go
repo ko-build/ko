@@ -58,6 +58,17 @@ func WithPlatforms(platforms string) Option {
 	}
 }
 
+// WithLabel is a functional option for adding labels to built images.
+func WithLabel(k, v string) Option {
+	return func(gbo *gobuildOpener) error {
+		if gbo.labels == nil {
+			gbo.labels = map[string]string{}
+		}
+		gbo.labels[k] = v
+		return nil
+	}
+}
+
 // withBuilder is a functional option for overriding the way go binaries
 // are built.
 func withBuilder(b builder) Option {

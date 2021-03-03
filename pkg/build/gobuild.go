@@ -83,6 +83,7 @@ type gobuild struct {
 	mod                  *modules
 	buildContext         buildContext
 	platformMatcher      *platformMatcher
+	labels               map[string]string
 }
 
 // Option is a functional option for NewGo.
@@ -96,6 +97,7 @@ type gobuildOpener struct {
 	mod                  *modules
 	buildContext         buildContext
 	platform             string
+	labels               map[string]string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -113,6 +115,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		disableOptimizations: gbo.disableOptimizations,
 		mod:                  gbo.mod,
 		buildContext:         gbo.buildContext,
+		labels:               gbo.labels,
 		platformMatcher:      matcher,
 	}, nil
 }
@@ -605,6 +608,13 @@ func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platfor
 	updatePath(cfg)
 	cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	cfg.Author = "github.com/google/ko"
+
+	if cfg.Config.Labels == nil {
+		cfg.Config.Labels = map[string]string{}
+	}
+	for k, v := range g.labels {
+		cfg.Config.Labels[k] = v
+	}
 
 	image, err := mutate.ConfigFile(withApp, cfg)
 	if err != nil {
