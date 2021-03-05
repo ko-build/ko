@@ -54,7 +54,7 @@ tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
 ### Install from [Releases](https://github.com/google/ko/releases)
 
 ```
-VERSION=TODO # choose the latest version, for example '0.8.1'
+VERSION=TODO # choose the latest version
 OS=Linux     # or Darwin
 ARCH=x86_64  # or arm64, i386, s390x
 curl -L https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz | tar xzf - ko
