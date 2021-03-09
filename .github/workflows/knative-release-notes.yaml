@@ -21,9 +21,9 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: 'Branch? (master)'
+        description: 'Branch? (main)'
         required: true
-        default: 'master'
+        default: 'main'
       start-sha:
         description: 'Starting SHA? (last tag on branch)'
       end-sha:
