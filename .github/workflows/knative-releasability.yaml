@@ -60,7 +60,7 @@ jobs:
           go-version: 1.15.x
 
       - name: Install Dependencies
-        run: GO111MODULE=on go get knative.dev/test-infra/buoy@master
+        run: GO111MODULE=on go get knative.dev/test-infra/buoy@main
 
       - name: Check out code
         uses: actions/checkout@v2
