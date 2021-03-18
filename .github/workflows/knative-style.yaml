@@ -147,7 +147,7 @@ jobs:
           git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
           git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
           grep -Ev '^(vendor/|third_party/|.git)' |
-          xargs misspell -error |
+          xargs misspell -i importas -error |
           reviewdog -efm="%f:%l:%c: %m" \
                 -name="github.com/client9/misspell" \
                 -reporter="github-pr-check" \
