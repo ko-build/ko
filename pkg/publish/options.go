@@ -94,6 +94,14 @@ func WithTags(tags []string) Option {
 	}
 }
 
+// WithTagOnly is a functional option for resolving images into tag-only references
+func WithTagOnly(tagOnly bool) Option {
+	return func(i *defaultOpener) error {
+		i.tagOnly = tagOnly
+		return nil
+	}
+}
+
 func Insecure(b bool) Option {
 	return func(i *defaultOpener) error {
 		i.insecure = b

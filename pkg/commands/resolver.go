@@ -170,6 +170,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 				publish.WithAuthFromKeychain(authn.DefaultKeychain),
 				publish.WithNamer(namer),
 				publish.WithTags(po.Tags),
+				publish.WithTagOnly(po.TagOnly),
 				publish.Insecure(po.InsecureRegistry))
 			if err != nil {
 				return nil, err
