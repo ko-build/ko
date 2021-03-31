@@ -162,7 +162,7 @@ import path, to avoid collisions.
 
 - `--preserve-import-path` (`-P`) will include the entire importpath:
   `registry.example.com/repo/github.com/my-user/my-repo/cmd/app`
-- `--base` (`-B`) will omit the MD5 portion: `registry.example.com/repo/app`
+- `--base-import-paths` (`-B`) will omit the MD5 portion: `registry.example.com/repo/app`
 - `--bare` will only include the `KO_DOCKER_REPO`: `registry.example.com/repo`
 
 ## Local Publishing Options
