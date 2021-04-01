@@ -20,33 +20,6 @@ fit for lightweight CI/CD use cases.
 `ko` also includes support for simple YAML templating which makes it a powerful
 tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
 
-- [Setup](#setup)
-  - [Install](#install)
-    - [Install from Releases](#install-from-releases)
-    - [Install using Homebrew](#install-using-homebrew)
-    - [Build and Install from Source](#build-and-install-from-source)
-  - [Authenticate](#authenticate)
-  - [Choose Destination](#choose-destination)
-- [Build an Image](#build-an-image)
-  - [Configuration](#configuration)
-    - [Overriding Base Images](#overriding-base-images)
-  - [Naming Images](#naming-images)
-  - [Local Publishing Options](#local-publishing-options)
-  - [Multi-Platform Images](#multi-platform-images)
-  - [Static Assets](#static-assets)
-- [Kubernetes Integration](#kubernetes-integration)
-  - [YAML Changes](#yaml-changes)
-  - [`ko resolve`](#ko-resolve)
-  - [`ko apply`](#ko-apply)
-  - [`ko delete`](#ko-delete)
-- [Frequently Asked Questions](#frequently-asked-questions)
-  - [How can I set `ldflags`?](#how-can-i-set-ldflags)
-  - [Why are my images all created in 1970?](#why-are-my-images-all-created-in-1970)
-  - [Can I optimize images for eStargz support?](#can-i-optimize-images-for-estargz-support)
-  - [Does `ko` support autocompletion?](#does-ko-support-autocompletion)
-  - [Does `ko` work with Kustomize?](#does-ko-work-with-kustomize)
-- [Acknowledgements](#acknowledgements)
-
 # Setup
 
 ## Install
@@ -407,3 +380,8 @@ This work is based heavily on learnings from having built the
 [Kubernetes](https://github.com/bazelbuild/rules_k8s) support for
 [Bazel](https://bazel.build). That work was presented
 [here](https://www.youtube.com/watch?v=RS1aiQqgUTA).
+
+# Discuss
+
+Questions? Comments? Ideas? Come discuss `ko` with us in the `#ko-project`
+channel on the [Kubernetes Slack](https://slack.k8s.io)! See you there!
