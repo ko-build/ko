@@ -41,7 +41,7 @@ type PublishOptions struct {
 	PreserveImportPaths bool
 	// BaseImportPaths uses the base path without MD5 hash after KO_DOCKER_REPO.
 	BaseImportPaths bool
-	// Base uses a tag on the KO_DOCKER_REPO without anything additional.
+	// Bare uses a tag on the KO_DOCKER_REPO without anything additional.
 	Bare bool
 }
 
@@ -65,7 +65,7 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 	cmd.Flags().BoolVarP(&po.BaseImportPaths, "base-import-paths", "B", po.BaseImportPaths,
 		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).")
 	cmd.Flags().BoolVar(&po.Bare, "bare", po.Bare,
-		"Whether to just use KO_DOCKER_REPO without additional context (will not work properly with --tags).")
+		"Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).")
 }
 
 func packageWithMD5(base, importpath string) string {
