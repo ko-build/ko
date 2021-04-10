@@ -20,6 +20,7 @@ builds:
   - s390x
   - 386
   - mips64le
+  - ppc64le
 archives:
 - replacements:
     darwin: Darwin
