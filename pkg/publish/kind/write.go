@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 
 	"golang.org/x/sync/errgroup"
 
@@ -53,9 +54,15 @@ func Tag(src, dest name.Tag) error {
 	})
 }
 
+// writeMu serializes image imports to kind, to avoid locking situations
+// observed when publishing multiple images to KinD at the same time.
+var writeMu sync.Mutex
+
 // Write saves the image into the kind nodes as the given tag.
 func Write(tag name.Tag, img v1.Image) error {
 	return onEachNode(func(n nodes.Node) error {
+		writeMu.Lock()
+		defer writeMu.Unlock()
 		pr, pw := io.Pipe()
 
 		grp := errgroup.Group{}
