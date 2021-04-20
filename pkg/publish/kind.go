@@ -46,7 +46,7 @@ func NewKindPublisher(namer Namer, tags []string) Interface {
 }
 
 // Publish implements publish.Interface.
-func (t *kindPublisher) Publish(_ context.Context, br build.Result, s string) (name.Reference, error) {
+func (t *kindPublisher) Publish(ctx context.Context, br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
@@ -102,7 +102,7 @@ func (t *kindPublisher) Publish(_ context.Context, br build.Result, s string) (n
 	}
 
 	log.Printf("Loading %v", digestTag)
-	if err := kind.Write(digestTag, img); err != nil {
+	if err := kind.Write(ctx, digestTag, img); err != nil {
 		return nil, err
 	}
 	log.Printf("Loaded %v", digestTag)
@@ -114,7 +114,7 @@ func (t *kindPublisher) Publish(_ context.Context, br build.Result, s string) (n
 			return nil, err
 		}
 
-		if err := kind.Tag(digestTag, tag); err != nil {
+		if err := kind.Tag(ctx, digestTag, tag); err != nil {
 			return nil, err
 		}
 		log.Printf("Added tag %v", tagName)

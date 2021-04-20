@@ -15,6 +15,7 @@
 package kind
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -43,9 +44,9 @@ var GetProvider = func() provider {
 }
 
 // Tag adds a tag to an already existent image.
-func Tag(src, dest name.Tag) error {
+func Tag(ctx context.Context, src, dest name.Tag) error {
 	return onEachNode(func(n nodes.Node) error {
-		cmd := n.Command("ctr", "--namespace=k8s.io", "images", "tag", "--force", src.String(), dest.String())
+		cmd := n.CommandContext(ctx, "ctr", "--namespace=k8s.io", "images", "tag", "--force", src.String(), dest.String())
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to tag image: %w", err)
 		}
@@ -54,7 +55,7 @@ func Tag(src, dest name.Tag) error {
 }
 
 // Write saves the image into the kind nodes as the given tag.
-func Write(tag name.Tag, img v1.Image) error {
+func Write(ctx context.Context, tag name.Tag, img v1.Image) error {
 	return onEachNode(func(n nodes.Node) error {
 		pr, pw := io.Pipe()
 
@@ -63,7 +64,7 @@ func Write(tag name.Tag, img v1.Image) error {
 			return pw.CloseWithError(tarball.Write(tag, img, pw))
 		})
 
-		cmd := n.Command("ctr", "--namespace=k8s.io", "images", "import", "-").SetStdin(pr)
+		cmd := n.CommandContext(ctx, "ctr", "--namespace=k8s.io", "images", "import", "-").SetStdin(pr)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to load image to node %q: %w", n, err)
 		}
