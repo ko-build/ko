@@ -30,6 +30,7 @@ import (
 )
 
 func TestWrite(t *testing.T) {
+	ctx := context.Background()
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -46,7 +47,7 @@ func TestWrite(t *testing.T) {
 		return &fakeProvider{nodes: []nodes.Node{n1, n2}}
 	}
 
-	if err := Write(tag, img); err != nil {
+	if err := Write(ctx, tag, img); err != nil {
 		t.Fatalf("Write() = %v", err)
 	}
 
@@ -64,6 +65,7 @@ func TestWrite(t *testing.T) {
 }
 
 func TestTag(t *testing.T) {
+	ctx := context.Background()
 	oldTag, err := name.NewTag("kind.local/test:test")
 	if err != nil {
 		t.Fatalf("name.NewTag() = %v", err)
@@ -80,7 +82,7 @@ func TestTag(t *testing.T) {
 		return &fakeProvider{nodes: []nodes.Node{n1, n2}}
 	}
 
-	if err := Tag(oldTag, newTag); err != nil {
+	if err := Tag(ctx, oldTag, newTag); err != nil {
 		t.Fatalf("Tag() = %v", err)
 	}
 
@@ -98,6 +100,7 @@ func TestTag(t *testing.T) {
 }
 
 func TestFailWithNoNodes(t *testing.T) {
+	ctx := context.Background()
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		panic(err)
@@ -117,15 +120,16 @@ func TestFailWithNoNodes(t *testing.T) {
 		return &fakeProvider{}
 	}
 
-	if err := Write(newTag, img); err == nil {
+	if err := Write(ctx, newTag, img); err == nil {
 		t.Fatal("Write() = nil, wanted an error")
 	}
-	if err := Tag(oldTag, newTag); err == nil {
+	if err := Tag(ctx, oldTag, newTag); err == nil {
 		t.Fatal("Tag() = nil, wanted an error")
 	}
 }
 
 func TestFailCommands(t *testing.T) {
+	ctx := context.Background()
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		panic(err)
@@ -149,10 +153,10 @@ func TestFailCommands(t *testing.T) {
 		return &fakeProvider{nodes: []nodes.Node{n1, n2}}
 	}
 
-	if err := Write(newTag, img); !errors.Is(err, errTest) {
+	if err := Write(ctx, newTag, img); !errors.Is(err, errTest) {
 		t.Fatalf("Write() = %v, want %v", err, errTest)
 	}
-	if err := Tag(oldTag, newTag); !errors.Is(err, errTest) {
+	if err := Tag(ctx, oldTag, newTag); !errors.Is(err, errTest) {
 		t.Fatalf("Write() = %v, want %v", err, errTest)
 	}
 }
@@ -171,7 +175,7 @@ type fakeNode struct {
 	err  error
 }
 
-func (f *fakeNode) Command(cmd string, args ...string) exec.Cmd {
+func (f *fakeNode) CommandContext(ctx context.Context, cmd string, args ...string) exec.Cmd {
 	command := &fakeCmd{
 		cmd: strings.Join(append([]string{cmd}, args...), " "),
 		err: f.err,
@@ -185,10 +189,10 @@ func (f *fakeNode) String() string {
 }
 
 // The following functions are not used by our code at all.
-func (f *fakeNode) CommandContext(context.Context, string, ...string) exec.Cmd { return nil }
-func (f *fakeNode) Role() (string, error)                                      { return "", nil }
-func (f *fakeNode) IP() (ipv4 string, ipv6 string, err error)                  { return "", "", nil }
-func (f *fakeNode) SerialLogs(writer io.Writer) error                          { return nil }
+func (f *fakeNode) Command(string, ...string) exec.Cmd        { return nil }
+func (f *fakeNode) Role() (string, error)                     { return "", nil }
+func (f *fakeNode) IP() (ipv4 string, ipv6 string, err error) { return "", "", nil }
+func (f *fakeNode) SerialLogs(writer io.Writer) error         { return nil }
 
 type fakeCmd struct {
 	cmd   string
