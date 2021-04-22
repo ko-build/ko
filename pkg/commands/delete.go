@@ -15,7 +15,7 @@
 package commands
 
 import (
-	"log"
+	"errors"
 	"os"
 	"os/exec"
 
@@ -23,15 +23,14 @@ import (
 )
 
 // runCmd is suitable for use with cobra.Command's Run field.
-type runCmd func(*cobra.Command, []string)
+type runCmd func(*cobra.Command, []string) error
 
 // passthru returns a runCmd that simply passes our CLI arguments
 // through to a binary named command.
 func passthru(command string) runCmd {
-	return func(_ *cobra.Command, _ []string) {
+	return func(_ *cobra.Command, _ []string) error {
 		if !isKubectlAvailable() {
-			log.Print("error: kubectl is not available. kubectl must be installed to use ko delete.")
-			return
+			return errors.New("error: kubectl is not available. kubectl must be installed to use ko delete")
 		}
 
 		// Cancel on signals.
@@ -49,9 +48,7 @@ func passthru(command string) runCmd {
 		cmd.Stdin = os.Stdin
 
 		// Run it.
-		if err := cmd.Run(); err != nil {
-			log.Fatalf("error executing %q command with args: %v; %v", command, os.Args[1:], err)
-		}
+		return cmd.Run()
 	}
 }
 
@@ -60,7 +57,7 @@ func addDelete(topLevel *cobra.Command) {
 	topLevel.AddCommand(&cobra.Command{
 		Use:   "delete",
 		Short: `See "kubectl help delete" for detailed usage.`,
-		Run:   passthru("kubectl"),
+		RunE:  passthru("kubectl"),
 		// We ignore unknown flags to avoid importing everything Go exposes
 		// from our commands.
 		FParseErrWhitelist: cobra.FParseErrWhitelist{

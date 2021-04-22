@@ -15,6 +15,8 @@
 package commands
 
 import (
+	"errors"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -46,7 +48,7 @@ func addRun(topLevel *cobra.Command) {
 
   # You can also supply args and flags to the command.
   ko run ./cmd/baz -- -v arg1 arg2 --yes`,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := createCancellableContext()
 
 			// Args after -- are for kubectl, so only consider importPaths before it.
@@ -56,7 +58,7 @@ func addRun(topLevel *cobra.Command) {
 				importPaths = args[:cmd.Flags().ArgsLenAtDash()]
 			}
 			if len(importPaths) == 0 {
-				log.Fatalf("ko run: no importpaths listed")
+				return errors.New("ko run: no importpaths listed")
 			}
 
 			kubectlArgs := []string{}
@@ -67,24 +69,24 @@ func addRun(topLevel *cobra.Command) {
 
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
-				log.Fatalf("error creating builder: %v", err)
+				return fmt.Errorf("error creating builder: %v", err)
 			}
 			publisher, err := makePublisher(po)
 			if err != nil {
-				log.Fatalf("error creating publisher: %v", err)
+				return fmt.Errorf("error creating publisher: %v", err)
 			}
 			defer publisher.Close()
 
 			if len(os.Args) < 3 {
-				log.Fatalf("usage: %s run <package>", os.Args[0])
+				return fmt.Errorf("usage: %s run <package>", os.Args[0])
 			}
 			ip := os.Args[2]
 			if strings.HasPrefix(ip, "-") {
-				log.Fatalf("expected first arg to be positional, got %q", ip)
+				return fmt.Errorf("expected first arg to be positional, got %q", ip)
 			}
 			imgs, err := publishImages(ctx, importPaths, publisher, builder)
 			if err != nil {
-				log.Fatalf("failed to publish images: %v", err)
+				return fmt.Errorf("failed to publish images: %v", err)
 			}
 
 			// Usually only one, but this is the simple way to access the
@@ -127,9 +129,10 @@ func addRun(topLevel *cobra.Command) {
 
 				// Run it.
 				if err := kubectlCmd.Run(); err != nil {
-					log.Fatalf("error executing \"kubectl run\": %v", err)
+					return err
 				}
 			}
+			return nil
 		},
 		// We ignore unknown flags to avoid importing everything Go exposes
 		// from our commands.
