@@ -15,7 +15,7 @@
 package commands
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/google/ko/pkg/commands/options"
@@ -54,20 +54,18 @@ func addResolve(topLevel *cobra.Command) {
   # This always preserves import paths.
   ko resolve --local -f config/`,
 		Args: cobra.NoArgs,
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := createCancellableContext()
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
-				log.Fatalf("error creating builder: %v", err)
+				return fmt.Errorf("error creating builder: %v", err)
 			}
 			publisher, err := makePublisher(po)
 			if err != nil {
-				log.Fatalf("error creating publisher: %v", err)
+				return fmt.Errorf("error creating publisher: %v", err)
 			}
 			defer publisher.Close()
-			if err := resolveFilesToWriter(ctx, builder, publisher, fo, so, os.Stdout); err != nil {
-				log.Fatal(err)
-			}
+			return resolveFilesToWriter(ctx, builder, publisher, fo, so, os.Stdout)
 		},
 	}
 	options.AddPublishArg(resolve, po)

@@ -16,7 +16,6 @@ package commands
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
@@ -57,24 +56,25 @@ func addPublish(topLevel *cobra.Command) {
   # This always preserves import paths.
   ko publish --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
 		Args: cobra.MinimumNArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := createCancellableContext()
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
-				log.Fatalf("error creating builder: %v", err)
+				return fmt.Errorf("error creating builder: %v", err)
 			}
 			publisher, err := makePublisher(po)
 			if err != nil {
-				log.Fatalf("error creating publisher: %v", err)
+				return fmt.Errorf("error creating publisher: %v", err)
 			}
 			defer publisher.Close()
 			images, err := publishImages(ctx, args, publisher, builder)
 			if err != nil {
-				log.Fatalf("failed to publish images: %v", err)
+				return fmt.Errorf("failed to publish images: %v", err)
 			}
 			for _, img := range images {
 				fmt.Println(img)
 			}
+			return nil
 		},
 	}
 	options.AddPublishArg(publish, po)
