@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Google LLC All Rights Reserved.
+Copyright 2018 Google LLC All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 )
 
+// ua returns the ko user agent.
 func ua() string {
 	if v := version(); v != "" {
 		return "ko/" + v
@@ -79,7 +80,7 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	}
 
 	opts := []build.Option{
-		build.WithBaseImages(getBaseImage(platform)),
+		build.WithBaseImages(getBaseImage(platform, bo)),
 		build.WithPlatforms(platform),
 	}
 	if creationTime != nil {
@@ -96,6 +97,11 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithLabel(parts[0], parts[1]))
 	}
 	return opts, nil
+}
+
+// NewBuilder creates a ko builder
+func NewBuilder(ctx context.Context, bo *options.BuildOptions) (build.Interface, error) {
+	return makeBuilder(ctx, bo)
 }
 
 func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching, error) {
@@ -129,6 +135,11 @@ func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching,
 	return build.NewCaching(innerBuilder)
 }
 
+// NewPublisher creates a ko publisher
+func NewPublisher(po *options.PublishOptions) (publish.Interface, error) {
+	return makePublisher(po)
+}
+
 func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	// Create the publish.Interface that we will use to publish image references
 	// to either a docker daemon or a container image registry.
@@ -151,7 +162,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		}
 		if _, err := name.NewRegistry(repoName); err != nil {
 			if _, err := name.NewRepository(repoName); err != nil {
-				return nil, fmt.Errorf("failed to parse environment variable KO_DOCKER_REPO=%q as repository: %v", repoName, err)
+				return nil, fmt.Errorf("failed to parse %q as repository: %v", repoName, err)
 			}
 		}
 
@@ -167,9 +178,13 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			tp := publish.NewTarball(po.TarballFile, repoName, namer, po.Tags)
 			publishers = append(publishers, tp)
 		}
+		userAgent := ua()
+		if po.UserAgent != "" {
+			userAgent = po.UserAgent
+		}
 		if po.Push {
 			dp, err := publish.NewDefault(repoName,
-				publish.WithUserAgent(ua()),
+				publish.WithUserAgent(userAgent),
 				publish.WithAuthFromKeychain(authn.DefaultKeychain),
 				publish.WithNamer(namer),
 				publish.WithTags(po.Tags),
@@ -208,6 +223,7 @@ type nopPublisher struct {
 }
 
 func (n nopPublisher) Publish(_ context.Context, br build.Result, s string) (name.Reference, error) {
+	s = strings.TrimPrefix(s, build.StrictScheme)
 	h, err := br.Digest()
 	if err != nil {
 		return nil, err

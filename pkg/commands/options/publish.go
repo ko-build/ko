@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Google LLC All Rights Reserved.
+Copyright 2018 Google LLC All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -34,6 +34,10 @@ type PublishOptions struct {
 
 	// LocalDomain overrides the default domain for images loaded into the local Docker daemon. Use with Local=true.
 	LocalDomain string
+
+	// UserAgent enables overriding the default value of the `User-Agent` HTTP
+	// request header used when pushing the built image to an image registry.
+	UserAgent string
 
 	Tags []string
 	// TagOnly resolves images into tag-only references.

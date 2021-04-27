@@ -1,16 +1,18 @@
-// Copyright 2018 Google LLC All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2018 Google LLC All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package commands
 
@@ -20,12 +22,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
@@ -131,6 +135,52 @@ kind: Bar
 	}
 	if diff := cmp.Diff(passesSelector, string(outputYAML)); diff != "" {
 		t.Errorf("resolveFile (-want +got) = %v", diff)
+	}
+}
+
+func TestMakeBuilder(t *testing.T) {
+	ctx := context.Background()
+	bo := &options.BuildOptions{
+		ConcurrentBuilds: 1,
+	}
+	builder, err := NewBuilder(ctx, bo)
+	if err != nil {
+		t.Fatalf("MakeBuilder(): %v", err)
+	}
+	res, err := builder.Build(ctx, "ko://github.com/google/ko/test")
+	if err != nil {
+		t.Fatalf("builder.Build(): %v", err)
+	}
+	gotDigest, err := res.Digest()
+	if err != nil {
+		t.Fatalf("res.Digest(): %v", err)
+	}
+	fmt.Println(gotDigest.String())
+}
+
+func TestMakePublisher(t *testing.T) {
+	repo := "registry.example.com/repository"
+	po := &options.PublishOptions{
+		DockerRepo:          repo,
+		PreserveImportPaths: true,
+	}
+	publisher, err := NewPublisher(po)
+	if err != nil {
+		t.Fatalf("MakePublisher(): %v", err)
+	}
+	defer publisher.Close()
+	ctx := context.Background()
+	importpath := "github.com/google/ko/test"
+	importpathWithScheme := build.StrictScheme + importpath
+	buildResult := empty.Index
+	ref, err := publisher.Publish(ctx, buildResult, importpathWithScheme)
+	if err != nil {
+		t.Fatalf("publisher.Publish(): %v", err)
+	}
+	gotImageName := ref.Context().Name()
+	wantImageName := strings.ToLower(fmt.Sprintf("%s/%s", repo, importpath))
+	if gotImageName != wantImageName {
+		t.Errorf("got %s, wanted %s", gotImageName, wantImageName)
 	}
 }
 

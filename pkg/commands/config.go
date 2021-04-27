@@ -1,16 +1,18 @@
-// Copyright 2018 Google LLC All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2018 Google LLC All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package commands
 
@@ -31,6 +33,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/viper"
 )
 
@@ -39,7 +42,9 @@ var (
 	baseImageOverrides map[string]name.Reference
 )
 
-func getBaseImage(platform string) build.GetBase {
+// getBaseImage returns a function that determines the base image for a given import path.
+// If the `bo.BaseImage` parameter is non-empty, it overrides base image configuration from `.ko.yaml`.
+func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 	return func(ctx context.Context, s string) (build.Result, error) {
 		s = strings.TrimPrefix(s, build.StrictScheme)
 		// Viper configuration file keys are case insensitive, and are
@@ -52,9 +57,20 @@ func getBaseImage(platform string) build.GetBase {
 		if !ok {
 			ref = defaultBaseImage
 		}
+		if bo.BaseImage != "" {
+			var err error
+			ref, err = name.ParseReference(bo.BaseImage)
+			if err != nil {
+				return nil, fmt.Errorf("parsing bo.BaseImage (%q): %v", bo.BaseImage, err)
+			}
+		}
+		userAgent := ua()
+		if bo.UserAgent != "" {
+			userAgent = bo.UserAgent
+		}
 		ropt := []remote.Option{
 			remote.WithAuthFromKeychain(authn.DefaultKeychain),
-			remote.WithUserAgent(ua()),
+			remote.WithUserAgent(userAgent),
 			remote.WithContext(ctx),
 		}
 
