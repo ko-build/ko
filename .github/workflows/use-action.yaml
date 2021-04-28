@@ -1,0 +1,60 @@
+# Demonstrate/test using the GitHub Action.
+# This uses the definition of the action at tip of main.
+name: Use GitHub Action
+
+on:
+  push:
+    branches: [ 'main' ]
+  pull_request:
+    branches: [ 'main' ]
+
+jobs:
+
+  use-action:
+    name: Use GitHub Action
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      # Install latest release.
+      - name: Setup ko
+        uses: google/ko@main
+      - name: Publish using release
+        run: |
+          # Build and run locally.
+          docker run $(KO_DOCKER_REPO=ko.local ko publish ./)
+
+          # Build and publish to ghcr.io.
+          cat ~/.docker/config.json | grep ghcr.io
+          docker run $(ko publish --bare -t ${{ github.sha }} ./) --help
+
+      # Install an old release.
+      - name: Setup ko @ v0.8.0
+        uses: google/ko@main
+        with:
+          version: v0.8.0
+      - name: Publish using v0.8.0
+        run: |
+          # Build and run locally.
+          docker run $(KO_DOCKER_REPO=ko.local ko publish ./)
+
+          # Check version.
+          ko version | grep 0.8.0
+
+      # Install from tip
+      - name: Setup ko @ tip
+        uses: google/ko@main
+        with:
+          version: tip
+      - name: Publish using tip
+        run: |
+          # Uninstall previous versions to avoid confusion.
+          sudo rm /usr/local/bin/ko
+
+          # Build and run locally.
+          docker run $(KO_DOCKER_REPO=ko.local ko publish ./)
