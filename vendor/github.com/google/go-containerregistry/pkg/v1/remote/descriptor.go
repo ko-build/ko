@@ -25,10 +25,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/google/go-containerregistry/internal/verify"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/internal/verify"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -324,14 +324,26 @@ func (f *fetcher) headManifest(ref name.Reference, acceptable []types.MediaType)
 		return nil, err
 	}
 
-	mediaType := types.MediaType(resp.Header.Get("Content-Type"))
+	mth := resp.Header.Get("Content-Type")
+	if mth == "" {
+		return nil, fmt.Errorf("HEAD %s: response did not include Content-Type header", u.String())
+	}
+	mediaType := types.MediaType(mth)
 
-	size, err := strconv.ParseInt(resp.Header.Get("Content-Length"), 10, 64)
+	lh := resp.Header.Get("Content-Length")
+	if lh == "" {
+		return nil, fmt.Errorf("HEAD %s: response did not include Content-Length header", u.String())
+	}
+	size, err := strconv.ParseInt(lh, 10, 64)
 	if err != nil {
 		return nil, err
 	}
 
-	digest, err := v1.NewHash(resp.Header.Get("Docker-Content-Digest"))
+	dh := resp.Header.Get("Docker-Content-Digest")
+	if dh == "" {
+		return nil, fmt.Errorf("HEAD %s: response did not include Docker-Content-Digest header", u.String())
+	}
+	digest, err := v1.NewHash(dh)
 	if err != nil {
 		return nil, err
 	}

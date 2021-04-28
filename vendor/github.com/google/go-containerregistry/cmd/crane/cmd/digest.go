@@ -15,8 +15,8 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
-	"log"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/spf13/cobra"
@@ -24,16 +24,52 @@ import (
 
 // NewCmdDigest creates a new cobra.Command for the digest subcommand.
 func NewCmdDigest(options *[]crane.Option) *cobra.Command {
-	return &cobra.Command{
+	var tarball string
+	cmd := &cobra.Command{
 		Use:   "digest IMAGE",
 		Short: "Get the digest of an image",
-		Args:  cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
-			digest, err := crane.Digest(args[0], *options...)
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if tarball == "" && len(args) == 0 {
+				cmd.Help()
+				return errors.New("image reference required without --tarball")
+			}
+
+			digest, err := getDigest(tarball, args, options)
 			if err != nil {
-				log.Fatalf("computing digest: %v", err)
+				return err
 			}
 			fmt.Println(digest)
+			return nil
 		},
 	}
+
+	cmd.Flags().StringVar(&tarball, "tarball", "", "(Optional) path to tarball containing the image")
+
+	return cmd
+}
+
+func getDigest(tarball string, args []string, options *[]crane.Option) (string, error) {
+	if tarball != "" {
+		return getTarballDigest(tarball, args, options)
+	}
+
+	return crane.Digest(args[0], *options...)
+}
+
+func getTarballDigest(tarball string, args []string, options *[]crane.Option) (string, error) {
+	tag := ""
+	if len(args) > 0 {
+		tag = args[0]
+	}
+
+	img, err := crane.LoadTag(tarball, tag, *options...)
+	if err != nil {
+		return "", fmt.Errorf("loading image from %q: %v", tarball, err)
+	}
+	digest, err := img.Digest()
+	if err != nil {
+		return "", fmt.Errorf("computing digest: %v", err)
+	}
+	return digest.String(), nil
 }

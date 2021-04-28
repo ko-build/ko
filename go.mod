@@ -10,7 +10,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/google/go-cmp v0.5.4
-	github.com/google/go-containerregistry v0.4.1-0.20210216200643-d81088d9983e
+	github.com/google/go-containerregistry v0.5.0
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
 	github.com/onsi/gomega v1.10.3 // indirect

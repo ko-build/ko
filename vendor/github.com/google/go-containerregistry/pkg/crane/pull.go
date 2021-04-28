@@ -37,7 +37,7 @@ func Pull(src string, opt ...Option) (v1.Image, error) {
 	o := makeOptions(opt...)
 	ref, err := name.ParseReference(src, o.name...)
 	if err != nil {
-		return nil, fmt.Errorf("parsing tag %q: %v", src, err)
+		return nil, fmt.Errorf("parsing reference %q: %v", src, err)
 	}
 
 	return remote.Image(ref, o.remote...)
@@ -45,26 +45,36 @@ func Pull(src string, opt ...Option) (v1.Image, error) {
 
 // Save writes the v1.Image img as a tarball at path with tag src.
 func Save(img v1.Image, src, path string) error {
-	ref, err := name.ParseReference(src)
-	if err != nil {
-		return fmt.Errorf("parsing ref %q: %v", src, err)
-	}
+	imgMap := map[string]v1.Image{src: img}
+	return MultiSave(imgMap, path)
+}
 
-	// WriteToFile wants a tag to write to the tarball, but we might have
-	// been given a digest.
-	// If the original ref was a tag, use that. Otherwise, if it was a
-	// digest, tag the image with :i-was-a-digest instead.
-	tag, ok := ref.(name.Tag)
-	if !ok {
-		d, ok := ref.(name.Digest)
-		if !ok {
-			return fmt.Errorf("ref wasn't a tag or digest")
+// MultiSave writes collection of v1.Image img with tag as a tarball.
+func MultiSave(imgMap map[string]v1.Image, path string) error {
+	tagToImage := map[name.Tag]v1.Image{}
+
+	for src, img := range imgMap {
+		ref, err := name.ParseReference(src)
+		if err != nil {
+			return fmt.Errorf("parsing ref %q: %v", src, err)
 		}
-		tag = d.Repository.Tag(iWasADigestTag)
-	}
 
+		// WriteToFile wants a tag to write to the tarball, but we might have
+		// been given a digest.
+		// If the original ref was a tag, use that. Otherwise, if it was a
+		// digest, tag the image with :i-was-a-digest instead.
+		tag, ok := ref.(name.Tag)
+		if !ok {
+			d, ok := ref.(name.Digest)
+			if !ok {
+				return fmt.Errorf("ref wasn't a tag or digest")
+			}
+			tag = d.Repository.Tag(iWasADigestTag)
+		}
+		tagToImage[tag] = img
+	}
 	// no progress channel (for now)
-	return tarball.WriteToFile(path, tag, img)
+	return tarball.MultiWriteToFile(path, tagToImage)
 }
 
 // PullLayer returns the given layer from a registry.
@@ -80,9 +90,20 @@ func PullLayer(ref string, opt ...Option) (v1.Layer, error) {
 
 // SaveLegacy writes the v1.Image img as a legacy tarball at path with tag src.
 func SaveLegacy(img v1.Image, src, path string) error {
-	ref, err := name.ParseReference(src)
-	if err != nil {
-		return fmt.Errorf("parsing ref %q: %v", src, err)
+	imgMap := map[string]v1.Image{src: img}
+	return MultiSave(imgMap, path)
+}
+
+// MultiSaveLegacy writes collection of v1.Image img with tag as a legacy tarball.
+func MultiSaveLegacy(imgMap map[string]v1.Image, path string) error {
+	refToImage := map[name.Reference]v1.Image{}
+
+	for src, img := range imgMap {
+		ref, err := name.ParseReference(src)
+		if err != nil {
+			return fmt.Errorf("parsing ref %q: %v", src, err)
+		}
+		refToImage[ref] = img
 	}
 
 	w, err := os.Create(path)
@@ -91,12 +112,19 @@ func SaveLegacy(img v1.Image, src, path string) error {
 	}
 	defer w.Close()
 
-	return legacy.Write(ref, img, w)
+	return legacy.MultiWrite(refToImage, w)
 }
 
 // SaveOCI writes the v1.Image img as an OCI Image Layout at path. If a layout
 // already exists at that path, it will add the image to the index.
 func SaveOCI(img v1.Image, path string) error {
+	imgMap := map[string]v1.Image{"": img}
+	return MultiSaveOCI(imgMap, path)
+}
+
+// MultiSaveOCI writes collection of v1.Image img as an OCI Image Layout at path. If a layout
+// already exists at that path, it will add the image to the index.
+func MultiSaveOCI(imgMap map[string]v1.Image, path string) error {
 	p, err := layout.FromPath(path)
 	if err != nil {
 		p, err = layout.Write(path, empty.Index)
@@ -104,5 +132,10 @@ func SaveOCI(img v1.Image, path string) error {
 			return err
 		}
 	}
-	return p.AppendImage(img)
+	for _, img := range imgMap {
+		if err = p.AppendImage(img); err != nil {
+			return err
+		}
+	}
+	return nil
 }

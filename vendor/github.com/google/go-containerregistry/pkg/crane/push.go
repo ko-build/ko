@@ -24,17 +24,31 @@ import (
 )
 
 // Load reads the tarball at path as a v1.Image.
-func Load(path string) (v1.Image, error) {
-	// TODO: Allow tag?
-	return tarball.ImageFromPath(path, nil)
+func Load(path string, opt ...Option) (v1.Image, error) {
+	return LoadTag(path, "")
+}
+
+// LoadTag reads a tag from the tarball at path as a v1.Image.
+// If tag is "", will attempt to read the tarball as a single image.
+func LoadTag(path, tag string, opt ...Option) (v1.Image, error) {
+	if tag == "" {
+		return tarball.ImageFromPath(path, nil)
+	}
+
+	o := makeOptions(opt...)
+	t, err := name.NewTag(tag, o.name...)
+	if err != nil {
+		return nil, fmt.Errorf("parsing tag %q: %v", tag, err)
+	}
+	return tarball.ImageFromPath(path, &t)
 }
 
 // Push pushes the v1.Image img to a registry as dst.
 func Push(img v1.Image, dst string, opt ...Option) error {
 	o := makeOptions(opt...)
-	tag, err := name.NewTag(dst, o.name...)
+	tag, err := name.ParseReference(dst, o.name...)
 	if err != nil {
-		return fmt.Errorf("parsing tag %q: %v", dst, err)
+		return fmt.Errorf("parsing reference %q: %v", dst, err)
 	}
 	return remote.Write(tag, img, o.remote...)
 }

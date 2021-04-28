@@ -14,6 +14,8 @@
 
 package crane
 
+import "github.com/google/go-containerregistry/pkg/logs"
+
 // Digest returns the sha256 hash of the remote image at ref.
 func Digest(ref string, opt ...Option) (string, error) {
 	o := makeOptions(opt...)
@@ -39,7 +41,12 @@ func Digest(ref string, opt ...Option) (string, error) {
 	}
 	desc, err := head(ref, opt...)
 	if err != nil {
-		return "", err
+		logs.Warn.Printf("HEAD request failed, falling back on GET: %v", err)
+		rdesc, err := getManifest(ref, opt...)
+		if err != nil {
+			return "", err
+		}
+		return rdesc.Digest.String(), nil
 	}
 	return desc.Digest.String(), nil
 }

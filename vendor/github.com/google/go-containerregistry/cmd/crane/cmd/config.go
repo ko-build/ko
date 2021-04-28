@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/spf13/cobra"
@@ -28,12 +27,13 @@ func NewCmdConfig(options *[]crane.Option) *cobra.Command {
 		Use:   "config IMAGE",
 		Short: "Get the config of an image",
 		Args:  cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, err := crane.Config(args[0], *options...)
 			if err != nil {
-				log.Fatalf("fetching config: %v", err)
+				return fmt.Errorf("fetching config: %v", err)
 			}
 			fmt.Print(string(cfg))
+			return nil
 		},
 	}
 }

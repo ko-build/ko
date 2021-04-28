@@ -23,11 +23,13 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
+	"path/filepath"
 	"sync"
 
+	"github.com/google/go-containerregistry/internal/gzip"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/internal/gzip"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
@@ -216,6 +218,10 @@ func extractFileFromTar(opener Opener, filePath string) (io.ReadCloser, error) {
 			return nil, err
 		}
 		if hdr.Name == filePath {
+			if hdr.Typeflag == tar.TypeSymlink || hdr.Typeflag == tar.TypeLink {
+				currentDir := filepath.Dir(filePath)
+				return extractFileFromTar(opener, path.Join(currentDir, hdr.Linkname))
+			}
 			close = false
 			return tarFile{
 				Reader: tf,

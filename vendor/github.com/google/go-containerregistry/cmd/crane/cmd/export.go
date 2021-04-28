@@ -15,7 +15,7 @@
 package cmd
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -33,23 +33,21 @@ func NewCmdExport(options *[]crane.Option) *cobra.Command {
   # Write tarball to file
   crane export ubuntu ubuntu.tar`,
 		Args: cobra.ExactArgs(2),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			src, dst := args[0], args[1]
 
 			f, err := openFile(dst)
 			if err != nil {
-				log.Fatalf("failed to open %s: %v", dst, err)
+				return fmt.Errorf("failed to open %s: %v", dst, err)
 			}
 			defer f.Close()
 
 			img, err := crane.Pull(src, *options...)
 			if err != nil {
-				log.Fatal(err)
+				return fmt.Errorf("pulling %s: %v", src, err)
 			}
 
-			if err := crane.Export(img, f); err != nil {
-				log.Fatalf("exporting %s: %v", src, err)
-			}
+			return crane.Export(img, f)
 		},
 	}
 }

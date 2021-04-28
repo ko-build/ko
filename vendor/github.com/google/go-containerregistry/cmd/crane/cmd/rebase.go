@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -31,36 +30,37 @@ func NewCmdRebase(options *[]crane.Option) *cobra.Command {
 		Use:   "rebase",
 		Short: "Rebase an image onto a new base image",
 		Args:  cobra.NoArgs,
-		Run: func(*cobra.Command, []string) {
+		RunE: func(*cobra.Command, []string) error {
 			origImg, err := crane.Pull(orig, *options...)
 			if err != nil {
-				log.Fatalf("pulling %s: %v", orig, err)
+				return fmt.Errorf("pulling %s: %v", orig, err)
 			}
 
 			oldBaseImg, err := crane.Pull(oldBase, *options...)
 			if err != nil {
-				log.Fatalf("pulling %s: %v", oldBase, err)
+				return fmt.Errorf("pulling %s: %v", oldBase, err)
 			}
 
 			newBaseImg, err := crane.Pull(newBase, *options...)
 			if err != nil {
-				log.Fatalf("pulling %s: %v", newBase, err)
+				return fmt.Errorf("pulling %s: %v", newBase, err)
 			}
 
 			img, err := mutate.Rebase(origImg, oldBaseImg, newBaseImg)
 			if err != nil {
-				log.Fatalf("rebasing: %v", err)
+				return fmt.Errorf("rebasing: %v", err)
 			}
 
 			if err := crane.Push(img, rebased, *options...); err != nil {
-				log.Fatalf("pushing %s: %v", rebased, err)
+				return fmt.Errorf("pushing %s: %v", rebased, err)
 			}
 
 			digest, err := img.Digest()
 			if err != nil {
-				log.Fatalf("digesting rebased: %v", err)
+				return fmt.Errorf("digesting rebased: %v", err)
 			}
 			fmt.Println(digest.String())
+			return nil
 		},
 	}
 	rebaseCmd.Flags().StringVarP(&orig, "original", "", "", "Original image to rebase")

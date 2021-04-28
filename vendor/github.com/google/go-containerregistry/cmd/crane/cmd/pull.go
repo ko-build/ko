@@ -16,9 +16,9 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/spf13/cobra"
 )
@@ -29,34 +29,40 @@ func NewCmdPull(options *[]crane.Option) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "pull IMAGE TARBALL",
-		Short: "Pull a remote image by reference and store its contents in a tarball",
-		Args:  cobra.ExactArgs(2),
-		Run: func(_ *cobra.Command, args []string) {
-			src, path := args[0], args[1]
-			img, err := crane.Pull(src, *options...)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if cachePath != "" {
-				img = cache.Image(img, cache.NewFilesystemCache(cachePath))
+		Short: "Pull remote images by reference and store their contents in a tarball",
+		Args:  cobra.MinimumNArgs(2),
+		RunE: func(_ *cobra.Command, args []string) error {
+			imageMap := map[string]v1.Image{}
+			srcList, path := args[:len(args)-1], args[len(args)-1]
+			for _, src := range srcList {
+				img, err := crane.Pull(src, *options...)
+				if err != nil {
+					return fmt.Errorf("pulling %s: %v", src, err)
+				}
+				if cachePath != "" {
+					img = cache.Image(img, cache.NewFilesystemCache(cachePath))
+				}
+
+				imageMap[src] = img
 			}
 
 			switch format {
 			case "tarball":
-				if err := crane.Save(img, src, path); err != nil {
-					log.Fatalf("saving tarball %s: %v", path, err)
+				if err := crane.MultiSave(imageMap, path); err != nil {
+					return fmt.Errorf("saving tarball %s: %v", path, err)
 				}
 			case "legacy":
-				if err := crane.SaveLegacy(img, src, path); err != nil {
-					log.Fatalf("saving legacy tarball %s: %v", path, err)
+				if err := crane.MultiSaveLegacy(imageMap, path); err != nil {
+					return fmt.Errorf("saving legacy tarball %s: %v", path, err)
 				}
 			case "oci":
-				if err := crane.SaveOCI(img, path); err != nil {
-					log.Fatalf("saving oci image layout %s: %v", path, err)
+				if err := crane.MultiSaveOCI(imageMap, path); err != nil {
+					return fmt.Errorf("saving oci image layout %s: %v", path, err)
 				}
 			default:
-				log.Fatalf("unexpected --format: %q (valid values are: tarball, legacy, and oci)", format)
+				return fmt.Errorf("unexpected --format: %q (valid values are: tarball, legacy, and oci)", format)
 			}
+			return nil
 		},
 	}
 	cmd.Flags().StringVarP(&cachePath, "cache_path", "c", "", "Path to cache image layers")

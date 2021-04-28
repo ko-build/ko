@@ -15,7 +15,7 @@
 package cmd
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/spf13/cobra"
@@ -27,16 +27,14 @@ func NewCmdPush(options *[]crane.Option) *cobra.Command {
 		Use:   "push TARBALL IMAGE",
 		Short: "Push image contents as a tarball to a remote registry",
 		Args:  cobra.ExactArgs(2),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			path, tag := args[0], args[1]
 			img, err := crane.Load(path)
 			if err != nil {
-				log.Fatalf("loading %s as tarball: %v", path, err)
+				return fmt.Errorf("loading %s as tarball: %v", path, err)
 			}
 
-			if err := crane.Push(img, tag, *options...); err != nil {
-				log.Fatalf("pushing %s: %v", tag, err)
-			}
+			return crane.Push(img, tag, *options...)
 		},
 	}
 }

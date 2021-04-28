@@ -105,16 +105,20 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.4.1-0.20210216200643-d81088d9983e
+# github.com/google/go-containerregistry v0.5.0
 ## explicit
 github.com/google/go-containerregistry/cmd/crane/cmd
+github.com/google/go-containerregistry/internal/and
+github.com/google/go-containerregistry/internal/estargz
+github.com/google/go-containerregistry/internal/gzip
+github.com/google/go-containerregistry/internal/httptest
+github.com/google/go-containerregistry/internal/legacy
+github.com/google/go-containerregistry/internal/redact
+github.com/google/go-containerregistry/internal/retry
+github.com/google/go-containerregistry/internal/retry/wait
+github.com/google/go-containerregistry/internal/verify
 github.com/google/go-containerregistry/pkg/authn
 github.com/google/go-containerregistry/pkg/crane
-github.com/google/go-containerregistry/pkg/internal/httptest
-github.com/google/go-containerregistry/pkg/internal/legacy
-github.com/google/go-containerregistry/pkg/internal/redact
-github.com/google/go-containerregistry/pkg/internal/retry
-github.com/google/go-containerregistry/pkg/internal/retry/wait
 github.com/google/go-containerregistry/pkg/legacy
 github.com/google/go-containerregistry/pkg/legacy/tarball
 github.com/google/go-containerregistry/pkg/logs
@@ -124,10 +128,6 @@ github.com/google/go-containerregistry/pkg/v1
 github.com/google/go-containerregistry/pkg/v1/cache
 github.com/google/go-containerregistry/pkg/v1/daemon
 github.com/google/go-containerregistry/pkg/v1/empty
-github.com/google/go-containerregistry/pkg/v1/internal/and
-github.com/google/go-containerregistry/pkg/v1/internal/estargz
-github.com/google/go-containerregistry/pkg/v1/internal/gzip
-github.com/google/go-containerregistry/pkg/v1/internal/verify
 github.com/google/go-containerregistry/pkg/v1/layout
 github.com/google/go-containerregistry/pkg/v1/match
 github.com/google/go-containerregistry/pkg/v1/mutate

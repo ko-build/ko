@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/spf13/cobra"
@@ -28,13 +27,14 @@ func NewCmdManifest(options *[]crane.Option) *cobra.Command {
 		Use:   "manifest IMAGE",
 		Short: "Get the manifest of an image",
 		Args:  cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			src := args[0]
 			manifest, err := crane.Manifest(src, *options...)
 			if err != nil {
-				log.Fatalf("fetching manifest %s: %v", src, err)
+				return fmt.Errorf("fetching manifest %s: %v", src, err)
 			}
 			fmt.Print(string(manifest))
+			return nil
 		},
 	}
 }
