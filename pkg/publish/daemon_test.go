@@ -26,24 +26,30 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 )
 
-type MockImageLoader struct{}
+type mockClient struct {
+	daemon.Client
+}
 
-var Tags []string
-
-func (m *MockImageLoader) ImageLoad(_ context.Context, _ io.Reader, _ bool) (types.ImageLoadResponse, error) {
+func (m *mockClient) NegotiateAPIVersion(context.Context) {}
+func (m *mockClient) ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error) {
 	return types.ImageLoadResponse{
 		Body: ioutil.NopCloser(strings.NewReader("Loaded")),
 	}, nil
 }
 
-func (m *MockImageLoader) ImageTag(ctx context.Context, source, target string) error {
-	Tags = append(Tags, target)
+func (m *mockClient) ImageTag(_ context.Context, _ string, tag string) error {
+	Tags = append(Tags, tag)
 	return nil
 }
 
+var Tags []string
+
 func init() {
-	daemon.GetImageLoader = func() (daemon.ImageLoader, error) {
-		return &MockImageLoader{}, nil
+	getOpts = func(ctx context.Context) []daemon.Option {
+		return []daemon.Option{
+			daemon.WithContext(ctx),
+			daemon.WithClient(&mockClient{}),
+		}
 	}
 }
 

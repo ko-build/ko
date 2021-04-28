@@ -15,8 +15,6 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/spf13/cobra"
 )
@@ -27,11 +25,9 @@ func NewCmdDelete(options *[]crane.Option) *cobra.Command {
 		Use:   "delete IMAGE",
 		Short: "Delete an image reference from its registry",
 		Args:  cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			ref := args[0]
-			if err := crane.Delete(ref, *options...); err != nil {
-				log.Fatalf("deleting %s: %v", ref, err)
-			}
+			return crane.Delete(ref, *options...)
 		},
 	}
 }

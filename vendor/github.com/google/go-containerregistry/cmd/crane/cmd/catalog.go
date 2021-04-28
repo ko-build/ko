@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/spf13/cobra"
@@ -28,16 +27,17 @@ func NewCmdCatalog(options *[]crane.Option) *cobra.Command {
 		Use:   "catalog",
 		Short: "List the repos in a registry",
 		Args:  cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			reg := args[0]
 			repos, err := crane.Catalog(reg, *options...)
 			if err != nil {
-				log.Fatalf("reading repos for %s: %v", reg, err)
+				return fmt.Errorf("reading repos for %s: %v", reg, err)
 			}
 
 			for _, repo := range repos {
 				fmt.Println(repo)
 			}
+			return nil
 		},
 	}
 }

@@ -40,20 +40,33 @@ func Append(base v1.Image, paths ...string) (v1.Image, error) {
 }
 
 func getLayer(path string) (v1.Layer, error) {
+	f, err := streamFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if f != nil {
+		return stream.NewLayer(f), nil
+	}
+
+	return tarball.LayerFromFile(path)
+}
+
+// If we're dealing with a named pipe, trying to open it multiple times will
+// fail, so we need to do a streaming upload.
+//
+// returns nil, nil for non-streaming files
+func streamFile(path string) (*os.File, error) {
+	if path == "-" {
+		return os.Stdin, nil
+	}
 	fi, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	// If we're dealing with a named pipe, trying to open it multiple times will
-	// fail, so we need to do a streaming upload.
 	if !fi.Mode().IsRegular() {
-		rc, err := os.Open(path)
-		if err != nil {
-			return nil, err
-		}
-		return stream.NewLayer(rc), nil
+		return os.Open(path)
 	}
 
-	return tarball.LayerFromFile(path)
+	return nil, nil
 }

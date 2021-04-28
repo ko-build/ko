@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/go-containerregistry/pkg/internal/retry/wait"
+	"github.com/google/go-containerregistry/internal/retry/wait"
 )
 
 // Backoff is an alias of our own wait.Backoff to avoid name conflicts with

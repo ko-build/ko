@@ -78,18 +78,18 @@ func NewCmdAuthGet(argv ...string) *cobra.Command {
 		Short:   "Implements a credential helper",
 		Example: eg,
 		Args:    cobra.NoArgs,
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			b, err := ioutil.ReadAll(os.Stdin)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			reg, err := name.NewRegistry(strings.TrimSpace(string(b)))
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 			authorizer, err := authn.DefaultKeychain.Resolve(reg)
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			// If we don't find any credentials, there's a magic error to return:
@@ -103,15 +103,13 @@ func NewCmdAuthGet(argv ...string) *cobra.Command {
 
 			auth, err := authorizer.Authorization()
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			// Convert back to a form that credential helpers can parse so that this
 			// can act as a meta credential helper.
 			creds := toCreds(auth)
-			if err := json.NewEncoder(os.Stdout).Encode(creds); err != nil {
-				log.Fatal(err)
-			}
+			return json.NewEncoder(os.Stdout).Encode(creds)
 		},
 	}
 }
@@ -132,17 +130,15 @@ func NewCmdAuthLogin(argv ...string) *cobra.Command {
 		Short:   "Log in to a registry",
 		Example: eg,
 		Args:    cobra.ExactArgs(1),
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			reg, err := name.NewRegistry(args[0])
 			if err != nil {
-				log.Fatal(err)
+				return err
 			}
 
 			opts.serverAddress = reg.Name()
 
-			if err := login(opts); err != nil {
-				log.Fatal(err)
-			}
+			return login(opts)
 		},
 	}
 

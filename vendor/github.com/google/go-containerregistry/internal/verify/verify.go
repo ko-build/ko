@@ -20,8 +20,8 @@ import (
 	"hash"
 	"io"
 
+	"github.com/google/go-containerregistry/internal/and"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/internal/and"
 )
 
 type verifyReader struct {

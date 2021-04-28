@@ -15,8 +15,6 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/spf13/cobra"
 )
@@ -38,11 +36,9 @@ crane tag registry.example.com/library/ubuntu:v0 v1
 		Example: `# Add a v1 tag to ubuntu
 crane tag ubuntu v1`,
 		Args: cobra.ExactArgs(2),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			img, tag := args[0], args[1]
-			if err := crane.Tag(img, tag, *options...); err != nil {
-				log.Fatal(err)
-			}
+			return crane.Tag(img, tag, *options...)
 		},
 	}
 }

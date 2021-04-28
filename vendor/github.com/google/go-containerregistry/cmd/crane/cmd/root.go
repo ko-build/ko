@@ -93,6 +93,7 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 		NewCmdTag(&options),
 		NewCmdValidate(&options),
 		NewCmdVersion(),
+		NewCmdMutate(&options),
 	}
 
 	root.AddCommand(commands...)

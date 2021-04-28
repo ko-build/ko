@@ -23,8 +23,8 @@ import (
 
 // Manifest represents the OCI image manifest in a structured way.
 type Manifest struct {
-	SchemaVersion int64             `json:"schemaVersion,omitempty"`
-	MediaType     types.MediaType   `json:"mediaType"`
+	SchemaVersion int64             `json:"schemaVersion"`
+	MediaType     types.MediaType   `json:"mediaType,omitempty"`
 	Config        Descriptor        `json:"config"`
 	Layers        []Descriptor      `json:"layers"`
 	Annotations   map[string]string `json:"annotations,omitempty"`

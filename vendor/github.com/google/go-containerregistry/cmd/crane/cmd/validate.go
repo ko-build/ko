@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -33,7 +32,7 @@ func NewCmdValidate(options *[]crane.Option) *cobra.Command {
 		Use:   "validate",
 		Short: "Validate that an image is well-formed",
 		Args:  cobra.ExactArgs(0),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			for flag, maker := range map[string]func(string, ...crane.Option) (v1.Image, error){
 				tarballPath: makeTarball,
 				remoteRef:   crane.Pull,
@@ -43,7 +42,7 @@ func NewCmdValidate(options *[]crane.Option) *cobra.Command {
 				}
 				img, err := maker(flag, *options...)
 				if err != nil {
-					log.Fatalf("failed to read image %s: %v", flag, err)
+					return fmt.Errorf("failed to read image %s: %v", flag, err)
 				}
 
 				if err := validate.Image(img); err != nil {
@@ -52,6 +51,7 @@ func NewCmdValidate(options *[]crane.Option) *cobra.Command {
 					fmt.Printf("PASS: %s\n", flag)
 				}
 			}
+			return nil
 		},
 	}
 	validateCmd.Flags().StringVar(&tarballPath, "tarball", "", "Path to tarball to validate")

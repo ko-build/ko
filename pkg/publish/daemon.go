@@ -43,8 +43,13 @@ func NewDaemon(namer Namer, tags []string) Interface {
 	return &demon{namer, tags}
 }
 
+// getOpts returns daemon.Options. It's a var to allow it to be overridden during tests.
+var getOpts = func(ctx context.Context) []daemon.Option {
+	return []daemon.Option{daemon.WithContext(ctx)}
+}
+
 // Publish implements publish.Interface
-func (d *demon) Publish(_ context.Context, br build.Result, s string) (name.Reference, error) {
+func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
@@ -100,7 +105,7 @@ func (d *demon) Publish(_ context.Context, br build.Result, s string) (name.Refe
 	}
 
 	log.Printf("Loading %v", digestTag)
-	if _, err := daemon.Write(digestTag, img); err != nil {
+	if _, err := daemon.Write(digestTag, img, getOpts(ctx)...); err != nil {
 		return nil, err
 	}
 	log.Printf("Loaded %v", digestTag)
@@ -112,9 +117,7 @@ func (d *demon) Publish(_ context.Context, br build.Result, s string) (name.Refe
 			return nil, err
 		}
 
-		err = daemon.Tag(digestTag, tag)
-
-		if err != nil {
+		if err := daemon.Tag(digestTag, tag, getOpts(ctx)...); err != nil {
 			return nil, err
 		}
 		log.Printf("Added tag %v", tagName)

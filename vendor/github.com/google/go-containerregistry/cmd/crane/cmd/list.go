@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/spf13/cobra"
@@ -28,16 +27,17 @@ func NewCmdList(options *[]crane.Option) *cobra.Command {
 		Use:   "ls REPO",
 		Short: "List the tags in a repo",
 		Args:  cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			repo := args[0]
 			tags, err := crane.ListTags(repo, *options...)
 			if err != nil {
-				log.Fatalf("reading tags for %s: %v", repo, err)
+				return fmt.Errorf("reading tags for %s: %v", repo, err)
 			}
 
 			for _, tag := range tags {
 				fmt.Println(tag)
 			}
+			return nil
 		},
 	}
 }

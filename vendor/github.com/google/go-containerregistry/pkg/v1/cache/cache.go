@@ -3,9 +3,11 @@ package cache
 
 import (
 	"errors"
+	"io"
 
 	"github.com/google/go-containerregistry/pkg/logs"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
 // Cache encapsulates methods to interact with cached layers.
@@ -55,45 +57,65 @@ func (i *image) Layers() ([]v1.Layer, error) {
 
 	var out []v1.Layer
 	for _, l := range ls {
-		// Check if this layer is present in the cache in compressed
-		// form.
-		digest, err := l.Digest()
-		if err != nil {
-			return nil, err
-		}
-		if cl, err := i.c.Get(digest); err == nil {
-			// Layer found in the cache.
-			logs.Progress.Printf("Layer %s found (compressed) in cache", digest)
-			out = append(out, cl)
-			continue
-		} else if err != nil && err != ErrNotFound {
-			return nil, err
-		}
-
-		// Check if this layer is present in the cache in
-		// uncompressed form.
-		diffID, err := l.DiffID()
-		if err != nil {
-			return nil, err
-		}
-		if cl, err := i.c.Get(diffID); err == nil {
-			// Layer found in the cache.
-			logs.Progress.Printf("Layer %s found (uncompressed) in cache", diffID)
-			out = append(out, cl)
-		} else if err != nil && err != ErrNotFound {
-			return nil, err
-		}
-
-		// Not cached, fall through to real layer.
-		l, err = i.c.Put(l)
-		if err != nil {
-			return nil, err
-		}
-		out = append(out, l)
-
+		out = append(out, &lazyLayer{inner: l, c: i.c})
 	}
 	return out, nil
 }
+
+type lazyLayer struct {
+	inner v1.Layer
+	c     Cache
+}
+
+func (l *lazyLayer) Compressed() (io.ReadCloser, error) {
+	digest, err := l.inner.Digest()
+	if err != nil {
+		return nil, err
+	}
+
+	if cl, err := l.c.Get(digest); err == nil {
+		// Layer found in the cache.
+		logs.Progress.Printf("Layer %s found (compressed) in cache", digest)
+		return cl.Compressed()
+	} else if err != nil && err != ErrNotFound {
+		return nil, err
+	}
+
+	// Not cached, pull and return the real layer.
+	logs.Progress.Printf("Layer %s not found (compressed) in cache, getting", digest)
+	rl, err := l.c.Put(l.inner)
+	if err != nil {
+		return nil, err
+	}
+	return rl.Compressed()
+}
+
+func (l *lazyLayer) Uncompressed() (io.ReadCloser, error) {
+	diffID, err := l.inner.DiffID()
+	if err != nil {
+		return nil, err
+	}
+	if cl, err := l.c.Get(diffID); err == nil {
+		// Layer found in the cache.
+		logs.Progress.Printf("Layer %s found (uncompressed) in cache", diffID)
+		return cl.Uncompressed()
+	} else if err != nil && err != ErrNotFound {
+		return nil, err
+	}
+
+	// Not cached, pull and return the real layer.
+	logs.Progress.Printf("Layer %s not found (uncompressed) in cache, getting", diffID)
+	rl, err := l.c.Put(l.inner)
+	if err != nil {
+		return nil, err
+	}
+	return rl.Uncompressed()
+}
+
+func (l *lazyLayer) Size() (int64, error)                { return l.inner.Size() }
+func (l *lazyLayer) DiffID() (v1.Hash, error)            { return l.inner.DiffID() }
+func (l *lazyLayer) Digest() (v1.Hash, error)            { return l.inner.Digest() }
+func (l *lazyLayer) MediaType() (types.MediaType, error) { return l.inner.MediaType() }
 
 func (i *image) LayerByDigest(h v1.Hash) (v1.Layer, error) {
 	l, err := i.c.Get(h)

@@ -15,8 +15,6 @@
 package cmd
 
 import (
-	"log"
-
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/spf13/cobra"
 )
@@ -28,11 +26,9 @@ func NewCmdCopy(options *[]crane.Option) *cobra.Command {
 		Aliases: []string{"cp"},
 		Short:   "Efficiently copy a remote image from src to dst",
 		Args:    cobra.ExactArgs(2),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			src, dst := args[0], args[1]
-			if err := crane.Copy(src, dst, *options...); err != nil {
-				log.Fatal(err)
-			}
+			return crane.Copy(src, dst, *options...)
 		},
 	}
 }
