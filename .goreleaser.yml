@@ -14,6 +14,10 @@ builds:
   - -trimpath
   ldflags:
   - "-s -w -X github.com/google/ko/pkg/commands.Version={{.Version}}"
+  goos:
+  - windows
+  - linux
+  - darwin
   goarch:
   - amd64
   - arm64
