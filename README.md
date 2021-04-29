@@ -377,21 +377,23 @@ kustomize build config | ko resolve -f -
 
 Yes! Follow these steps:
 
-* Connect to your OpenShift installation: https://docs.openshift.com/container-platform/4.7/cli_reference/openshift_cli/getting-started-cli.html#cli-logging-in_cli-developer-commands
-* Expose the OpenShift Internal Registry so you can push to it: https://docs.openshift.com/container-platform/4.7/registry/securing-exposing-registry.html
-* Export your token to `$HOME/.docker/config.json`:
+- Connect to your OpenShift installation:
+  https://docs.openshift.com/container-platform/4.7/cli_reference/openshift_cli/getting-started-cli.html#cli-logging-in_cli-developer-commands
+- Expose the OpenShift Internal Registry so you can push to it:
+  https://docs.openshift.com/container-platform/4.7/registry/securing-exposing-registry.html
+- Export your token to `$HOME/.docker/config.json`:
 
 ```sh
 oc registry login --to=$HOME/.docker/config.json
 ```
 
-* Create a namespace where you will push your images, i.e: `ko-images`
-* Execute this command to set `KO_DOCKER_REPO` to publish images to the internal registry.
+- Create a namespace where you will push your images, i.e: `ko-images`
+- Execute this command to set `KO_DOCKER_REPO` to publish images to the internal
+  registry.
 
 ```sh
    export KO_DOCKER_REPO=$(oc get route default-route -n openshift-image-registry --template='{{ .spec.host }}')/ko-images
 ```
-
 
 # Acknowledgements
 
