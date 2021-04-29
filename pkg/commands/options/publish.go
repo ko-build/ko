@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright 2021 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -25,6 +25,9 @@ import (
 
 // PublishOptions encapsulates options when publishing.
 type PublishOptions struct {
+	// DockerRepo overrides the KO_DOCKER_REPO environment variable, if present
+	DockerRepo string
+
 	Tags []string
 
 	// Push publishes images to a registry.
@@ -46,6 +49,8 @@ type PublishOptions struct {
 }
 
 func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
+	cmd.Flags().StringVar(&po.DockerRepo, "docker-repo", "", "Repository to push images, overrides KO_DOCKER_REPO")
+
 	cmd.Flags().StringSliceVarP(&po.Tags, "tags", "t", []string{"latest"},
 		"Which tags to use for the produced image instead of the default 'latest' tag "+
 			"(may not work properly with --base-import-paths or --bare).")
