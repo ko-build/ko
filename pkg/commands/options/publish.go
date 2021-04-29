@@ -26,7 +26,7 @@ import (
 
 // PublishOptions encapsulates options when publishing.
 type PublishOptions struct {
-	// DockerRepo overrides the KO_DOCKER_REPO environment variable, if present
+	// DockerRepo configures the destination image repository
 	DockerRepo string
 
 	Tags []string
