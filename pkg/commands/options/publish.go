@@ -17,6 +17,7 @@ package options
 import (
 	"crypto/md5" //nolint: gosec // No strong cryptography needed.
 	"encoding/hex"
+	"os"
 	"path"
 
 	"github.com/google/ko/pkg/publish"
@@ -49,7 +50,11 @@ type PublishOptions struct {
 }
 
 func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
-	cmd.Flags().StringVar(&po.DockerRepo, "docker-repo", "", "Repository to push images, overrides KO_DOCKER_REPO")
+	// Set DockerRepo from the KO_DOCKER_REPO envionment variable.
+	// See https://github.com/google/ko/pull/351 for flag discussion.
+	if dockerRepo, exists := os.LookupEnv("KO_DOCKER_REPO"); exists {
+		po.DockerRepo = dockerRepo
+	}
 
 	cmd.Flags().StringSliceVarP(&po.Tags, "tags", "t", []string{"latest"},
 		"Which tags to use for the produced image instead of the default 'latest' tag "+

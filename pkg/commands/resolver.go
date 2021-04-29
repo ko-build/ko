@@ -131,10 +131,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	// Create the publish.Interface that we will use to publish image references
 	// to either a docker daemon or a container image registry.
 	innerPublisher, err := func() (publish.Interface, error) {
-		repoName := os.Getenv("KO_DOCKER_REPO")
-		if po.DockerRepo != "" {
-			repoName = po.DockerRepo
-		}
+		repoName := po.DockerRepo
 		namer := options.MakeNamer(po)
 		if repoName == publish.LocalDomain || po.Local {
 			// TODO(jonjohnsonjr): I'm assuming that nobody will
@@ -147,7 +144,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		}
 
 		if repoName == "" {
-			return nil, errors.New("either --docker-repo flag or KO_DOCKER_REPO environment variable must be set")
+			return nil, errors.New("KO_DOCKER_REPO environment variable is unset")
 		}
 		if _, err := name.NewRegistry(repoName); err != nil {
 			if _, err := name.NewRepository(repoName); err != nil {

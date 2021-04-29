@@ -61,13 +61,12 @@ to
 
 ## Choose Destination
 
-`ko` must be configured with a destination for where it should push images that
-it builds. You can configure this with either the `--docker-repo` flag or the
-`KO_DOCKER_REPO` environment variable. Typically, the value will be a remote
-registry, e.g.:
+`ko` depends on an environment variable, `KO_DOCKER_REPO`, to identify where it
+should push images that it builds. Typically this will be a remote registry,
+e.g.:
 
 - `KO_DOCKER_REPO=gcr.io/my-project`, or
-- `--docker-repo=my-dockerhub-user`
+- `KO_DOCKER_REPO=my-dockerhub-user`
 
 If both the flag and the environment variable are set, the flag value takes
 precedence.
