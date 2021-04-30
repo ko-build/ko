@@ -22,6 +22,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -37,11 +38,13 @@ import (
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/google/ko/pkg/publish"
 	"github.com/spf13/viper"
+	"golang.org/x/tools/go/packages"
 )
 
 var (
 	defaultBaseImage   string
 	baseImageOverrides map[string]string
+	buildConfigs       map[string]build.Config
 )
 
 // getBaseImage returns a function that determines the base image for a given import path.
@@ -161,6 +164,50 @@ func createCancellableContext() context.Context {
 	return ctx
 }
 
+func createBuildConfigs(baseDir string, configs []build.Config) map[string]build.Config {
+	buildConfigs = make(map[string]build.Config)
+	for i, config := range configs {
+		// Make sure to behave like GoReleaser by defaulting to the current
+		// directory in case the build or main field is not set, check
+		// https://goreleaser.com/customization/build/ for details
+		if config.Dir == "" {
+			config.Dir = "."
+		}
+		if config.Main == "" {
+			config.Main = "."
+		}
+
+		// To behave like GoReleaser, check whether the configured path points to a
+		// source file, and if so, just use the directory it is in
+		var path string
+		if fi, err := os.Stat(filepath.Join(baseDir, config.Dir, config.Main)); err == nil && fi.Mode().IsRegular() {
+			path = filepath.Dir(filepath.Join(config.Dir, config.Main))
+
+		} else {
+			path = filepath.Join(config.Dir, config.Main)
+		}
+
+		// By default, paths configured in the builds section are considered
+		// local import paths, therefore add a "./" equivalent as a prefix to
+		// the constructured import path
+		importPath := fmt.Sprint(".", string(filepath.Separator), path)
+
+		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: baseDir}, importPath)
+		if err != nil {
+			log.Fatalf("'builds': entry #%d does not contain a usuable path (%s): %v", i, importPath, err)
+		}
+
+		if len(pkgs) != 1 {
+			log.Fatalf("'builds': entry #%d results in %d local packages, only 1 is expected", i, len(pkgs))
+		}
+
+		importPath = pkgs[0].PkgPath
+		buildConfigs[importPath] = config
+	}
+
+	return buildConfigs
+}
+
 func init() {
 	// If omitted, use this base image.
 	viper.SetDefault("defaultBaseImage", "gcr.io/distroless/static:nonroot")
@@ -194,4 +241,10 @@ func init() {
 		}
 		baseImageOverrides[k] = v
 	}
+
+	var builds []build.Config
+	if err := viper.UnmarshalKey("builds", &builds); err != nil {
+		log.Fatalf("configuration section 'builds' cannot be parsed")
+	}
+	buildConfigs = createBuildConfigs(".", builds)
 }
