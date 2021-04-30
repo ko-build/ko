@@ -68,9 +68,6 @@ e.g.:
 - `KO_DOCKER_REPO=gcr.io/my-project`, or
 - `KO_DOCKER_REPO=my-dockerhub-user`
 
-If both the flag and the environment variable are set, the flag value takes
-precedence.
-
 # Build an Image
 
 `ko publish ./cmd/app` builds and pushes a container image, and prints the
