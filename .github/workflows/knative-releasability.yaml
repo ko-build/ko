@@ -36,8 +36,8 @@ jobs:
     env:
       #########################################
       #   Update this section each release.   #
-      RELEASE: 'v0.22'
-      SLACK_CHANNEL: 'release-22'
+      RELEASE: 'v0.23'
+      SLACK_CHANNEL: 'release-23'
       #########################################
 
     steps:
@@ -110,25 +110,15 @@ jobs:
           # If we don't run `git status` before the "git diff-index" it seems
           # to list every file that's been touched by codegen.
           git status
-          FOUND_DIFF=0
-          for x in $(git diff-index --name-only HEAD --); do
-            if [ "$(basename $x)" = "go.mod" ]; then
-              continue
-            elif [ "$(basename $x)" = "go.sum" ]; then
-              continue
-            elif [ "$(basename $x)" = "modules.txt" ]; then
-              continue
-            fi
-            echo "Found non-module diff: $x"
-            FOUND_DIFF=1
-            break
-          done
+
+          CHANGED="$(git diff-index --name-only HEAD --)"
 
           # If we see no changes after the upgrade, then we are up to date.
-          if [[ "$FOUND_DIFF" -eq "0"  ]]; then
+          if [[ "$CHANGED" == "" ]]; then
               echo "VERIFY_MESSAGE=${{ github.repository }} up to date." >> $GITHUB_ENV
           else
               echo "VERIFY_MESSAGE=${{ github.repository }} is out of date." >> $GITHUB_ENV
+              echo "The following files are changed: $CHANGED"
               echo 'current=false' >> $GITHUB_ENV
           fi
 
