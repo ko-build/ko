@@ -316,7 +316,7 @@ builds, or delete any previously built images.
 
 [Using -ldflags](https://blog.cloudflare.com/setting-go-variables-at-compile-time/)
 is a common way to embed version info in go binaries (In fact, we do this for
-`ko`!). Unforunately, because `ko` wraps `go build`, it's not possible to use
+`ko`!). Unfortunately, because `ko` wraps `go build`, it's not possible to use
 this flag directly; however, you can use the `GOFLAGS` environment variable
 instead:
 
