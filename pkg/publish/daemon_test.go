@@ -1,16 +1,18 @@
-// Copyright 2018 Google LLC All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2021 Google LLC All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package publish
 
@@ -60,7 +62,11 @@ func TestDaemon(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	def := NewDaemon(md5Hash, []string{})
+	def, err := NewDaemon(md5Hash)
+	if err != nil {
+		t.Fatalf("NewDaemon() = %v", err)
+	}
+
 	if d, err := def.Publish(context.Background(), img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if got, want := d.String(), md5Hash("ko.local", importpath); !strings.HasPrefix(got, want) {
@@ -77,7 +83,11 @@ func TestDaemonTags(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	def := NewDaemon(md5Hash, []string{"v2.0.0", "v1.2.3", "production"})
+	def, err := NewDaemon(md5Hash, WithLocalTags([]string{"v2.0.0", "v1.2.3", "production"}))
+	if err != nil {
+		t.Fatalf("NewDaemon() = %v", err)
+	}
+
 	if d, err := def.Publish(context.Background(), img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if got, want := d.String(), md5Hash("ko.local", importpath); !strings.HasPrefix(got, want) {
@@ -90,5 +100,29 @@ func TestDaemonTags(t *testing.T) {
 		if Tags[i] != v {
 			t.Errorf("Expected tag %v got %v", v, Tags[i])
 		}
+	}
+}
+
+func TestDaemonDomain(t *testing.T) {
+	Tags = nil
+
+	importpath := "github.com/google/ko"
+	img, err := random.Image(1024, 1)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
+	localDomain := "registry.example.com/repository"
+	def, err := NewDaemon(md5Hash,
+		WithLocalDomain(localDomain),
+		WithLocalTags([]string{"v1.0.0"}))
+	if err != nil {
+		t.Fatalf("NewDaemon() = %v", err)
+	}
+
+	if d, err := def.Publish(context.Background(), img, importpath); err != nil {
+		t.Errorf("Publish() = %v", err)
+	} else if got, want := d.String(), md5Hash(localDomain, importpath); !strings.HasPrefix(got, want) {
+		t.Errorf("Publish() = %v, wanted prefix %v", got, want)
 	}
 }

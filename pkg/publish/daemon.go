@@ -1,16 +1,18 @@
-// Copyright 2018 Google LLC All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2021 Google LLC All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package publish
 
@@ -34,13 +36,45 @@ const (
 
 // demon is intentionally misspelled to avoid name collision (and drive Jon nuts).
 type demon struct {
+	base  string
 	namer Namer
 	tags  []string
 }
 
+// DaemonOption is a functional option for NewDaemon.
+type DaemonOption func(*demon) error
+
+// WithLocalDomain is a functional option for overriding the domain used for images that are side-loaded into the daemon.
+func WithLocalDomain(domain string) DaemonOption {
+	return func(i *demon) error {
+		if domain != "" {
+			i.base = domain
+		}
+		return nil
+	}
+}
+
+// WithTags is a functional option for overriding the image tags
+func WithLocalTags(tags []string) DaemonOption {
+	return func(i *demon) error {
+		i.tags = tags
+		return nil
+	}
+}
+
 // NewDaemon returns a new publish.Interface that publishes images to a container daemon.
-func NewDaemon(namer Namer, tags []string) Interface {
-	return &demon{namer, tags}
+func NewDaemon(namer Namer, opts ...DaemonOption) (Interface, error) {
+	d := &demon{
+		base:  LocalDomain,
+		namer: namer,
+		tags:  []string{},
+	}
+	for _, option := range opts {
+		if err := option(d); err != nil {
+			return nil, err
+		}
+	}
+	return d, nil
 }
 
 // getOpts returns daemon.Options. It's a var to allow it to be overridden during tests.
@@ -99,7 +133,7 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 		return nil, err
 	}
 
-	digestTag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(LocalDomain, s), h.Hex))
+	digestTag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(d.base, s), h.Hex))
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +146,7 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 
 	for _, tagName := range d.tags {
 		log.Printf("Adding tag %v", tagName)
-		tag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(LocalDomain, s), tagName))
+		tag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(d.base, s), tagName))
 		if err != nil {
 			return nil, err
 		}
