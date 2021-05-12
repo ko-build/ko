@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Google LLC All Rights Reserved.
+Copyright 2018 Google LLC All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ func TestDaemon(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	def, err := NewDaemon(md5Hash)
+	def, err := NewDaemon(md5Hash, []string{})
 	if err != nil {
 		t.Fatalf("NewDaemon() = %v", err)
 	}
@@ -83,7 +83,7 @@ func TestDaemonTags(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	def, err := NewDaemon(md5Hash, WithLocalTags([]string{"v2.0.0", "v1.2.3", "production"}))
+	def, err := NewDaemon(md5Hash, []string{"v2.0.0", "v1.2.3", "production"})
 	if err != nil {
 		t.Fatalf("NewDaemon() = %v", err)
 	}
@@ -113,9 +113,7 @@ func TestDaemonDomain(t *testing.T) {
 	}
 
 	localDomain := "registry.example.com/repository"
-	def, err := NewDaemon(md5Hash,
-		WithLocalDomain(localDomain),
-		WithLocalTags([]string{"v1.0.0"}))
+	def, err := NewDaemon(md5Hash, []string{}, WithLocalDomain(localDomain))
 	if err != nil {
 		t.Fatalf("NewDaemon() = %v", err)
 	}

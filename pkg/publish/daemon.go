@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Google LLC All Rights Reserved.
+Copyright 2018 Google LLC All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -54,20 +54,12 @@ func WithLocalDomain(domain string) DaemonOption {
 	}
 }
 
-// WithTags is a functional option for overriding the image tags
-func WithLocalTags(tags []string) DaemonOption {
-	return func(i *demon) error {
-		i.tags = tags
-		return nil
-	}
-}
-
 // NewDaemon returns a new publish.Interface that publishes images to a container daemon.
-func NewDaemon(namer Namer, opts ...DaemonOption) (Interface, error) {
+func NewDaemon(namer Namer, tags []string, opts ...DaemonOption) (Interface, error) {
 	d := &demon{
 		base:  LocalDomain,
 		namer: namer,
-		tags:  []string{},
+		tags:  tags,
 	}
 	for _, option := range opts {
 		if err := option(d); err != nil {
