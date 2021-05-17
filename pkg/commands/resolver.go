@@ -139,7 +139,8 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			// TODO(jonjohnsonjr): I'm assuming that nobody will
 			// use local with other publishers, but that might
 			// not be true.
-			return publish.NewDaemon(namer, po.Tags), nil
+			return publish.NewDaemon(namer, po.Tags,
+				publish.WithLocalDomain(po.LocalDomain))
 		}
 		if repoName == publish.KindDomain {
 			return publish.NewKindPublisher(namer, po.Tags), nil

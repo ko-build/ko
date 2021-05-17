@@ -32,6 +32,9 @@ type PublishOptions struct {
 	// In normal ko usage, this is populated with the value of $KO_DOCKER_REPO.
 	DockerRepo string
 
+	// LocalDomain overrides the default domain for images loaded into the local Docker daemon. Use with Local=true.
+	LocalDomain string
+
 	Tags []string
 
 	// Push publishes images to a registry.
