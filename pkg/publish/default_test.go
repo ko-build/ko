@@ -224,4 +224,21 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 	if _, ok := createdTags["v1.2.3"]; !ok {
 		t.Errorf("Tag v1.2.3 was not created.")
 	}
+
+	def, err = NewDefault(repoName, WithTags([]string{releaseTag}), WithTagOnly(true))
+	if err != nil {
+		t.Errorf("NewDefault() = %v", err)
+	}
+	if d, err := def.Publish(context.Background(), img, build.StrictScheme+importpath); err != nil {
+		t.Errorf("Publish() = %v", err)
+	} else if !strings.HasPrefix(d.String(), repoName) {
+		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
+	} else if !strings.HasSuffix(d.Context().String(), strings.ToLower(importpath)) {
+		t.Errorf("Publish() = %v, wanted suffix %v", d.Context(), md5Hash("", importpath))
+	} else if !strings.Contains(d.String(), releaseTag) {
+		t.Errorf("Publish() = %v, wanted tag included: %v", d.String(), releaseTag)
+	} else if strings.Contains(d.String(), "@sha256:") {
+		t.Errorf("Publish() = %v, wanted no digest", d.String())
+	}
+
 }

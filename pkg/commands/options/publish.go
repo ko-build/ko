@@ -36,6 +36,8 @@ type PublishOptions struct {
 	LocalDomain string
 
 	Tags []string
+	// TagOnly resolves images into tag-only references.
+	TagOnly bool
 
 	// Push publishes images to a registry.
 	Push bool
@@ -65,6 +67,8 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 	cmd.Flags().StringSliceVarP(&po.Tags, "tags", "t", []string{"latest"},
 		"Which tags to use for the produced image instead of the default 'latest' tag "+
 			"(may not work properly with --base-import-paths or --bare).")
+	cmd.Flags().BoolVar(&po.TagOnly, "tag-only", false,
+		"Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.")
 
 	cmd.Flags().BoolVar(&po.Push, "push", true, "Push images to KO_DOCKER_REPO")
 

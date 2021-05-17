@@ -16,6 +16,7 @@ package publish
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -38,6 +39,7 @@ type defalt struct {
 	auth      authn.Authenticator
 	namer     Namer
 	tags      []string
+	tagOnly   bool
 	insecure  bool
 }
 
@@ -51,6 +53,7 @@ type defaultOpener struct {
 	auth      authn.Authenticator
 	namer     Namer
 	tags      []string
+	tagOnly   bool
 	insecure  bool
 }
 
@@ -69,6 +72,15 @@ func identity(base, in string) string { return path.Join(base, in) }
 var defaultTags = []string{"latest"}
 
 func (do *defaultOpener) Open() (Interface, error) {
+	if do.tagOnly {
+		if len(do.tags) != 1 {
+			return nil, errors.New("must specify exactly one tag to resolve images into tag-only references")
+		}
+		if do.tags[0] == defaultTags[0] {
+			return nil, errors.New("latest tag cannot be used in tag-only references")
+		}
+	}
+
 	return &defalt{
 		base:      do.base,
 		t:         do.t,
@@ -76,6 +88,7 @@ func (do *defaultOpener) Open() (Interface, error) {
 		auth:      do.auth,
 		namer:     do.namer,
 		tags:      do.tags,
+		tagOnly:   do.tagOnly,
 		insecure:  do.insecure,
 	}, nil
 }
@@ -154,6 +167,15 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 				return nil, err
 			}
 		}
+	}
+
+	if d.tagOnly {
+		// We have already validated that there is a single tag (not latest).
+		tag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(d.base, s), d.tags[0]))
+		if err != nil {
+			return nil, err
+		}
+		return &tag, nil
 	}
 
 	h, err := br.Digest()
