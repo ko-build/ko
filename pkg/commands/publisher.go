@@ -19,29 +19,11 @@ package commands
 import (
 	"context"
 	"fmt"
-	gb "go/build"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish"
-
-	"golang.org/x/tools/go/packages"
 )
-
-func qualifyLocalImport(importpath string) (string, error) {
-	cfg := &packages.Config{
-		Mode: packages.NeedName,
-	}
-	pkgs, err := packages.Load(cfg, importpath)
-	if err != nil {
-		return "", err
-	}
-	if len(pkgs) != 1 {
-		return "", fmt.Errorf("found %d local packages, expected 1", len(pkgs))
-	}
-	return pkgs[0].PkgPath, nil
-}
 
 // PublishImages publishes images
 func PublishImages(ctx context.Context, importpaths []string, pub publish.Interface, b build.Interface) (map[string]name.Reference, error) {
@@ -51,17 +33,10 @@ func PublishImages(ctx context.Context, importpaths []string, pub publish.Interf
 func publishImages(ctx context.Context, importpaths []string, pub publish.Interface, b build.Interface) (map[string]name.Reference, error) {
 	imgs := make(map[string]name.Reference)
 	for _, importpath := range importpaths {
-		if gb.IsLocalImport(importpath) {
-			var err error
-			importpath, err = qualifyLocalImport(importpath)
-			if err != nil {
-				return nil, err
-			}
+		importpath, err := b.QualifyImport(importpath)
+		if err != nil {
+			return nil, err
 		}
-		if !strings.HasPrefix(importpath, build.StrictScheme) {
-			importpath = build.StrictScheme + importpath
-		}
-
 		if err := b.IsSupportedReference(importpath); err != nil {
 			return nil, fmt.Errorf("importpath %q is not supported: %v", importpath, err)
 		}

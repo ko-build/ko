@@ -1,16 +1,18 @@
-// Copyright 2018 Google LLC All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2018 Google LLC All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package build
 
@@ -38,6 +40,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"golang.org/x/tools/go/packages"
 )
 
 const (
@@ -64,7 +67,7 @@ For more information see:
 // GetBase takes an importpath and returns a base image.
 type GetBase func(context.Context, string) (Result, error)
 
-type builder func(context.Context, string, v1.Platform, bool) (string, error)
+type builder func(context.Context, string, string, v1.Platform, bool) (string, error)
 
 type buildContext interface {
 	Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error)
@@ -83,6 +86,7 @@ type gobuild struct {
 	mod                  *modules
 	buildContext         buildContext
 	platformMatcher      *platformMatcher
+	dir                  string
 	labels               map[string]string
 }
 
@@ -98,6 +102,7 @@ type gobuildOpener struct {
 	buildContext         buildContext
 	platform             string
 	labels               map[string]string
+	dir                  string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -116,6 +121,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		mod:                  gbo.mod,
 		buildContext:         gbo.buildContext,
 		labels:               gbo.labels,
+		dir:                  gbo.dir,
 		platformMatcher:      matcher,
 	}, nil
 }
@@ -136,14 +142,16 @@ type modInfo struct {
 // using go modules, otherwise returns nil.
 //
 // Related: https://github.com/golang/go/issues/26504
-func moduleInfo(ctx context.Context) (*modules, error) {
+func moduleInfo(ctx context.Context, dir string) (*modules, error) {
 	modules := modules{
 		deps: make(map[string]*modInfo),
 	}
 
 	// TODO we read all the output as a single byte array - it may
 	// be possible & more efficient to stream it
-	output, err := exec.CommandContext(ctx, "go", "list", "-mod=readonly", "-json", "-m", "all").Output()
+	cmd := exec.CommandContext(ctx, "go", "list", "-mod=readonly", "-json", "-m", "all")
+	cmd.Dir = dir
+	output, err := cmd.Output()
 	if err != nil {
 		return nil, nil
 	}
@@ -186,22 +194,29 @@ func moduleInfo(ctx context.Context) (*modules, error) {
 // `ko` binary that expects a different GOROOT.
 //
 // See https://github.com/google/ko/issues/106
-func getGoroot(ctx context.Context) (string, error) {
-	output, err := exec.CommandContext(ctx, "go", "env", "GOROOT").Output()
+func getGoroot(ctx context.Context, dir string) (string, error) {
+	cmd := exec.CommandContext(ctx, "go", "env", "GOROOT")
+	// It's probably not necessary to set the command working directory here,
+	// but it helps keep everything consistent.
+	cmd.Dir = dir
+	output, err := cmd.Output()
 	return strings.TrimSpace(string(output)), err
 }
 
 // NewGo returns a build.Interface implementation that:
 //  1. builds go binaries named by importpath,
-//  2. containerizes the binary on a suitable base,
-func NewGo(ctx context.Context, options ...Option) (Interface, error) {
+//  2. containerizes the binary on a suitable base.
+//
+// The `dir` argument is the working directory for executing the `go` tool.
+// If `dir` is empty, the function uses the current process working directory.
+func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error) {
 	// TODO: We could do moduleInfo() and getGoroot() concurrently.
-	module, err := moduleInfo(ctx)
+	module, err := moduleInfo(ctx, dir)
 	if err != nil {
 		return nil, err
 	}
 
-	goroot, err := getGoroot(ctx)
+	goroot, err := getGoroot(ctx, dir)
 	if err != nil {
 		// On error, print the output and set goroot to "" to avoid using it later.
 		log.Printf("Unexpected error running \"go env GOROOT\": %v\n%v", err, goroot)
@@ -213,6 +228,7 @@ func NewGo(ctx context.Context, options ...Option) (Interface, error) {
 	// If $(go env GOROOT) successfully returns a non-empty string that differs from
 	// the default build context GOROOT, print a warning and use $(go env GOROOT).
 	bc := gb.Default
+	bc.Dir = dir
 	if goroot != "" && bc.GOROOT != goroot {
 		log.Printf(gorootWarningTemplate, bc.GOROOT, goroot, goroot)
 		bc.GOROOT = goroot
@@ -222,6 +238,9 @@ func NewGo(ctx context.Context, options ...Option) (Interface, error) {
 		build:        build,
 		mod:          module,
 		buildContext: &bc,
+		// dir is set on both buildContext and on gbo. Not ideal, but the
+		// build.Context interface doesn't expose
+		dir: dir,
 	}
 
 	for _, option := range options {
@@ -229,8 +248,37 @@ func NewGo(ctx context.Context, options ...Option) (Interface, error) {
 			return nil, err
 		}
 	}
-
 	return gbo.Open()
+}
+
+func (g *gobuild) qualifyLocalImport(importpath string) (string, error) {
+	cfg := &packages.Config{
+		Mode: packages.NeedName,
+		Dir:  g.dir,
+	}
+	pkgs, err := packages.Load(cfg, importpath)
+	if err != nil {
+		return "", err
+	}
+	if len(pkgs) != 1 {
+		return "", fmt.Errorf("found %d local packages, expected 1", len(pkgs))
+	}
+	return pkgs[0].PkgPath, nil
+}
+
+// QualifyImport implements build.Interface
+func (g *gobuild) QualifyImport(importpath string) (string, error) {
+	if gb.IsLocalImport(importpath) {
+		var err error
+		importpath, err = g.qualifyLocalImport(importpath)
+		if err != nil {
+			return "", fmt.Errorf("qualifying local import %s: %v", importpath, err)
+		}
+	}
+	if !strings.HasPrefix(importpath, StrictScheme) {
+		importpath = StrictScheme + importpath
+	}
+	return importpath, nil
 }
 
 // IsSupportedReference implements build.Interface
@@ -303,7 +351,7 @@ func platformToString(p v1.Platform) string {
 	return fmt.Sprintf("%s/%s", p.OS, p.Architecture)
 }
 
-func build(ctx context.Context, ip string, platform v1.Platform, disableOptimizations bool) (string, error) {
+func build(ctx context.Context, ip string, dir string, platform v1.Platform, disableOptimizations bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -320,6 +368,7 @@ func build(ctx context.Context, ip string, platform v1.Platform, disableOptimiza
 	args = addGo113TrimPathFlag(args)
 	args = append(args, ip)
 	cmd := exec.CommandContext(ctx, "go", args...)
+	cmd.Dir = dir
 
 	// Last one wins
 	defaultEnv := []string{
@@ -536,7 +585,7 @@ func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platfor
 	}
 
 	// Do the build into a temporary file.
-	file, err := g.build(ctx, ref.Path(), *platform, g.disableOptimizations)
+	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.disableOptimizations)
 	if err != nil {
 		return nil, err
 	}
