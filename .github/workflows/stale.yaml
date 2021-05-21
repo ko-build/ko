@@ -15,7 +15,7 @@ jobs:
         stale-issue-message: |-
           This issue is stale because it has been open for 90 days with no
           activity. It will automatically close after 30 more days of
-          inactivity. Keep frash with the 'lifecycle/frozen' label.
+          inactivity. Keep fresh with the 'lifecycle/frozen' label.
         stale-issue-label: 'lifecycle/stale'
         exempt-issue-labels: 'lifecycle/frozen'
 
