@@ -22,10 +22,16 @@ import (
 
 // BuildOptions represents options for the ko builder.
 type BuildOptions struct {
+	// BaseImage enables setting the default base image programmatically.
+	// If non-empty, this takes precedence over the value in `.ko.yaml`.
+	BaseImage            string
 	ConcurrentBuilds     int
 	DisableOptimizations bool
 	Platform             string
 	Labels               []string
+	// UserAgent enables overriding the default value of the `User-Agent` HTTP
+	// request header used when retrieving the base image.
+	UserAgent string
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
