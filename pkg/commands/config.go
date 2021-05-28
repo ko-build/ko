@@ -38,8 +38,8 @@ import (
 )
 
 var (
-	defaultBaseImage   name.Reference
-	baseImageOverrides map[string]name.Reference
+	defaultBaseImage   string
+	baseImageOverrides map[string]string
 )
 
 // getBaseImage returns a function that determines the base image for a given import path.
@@ -53,16 +53,20 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 		//    github.com/GoogleCloudPlatform/foo/cmd/bar
 		// comes through as:
 		//    github.com/googlecloudplatform/foo/cmd/bar
-		ref, ok := baseImageOverrides[strings.ToLower(s)]
+		baseImage, ok := baseImageOverrides[strings.ToLower(s)]
 		if !ok {
-			ref = defaultBaseImage
+			baseImage = defaultBaseImage
 		}
 		if bo.BaseImage != "" {
-			var err error
-			ref, err = name.ParseReference(bo.BaseImage)
-			if err != nil {
-				return nil, fmt.Errorf("parsing bo.BaseImage (%q): %v", bo.BaseImage, err)
-			}
+			baseImage = bo.BaseImage
+		}
+		nameOpts := []name.Option{}
+		if bo.InsecureRegistry {
+			nameOpts = append(nameOpts, name.Insecure)
+		}
+		ref, err := name.ParseReference(baseImage, nameOpts...)
+		if err != nil {
+			return nil, fmt.Errorf("parsing base image (%q): %v", baseImage, err)
 		}
 		userAgent := ua()
 		if bo.UserAgent != "" {
@@ -161,19 +165,17 @@ func init() {
 	}
 
 	ref := viper.GetString("defaultBaseImage")
-	dbi, err := name.ParseReference(ref)
-	if err != nil {
+	if _, err := name.ParseReference(ref); err != nil {
 		log.Fatalf("'defaultBaseImage': error parsing %q as image reference: %v", ref, err)
 	}
-	defaultBaseImage = dbi
+	defaultBaseImage = ref
 
-	baseImageOverrides = make(map[string]name.Reference)
+	baseImageOverrides = make(map[string]string)
 	overrides := viper.GetStringMapString("baseImageOverrides")
 	for k, v := range overrides {
-		bi, err := name.ParseReference(v)
-		if err != nil {
+		if _, err := name.ParseReference(v); err != nil {
 			log.Fatalf("'baseImageOverrides': error parsing %q as image reference: %v", v, err)
 		}
-		baseImageOverrides[k] = bi
+		baseImageOverrides[k] = v
 	}
 }

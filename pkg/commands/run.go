@@ -67,6 +67,7 @@ func addRun(topLevel *cobra.Command) {
 				kubectlArgs = os.Args[dashes:]
 			}
 
+			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				return fmt.Errorf("error creating builder: %v", err)

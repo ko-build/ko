@@ -58,6 +58,7 @@ func addPublish(topLevel *cobra.Command) {
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := createCancellableContext()
+			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				return fmt.Errorf("error creating builder: %v", err)

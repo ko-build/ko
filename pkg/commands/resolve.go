@@ -56,6 +56,7 @@ func addResolve(topLevel *cobra.Command) {
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := createCancellableContext()
+			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				return fmt.Errorf("error creating builder: %v", err)
