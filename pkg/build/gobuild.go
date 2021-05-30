@@ -81,6 +81,7 @@ type platformMatcher struct {
 type gobuild struct {
 	getBase              GetBase
 	creationTime         v1.Time
+	kodataCreationTime   v1.Time
 	build                builder
 	disableOptimizations bool
 	mod                  *modules
@@ -96,6 +97,7 @@ type Option func(*gobuildOpener) error
 type gobuildOpener struct {
 	getBase              GetBase
 	creationTime         v1.Time
+	kodataCreationTime   v1.Time
 	build                builder
 	disableOptimizations bool
 	mod                  *modules
@@ -116,6 +118,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	return &gobuild{
 		getBase:              gbo.getBase,
 		creationTime:         gbo.creationTime,
+		kodataCreationTime:   gbo.kodataCreationTime,
 		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
 		mod:                  gbo.mod,
@@ -414,13 +417,13 @@ func appFilename(importpath string) string {
 	return base
 }
 
-func tarAddDirectories(tw *tar.Writer, dir string) error {
+func tarAddDirectories(tw *tar.Writer, dir string, creationTime v1.Time) error {
 	if dir == "." || dir == string(filepath.Separator) {
 		return nil
 	}
 
 	// Write parent directories first
-	if err := tarAddDirectories(tw, filepath.Dir(dir)); err != nil {
+	if err := tarAddDirectories(tw, filepath.Dir(dir), creationTime); err != nil {
 		return err
 	}
 
@@ -431,7 +434,8 @@ func tarAddDirectories(tw *tar.Writer, dir string) error {
 		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 		// under which it was created. Additionally, windows can only set 0222,
 		// 0444, or 0666, none of which are executable.
-		Mode: 0555,
+		Mode:    0555,
+		ModTime: creationTime.Time,
 	}); err != nil {
 		return err
 	}
@@ -439,13 +443,13 @@ func tarAddDirectories(tw *tar.Writer, dir string) error {
 	return nil
 }
 
-func tarBinary(name, binary string) (*bytes.Buffer, error) {
+func tarBinary(name, binary string, creationTime v1.Time) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
 	// write the parent directories to the tarball archive
-	if err := tarAddDirectories(tw, path.Dir(name)); err != nil {
+	if err := tarAddDirectories(tw, path.Dir(name), creationTime); err != nil {
 		return nil, err
 	}
 
@@ -465,7 +469,8 @@ func tarBinary(name, binary string) (*bytes.Buffer, error) {
 		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 		// under which it was created. Additionally, windows can only set 0222,
 		// 0444, or 0666, none of which are executable.
-		Mode: 0555,
+		Mode:    0555,
+		ModTime: creationTime.Time,
 	}
 	// write the header to the tarball archive
 	if err := tw.WriteHeader(header); err != nil {
@@ -493,7 +498,7 @@ const kodataRoot = "/var/run/ko"
 // walkRecursive performs a filepath.Walk of the given root directory adding it
 // to the provided tar.Writer with root -> chroot.  All symlinks are dereferenced,
 // which is what leads to recursion when we encounter a directory symlink.
-func walkRecursive(tw *tar.Writer, root, chroot string) error {
+func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time) error {
 	return filepath.Walk(root, func(hostPath string, info os.FileInfo, err error) error {
 		if hostPath == root {
 			// Add an entry for the root directory of our walk.
@@ -503,7 +508,8 @@ func walkRecursive(tw *tar.Writer, root, chroot string) error {
 				// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 				// under which it was created. Additionally, windows can only set 0222,
 				// 0444, or 0666, none of which are executable.
-				Mode: 0555,
+				Mode:    0555,
+				ModTime: creationTime.Time,
 			})
 		}
 		if err != nil {
@@ -527,7 +533,7 @@ func walkRecursive(tw *tar.Writer, root, chroot string) error {
 		}
 		// Skip other directories.
 		if info.Mode().IsDir() {
-			return walkRecursive(tw, evalPath, newPath)
+			return walkRecursive(tw, evalPath, newPath, creationTime)
 		}
 
 		// Open the file to copy it into the tarball.
@@ -545,7 +551,8 @@ func walkRecursive(tw *tar.Writer, root, chroot string) error {
 			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 			// under which it was created. Additionally, windows can only set 0222,
 			// 0444, or 0666, none of which are executable.
-			Mode: 0555,
+			Mode:    0555,
+			ModTime: creationTime.Time,
 		}); err != nil {
 			return fmt.Errorf("tar.Writer.WriteHeader(%q): %w", newPath, err)
 		}
@@ -566,7 +573,9 @@ func (g *gobuild) tarKoData(ref reference) (*bytes.Buffer, error) {
 		return nil, err
 	}
 
-	return buf, walkRecursive(tw, root, kodataRoot)
+	creationTime := g.kodataCreationTime
+
+	return buf, walkRecursive(tw, root, kodataRoot, creationTime)
 }
 
 func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platform *v1.Platform) (v1.Image, error) {
@@ -616,7 +625,7 @@ func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platfor
 	appPath := path.Join(appDir, appFilename(ref.Path()))
 
 	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(appPath, file)
+	binaryLayerBuf, err := tarBinary(appPath, file, v1.Time{})
 	if err != nil {
 		return nil, err
 	}

@@ -352,6 +352,8 @@ or to the latest git commit's timestamp with:
 export SOURCE_DATE_EPOCH=$(git log -1 --format='%ct')
 ```
 
+The same applies to `KO_DATA_DATE_EPOCH` which sets the last modified time of all files in `kodata`.
+
 ## Can I optimize images for [eStargz support](https://github.com/containerd/stargz-snapshotter/blob/v0.2.0/docs/stargz-estargz.md)?
 
 Yes! Set the environment variable `GGCR_EXPERIMENT_ESTARGZ=1` to produce

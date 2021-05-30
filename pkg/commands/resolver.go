@@ -55,6 +55,11 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		return nil, err
 	}
 
+	kodataCreationTime, err := getKoDataCreationTime()
+	if err != nil {
+		return nil, err
+	}
+
 	platform := bo.Platform
 	if platform == "" {
 		platform = "linux/amd64"
@@ -85,6 +90,9 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	}
 	if creationTime != nil {
 		opts = append(opts, build.WithCreationTime(*creationTime))
+	}
+	if kodataCreationTime != nil {
+		opts = append(opts, build.WithKoDataCreationTime(*kodataCreationTime))
 	}
 	if bo.DisableOptimizations {
 		opts = append(opts, build.WithDisabledOptimizations())
