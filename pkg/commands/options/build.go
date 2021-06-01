@@ -32,6 +32,8 @@ type BuildOptions struct {
 	// UserAgent enables overriding the default value of the `User-Agent` HTTP
 	// request header used when retrieving the base image.
 	UserAgent string
+
+	InsecureRegistry bool
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {

@@ -70,6 +70,7 @@ func addCreate(topLevel *cobra.Command) {
 			// Cancel on signals.
 			ctx := createCancellableContext()
 
+			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				return fmt.Errorf("error creating builder: %v", err)
