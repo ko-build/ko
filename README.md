@@ -147,6 +147,12 @@ identified by `KO_DOCKER_REPO`.
 `ko` can also publish images to a local Docker daemon, if available, by setting
 `KO_DOCKER_REPO=ko.local`, or by passing the `--local` (`-L`) flag.
 
+Locally-published images can be used as a base image for other `ko` images:
+
+```yaml
+defaultBaseImage: ko.local/example/base/image
+```
+
 `ko` can also publish images to a local [KinD](https://kind.sigs.k8s.io)
 cluster, if available, by setting `KO_DOCKER_REPO=kind.local`.
 
