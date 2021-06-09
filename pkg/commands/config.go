@@ -30,10 +30,12 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/publish"
 	"github.com/spf13/viper"
 )
 
@@ -68,6 +70,12 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 		if err != nil {
 			return nil, fmt.Errorf("parsing base image (%q): %v", baseImage, err)
 		}
+
+		// For ko.local, look in the daemon.
+		if ref.Context().RegistryStr() == publish.LocalDomain {
+			return daemon.Image(ref)
+		}
+
 		userAgent := ua()
 		if bo.UserAgent != "" {
 			userAgent = bo.UserAgent
