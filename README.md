@@ -148,7 +148,9 @@ identified by `KO_DOCKER_REPO`.
 `KO_DOCKER_REPO=ko.local`, or by passing the `--local` (`-L`) flag.
 
 `ko` can also publish images to a local [KinD](https://kind.sigs.k8s.io)
-cluster, if available, by setting `KO_DOCKER_REPO=kind.local`.
+cluster, if available, by setting `KO_DOCKER_REPO=kind.local`. By default this
+publishes to the default KinD cluster name (`kind`). To publish to another KinD
+cluster, set `KIND_CLUSTER_NAME=my-other-cluster`.
 
 ## Multi-Platform Images
 
