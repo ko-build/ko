@@ -1,16 +1,18 @@
-// Copyright 2018 Google LLC All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//    http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+/*
+Copyright 2018 Google LLC All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
 
 package build
 
@@ -23,6 +25,7 @@ import (
 	"io/ioutil"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -34,13 +37,107 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 )
 
+func repoRootDir() (string, error) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		return "", fmt.Errorf("could not get current filename")
+	}
+	basepath := filepath.Dir(filename)
+	repoDir := filepath.Join(basepath, "..", "..")
+	return filepath.Rel(basepath, repoDir)
+}
+
+func TestGoBuildQualifyImport(t *testing.T) {
+	base, err := random.Image(1024, 1)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
+	repoDir, err := repoRootDir()
+	if err != nil {
+		t.Fatalf("could not get Git repository root directory")
+	}
+
+	tests := []struct {
+		description         string
+		rawImportpath       string
+		dir                 string
+		qualifiedImportpath string
+		expectError         bool
+	}{
+		{
+			description:         "strict qualified import path",
+			rawImportpath:       "ko://github.com/google/ko",
+			dir:                 "",
+			qualifiedImportpath: "ko://github.com/google/ko",
+			expectError:         false,
+		},
+		{
+			description:         "strict qualified import path in subdirectory of go.mod",
+			rawImportpath:       "ko://github.com/google/ko/test",
+			dir:                 "",
+			qualifiedImportpath: "ko://github.com/google/ko/test",
+			expectError:         false,
+		},
+		{
+			description:         "non-strict qualified import path",
+			rawImportpath:       "github.com/google/ko",
+			dir:                 "",
+			qualifiedImportpath: "ko://github.com/google/ko",
+			expectError:         false,
+		},
+		{
+			description:         "non-strict local import path in repository root directory",
+			rawImportpath:       "./test",
+			dir:                 repoDir,
+			qualifiedImportpath: "ko://github.com/google/ko/test",
+			expectError:         false,
+		},
+		{
+			description:         "non-strict local import path in subdirectory",
+			rawImportpath:       ".",
+			dir:                 filepath.Join(repoDir, "test"),
+			qualifiedImportpath: "ko://github.com/google/ko/test",
+			expectError:         false,
+		},
+		{
+			description:         "non-existent non-strict local import path",
+			rawImportpath:       "./does-not-exist",
+			dir:                 "/",
+			qualifiedImportpath: "should return error",
+			expectError:         true,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			ng, err := NewGo(context.Background(), test.dir, WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }))
+			if err != nil {
+				t.Fatalf("NewGo() = %v", err)
+			}
+			gotImportpath, err := ng.QualifyImport(test.rawImportpath)
+			if err != nil && test.expectError {
+				return
+			}
+			if err != nil && !test.expectError {
+				t.Errorf("QualifyImport(dir=%q)(%q) was error (%v), want nil error", test.dir, test.rawImportpath, err)
+			}
+			if err == nil && test.expectError {
+				t.Errorf("QualifyImport(dir=%q)(%q) was nil error, want non-nil error", test.dir, test.rawImportpath)
+			}
+			if gotImportpath != test.qualifiedImportpath {
+				t.Errorf("QualifyImport(dir=%q)(%q) = (%q, nil), want (%q, nil)", test.dir, test.rawImportpath, gotImportpath, test.qualifiedImportpath)
+			}
+		})
+	}
+}
+
 func TestGoBuildIsSupportedRef(t *testing.T) {
 	base, err := random.Image(1024, 3)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	ng, err := NewGo(context.Background(), WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }))
+	ng, err := NewGo(context.Background(), "", WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }))
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}
@@ -100,7 +197,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 		}),
 	}
 
-	ng, err := NewGo(context.Background(), opts...)
+	ng, err := NewGo(context.Background(), "", opts...)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
 	}
@@ -132,7 +229,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 }
 
 // A helper method we use to substitute for the default "build" method.
-func writeTempFile(_ context.Context, s string, _ v1.Platform, _ bool) (string, error) {
+func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ bool) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -160,6 +257,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		context.Background(),
+		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }),
 		withBuilder(writeTempFile),
@@ -402,6 +500,7 @@ func TestGoBuild(t *testing.T) {
 	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		context.Background(),
+		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }),
 		withBuilder(writeTempFile),
@@ -474,6 +573,7 @@ func TestGoBuildIndex(t *testing.T) {
 	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		context.Background(),
+		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (Result, error) { return base, nil }),
 		WithPlatforms("all"),
@@ -546,6 +646,7 @@ func TestNestedIndex(t *testing.T) {
 	creationTime := v1.Time{Time: time.Unix(5000, 0)}
 	ng, err := NewGo(
 		context.Background(),
+		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (Result, error) { return nestedBase, nil }),
 		withBuilder(writeTempFile),

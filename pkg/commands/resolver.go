@@ -109,7 +109,7 @@ func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching,
 	if err != nil {
 		return nil, fmt.Errorf("error setting up builder options: %v", err)
 	}
-	innerBuilder, err := build.NewGo(ctx, opt...)
+	innerBuilder, err := build.NewGo(ctx, bo.WorkingDirectory, opt...)
 	if err != nil {
 		return nil, err
 	}
