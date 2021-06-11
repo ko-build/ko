@@ -214,6 +214,13 @@ you can include Git commit information in your image with:
 ln -s -r .git/HEAD ./cmd/app/kodata/
 ```
 
+Also note that `http.FileServer` will not serve the `Last-Modified` header
+(or validate `If-Modified-Since` request headers) because `ko` does not embed
+timestamps by default.
+
+This can be supported by manually setting the `KO_DATA_DATE_EPOCH` environment
+variable during build ([See below](#Why-are-my-images-all-created-in-1970)).
+
 # Kubernetes Integration
 
 You could stop at just building and pushing images.
@@ -335,24 +342,28 @@ GOFLAGS="-ldflags=-X=main.version=1.2.3" ko publish .
 ## Why are my images all created in 1970?
 
 In order to support [reproducible builds](https://reproducible-builds.org), `ko`
-doesn't embed timestamps in the images it produces by default; however, `ko`
-does respect the
-[`SOURCE_DATE_EPOCH`](https://reproducible-builds.org/docs/source-date-epoch/)
-environment variable.
+doesn't embed timestamps in the images it produces by default.
 
-For example, you can set this to the current timestamp by executing:
+However, `ko` does respect the [`SOURCE_DATE_EPOCH`](https://reproducible-builds.org/docs/source-date-epoch/)
+environment variable, which will set the container image's timestamp
+accordingly.
+
+Similarly, the `KO_DATA_DATE_EPOCH` environment variable can be used to set
+the _modtime_ timestamp of the files in `KO_DATA_PATH`.
+
+For example, you can set the container image's timestamp to the current
+timestamp by executing:
 
 ```
 export SOURCE_DATE_EPOCH=$(date +%s)
 ```
 
-or to the latest git commit's timestamp with:
+or set the timestamp of the files in `KO_DATA_PATH` to the latest git commit's
+timestamp with:
 
 ```
-export SOURCE_DATE_EPOCH=$(git log -1 --format='%ct')
+export KO_DATA_DATE_EPOCH=$(git log -1 --format='%ct')
 ```
-
-The same applies to `KO_DATA_DATE_EPOCH` which sets the last modified time of all files in `kodata`.
 
 ## Can I optimize images for [eStargz support](https://github.com/containerd/stargz-snapshotter/blob/v0.2.0/docs/stargz-estargz.md)?
 
