@@ -36,6 +36,15 @@ func WithCreationTime(t v1.Time) Option {
 	}
 }
 
+// WithKoDataCreationTime is a functional option for overriding the creation
+// time given to the files in the kodata directory.
+func WithKoDataCreationTime(t v1.Time) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.kodataCreationTime = t
+		return nil
+	}
+}
+
 // WithDisabledOptimizations is a functional option for disabling optimizations
 // when compiling.
 func WithDisabledOptimizations() Option {

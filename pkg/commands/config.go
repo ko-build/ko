@@ -127,17 +127,25 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 	}
 }
 
-func getCreationTime() (*v1.Time, error) {
-	epoch := os.Getenv("SOURCE_DATE_EPOCH")
+func getTimeFromEnv(env string) (*v1.Time, error) {
+	epoch := os.Getenv(env)
 	if epoch == "" {
 		return nil, nil
 	}
 
 	seconds, err := strconv.ParseInt(epoch, 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf("the environment variable SOURCE_DATE_EPOCH should be the number of seconds since January 1st 1970, 00:00 UTC, got: %v", err)
+		return nil, fmt.Errorf("the environment variable %s should be the number of seconds since January 1st 1970, 00:00 UTC, got: %v", env, err)
 	}
 	return &v1.Time{Time: time.Unix(seconds, 0)}, nil
+}
+
+func getCreationTime() (*v1.Time, error) {
+	return getTimeFromEnv("SOURCE_DATE_EPOCH")
+}
+
+func getKoDataCreationTime() (*v1.Time, error) {
+	return getTimeFromEnv("KO_DATA_DATE_EPOCH")
 }
 
 func createCancellableContext() context.Context {
