@@ -54,6 +54,18 @@ func WithDisabledOptimizations() Option {
 	}
 }
 
+// WithConfig is a functional option for providing GoReleaser Build influenced
+// build settings for importpaths.
+//
+// Set a fully qualified importpath (e.g. github.com/my-user/my-repo/cmd/app)
+// as the mapping key for the respective Config.
+func WithConfig(buildConfigs map[string]Config) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.buildConfigs = buildConfigs
+		return nil
+	}
+}
+
 // WithPlatforms is a functional option for building certain platforms for
 // multi-platform base images. To build everything from the base, use "all",
 // otherwise use a comma-separated list of platform specs, i.e.:

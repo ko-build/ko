@@ -123,6 +123,42 @@ baseImageOverrides:
   github.com/my-user/my-repo/cmd/foo: registry.example.com/base/for/foo
 ```
 
+### Overriding Go build settings
+
+By default, `ko` builds the binary with no additional build flags other than
+`--trimpath` (depending on the Go version). You can replace the default build
+arguments by providing build flags and ldflags using a
+[GoReleaser](https://github.com/goreleaser/goreleaser) influenced `builds`
+configuration section in your `.ko.yaml`.
+
+```yaml
+builds:
+- id: foo
+  main: ./foobar/foo
+  flags:
+  - -tags
+  - netgo
+  ldflags:
+  - -s -w
+  - -extldflags "-static"
+  - -X main.version={{.Env.VERSION}}
+- id: bar
+  main: ./foobar/bar/main.go
+  ldflags:
+  - -s
+  - -w
+```
+
+For the build, `ko` will pick the entry based on the respective import path
+being used. It will be matched against the local path that is configured using
+`dir` and `main`. In the context of `ko`, it is fine just to specify `main`
+with the intended import path.
+
+_Please note:_ Even though the configuration section is similar to the
+[GoReleaser `builds` section](https://goreleaser.com/customization/build/),
+only the `flags` and `ldflags` fields are currently supported. Also, the
+templating support is currently limited to environment variables only.
+
 ## Naming Images
 
 `ko` provides a few different strategies for naming the image it pushes, to
@@ -335,9 +371,16 @@ is a common way to embed version info in go binaries (In fact, we do this for
 this flag directly; however, you can use the `GOFLAGS` environment variable
 instead:
 
-```
+```sh
 GOFLAGS="-ldflags=-X=main.version=1.2.3" ko publish .
 ```
+
+## How can I set multiple `ldflags`?
+
+Currently, there is a limitation that does not allow to set multiple arguments
+in `ldflags` using `GOFLAGS`. Using `-ldflags` multiple times also does not
+work. In this use case, it works best to use the [`builds` section](#overriding-go-build-settings)
+in the `.ko.yaml` file.
 
 ## Why are my images all created in 1970?
 

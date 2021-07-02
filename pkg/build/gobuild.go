@@ -33,6 +33,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/containerd/stargz-snapshotter/estargz"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -67,7 +68,7 @@ For more information see:
 // GetBase takes an importpath and returns a base image.
 type GetBase func(context.Context, string) (Result, error)
 
-type builder func(context.Context, string, string, v1.Platform, bool) (string, error)
+type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
 
 type buildContext interface {
 	Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error)
@@ -84,6 +85,7 @@ type gobuild struct {
 	kodataCreationTime   v1.Time
 	build                builder
 	disableOptimizations bool
+	buildConfigs         map[string]Config
 	mod                  *modules
 	buildContext         buildContext
 	platformMatcher      *platformMatcher
@@ -100,6 +102,7 @@ type gobuildOpener struct {
 	kodataCreationTime   v1.Time
 	build                builder
 	disableOptimizations bool
+	buildConfigs         map[string]Config
 	mod                  *modules
 	buildContext         buildContext
 	platform             string
@@ -121,6 +124,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		kodataCreationTime:   gbo.kodataCreationTime,
 		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
+		buildConfigs:         gbo.buildConfigs,
 		mod:                  gbo.mod,
 		buildContext:         gbo.buildContext,
 		labels:               gbo.labels,
@@ -354,21 +358,22 @@ func platformToString(p v1.Platform) string {
 	return fmt.Sprintf("%s/%s", p.OS, p.Architecture)
 }
 
-func build(ctx context.Context, ip string, dir string, platform v1.Platform, disableOptimizations bool) (string, error) {
+func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
 	}
 	file := filepath.Join(tmpDir, "out")
 
-	args := make([]string, 0, 7)
-	args = append(args, "build")
-	if disableOptimizations {
-		// Disable optimizations (-N) and inlining (-l).
-		args = append(args, "-gcflags", "all=-N -l")
+	buildArgs, err := createBuildArgs(config)
+	if err != nil {
+		return "", err
 	}
+
+	args := make([]string, 0, 4+len(buildArgs))
+	args = append(args, "build")
+	args = append(args, buildArgs...)
 	args = append(args, "-o", file)
-	args = addGo113TrimPathFlag(args)
 	args = append(args, ip)
 	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = dir
@@ -578,6 +583,75 @@ func (g *gobuild) tarKoData(ref reference) (*bytes.Buffer, error) {
 	return buf, walkRecursive(tw, root, kodataRoot, creationTime)
 }
 
+func createTemplateData() map[string]interface{} {
+	envVars := map[string]string{}
+	for _, entry := range os.Environ() {
+		kv := strings.SplitN(entry, "=", 2)
+		envVars[kv[0]] = kv[1]
+	}
+
+	return map[string]interface{}{
+		"Env": envVars,
+	}
+}
+
+func applyTemplating(list []string, data map[string]interface{}) error {
+	for i, entry := range list {
+		tmpl, err := template.New("argsTmpl").Option("missingkey=error").Parse(entry)
+		if err != nil {
+			return err
+		}
+
+		var buf bytes.Buffer
+		if err := tmpl.Execute(&buf, data); err != nil {
+			return err
+		}
+
+		list[i] = buf.String()
+	}
+
+	return nil
+}
+
+func createBuildArgs(buildCfg Config) ([]string, error) {
+	var args []string
+
+	data := createTemplateData()
+
+	if len(buildCfg.Flags) > 0 {
+		if err := applyTemplating(buildCfg.Flags, data); err != nil {
+			return nil, err
+		}
+
+		args = append(args, buildCfg.Flags...)
+	}
+
+	if len(buildCfg.Ldflags) > 0 {
+		if err := applyTemplating(buildCfg.Ldflags, data); err != nil {
+			return nil, err
+		}
+
+		args = append(args, fmt.Sprintf("-ldflags=%s", strings.Join(buildCfg.Ldflags, " ")))
+	}
+
+	return args, nil
+}
+
+func (g *gobuild) configForImportPath(ip string) Config {
+	config, ok := g.buildConfigs[ip]
+	if !ok {
+		// Apply default build flags in case none were supplied
+		config.Flags = addGo113TrimPathFlag(config.Flags)
+	}
+
+	if g.disableOptimizations {
+		// Disable optimizations (-N) and inlining (-l).
+		config.Flags = append(config.Flags, "-gcflags", "all=-N -l")
+	}
+
+	return config
+}
+
 func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platform *v1.Platform) (v1.Image, error) {
 	ref := newRef(s)
 
@@ -594,7 +668,7 @@ func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platfor
 	}
 
 	// Do the build into a temporary file.
-	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.disableOptimizations)
+	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.configForImportPath(ref.Path()))
 	if err != nil {
 		return nil, err
 	}
