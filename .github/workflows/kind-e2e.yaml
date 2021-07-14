@@ -1,6 +1,7 @@
 name: KinD e2e tests
 
 on:
+  workflow_dispatch:  # Allow manual runs.
   pull_request:
     branches: ['main']
 
