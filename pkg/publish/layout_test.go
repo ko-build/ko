@@ -31,7 +31,7 @@ func TestLayout(t *testing.T) {
 	}
 	importpath := "github.com/Google/go-containerregistry/cmd/crane"
 
-	tmp, err := ioutil.TempDir("", "ko")
+	tmp, err := ioutil.TempDir("/tmp", "ko")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -42,7 +42,7 @@ func TestMulti(t *testing.T) {
 
 	tp := NewTarball(fp.Name(), repoName, md5Hash, []string{})
 
-	tmp, err := ioutil.TempDir("", "ko")
+	tmp, err := ioutil.TempDir("/tmp", "ko")
 	if err != nil {
 		t.Fatal(err)
 	}
