@@ -68,7 +68,7 @@ For more information see:
 
 const (
 	baseDigestAnnotation = "org.opencontainers.image.base.digest"
-	baseRefAnnotation    = "org.opencontainers.image.base.ref.name"
+	baseRefAnnotation    = "org.opencontainers.image.base.name"
 )
 
 // GetBase takes an importpath and returns a base image reference and base image (or index).
