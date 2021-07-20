@@ -36,6 +36,7 @@ import (
 	"text/template"
 
 	"github.com/containerd/stargz-snapshotter/estargz"
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
@@ -65,8 +66,13 @@ For more information see:
 `
 )
 
-// GetBase takes an importpath and returns a base image.
-type GetBase func(context.Context, string) (Result, error)
+const (
+	baseDigestAnnotation = "org.opencontainers.image.base.digest"
+	baseRefAnnotation    = "org.opencontainers.image.base.name"
+)
+
+// GetBase takes an importpath and returns a base image reference and base image (or index).
+type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
 
@@ -652,8 +658,8 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	return config
 }
 
-func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platform *v1.Platform) (v1.Image, error) {
-	ref := newRef(s)
+func (g *gobuild) buildOne(ctx context.Context, refStr string, baseRef name.Reference, baseDigest v1.Hash, base v1.Image, platform *v1.Platform) (v1.Image, error) {
+	ref := newRef(refStr)
 
 	cf, err := base.ConfigFile()
 	if err != nil {
@@ -728,6 +734,11 @@ func (g *gobuild) buildOne(ctx context.Context, s string, base v1.Image, platfor
 		return nil, err
 	}
 
+	withApp = mutate.Annotations(withApp, map[string]string{
+		baseRefAnnotation:    baseRef.Name(),
+		baseDigestAnnotation: baseDigest.String(),
+	})
+
 	// Start from a copy of the base image's config file, and set
 	// the entrypoint to our app.
 	cfg, err := withApp.ConfigFile()
@@ -784,7 +795,7 @@ func updatePath(cf *v1.ConfigFile) {
 // Build implements build.Interface
 func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	// Determine the appropriate base image for this import path.
-	base, err := g.getBase(ctx, s)
+	baseRef, base, err := g.getBase(ctx, s)
 	if err != nil {
 		return nil, err
 	}
@@ -795,27 +806,33 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		return nil, err
 	}
 
+	// Take the digest of the base index or image, to annotate images we'll build later.
+	baseDigest, err := base.Digest()
+	if err != nil {
+		return nil, err
+	}
+
 	switch mt {
 	case types.OCIImageIndex, types.DockerManifestList:
-		base, ok := base.(v1.ImageIndex)
+		baseIndex, ok := base.(v1.ImageIndex)
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as index: %v", base)
 		}
-		return g.buildAll(ctx, s, base)
+		return g.buildAll(ctx, s, baseRef, baseDigest, baseIndex)
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
-		base, ok := base.(v1.Image)
+		baseImage, ok := base.(v1.Image)
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as image: %v", base)
 		}
-		return g.buildOne(ctx, s, base, nil)
+		return g.buildOne(ctx, s, baseRef, baseDigest, baseImage, nil)
 	default:
 		return nil, fmt.Errorf("base image media type: %s", mt)
 	}
 }
 
 // TODO(#192): Do these in parallel?
-func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v1.ImageIndex, error) {
-	im, err := base.IndexManifest()
+func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Reference, baseDigest v1.Hash, baseIndex v1.ImageIndex) (v1.ImageIndex, error) {
+	im, err := baseIndex.IndexManifest()
 	if err != nil {
 		return nil, err
 	}
@@ -825,18 +842,18 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 	for _, desc := range im.Manifests {
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
-			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, s)
+			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, ref)
 		}
 
 		if !g.platformMatcher.matches(desc.Platform) {
 			continue
 		}
 
-		base, err := base.Image(desc.Digest)
+		baseImage, err := baseIndex.Image(desc.Digest)
 		if err != nil {
 			return nil, err
 		}
-		img, err := g.buildOne(ctx, s, base, desc.Platform)
+		img, err := g.buildOne(ctx, ref, baseRef, baseDigest, baseImage, desc.Platform)
 		if err != nil {
 			return nil, err
 		}
@@ -851,7 +868,7 @@ func (g *gobuild) buildAll(ctx context.Context, s string, base v1.ImageIndex) (v
 		})
 	}
 
-	baseType, err := base.MediaType()
+	baseType, err := baseIndex.MediaType()
 	if err != nil {
 		return nil, err
 	}
