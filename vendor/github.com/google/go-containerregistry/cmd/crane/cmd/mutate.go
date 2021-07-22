@@ -21,6 +21,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/spf13/cobra"
 )
@@ -91,7 +92,7 @@ func NewCmdMutate(options *[]crane.Option) *cobra.Command {
 				log.Fatalf("mutating config: %v", err)
 			}
 
-			img = mutate.Annotations(img, annotations)
+			img = mutate.Annotations(img, annotations).(v1.Image)
 
 			// If the new ref isn't provided, write over the original image.
 			// If that ref was provided by digest (e.g., output from

@@ -786,7 +786,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, baseRef name.Refe
 	withApp = mutate.Annotations(withApp, map[string]string{
 		baseRefAnnotation:    baseRef.Name(),
 		baseDigestAnnotation: baseDigest.String(),
-	})
+	}).(v1.Image)
 
 	// Start from a copy of the base image's config file, and set
 	// the entrypoint to our app.
@@ -927,8 +927,18 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	if err != nil {
 		return nil, err
 	}
+	idx := mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType)
 
-	return mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType), nil
+	// Annotate the index with base image information, if the index is an OCI image index.
+	// (Docker manifest lists don't support annotations)
+	if baseType == types.OCIImageIndex {
+		idx = mutate.Annotations(idx, map[string]string{
+			baseRefAnnotation:    baseRef.Name(),
+			baseDigestAnnotation: baseDigest.String(),
+		}).(v1.ImageIndex)
+	}
+
+	return idx, nil
 }
 
 func parseSpec(spec string) (*platformMatcher, error) {

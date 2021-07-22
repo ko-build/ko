@@ -11,13 +11,12 @@ require (
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.6
-	github.com/google/go-containerregistry v0.5.2-0.20210622202051-acad0ede73ff
+	github.com/google/go-containerregistry v0.5.2-0.20210720200529-2f6fbf77f249
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/spf13/cobra v1.2.1
-	github.com/spf13/jwalterweatherman v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
@@ -27,7 +26,5 @@ require (
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/apimachinery v0.21.3
 	k8s.io/cli-runtime v0.20.6
-	k8s.io/klog v1.0.0 // indirect
 	sigs.k8s.io/kind v0.11.1
-	sigs.k8s.io/structured-merge-diff/v3 v3.0.0 // indirect
 )
