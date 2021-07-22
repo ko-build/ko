@@ -19,6 +19,7 @@ ko [flags]
 * [ko create](ko_create.md)	 - Create the input files with image references resolved to built/pushed image digests.
 * [ko delete](ko_delete.md)	 - See "kubectl help delete" for detailed usage.
 * [ko deps](ko_deps.md)	 - Print Go module dependency information about the ko-built binary in the image
+* [ko extract](ko_extract.md)	 - Extract ko-built image references from YAML configs
 * [ko login](ko_login.md)	 - Log in to a registry
 * [ko publish](ko_publish.md)	 - Build and publish container images from the given importpaths.
 * [ko resolve](ko_resolve.md)	 - Print the input files with image references resolved to built/pushed image digests.

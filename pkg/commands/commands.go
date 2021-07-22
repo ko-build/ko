@@ -32,6 +32,7 @@ func AddKubeCommands(topLevel *cobra.Command) {
 	addPublish(topLevel)
 	addRun(topLevel)
 	addDeps(topLevel)
+	addExtract(topLevel)
 	addCompletion(topLevel)
 }
 
