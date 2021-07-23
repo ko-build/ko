@@ -22,6 +22,7 @@ func CollectLogs(n nodes.Node, dir string) error {
 			return cmd.SetStdout(f).SetStderr(f).Run()
 		}
 	}
+
 	return errors.AggregateConcurrent([]func() error{
 		// record info about the node container
 		execToPathFn(

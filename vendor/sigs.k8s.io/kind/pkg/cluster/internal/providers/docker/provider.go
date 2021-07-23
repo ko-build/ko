@@ -17,6 +17,8 @@ limitations under the License.
 package docker
 
 import (
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -31,35 +33,43 @@ import (
 	"sigs.k8s.io/kind/pkg/log"
 
 	internallogs "sigs.k8s.io/kind/pkg/cluster/internal/logs"
-	"sigs.k8s.io/kind/pkg/cluster/internal/providers/provider"
-	"sigs.k8s.io/kind/pkg/cluster/internal/providers/provider/common"
+	"sigs.k8s.io/kind/pkg/cluster/internal/providers"
+	"sigs.k8s.io/kind/pkg/cluster/internal/providers/common"
 	"sigs.k8s.io/kind/pkg/cluster/nodeutils"
 	"sigs.k8s.io/kind/pkg/internal/apis/config"
 	"sigs.k8s.io/kind/pkg/internal/cli"
 )
 
 // NewProvider returns a new provider based on executing `docker ...`
-func NewProvider(logger log.Logger) provider.Provider {
-	return &Provider{
+func NewProvider(logger log.Logger) providers.Provider {
+	return &provider{
 		logger: logger,
 	}
 }
 
 // Provider implements provider.Provider
 // see NewProvider
-type Provider struct {
+type provider struct {
 	logger log.Logger
+	info   *providers.ProviderInfo
+}
+
+// String implements fmt.Stringer
+// NOTE: the value of this should not currently be relied upon for anything!
+// This is only used for setting the Node's providerID
+func (p *provider) String() string {
+	return "docker"
 }
 
 // Provision is part of the providers.Provider interface
-func (p *Provider) Provision(status *cli.Status, cluster string, cfg *config.Cluster) (err error) {
+func (p *provider) Provision(status *cli.Status, cfg *config.Cluster) (err error) {
 	// TODO: validate cfg
 	// ensure node images are pulled before actually provisioning
 	if err := ensureNodeImages(p.logger, status, cfg); err != nil {
 		return err
 	}
 
-	// ensure the pre-requesite network exists
+	// ensure the pre-requisite network exists
 	networkName := fixedNetworkName
 	if n := os.Getenv("KIND_EXPERIMENTAL_DOCKER_NETWORK"); n != "" {
 		p.logger.Warn("WARNING: Overriding docker network due to KIND_EXPERIMENTAL_DOCKER_NETWORK")
@@ -76,7 +86,7 @@ func (p *Provider) Provision(status *cli.Status, cluster string, cfg *config.Clu
 	defer func() { status.End(err == nil) }()
 
 	// plan creating the containers
-	createContainerFuncs, err := planCreation(cluster, cfg, networkName)
+	createContainerFuncs, err := planCreation(cfg, networkName)
 	if err != nil {
 		return err
 	}
@@ -86,7 +96,7 @@ func (p *Provider) Provision(status *cli.Status, cluster string, cfg *config.Clu
 }
 
 // ListClusters is part of the providers.Provider interface
-func (p *Provider) ListClusters() ([]string, error) {
+func (p *provider) ListClusters() ([]string, error) {
 	cmd := exec.Command("docker",
 		"ps",
 		"-a", // show stopped nodes
@@ -103,7 +113,7 @@ func (p *Provider) ListClusters() ([]string, error) {
 }
 
 // ListNodes is part of the providers.Provider interface
-func (p *Provider) ListNodes(cluster string) ([]nodes.Node, error) {
+func (p *provider) ListNodes(cluster string) ([]nodes.Node, error) {
 	cmd := exec.Command("docker",
 		"ps",
 		"-a", // show stopped nodes
@@ -125,7 +135,7 @@ func (p *Provider) ListNodes(cluster string) ([]nodes.Node, error) {
 }
 
 // DeleteNodes is part of the providers.Provider interface
-func (p *Provider) DeleteNodes(n []nodes.Node) error {
+func (p *provider) DeleteNodes(n []nodes.Node) error {
 	if len(n) == 0 {
 		return nil
 	}
@@ -146,7 +156,7 @@ func (p *Provider) DeleteNodes(n []nodes.Node) error {
 }
 
 // GetAPIServerEndpoint is part of the providers.Provider interface
-func (p *Provider) GetAPIServerEndpoint(cluster string) (string, error) {
+func (p *provider) GetAPIServerEndpoint(cluster string) (string, error) {
 	// locate the node that hosts this
 	allNodes, err := p.ListNodes(cluster)
 	if err != nil {
@@ -157,15 +167,37 @@ func (p *Provider) GetAPIServerEndpoint(cluster string) (string, error) {
 		return "", errors.Wrap(err, "failed to get api server endpoint")
 	}
 
-	// retrieve the specific port mapping using docker inspect
+	// if the 'desktop.docker.io/ports/<PORT>/tcp' label is present,
+	// defer to its value for the api server endpoint
+	//
+	// For example:
+	// "Labels": {
+	// 	"desktop.docker.io/ports/6443/tcp": "10.0.1.7:6443",
+	// }
 	cmd := exec.Command(
+		"docker", "inspect",
+		"--format", fmt.Sprintf(
+			"{{ index .Config.Labels \"desktop.docker.io/ports/%d/tcp\" }}", common.APIServerInternalPort,
+		),
+		n.String(),
+	)
+	lines, err := exec.OutputLines(cmd)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to get api server port")
+	}
+	if len(lines) == 1 && lines[0] != "" {
+		return lines[0], nil
+	}
+
+	// else, retrieve the specific port mapping via NetworkSettings.Ports
+	cmd = exec.Command(
 		"docker", "inspect",
 		"--format", fmt.Sprintf(
 			"{{ with (index (index .NetworkSettings.Ports \"%d/tcp\") 0) }}{{ printf \"%%s\t%%s\" .HostIp .HostPort }}{{ end }}", common.APIServerInternalPort,
 		),
 		n.String(),
 	)
-	lines, err := exec.OutputLines(cmd)
+	lines, err = exec.OutputLines(cmd)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get api server port")
 	}
@@ -182,7 +214,7 @@ func (p *Provider) GetAPIServerEndpoint(cluster string) (string, error) {
 }
 
 // GetAPIServerInternalEndpoint is part of the providers.Provider interface
-func (p *Provider) GetAPIServerInternalEndpoint(cluster string) (string, error) {
+func (p *provider) GetAPIServerInternalEndpoint(cluster string) (string, error) {
 	// locate the node that hosts this
 	allNodes, err := p.ListNodes(cluster)
 	if err != nil {
@@ -197,14 +229,14 @@ func (p *Provider) GetAPIServerInternalEndpoint(cluster string) (string, error) 
 }
 
 // node returns a new node handle for this provider
-func (p *Provider) node(name string) nodes.Node {
+func (p *provider) node(name string) nodes.Node {
 	return &node{
 		name: name,
 	}
 }
 
 // CollectLogs will populate dir with cluster logs and other debug files
-func (p *Provider) CollectLogs(dir string, nodes []nodes.Node) error {
+func (p *provider) CollectLogs(dir string, nodes []nodes.Node) error {
 	execToPathFn := func(cmd exec.Cmd, path string) func() error {
 		return func() error {
 			f, err := common.FileOnHost(path)
@@ -217,7 +249,6 @@ func (p *Provider) CollectLogs(dir string, nodes []nodes.Node) error {
 	}
 	// construct a slice of methods to collect logs
 	fns := []func() error{
-		// TODO(bentheelder): record the kind version here as well
 		// record info about the host docker
 		execToPathFn(
 			exec.Command("docker", "info"),
@@ -252,4 +283,63 @@ func (p *Provider) CollectLogs(dir string, nodes []nodes.Node) error {
 	// run and collect up all errors
 	errs = append(errs, errors.AggregateConcurrent(fns))
 	return errors.NewAggregate(errs)
+}
+
+// Info returns the provider info.
+// The info is cached on the first time of the execution.
+func (p *provider) Info() (*providers.ProviderInfo, error) {
+	var err error
+	if p.info == nil {
+		p.info, err = info()
+	}
+	return p.info, err
+}
+
+// dockerInfo corresponds to `docker info --format '{{json .}}'`
+type dockerInfo struct {
+	CgroupDriver    string   `json:"CgroupDriver"`  // "systemd", "cgroupfs", "none"
+	CgroupVersion   string   `json:"CgroupVersion"` // e.g. "2"
+	MemoryLimit     bool     `json:"MemoryLimit"`
+	PidsLimit       bool     `json:"PidsLimit"`
+	CPUShares       bool     `json:"CPUShares"`
+	SecurityOptions []string `json:"SecurityOptions"`
+}
+
+func info() (*providers.ProviderInfo, error) {
+	cmd := exec.Command("docker", "info", "--format", "{{json .}}")
+	out, err := exec.Output(cmd)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get docker info")
+	}
+	var dInfo dockerInfo
+	if err := json.Unmarshal(out, &dInfo); err != nil {
+		return nil, err
+	}
+	info := providers.ProviderInfo{
+		Cgroup2: dInfo.CgroupVersion == "2",
+	}
+	// When CgroupDriver == "none", the MemoryLimit/PidsLimit/CPUShares
+	// values are meaningless and need to be considered false.
+	// https://github.com/moby/moby/issues/42151
+	if dInfo.CgroupDriver != "none" {
+		info.SupportsMemoryLimit = dInfo.MemoryLimit
+		info.SupportsPidsLimit = dInfo.PidsLimit
+		info.SupportsCPUShares = dInfo.CPUShares
+	}
+	for _, o := range dInfo.SecurityOptions {
+		// o is like "name=seccomp,profile=default", or "name=rootless",
+		csvReader := csv.NewReader(strings.NewReader(o))
+		sliceSlice, err := csvReader.ReadAll()
+		if err != nil {
+			return nil, err
+		}
+		for _, f := range sliceSlice {
+			for _, ff := range f {
+				if ff == "name=rootless" {
+					info.Rootless = true
+				}
+			}
+		}
+	}
+	return &info, nil
 }

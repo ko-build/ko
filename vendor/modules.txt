@@ -7,7 +7,7 @@ github.com/Microsoft/go-winio/pkg/guid
 github.com/PuerkitoBio/purell
 # github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578
 github.com/PuerkitoBio/urlesc
-# github.com/alessio/shellescape v1.2.2
+# github.com/alessio/shellescape v1.4.1
 github.com/alessio/shellescape
 # github.com/containerd/containerd v1.5.2
 github.com/containerd/containerd/errdefs
@@ -67,7 +67,7 @@ github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
 # github.com/evanphx/json-patch v4.9.0+incompatible
 github.com/evanphx/json-patch
-# github.com/evanphx/json-patch/v5 v5.0.0
+# github.com/evanphx/json-patch/v5 v5.2.0
 github.com/evanphx/json-patch/v5
 # github.com/fsnotify/fsnotify v1.4.9
 ## explicit
@@ -193,8 +193,6 @@ github.com/mitchellh/mapstructure
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1
 github.com/modern-go/reflect2
-# github.com/onsi/gomega v1.10.3
-## explicit
 # github.com/opencontainers/go-digest v1.0.0
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.1
@@ -338,7 +336,7 @@ gopkg.in/inf.v0
 gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
-# gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
 gopkg.in/yaml.v3
 # k8s.io/api v0.20.6
@@ -477,19 +475,16 @@ k8s.io/client-go/util/workqueue
 ## explicit
 k8s.io/klog/v2
 # k8s.io/kube-openapi v0.0.0-20201113171705-d219536bb9fd
-## explicit
 k8s.io/kube-openapi/pkg/common
 k8s.io/kube-openapi/pkg/util/proto
 # k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 k8s.io/utils/integer
-# sigs.k8s.io/kind v0.8.1
+# sigs.k8s.io/kind v0.11.1
 ## explicit
 sigs.k8s.io/kind/pkg/apis/config/defaults
-sigs.k8s.io/kind/pkg/apis/config/v1alpha3
 sigs.k8s.io/kind/pkg/apis/config/v1alpha4
 sigs.k8s.io/kind/pkg/cluster
 sigs.k8s.io/kind/pkg/cluster/constants
-sigs.k8s.io/kind/pkg/cluster/internal/context
 sigs.k8s.io/kind/pkg/cluster/internal/create
 sigs.k8s.io/kind/pkg/cluster/internal/create/actions
 sigs.k8s.io/kind/pkg/cluster/internal/create/actions/config
@@ -506,12 +501,14 @@ sigs.k8s.io/kind/pkg/cluster/internal/kubeconfig/internal/kubeconfig
 sigs.k8s.io/kind/pkg/cluster/internal/loadbalancer
 sigs.k8s.io/kind/pkg/cluster/internal/logs
 sigs.k8s.io/kind/pkg/cluster/internal/patch
+sigs.k8s.io/kind/pkg/cluster/internal/providers
+sigs.k8s.io/kind/pkg/cluster/internal/providers/common
 sigs.k8s.io/kind/pkg/cluster/internal/providers/docker
 sigs.k8s.io/kind/pkg/cluster/internal/providers/podman
-sigs.k8s.io/kind/pkg/cluster/internal/providers/provider
-sigs.k8s.io/kind/pkg/cluster/internal/providers/provider/common
 sigs.k8s.io/kind/pkg/cluster/nodes
 sigs.k8s.io/kind/pkg/cluster/nodeutils
+sigs.k8s.io/kind/pkg/cmd
+sigs.k8s.io/kind/pkg/cmd/kind/version
 sigs.k8s.io/kind/pkg/errors
 sigs.k8s.io/kind/pkg/exec
 sigs.k8s.io/kind/pkg/fs
