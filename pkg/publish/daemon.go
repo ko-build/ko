@@ -145,12 +145,10 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 	}
 
 	log.Printf("Loading %v", digestTag)
-	// TODO: if resp, err := ...
-	resp, err := daemon.Write(digestTag, img, d.getOpts(ctx)...)
-	if err != nil {
+	if resp, err := daemon.Write(digestTag, img, d.getOpts(ctx)...); err != nil {
+		log.Println("daemon.Write response: ", resp)
 		return nil, err
 	}
-	log.Println("daemon.Write response: ", resp) // TODO: remove this
 	log.Printf("Loaded %v", digestTag)
 
 	for _, tagName := range d.tags {

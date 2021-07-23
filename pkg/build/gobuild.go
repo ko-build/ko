@@ -532,12 +532,10 @@ func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, pl
 
 		// Don't chase symlinks on Windows, where cross-compiled symlink support is not possible.
 		if platform.OS == "windows" {
-			log.Println("PLATFORM IS WINDOWS")
 			if info.Mode()&os.ModeSymlink != 0 {
-				log.Println("skipping symlink for windows:", info.Name())
+				log.Println("skipping symlink in kodata for windows:", info.Name())
 				return nil
 			}
-			log.Println(info.Name(), info.Mode()) // TODO remove this noisy logging
 		}
 
 		evalPath, err := filepath.EvalSymlinks(hostPath)
