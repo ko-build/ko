@@ -33,8 +33,9 @@ func main() {
 
 	// Parent command to which all subcommands are added.
 	cmds := &cobra.Command{
-		Use:   "ko",
-		Short: "Rapidly iterate with Go, Containers, and Kubernetes.",
+		Use:          "ko",
+		Short:        "Rapidly iterate with Go, Containers, and Kubernetes.",
+		SilenceUsage: true, // Don't show usage on errors
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
