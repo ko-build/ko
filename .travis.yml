@@ -8,7 +8,9 @@ git:
 jobs:
   include:
    - arch: amd64
-   - arch: arm64
+   # Travis arm64 builds hang indefinitely :(
+   # https://github.com/google/ko/issues/383
+   # - arch: arm64
    - arch: s390x
    - arch: ppc64le
    - arch: mips64le
