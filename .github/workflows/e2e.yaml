@@ -42,4 +42,3 @@ jobs:
 
         # Build and run the test/ binary, which should log "Hello there" served from KO_DATA_PATH
         docker run $(go run ./ publish ./test --platform=${GOOS}/${GOARCH} --preserve-import-paths) --wait=false 2>&1 | grep "Hello there"
-

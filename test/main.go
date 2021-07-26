@@ -39,13 +39,6 @@ func main() {
 	}
 	log.Print(string(bytes))
 
-	file = filepath.Join(dp, "HEAD")
-	bytes, err = ioutil.ReadFile(file)
-	if err != nil {
-		log.Fatalf("Error reading %q: %v", file, err)
-	}
-	log.Print(string(bytes))
-
 	// Cause the pod to "hang" to allow us to check for a readiness state.
 	if *wait {
 		sigs := make(chan os.Signal, 1)
