@@ -422,6 +422,7 @@ KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:1809 ko publish ./ --pl
 ```
 
 ### Known issues 🐛
+
 - Symlinks in `kodata` are ignored when building Windows images; only regular files and directories will be included in the Windows image.
 
 ## Can I optimize images for [eStargz support](https://github.com/containerd/stargz-snapshotter/blob/v0.7.0/docs/stargz-estargz.md)?
