@@ -19,6 +19,8 @@ package config
 
 import (
 	"bytes"
+	"fmt"
+	"net"
 	"strings"
 
 	"sigs.k8s.io/kind/pkg/cluster/constants"
@@ -28,7 +30,7 @@ import (
 	"sigs.k8s.io/kind/pkg/cluster/internal/create/actions"
 	"sigs.k8s.io/kind/pkg/cluster/internal/kubeadm"
 	"sigs.k8s.io/kind/pkg/cluster/internal/patch"
-	"sigs.k8s.io/kind/pkg/cluster/internal/providers/provider/common"
+	"sigs.k8s.io/kind/pkg/cluster/internal/providers/common"
 	"sigs.k8s.io/kind/pkg/cluster/nodeutils"
 	"sigs.k8s.io/kind/pkg/internal/apis/config"
 )
@@ -46,12 +48,17 @@ func (a *Action) Execute(ctx *actions.ActionContext) error {
 	ctx.Status.Start("Writing configuration 📜")
 	defer ctx.Status.End(false)
 
+	providerInfo, err := ctx.Provider.Info()
+	if err != nil {
+		return err
+	}
+
 	allNodes, err := ctx.Nodes()
 	if err != nil {
 		return err
 	}
 
-	controlPlaneEndpoint, err := ctx.ClusterContext.GetAPIServerInternalEndpoint()
+	controlPlaneEndpoint, err := ctx.Provider.GetAPIServerInternalEndpoint(ctx.Config.Name)
 	if err != nil {
 		return err
 	}
@@ -59,22 +66,28 @@ func (a *Action) Execute(ctx *actions.ActionContext) error {
 	// create kubeadm init config
 	fns := []func() error{}
 
+	provider := fmt.Sprintf("%s", ctx.Provider)
 	configData := kubeadm.ConfigData{
-		ClusterName:          ctx.ClusterContext.Name(),
+		NodeProvider:         provider,
+		ClusterName:          ctx.Config.Name,
 		ControlPlaneEndpoint: controlPlaneEndpoint,
 		APIBindPort:          common.APIServerInternalPort,
 		APIServerAddress:     ctx.Config.Networking.APIServerAddress,
 		Token:                kubeadm.Token,
 		PodSubnet:            ctx.Config.Networking.PodSubnet,
+		KubeProxyMode:        string(ctx.Config.Networking.KubeProxyMode),
 		ServiceSubnet:        ctx.Config.Networking.ServiceSubnet,
 		ControlPlane:         true,
-		IPv6:                 ctx.Config.Networking.IPFamily == "ipv6",
+		IPFamily:             ctx.Config.Networking.IPFamily,
 		FeatureGates:         ctx.Config.FeatureGates,
+		RuntimeConfig:        ctx.Config.RuntimeConfig,
+		RootlessProvider:     providerInfo.Rootless,
 	}
 
 	kubeadmConfigPlusPatches := func(node nodes.Node, data kubeadm.ConfigData) func() error {
 		return func() error {
-			kubeadmConfig, err := getKubeadmConfig(ctx.Config, data, node)
+			data.NodeName = node.String()
+			kubeadmConfig, err := getKubeadmConfig(ctx.Config, data, node, provider)
 			if err != nil {
 				// TODO(bentheelder): logging here
 				return errors.Wrap(err, "failed to generate kubeadm config content")
@@ -85,15 +98,42 @@ func (a *Action) Execute(ctx *actions.ActionContext) error {
 		}
 	}
 
+	// Populate the list of control-plane node labels and the list of worker node labels respectively.
+	// controlPlaneLabels is an array of maps (labels, read from config) associated with all the control-plane nodes.
+	// workerLabels is an array of maps (labels, read from config) associated with all the worker nodes.
+	controlPlaneLabels := []map[string]string{}
+	workerLabels := []map[string]string{}
+	for _, node := range ctx.Config.Nodes {
+		if node.Role == config.ControlPlaneRole {
+			controlPlaneLabels = append(controlPlaneLabels, node.Labels)
+		} else if node.Role == config.WorkerRole {
+			workerLabels = append(workerLabels, node.Labels)
+		} else {
+			continue
+		}
+	}
+
+	// hashMapLabelsToCommaSeparatedLabels converts labels in hashmap form to labels in a comma-separated string form like "key1=value1,key2=value2"
+	hashMapLabelsToCommaSeparatedLabels := func(labels map[string]string) string {
+		output := ""
+		for key, value := range labels {
+			output += fmt.Sprintf("%s=%s,", key, value)
+		}
+		return strings.TrimSuffix(output, ",") // remove the last character (comma) in the output string
+	}
+
 	// create the kubeadm join configuration for control plane nodes
 	controlPlanes, err := nodeutils.ControlPlaneNodes(allNodes)
 	if err != nil {
 		return err
 	}
 
-	for _, node := range controlPlanes {
+	for i, node := range controlPlanes {
 		node := node             // capture loop variable
 		configData := configData // copy config data
+		if len(controlPlaneLabels[i]) > 0 {
+			configData.NodeLabels = hashMapLabelsToCommaSeparatedLabels(controlPlaneLabels[i]) // updating the config with the respective labels to be written over the current control-plane node in consideration
+		}
 		fns = append(fns, kubeadmConfigPlusPatches(node, configData))
 	}
 
@@ -104,10 +144,13 @@ func (a *Action) Execute(ctx *actions.ActionContext) error {
 	}
 	if len(workers) > 0 {
 		// create the workers concurrently
-		for _, node := range workers {
+		for i, node := range workers {
 			node := node             // capture loop variable
 			configData := configData // copy config data
 			configData.ControlPlane = false
+			if len(workerLabels[i]) > 0 {
+				configData.NodeLabels = hashMapLabelsToCommaSeparatedLabels(workerLabels[i]) // updating the config with the respective labels to be written over the current worker node in consideration
+			}
 			fns = append(fns, kubeadmConfigPlusPatches(node, configData))
 		}
 	}
@@ -136,7 +179,7 @@ func (a *Action) Execute(ctx *actions.ActionContext) error {
 				}
 				patched, err := patch.TOML(buff.String(), ctx.Config.ContainerdConfigPatches, ctx.Config.ContainerdConfigPatchesJSON6902)
 				if err != nil {
-					return errors.Wrap(err, "failed to patch contianerd config")
+					return errors.Wrap(err, "failed to patch containerd config")
 				}
 				if err := nodeutils.WriteFile(node, containerdConfigPath, patched); err != nil {
 					return errors.Wrap(err, "failed to write patched containerd config")
@@ -161,7 +204,7 @@ func (a *Action) Execute(ctx *actions.ActionContext) error {
 
 // getKubeadmConfig generates the kubeadm config contents for the cluster
 // by running data through the template and applying patches as needed.
-func getKubeadmConfig(cfg *config.Cluster, data kubeadm.ConfigData, node nodes.Node) (path string, err error) {
+func getKubeadmConfig(cfg *config.Cluster, data kubeadm.ConfigData, node nodes.Node, provider string) (path string, err error) {
 	kubeVersion, err := nodeutils.KubeVersion(node)
 	if err != nil {
 		// TODO(bentheelder): logging here
@@ -194,11 +237,14 @@ func getKubeadmConfig(cfg *config.Cluster, data kubeadm.ConfigData, node nodes.N
 
 	data.NodeAddress = nodeAddress
 	// configure the right protocol addresses
-	if cfg.Networking.IPFamily == "ipv6" {
-		if nodeAddressIPv6 == "" {
-			return "", errors.Errorf("failed to get IPV6 address; is the docker daemon configured to use IPV6 correctly?")
+	if cfg.Networking.IPFamily == config.IPv6Family || cfg.Networking.IPFamily == config.DualStackFamily {
+		if ip := net.ParseIP(nodeAddressIPv6); ip.To16() == nil {
+			return "", errors.Errorf("failed to get IPv6 address for node %s; is %s configured to use IPv6 correctly?", node.String(), provider)
 		}
 		data.NodeAddress = nodeAddressIPv6
+		if cfg.Networking.IPFamily == config.DualStackFamily {
+			data.NodeAddress = fmt.Sprintf("%s,%s", nodeAddress, nodeAddressIPv6)
+		}
 	}
 
 	// generate the config contents

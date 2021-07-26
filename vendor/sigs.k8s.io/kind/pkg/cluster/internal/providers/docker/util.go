@@ -17,15 +17,26 @@ limitations under the License.
 package docker
 
 import (
+	"encoding/json"
 	"strings"
 
 	"sigs.k8s.io/kind/pkg/exec"
 )
 
+// IsAvailable checks if docker is available in the system
+func IsAvailable() bool {
+	cmd := exec.Command("docker", "-v")
+	lines, err := exec.OutputLines(cmd)
+	if err != nil || len(lines) != 1 {
+		return false
+	}
+	return strings.HasPrefix(lines[0], "Docker version")
+}
+
 // usernsRemap checks if userns-remap is enabled in dockerd
 func usernsRemap() bool {
 	cmd := exec.Command("docker", "info", "--format", "'{{json .SecurityOptions}}'")
-	lines, err := exec.CombinedOutputLines(cmd)
+	lines, err := exec.OutputLines(cmd)
 	if err != nil {
 		return false
 	}
@@ -38,15 +49,39 @@ func usernsRemap() bool {
 }
 
 // mountDevMapper checks if the Docker storage driver is Btrfs or ZFS
+// or if the backing filesystem is Btrfs
 func mountDevMapper() bool {
 	storage := ""
+	// check the docker storage driver
 	cmd := exec.Command("docker", "info", "-f", "{{.Driver}}")
-	lines, err := exec.CombinedOutputLines(cmd)
-	if err != nil {
+	lines, err := exec.OutputLines(cmd)
+	if err != nil || len(lines) != 1 {
 		return false
 	}
-	if len(lines) > 0 {
-		storage = strings.ToLower(strings.TrimSpace(lines[0]))
+
+	storage = strings.ToLower(strings.TrimSpace(lines[0]))
+	if storage == "btrfs" || storage == "zfs" || storage == "devicemapper" {
+		return true
 	}
-	return storage == "btrfs" || storage == "zfs"
+
+	// check the backing file system
+	// docker info -f '{{json .DriverStatus  }}'
+	// [["Backing Filesystem","extfs"],["Supports d_type","true"],["Native Overlay Diff","true"]]
+	cmd = exec.Command("docker", "info", "-f", "{{json .DriverStatus }}")
+	lines, err = exec.OutputLines(cmd)
+	if err != nil || len(lines) != 1 {
+		return false
+	}
+	var dat [][]string
+	if err := json.Unmarshal([]byte(lines[0]), &dat); err != nil {
+		return false
+	}
+	for _, item := range dat {
+		if item[0] == "Backing Filesystem" {
+			storage = strings.ToLower(item[1])
+			break
+		}
+	}
+
+	return storage == "btrfs" || storage == "zfs" || storage == "xfs"
 }

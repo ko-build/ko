@@ -19,13 +19,12 @@ package create
 import (
 	"fmt"
 	"math/rand"
-	"regexp"
 	"time"
 
 	"github.com/alessio/shellescape"
 
-	"sigs.k8s.io/kind/pkg/cluster/internal/context"
 	"sigs.k8s.io/kind/pkg/cluster/internal/delete"
+	"sigs.k8s.io/kind/pkg/cluster/internal/providers"
 	"sigs.k8s.io/kind/pkg/errors"
 	"sigs.k8s.io/kind/pkg/internal/apis/config"
 	"sigs.k8s.io/kind/pkg/internal/apis/config/encoding"
@@ -49,15 +48,10 @@ const (
 	clusterNameMax = 50
 )
 
-// similar to valid docker container names, but since we will prefix
-// and suffix this name, we can relax it a little
-// see NewContext() for usage
-// https://godoc.org/github.com/docker/docker/daemon/names#pkg-constants
-var validNameRE = regexp.MustCompile(`^[a-zA-Z0-9_.-]+$`)
-
 // ClusterOptions holds cluster creation options
 type ClusterOptions struct {
-	Config *config.Cluster
+	Config       *config.Cluster
+	NameOverride string // overrides config.Name
 	// NodeImage overrides the nodes' images in Config if non-zero
 	NodeImage      string
 	Retain         bool
@@ -71,22 +65,25 @@ type ClusterOptions struct {
 }
 
 // Cluster creates a cluster
-func Cluster(logger log.Logger, ctx *context.Context, opts *ClusterOptions) error {
+func Cluster(logger log.Logger, p providers.Provider, opts *ClusterOptions) error {
+	// validate provider first
+	if err := validateProvider(p); err != nil {
+		return err
+	}
+
 	// default / process options (namely config)
 	if err := fixupOptions(opts); err != nil {
 		return err
 	}
 
-	// validate the name
-	if !validNameRE.MatchString(ctx.Name()) {
-		return errors.Errorf(
-			"'%s' is not a valid cluster name, cluster names must match `%s`",
-			ctx.Name(), validNameRE.String(),
-		)
+	// Check if the cluster name already exists
+	if err := alreadyExists(p, opts.Config.Name); err != nil {
+		return err
 	}
+
 	// warn if cluster name might typically be too long
-	if len(ctx.Name()) > clusterNameMax {
-		logger.Warnf("cluster name %q is probably too long, this might not work properly on some systems", ctx.Name())
+	if len(opts.Config.Name) > clusterNameMax {
+		logger.Warnf("cluster name %q is probably too long, this might not work properly on some systems", opts.Config.Name)
 	}
 
 	// then validate
@@ -97,11 +94,14 @@ func Cluster(logger log.Logger, ctx *context.Context, opts *ClusterOptions) erro
 	// setup a status object to show progress to the user
 	status := cli.StatusForLogger(logger)
 
+	// we're going to start creating now, tell the user
+	logger.V(0).Infof("Creating cluster %q ...\n", opts.Config.Name)
+
 	// Create node containers implementing defined config Nodes
-	if err := ctx.Provider().Provision(status, ctx.Name(), opts.Config); err != nil {
+	if err := p.Provision(status, opts.Config); err != nil {
 		// In case of errors nodes are deleted (except if retain is explicitly set)
 		if !opts.Retain {
-			_ = delete.Cluster(logger, ctx, opts.KubeconfigPath)
+			_ = delete.Cluster(logger, p, opts.Config.Name, opts.KubeconfigPath)
 		}
 		return err
 	}
@@ -113,7 +113,7 @@ func Cluster(logger log.Logger, ctx *context.Context, opts *ClusterOptions) erro
 	}
 	if !opts.StopBeforeSettingUpKubernetes {
 		actionsToRun = append(actionsToRun,
-			kubeadminit.NewAction(), // run kubeadm init
+			kubeadminit.NewAction(opts.Config), // run kubeadm init
 		)
 		// this step might be skipped, but is next after init
 		if !opts.Config.Networking.DisableDefaultCNI {
@@ -130,11 +130,11 @@ func Cluster(logger log.Logger, ctx *context.Context, opts *ClusterOptions) erro
 	}
 
 	// run all actions
-	actionsContext := actions.NewActionContext(logger, opts.Config, ctx, status)
+	actionsContext := actions.NewActionContext(logger, status, p, opts.Config)
 	for _, action := range actionsToRun {
 		if err := action.Execute(actionsContext); err != nil {
 			if !opts.Retain {
-				_ = delete.Cluster(logger, ctx, opts.KubeconfigPath)
+				_ = delete.Cluster(logger, p, opts.Config.Name, opts.KubeconfigPath)
 			}
 			return err
 		}
@@ -145,13 +145,23 @@ func Cluster(logger log.Logger, ctx *context.Context, opts *ClusterOptions) erro
 		return nil
 	}
 
-	if err := kubeconfig.Export(ctx, opts.KubeconfigPath); err != nil {
+	// try exporting kubeconfig with backoff for locking failures
+	// TODO: factor out into a public errors API w/ backoff handling?
+	// for now this is easier than coming up with a good API
+	var err error
+	for _, b := range []time.Duration{0, time.Millisecond, time.Millisecond * 50, time.Millisecond * 100} {
+		time.Sleep(b)
+		if err = kubeconfig.Export(p, opts.Config.Name, opts.KubeconfigPath); err == nil {
+			break
+		}
+	}
+	if err != nil {
 		return err
 	}
 
 	// optionally display usage
 	if opts.DisplayUsage {
-		logUsage(logger, ctx, opts.KubeconfigPath)
+		logUsage(logger, opts.Config.Name, opts.KubeconfigPath)
 	}
 	// optionally give the user a friendly salutation
 	if opts.DisplaySalutation {
@@ -161,9 +171,22 @@ func Cluster(logger log.Logger, ctx *context.Context, opts *ClusterOptions) erro
 	return nil
 }
 
-func logUsage(logger log.Logger, ctx *context.Context, explicitKubeconfigPath string) {
+// alreadyExists returns an error if the cluster name already exists
+// or if we had an error checking
+func alreadyExists(p providers.Provider, name string) error {
+	n, err := p.ListNodes(name)
+	if err != nil {
+		return err
+	}
+	if len(n) != 0 {
+		return errors.Errorf("node(s) already exist for a cluster with the name %q", name)
+	}
+	return nil
+}
+
+func logUsage(logger log.Logger, name, explicitKubeconfigPath string) {
 	// construct a sample command for interacting with the cluster
-	kctx := kubeconfig.ContextForCluster(ctx.Name())
+	kctx := kubeconfig.ContextForCluster(name)
 	sampleCommand := fmt.Sprintf("kubectl cluster-info --context %s", kctx)
 	if explicitKubeconfigPath != "" {
 		// explicit path, include this
@@ -196,6 +219,10 @@ func fixupOptions(opts *ClusterOptions) error {
 		opts.Config = cfg
 	}
 
+	if opts.NameOverride != "" {
+		opts.Config.Name = opts.NameOverride
+	}
+
 	// if NodeImage was set, override the image on all nodes
 	if opts.NodeImage != "" {
 		// Apply image override to all the Nodes defined in Config
@@ -210,5 +237,21 @@ func fixupOptions(opts *ClusterOptions) error {
 	// may be constructed in memory rather than from disk)
 	config.SetDefaultsCluster(opts.Config)
 
+	return nil
+}
+
+func validateProvider(p providers.Provider) error {
+	info, err := p.Info()
+	if err != nil {
+		return err
+	}
+	if info.Rootless {
+		if !info.Cgroup2 {
+			return errors.New("running kind with rootless provider requires cgroup v2, see https://kind.sigs.k8s.io/docs/user/rootless/")
+		}
+		if !info.SupportsMemoryLimit || !info.SupportsPidsLimit || !info.SupportsCPUShares {
+			return errors.New("running kind with rootless provider requires setting systemd property \"Delegate=yes\", see https://kind.sigs.k8s.io/docs/user/rootless/")
+		}
+	}
 	return nil
 }
