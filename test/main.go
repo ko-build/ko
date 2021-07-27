@@ -25,6 +25,7 @@ import (
 )
 
 var (
+	f    = flag.String("f", "kenobi", "File in kodata to print")
 	wait = flag.Bool("wait", true, "Whether to wait for SIGTERM")
 )
 
@@ -32,15 +33,8 @@ func main() {
 	flag.Parse()
 
 	dp := os.Getenv("KO_DATA_PATH")
-	file := filepath.Join(dp, "kenobi")
+	file := filepath.Join(dp, *f)
 	bytes, err := ioutil.ReadFile(file)
-	if err != nil {
-		log.Fatalf("Error reading %q: %v", file, err)
-	}
-	log.Print(string(bytes))
-
-	file = filepath.Join(dp, "HEAD")
-	bytes, err = ioutil.ReadFile(file)
 	if err != nil {
 		log.Fatalf("Error reading %q: %v", file, err)
 	}

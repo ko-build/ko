@@ -408,7 +408,24 @@ timestamp with:
 export KO_DATA_DATE_EPOCH=$(git log -1 --format='%ct')
 ```
 
-## Can I optimize images for [eStargz support](https://github.com/containerd/stargz-snapshotter/blob/v0.2.0/docs/stargz-estargz.md)?
+## Can I build Windows containers?
+
+Yes, but support for Windows containers is new, experimental, and tenuous. Be prepared to file bugs. 🐛
+
+The default base image does not provide a Windows image.
+You can try out building a Windows container image by [setting the base image](#overriding-base-images) to a Windows base image and building with `--platform=windows/amd64` or `--platform=all`:
+
+For example, to build a Windows container image for `ko`, from within this repo:
+
+```
+KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:1809 ko publish ./ --platform=windows/amd64
+```
+
+### Known issues 🐛
+
+- Symlinks in `kodata` are ignored when building Windows images; only regular files and directories will be included in the Windows image.
+
+## Can I optimize images for [eStargz support](https://github.com/containerd/stargz-snapshotter/blob/v0.7.0/docs/stargz-estargz.md)?
 
 Yes! Set the environment variable `GGCR_EXPERIMENT_ESTARGZ=1` to produce
 eStargz-optimized images.
