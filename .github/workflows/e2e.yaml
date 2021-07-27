@@ -41,4 +41,11 @@ jobs:
         docker run $(go run ./ publish ./ --platform=${GOOS}/${GOARCH} --preserve-import-paths) version
 
         # Build and run the test/ binary, which should log "Hello there" served from KO_DATA_PATH
-        docker run $(go run ./ publish ./test --platform=${GOOS}/${GOARCH} --preserve-import-paths) --wait=false 2>&1 | grep "Hello there"
+        testimg=$(go run ./ publish ./test --platform=${GOOS}/${GOARCH} --preserve-import-paths)
+        docker run ${testimg} --wait=false 2>&1 | grep "Hello there"
+
+        # Check that symlinks in kodata are chased.
+        # Skip this test on Windows.
+        if [[ "$RUNNER_OS" == "Linux" ]]; then
+          docker run ${testimg} --wait=false -f HEAD
+        fi
