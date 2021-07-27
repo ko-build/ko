@@ -32,7 +32,7 @@ import (
 )
 
 // Action implements action for creating the kubeadm join
-// and deployng it on the bootrap control-plane node.
+// and deploying it on the bootstrap control-plane node.
 type Action struct{}
 
 // NewAction returns a new action for creating the kubeadm jion
@@ -115,7 +115,7 @@ func joinWorkers(
 	return nil
 }
 
-// runKubeadmJoin executes kubadm join command
+// runKubeadmJoin executes kubeadm join command
 func runKubeadmJoin(logger log.Logger, node nodes.Node) error {
 	// run kubeadm join
 	// TODO(bentheelder): this should be using the config file
@@ -123,9 +123,9 @@ func runKubeadmJoin(logger log.Logger, node nodes.Node) error {
 		"kubeadm", "join",
 		// the join command uses the config file generated in a well known location
 		"--config", "/kind/kubeadm.conf",
-		// preflight errors are expected, in particular for swap being enabled
-		// TODO(bentheelder): limit the set of acceptable errors
-		"--ignore-preflight-errors=all",
+		// skip preflight checks, as these have undesirable side effects
+		// and don't tell us much. requires kubeadm 1.13+
+		"--skip-phases=preflight",
 		// increase verbosity for debugging
 		"--v=6",
 	)

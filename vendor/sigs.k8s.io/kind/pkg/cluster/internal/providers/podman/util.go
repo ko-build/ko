@@ -17,6 +17,7 @@ limitations under the License.
 package podman
 
 import (
+	"fmt"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/util/version"
@@ -25,9 +26,19 @@ import (
 	"sigs.k8s.io/kind/pkg/exec"
 )
 
+// IsAvailable checks if podman is available in the system
+func IsAvailable() bool {
+	cmd := exec.Command("podman", "-v")
+	lines, err := exec.OutputLines(cmd)
+	if err != nil || len(lines) != 1 {
+		return false
+	}
+	return strings.HasPrefix(lines[0], "podman version")
+}
+
 func getPodmanVersion() (*version.Version, error) {
 	cmd := exec.Command("podman", "--version")
-	lines, err := exec.CombinedOutputLines(cmd)
+	lines, err := exec.OutputLines(cmd)
 	if err != nil {
 		return nil, err
 	}
@@ -57,4 +68,66 @@ func ensureMinVersion() error {
 		return errors.Errorf("podman version %q is too old, please upgrade to %q or later", v, minSupportedVersion)
 	}
 	return nil
+}
+
+// createAnonymousVolume creates a new anonymous volume
+// with the specified label=true
+// returns the name of the volume created
+func createAnonymousVolume(label string) (string, error) {
+	cmd := exec.Command("podman",
+		"volume",
+		"create",
+		// podman only support filter on key during list
+		// so we use the unique id as key
+		"--label", fmt.Sprintf("%s=true", label))
+	name, err := exec.Output(cmd)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSuffix(string(name), "\n"), nil
+}
+
+// getVolumes gets volume names filtered on specified label
+func getVolumes(label string) ([]string, error) {
+	cmd := exec.Command("podman",
+		"volume",
+		"ls",
+		"--filter", fmt.Sprintf("label=%s", label),
+		"--quiet")
+	// `output` from the above command is names of all volumes each followed by `\n`.
+	output, err := exec.Output(cmd)
+	if err != nil {
+		return nil, err
+	}
+	// Trim away the last `\n`.
+	trimmedOutput := strings.TrimSuffix(string(output), "\n")
+	// Get names of all volumes by splitting via `\n`.
+	return strings.Split(string(trimmedOutput), "\n"), nil
+}
+
+func deleteVolumes(names []string) error {
+	args := []string{
+		"volume",
+		"rm",
+		"--force",
+	}
+	args = append(args, names...)
+	cmd := exec.Command("podman", args...)
+	return cmd.Run()
+}
+
+// mountDevMapper checks if the podman storage driver is Btrfs or ZFS
+func mountDevMapper() bool {
+	storage := ""
+	cmd := exec.Command("podman", "info", "-f",
+		`{{ index .Store.GraphStatus "Backing Filesystem"}}`)
+	lines, err := exec.OutputLines(cmd)
+	if err != nil {
+		return false
+	}
+
+	if len(lines) > 0 {
+		storage = strings.ToLower(strings.TrimSpace(lines[0]))
+	}
+	return storage == "btrfs" || storage == "zfs"
 }

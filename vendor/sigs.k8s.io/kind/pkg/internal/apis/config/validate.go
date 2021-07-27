@@ -17,15 +17,30 @@ limitations under the License.
 package config
 
 import (
+	"fmt"
 	"net"
+	"regexp"
+	"strings"
 
 	"sigs.k8s.io/kind/pkg/errors"
 )
+
+// similar to valid docker container names, but since we will prefix
+// and suffix this name, we can relax it a little
+// see NewContext() for usage
+// https://godoc.org/github.com/docker/docker/daemon/names#pkg-constants
+var validNameRE = regexp.MustCompile(`^[a-z0-9.-]+$`)
 
 // Validate returns a ConfigErrors with an entry for each problem
 // with the config, or nil if there are none
 func (c *Cluster) Validate() error {
 	errs := []error{}
+
+	// validate the name
+	if !validNameRE.MatchString(c.Name) {
+		errs = append(errs, errors.Errorf("'%s' is not a valid cluster name, cluster names must match `%s`",
+			c.Name, validNameRE.String()))
+	}
 
 	// the api server port only needs checking if we aren't picking a random one
 	// at runtime
@@ -36,13 +51,21 @@ func (c *Cluster) Validate() error {
 		}
 	}
 
+	isDualStack := c.Networking.IPFamily == DualStackFamily
 	// podSubnet should be a valid CIDR
-	if _, _, err := net.ParseCIDR(c.Networking.PodSubnet); err != nil {
-		errs = append(errs, errors.Wrapf(err, "invalid podSubnet"))
+	if err := validateSubnets(c.Networking.PodSubnet, isDualStack); err != nil {
+		errs = append(errs, errors.Errorf("invalid pod subnet %v", err))
 	}
+
 	// serviceSubnet should be a valid CIDR
-	if _, _, err := net.ParseCIDR(c.Networking.ServiceSubnet); err != nil {
-		errs = append(errs, errors.Wrapf(err, "invalid serviceSubnet"))
+	if err := validateSubnets(c.Networking.ServiceSubnet, isDualStack); err != nil {
+		errs = append(errs, errors.Errorf("invalid service subnet %v", err))
+	}
+
+	// KubeProxyMode should be iptables or ipvs
+	if c.Networking.KubeProxyMode != IPTablesProxyMode && c.Networking.KubeProxyMode != IPVSProxyMode &&
+		c.Networking.KubeProxyMode != NoneProxyMode {
+		errs = append(errs, errors.Errorf("invalid kubeProxyMode: %s", c.Networking.KubeProxyMode))
 	}
 
 	// validate nodes
@@ -115,4 +138,65 @@ func validatePort(port int32) error {
 		return errors.Errorf("invalid port number: %d", port)
 	}
 	return nil
+}
+
+func validateSubnets(subnetStr string, dualstack bool) error {
+	allErrs := []error{}
+
+	cidrsString := strings.Split(subnetStr, ",")
+	subnets := make([]*net.IPNet, 0, len(cidrsString))
+	for _, cidrString := range cidrsString {
+		_, cidr, err := net.ParseCIDR(cidrString)
+		if err != nil {
+			return fmt.Errorf("failed to parse cidr value:%q with error: %v", cidrString, err)
+		}
+		subnets = append(subnets, cidr)
+	}
+
+	switch {
+	// if DualStack only 2 CIDRs allowed
+	case dualstack && len(subnets) > 2:
+		allErrs = append(allErrs, errors.New("expected one (IPv4 or IPv6) CIDR or two CIDRs from each family for dual-stack networking"))
+	// if DualStack and there are 2 CIDRs validate if there is at least one of each IP family
+	case dualstack && len(subnets) == 2:
+		areDualStackCIDRs, err := isDualStackCIDRs(subnets)
+		if err != nil {
+			allErrs = append(allErrs, err)
+		} else if !areDualStackCIDRs {
+			allErrs = append(allErrs, errors.New("expected one (IPv4 or IPv6) CIDR or two CIDRs from each family for dual-stack networking"))
+		}
+	// if not DualStack only one CIDR allowed
+	case !dualstack && len(subnets) > 1:
+		allErrs = append(allErrs, errors.New("only one CIDR allowed for single-stack networking"))
+	}
+
+	if len(allErrs) > 0 {
+		return errors.NewAggregate(allErrs)
+	}
+	return nil
+}
+
+// isDualStackCIDRs returns if
+// - all are valid cidrs
+// - at least one cidr from each family (v4 or v6)
+func isDualStackCIDRs(cidrs []*net.IPNet) (bool, error) {
+	v4Found := false
+	v6Found := false
+	for _, cidr := range cidrs {
+		if cidr == nil {
+			return false, fmt.Errorf("cidr %v is invalid", cidr)
+		}
+
+		if v4Found && v6Found {
+			continue
+		}
+
+		if cidr.IP != nil && cidr.IP.To4() == nil {
+			v6Found = true
+			continue
+		}
+		v4Found = true
+	}
+
+	return v4Found && v6Found, nil
 }
