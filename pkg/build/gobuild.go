@@ -448,7 +448,7 @@ func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform)
 			"Files",
 			"Files/ko-app",
 		}
-		name = "Files" + name + ".exe"
+		name = "Files" + name
 	}
 	for _, dir := range dirs {
 		if err := tw.WriteHeader(&tar.Header{
@@ -798,7 +798,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, baseRef name.Refe
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
 	if platform.OS == "windows" {
-		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFilename(ref.Path()) + ".exe"}
+		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFilename(ref.Path())}
 		updatePath(cfg, `C:\ko-app`)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
 	} else {
