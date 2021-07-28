@@ -16,7 +16,6 @@ package publish
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net/http"
 	"path"
@@ -109,7 +108,7 @@ func Insecure(b bool) Option {
 		i.insecure = b
 		t, ok := i.t.(*http.Transport)
 		if !ok {
-			return fmt.Errorf("unable to configure insecure roundtripper (not HTTP)")
+			return nil
 		}
 		t = t.Clone()
 		if t.TLSClientConfig == nil {
