@@ -15,6 +15,7 @@
 package publish
 
 import (
+	"crypto/tls"
 	"log"
 	"net/http"
 	"path"
@@ -105,6 +106,17 @@ func WithTagOnly(tagOnly bool) Option {
 func Insecure(b bool) Option {
 	return func(i *defaultOpener) error {
 		i.insecure = b
+		t, ok := i.t.(*http.Transport)
+		if !ok {
+			return nil
+		}
+		t = t.Clone()
+		if t.TLSClientConfig == nil {
+			t.TLSClientConfig = &tls.Config{} //nolint: gosec
+		}
+		t.TLSClientConfig.InsecureSkipVerify = b //nolint: gosec
+		i.t = t
+
 		return nil
 	}
 }
