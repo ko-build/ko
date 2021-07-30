@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -94,15 +95,12 @@ If the image was not built using ko, or if it was built without embedding depend
 					if err != nil {
 						return err
 					}
-					defer func() {
-						// Best effort: remove tmp file afterwards.
-						os.RemoveAll(tmp.Name())
-					}()
-					defer tmp.Close()
+					defer os.RemoveAll(tmp.Name()) // best effort: remove tmp file afterwards.
+					defer tmp.Close()              // close it first.
 					if _, err := io.Copy(tmp, tr); err != nil {
 						return err
 					}
-					if err := os.Chmod(tmp.Name(), 0777); err != nil {
+					if err := os.Chmod(tmp.Name(), fs.FileMode(h.Mode)); err != nil {
 						return err
 					}
 					cmd := exec.CommandContext(ctx, "go", "version", "-m", tmp.Name())
