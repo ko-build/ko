@@ -1,0 +1,93 @@
+// Copyright 2021 Google LLC All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package commands
+
+import (
+	"archive/tar"
+	"errors"
+	"io"
+	"io/ioutil"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/spf13/cobra"
+)
+
+// addDeps augments our CLI surface with deps.
+func addDeps(topLevel *cobra.Command) {
+
+	deps := &cobra.Command{
+		Use:     "deps IMAGE",
+		Short:   "Print Go module dependency information about the ko-built binary in the image",
+		Long:    `This sub-command finds and extracts the executable binary in the image, assuming it was built by ko, and prints information about the Go module dependencies of that executable, as reported by "go version -m".`,
+		Example: `TODO`,
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := createCancellableContext()
+
+			ref, err := name.ParseReference(args[0])
+			if err != nil {
+				return err
+			}
+
+			img, err := remote.Image(ref) // auth, --platform, etc.
+			if err != nil {
+				return err
+			}
+
+			rc := mutate.Extract(img)
+			defer rc.Close()
+			tr := tar.NewReader(rc)
+			for {
+				h, err := tr.Next()
+				if err == io.EOF {
+					return errors.New("no ko-built executable found")
+				}
+				if err != nil {
+					return err
+				}
+
+				if strings.HasPrefix(h.Name, "/ko-app/") && h.Typeflag == tar.TypeReg {
+					tmp, err := ioutil.TempFile("", filepath.Base(h.Name))
+					if err != nil {
+						return err
+					}
+					defer func() {
+						// Best effort: remove tmp file afterwards.
+						os.RemoveAll(tmp.Name())
+					}()
+					defer tmp.Close()
+					if _, err := io.Copy(tmp, tr); err != nil {
+						return err
+					}
+					if err := os.Chmod(tmp.Name(), 0777); err != nil {
+						return err
+					}
+					cmd := exec.CommandContext(ctx, "go", "version", "-m", tmp.Name())
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+					return cmd.Run()
+				}
+			}
+			// unreachable
+		},
+	}
+	topLevel.AddCommand(deps)
+}
