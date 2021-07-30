@@ -51,6 +51,9 @@ func computeDescriptor(ia IndexAddendum) (*v1.Descriptor, error) {
 	if len(ia.Descriptor.Annotations) != 0 {
 		desc.Annotations = ia.Descriptor.Annotations
 	}
+	if ia.Descriptor.Data != nil {
+		desc.Data = ia.Descriptor.Data
+	}
 
 	return desc, nil
 }

@@ -17,7 +17,9 @@
 package verify
 
 import (
+	"bytes"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"hash"
 	"io"
@@ -80,4 +82,26 @@ func ReadCloser(r io.ReadCloser, size int64, h v1.Hash) (io.ReadCloser, error) {
 		},
 		CloseFunc: r.Close,
 	}, nil
+}
+
+// Descriptor verifies that the embedded Data field matches the Size and Digest
+// fields of the given v1.Descriptor, returning an error if the Data field is
+// missing or if it contains incorrect data.
+func Descriptor(d v1.Descriptor) error {
+	if d.Data == nil {
+		return errors.New("error verifying descriptor; Data == nil")
+	}
+
+	h, sz, err := v1.SHA256(bytes.NewReader(d.Data))
+	if err != nil {
+		return err
+	}
+	if h != d.Digest {
+		return fmt.Errorf("error verifying Digest; got %q, want %q", h, d.Digest)
+	}
+	if sz != d.Size {
+		return fmt.Errorf("error verifying Size; got %d, want %d", sz, d.Size)
+	}
+
+	return nil
 }
