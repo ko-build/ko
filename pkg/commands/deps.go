@@ -18,7 +18,6 @@ import (
 	"archive/tar"
 	"errors"
 	"io"
-	"io/fs"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -89,7 +88,7 @@ If the image was not built using ko, or if it was built without embedding depend
 					if _, err := io.Copy(tmp, tr); err != nil {
 						return err
 					}
-					if err := os.Chmod(tmp.Name(), fs.FileMode(h.Mode)); err != nil {
+					if err := os.Chmod(tmp.Name(), os.FileMode(h.Mode)); err != nil {
 						return err
 					}
 					cmd := exec.CommandContext(ctx, "go", "version", "-m", tmp.Name())
