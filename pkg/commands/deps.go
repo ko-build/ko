@@ -16,7 +16,6 @@ package commands
 
 import (
 	"archive/tar"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -82,30 +81,37 @@ If the image was not built using ko, or if it was built without embedding depend
 				}
 				h, err := tr.Next()
 				if err == io.EOF {
-					return errors.New("no ko-built executable found")
+					return fmt.Errorf("no ko-built executable named %q found", bin)
 				}
 				if err != nil {
 					return err
 				}
 
-				if h.Typeflag == tar.TypeReg && h.Name == bin {
-					tmp, err := ioutil.TempFile("", filepath.Base(h.Name))
-					if err != nil {
-						return err
-					}
-					defer os.RemoveAll(tmp.Name()) // best effort: remove tmp file afterwards.
-					defer tmp.Close()              // close it first.
-					if _, err := io.Copy(tmp, tr); err != nil {
-						return err
-					}
-					if err := os.Chmod(tmp.Name(), os.FileMode(h.Mode)); err != nil {
-						return err
-					}
-					cmd := exec.CommandContext(ctx, "go", "version", "-m", tmp.Name())
-					cmd.Stdout = os.Stdout
-					cmd.Stderr = os.Stderr
-					return cmd.Run()
+				if h.Typeflag != tar.TypeReg {
+					continue
 				}
+				if h.Name != bin {
+					continue
+				}
+
+				tmp, err := ioutil.TempFile("", filepath.Base(h.Name))
+				if err != nil {
+					return err
+				}
+				n := tmp.Name()
+				defer os.RemoveAll(n) // best effort: remove tmp file afterwards.
+				defer tmp.Close()     // close it first.
+				// io.LimitReader to appease gosec...
+				if _, err := io.Copy(tmp, io.LimitReader(tr, h.Size)); err != nil {
+					return err
+				}
+				if err := os.Chmod(n, os.FileMode(h.Mode)); err != nil {
+					return err
+				}
+				cmd := exec.CommandContext(ctx, "go", "version", "-m", n)
+				cmd.Stdout = os.Stdout
+				cmd.Stderr = os.Stderr
+				return cmd.Run()
 			}
 			// unreachable
 		},
