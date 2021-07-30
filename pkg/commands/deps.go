@@ -17,14 +17,18 @@ package commands
 import (
 	"archive/tar"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/spf13/cobra"
@@ -32,13 +36,18 @@ import (
 
 // addDeps augments our CLI surface with deps.
 func addDeps(topLevel *cobra.Command) {
+	var platform string
 
 	deps := &cobra.Command{
-		Use:     "deps IMAGE",
-		Short:   "Print Go module dependency information about the ko-built binary in the image",
-		Long:    `This sub-command finds and extracts the executable binary in the image, assuming it was built by ko, and prints information about the Go module dependencies of that executable, as reported by "go version -m".`,
-		Example: `TODO`,
-		Args:    cobra.ExactArgs(1),
+		Use:   "deps IMAGE",
+		Short: "Print Go module dependency information about the ko-built binary in the image",
+		Long: `This sub-command finds and extracts the executable binary in the image, assuming it was built by ko, and prints information about the Go module dependencies of that executable, as reported by "go version -m".
+
+If the image was not built using ko, or if it was built without embedding dependency information, this command will fail.`,
+		Example: `
+  # Fetch and extract Go dependency information from an image:
+  ko deps docker.io/my-user/my-image:v3`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := createCancellableContext()
 
@@ -47,7 +56,16 @@ func addDeps(topLevel *cobra.Command) {
 				return err
 			}
 
-			img, err := remote.Image(ref) // auth, --platform, etc.
+			p, err := makePlatform(platform)
+			if err != nil {
+				return err
+			}
+
+			img, err := remote.Image(ref,
+				remote.WithContext(ctx),
+				remote.WithAuthFromKeychain(authn.DefaultKeychain),
+				remote.WithUserAgent(ua()),
+				remote.WithPlatform(p))
 			if err != nil {
 				return err
 			}
@@ -89,5 +107,44 @@ func addDeps(topLevel *cobra.Command) {
 			// unreachable
 		},
 	}
+	deps.Flags().StringVar(&platform, "platform", "",
+		"Which platform to use when pulling a multi-platform image. Format: <os>[/<arch>[/<variant>]][,platform]")
 	topLevel.AddCommand(deps)
+}
+
+func makePlatform(platform string) (v1.Platform, error) {
+	if platform == "" {
+		platform = "linux/amd64"
+	}
+	if platform == "all" || strings.Contains("platform", ",") {
+		return v1.Platform{}, errors.New("--platform cannot be 'all' or specify multiple platforms")
+	}
+
+	goos, goarch, goarm := os.Getenv("GOOS"), os.Getenv("GOARCH"), os.Getenv("GOARM")
+
+	// Default to linux/amd64 unless GOOS and GOARCH are set.
+	if goos != "" && goarch != "" {
+		platform = path.Join(goos, goarch)
+	}
+
+	// Use GOARM for variant if it's set and GOARCH is arm.
+	if strings.Contains(goarch, "arm") && goarm != "" {
+		platform = path.Join(platform, "v"+goarm)
+	}
+
+	var p v1.Platform
+	parts := strings.Split(platform, "/")
+	if len(parts) > 0 {
+		p.OS = parts[0]
+	}
+	if len(parts) > 1 {
+		p.Architecture = parts[1]
+	}
+	if len(parts) > 2 {
+		p.Variant = parts[2]
+	}
+	if len(parts) > 3 {
+		return v1.Platform{}, fmt.Errorf("too many slashes in platform spec: %s", platform)
+	}
+	return p, nil
 }
