@@ -74,6 +74,13 @@ If the image was not built using ko, or if it was built without embedding depend
 			defer rc.Close()
 			tr := tar.NewReader(rc)
 			for {
+				// Stop reading if the context is cancelled.
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				default:
+					// keep reading.
+				}
 				h, err := tr.Next()
 				if err == io.EOF {
 					return errors.New("no ko-built executable found")
