@@ -11,7 +11,7 @@ require (
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.6
-	github.com/google/go-containerregistry v0.5.2-0.20210720200529-2f6fbf77f249
+	github.com/google/go-containerregistry v0.6.0
 	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
