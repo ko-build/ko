@@ -17,12 +17,12 @@ package commands
 import (
 	"archive/tar"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -59,6 +59,16 @@ If the image was not built using ko, or if it was built without embedding depend
 				return err
 			}
 
+			cfg, err := img.ConfigFile()
+			if err != nil {
+				return err
+			}
+			ep := cfg.Config.Entrypoint
+			if len(ep) != 1 {
+				return fmt.Errorf("unexpected entrypoint: %s", ep)
+			}
+			bin := ep[0]
+
 			rc := mutate.Extract(img)
 			defer rc.Close()
 			tr := tar.NewReader(rc)
@@ -78,7 +88,7 @@ If the image was not built using ko, or if it was built without embedding depend
 					return err
 				}
 
-				if strings.HasPrefix(h.Name, "/ko-app/") && h.Typeflag == tar.TypeReg {
+				if h.Typeflag == tar.TypeReg && h.Name == bin {
 					tmp, err := ioutil.TempFile("", filepath.Base(h.Name))
 					if err != nil {
 						return err
