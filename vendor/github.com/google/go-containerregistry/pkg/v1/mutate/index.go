@@ -61,12 +61,13 @@ type index struct {
 	// remove is removed before adds
 	remove match.Matcher
 
-	computed  bool
-	manifest  *v1.IndexManifest
-	mediaType *types.MediaType
-	imageMap  map[v1.Hash]v1.Image
-	indexMap  map[v1.Hash]v1.ImageIndex
-	layerMap  map[v1.Hash]v1.Layer
+	computed    bool
+	manifest    *v1.IndexManifest
+	annotations map[string]string
+	mediaType   *types.MediaType
+	imageMap    map[v1.Hash]v1.Image
+	indexMap    map[v1.Hash]v1.ImageIndex
+	layerMap    map[v1.Hash]v1.Layer
 }
 
 var _ v1.ImageIndex = (*index)(nil)
@@ -134,6 +135,15 @@ func (i *index) compute() error {
 			manifest.MediaType = ""
 		} else if strings.Contains(string(*i.mediaType), types.DockerVendorPrefix) {
 			manifest.MediaType = *i.mediaType
+		}
+	}
+
+	if i.annotations != nil {
+		if manifest.Annotations == nil {
+			manifest.Annotations = map[string]string{}
+		}
+		for k, v := range i.annotations {
+			manifest.Annotations[k] = v
 		}
 	}
 

@@ -26,6 +26,9 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
+// SizeUnknown is a sentinel value to indicate that the expected size is not known.
+const SizeUnknown = -1
+
 type verifyReader struct {
 	inner             io.Reader
 	hasher            hash.Hash
@@ -38,7 +41,7 @@ func (vc *verifyReader) Read(b []byte) (int, error) {
 	n, err := vc.inner.Read(b)
 	vc.gotSize += int64(n)
 	if err == io.EOF {
-		if vc.gotSize != vc.wantSize {
+		if vc.wantSize != SizeUnknown && vc.gotSize != vc.wantSize {
 			return n, fmt.Errorf("error verifying size; got %d, want %d", vc.gotSize, vc.wantSize)
 		}
 		got := hex.EncodeToString(vc.hasher.Sum(make([]byte, 0, vc.hasher.Size())))
@@ -56,12 +59,18 @@ func (vc *verifyReader) Read(b []byte) (int, error) {
 // The reader will only be read up to size bytes, to prevent resource
 // exhaustion. If EOF is returned before size bytes are read, an error is
 // returned.
+//
+// A size of SizeUnknown (-1) indicates disables size verification when the size
+// is unknown ahead of time.
 func ReadCloser(r io.ReadCloser, size int64, h v1.Hash) (io.ReadCloser, error) {
 	w, err := v1.Hasher(h.Algorithm)
 	if err != nil {
 		return nil, err
 	}
-	r2 := io.LimitReader(io.TeeReader(r, w), size)
+	var r2 io.Reader = r
+	if size != SizeUnknown {
+		r2 = io.LimitReader(io.TeeReader(r, w), size)
+	}
 	return &and.ReadCloser{
 		Reader: &verifyReader{
 			inner:    r2,

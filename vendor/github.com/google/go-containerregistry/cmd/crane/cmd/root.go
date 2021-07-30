@@ -67,18 +67,19 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 			transport := http.DefaultTransport.(*http.Transport).Clone()
 			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecure}
 
+			var rt http.RoundTripper = transport
 			// Add any http headers if they are set in the config file.
 			cf, err := config.Load(os.Getenv("DOCKER_CONFIG"))
 			if err != nil {
 				logs.Debug.Printf("failed to read config file: %v", err)
 			} else if len(cf.HTTPHeaders) != 0 {
-				options = append(options, crane.WithTransport(&headerTransport{
-					inner:       transport,
+				rt = &headerTransport{
+					inner:       rt,
 					httpHeaders: cf.HTTPHeaders,
-				}))
+				}
 			}
 
-			options = append(options, crane.WithTransport(transport))
+			options = append(options, crane.WithTransport(rt))
 		},
 	}
 

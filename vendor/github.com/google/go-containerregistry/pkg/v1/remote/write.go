@@ -355,6 +355,7 @@ func (w *writer) streamBlob(ctx context.Context, blob io.ReadCloser, streamLocat
 	if err != nil {
 		return "", err
 	}
+	req.Header.Set("Content-Type", "application/octet-stream")
 
 	resp, err := w.client.Do(req.WithContext(ctx))
 	if err != nil {
@@ -386,6 +387,7 @@ func (w *writer) commitBlob(location, digest string) error {
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Content-Type", "application/octet-stream")
 
 	resp, err := w.client.Do(req.WithContext(w.context))
 	if err != nil {
