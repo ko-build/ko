@@ -36,6 +36,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func repoRootDir() (string, error) {
@@ -487,11 +488,11 @@ func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1
 			t.Fatalf("Manifest() = %v", err)
 		}
 		t.Logf("Got annotations: %v", mf.Annotations)
-		if _, found := mf.Annotations[baseDigestAnnotation]; !found {
+		if _, found := mf.Annotations[specsv1.AnnotationBaseImageDigest]; !found {
 			t.Errorf("image annotations did not contain base image digest")
 		}
 		want := baseRef.Name()
-		if got := mf.Annotations[baseRefAnnotation]; got != want {
+		if got := mf.Annotations[specsv1.AnnotationBaseImageName]; got != want {
 			t.Errorf("base image ref; got %q, want %q", got, want)
 		}
 	})

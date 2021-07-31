@@ -42,6 +42,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -63,11 +64,6 @@ For more information see:
     https://github.com/google/ko/issues/106
 -----------------------------------------------------------------
 `
-)
-
-const (
-	baseDigestAnnotation = "org.opencontainers.image.base.digest"
-	baseRefAnnotation    = "org.opencontainers.image.base.name"
 )
 
 // GetBase takes an importpath and returns a base image reference and base image (or index).
@@ -784,8 +780,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, baseRef name.Refe
 	}
 
 	withApp = mutate.Annotations(withApp, map[string]string{
-		baseRefAnnotation:    baseRef.Name(),
-		baseDigestAnnotation: baseDigest.String(),
+		specsv1.AnnotationBaseImageDigest: baseDigest.String(),
+		specsv1.AnnotationBaseImageName:   baseRef.Name(),
 	}).(v1.Image)
 
 	// Start from a copy of the base image's config file, and set
@@ -933,8 +929,8 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	// (Docker manifest lists don't support annotations)
 	if baseType == types.OCIImageIndex {
 		idx = mutate.Annotations(idx, map[string]string{
-			baseRefAnnotation:    baseRef.Name(),
-			baseDigestAnnotation: baseDigest.String(),
+			specsv1.AnnotationBaseImageName:   baseRef.Name(),
+			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
 		}).(v1.ImageIndex)
 	}
 
