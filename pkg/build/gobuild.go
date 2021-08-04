@@ -779,9 +779,13 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, baseRef name.Refe
 		return nil, err
 	}
 
+	var baseName string
+	if _, ok := baseRef.(name.Tag); ok {
+		baseName = baseRef.Name()
+	}
 	withApp = mutate.Annotations(withApp, map[string]string{
 		specsv1.AnnotationBaseImageDigest: baseDigest.String(),
-		specsv1.AnnotationBaseImageName:   baseRef.Name(),
+		specsv1.AnnotationBaseImageName:   baseName,
 	}).(v1.Image)
 
 	// Start from a copy of the base image's config file, and set
@@ -928,8 +932,12 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	// Annotate the index with base image information, if the index is an OCI image index.
 	// (Docker manifest lists don't support annotations)
 	if baseType == types.OCIImageIndex {
+		var baseName string
+		if _, ok := baseRef.(name.Tag); ok {
+			baseName = baseRef.Name()
+		}
 		idx = mutate.Annotations(idx, map[string]string{
-			specsv1.AnnotationBaseImageName:   baseRef.Name(),
+			specsv1.AnnotationBaseImageName:   baseName,
 			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
 		}).(v1.ImageIndex)
 	}
