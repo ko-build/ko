@@ -702,7 +702,7 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	return config
 }
 
-func (g *gobuild) buildOne(ctx context.Context, refStr string, baseRef name.Reference, baseDigest v1.Hash, base v1.Image, platform *v1.Platform) (v1.Image, error) {
+func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (v1.Image, error) {
 	ref := newRef(refStr)
 
 	cf, err := base.ConfigFile()
@@ -865,13 +865,13 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as index: %v", base)
 		}
-		res, err = g.buildAll(ctx, s, baseRef, baseDigest, baseIndex)
+		res, err = g.buildAll(ctx, s, baseIndex)
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		baseImage, ok := base.(v1.Image)
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as image: %v", base)
 		}
-		res, err = g.buildOne(ctx, s, baseRef, baseDigest, baseImage, nil)
+		res, err = g.buildOne(ctx, s, baseImage, nil)
 	default:
 		return nil, fmt.Errorf("base image media type: %s", mt)
 	}
@@ -895,7 +895,7 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 }
 
 // TODO(#192): Do these in parallel?
-func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Reference, baseDigest v1.Hash, baseIndex v1.ImageIndex) (v1.ImageIndex, error) {
+func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (v1.ImageIndex, error) {
 	im, err := baseIndex.IndexManifest()
 	if err != nil {
 		return nil, err
@@ -917,7 +917,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		if err != nil {
 			return nil, err
 		}
-		img, err := g.buildOne(ctx, ref, baseRef, baseDigest, baseImage, desc.Platform)
+		img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
 		if err != nil {
 			return nil, err
 		}
