@@ -12,7 +12,6 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.6.0
-	github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc // indirect
 	github.com/klauspost/compress v1.13.1 // indirect
 	github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
 	github.com/mattn/go-isatty v0.0.13 // indirect
@@ -26,6 +25,5 @@ require (
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/apimachinery v0.21.3
-	k8s.io/cli-runtime v0.20.6
 	sigs.k8s.io/kind v0.11.1
 )

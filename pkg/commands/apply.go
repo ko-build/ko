@@ -22,14 +22,11 @@ import (
 
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 	"golang.org/x/sync/errgroup"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 )
 
 // addApply augments our CLI surface with apply.
 func addApply(topLevel *cobra.Command) {
-	koApplyFlags := []string{}
 	po := &options.PublishOptions{}
 	fo := &options.FilenameOptions{}
 	so := &options.SelectorOptions{}
@@ -60,8 +57,11 @@ func addApply(topLevel *cobra.Command) {
   ko apply --local -f config/
 
   # Apply from stdin:
-  cat config.yaml | ko apply -f -`,
-		Args: cobra.NoArgs,
+  cat config.yaml | ko apply -f -
+
+  # Any flags passed after '--' are passed to 'kubectl apply' directly:
+  ko apply -f config -- --namespace=foo --kubeconfig=cfg.yaml
+  `,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !isKubectlAvailable() {
 				return errors.New("error: kubectl is not available. kubectl must be installed to use ko apply")
@@ -80,26 +80,12 @@ func addApply(topLevel *cobra.Command) {
 				return fmt.Errorf("error creating publisher: %v", err)
 			}
 			defer publisher.Close()
-			// Create a set of ko-specific flags to ignore when passing through
-			// kubectl global flags.
-			ignoreSet := make(map[string]struct{})
-			for _, s := range koApplyFlags {
-				ignoreSet[s] = struct{}{}
-			}
-
-			// Filter out ko flags from what we will pass through to kubectl.
-			kubectlFlags := []string{}
-			cmd.Flags().Visit(func(flag *pflag.Flag) {
-				if _, ok := ignoreSet[flag.Name]; !ok {
-					kubectlFlags = append(kubectlFlags, "--"+flag.Name, flag.Value.String())
-				}
-			})
 
 			// Issue a "kubectl apply" command reading from stdin,
-			// to which we will pipe the resolved files.
-			argv := []string{"apply", "-f", "-"}
-			argv = append(argv, kubectlFlags...)
-			kubectlCmd := exec.CommandContext(ctx, "kubectl", argv...)
+			// to which we will pipe the resolved files, and any
+			// remaining flags passed after '--'.
+			kubectlCmd := exec.CommandContext(ctx, "kubectl",
+				append([]string{"apply", "-f", "-"}, args...)...)
 
 			// Pass through our environment
 			kubectlCmd.Env = os.Environ()
@@ -145,17 +131,6 @@ func addApply(topLevel *cobra.Command) {
 	options.AddFileArg(apply, fo)
 	options.AddSelectorArg(apply, so)
 	options.AddBuildOptions(apply, bo)
-
-	// Collect the ko-specific apply flags before registering the kubectl global
-	// flags so that we can ignore them when passing kubectl global flags through
-	// to kubectl.
-	apply.Flags().VisitAll(func(flag *pflag.Flag) {
-		koApplyFlags = append(koApplyFlags, flag.Name)
-	})
-
-	// Register the kubectl global flags.
-	kubeConfigFlags := genericclioptions.NewConfigFlags(false)
-	kubeConfigFlags.AddFlags(apply.Flags())
 
 	topLevel.AddCommand(apply)
 }
