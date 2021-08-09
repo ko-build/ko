@@ -65,7 +65,7 @@ github.com/dprotaso/go-yit
 # github.com/emicklei/go-restful v2.9.5+incompatible
 github.com/emicklei/go-restful
 github.com/emicklei/go-restful/log
-# github.com/evanphx/json-patch v4.9.0+incompatible
+# github.com/evanphx/json-patch v4.11.0+incompatible
 github.com/evanphx/json-patch
 # github.com/evanphx/json-patch/v5 v5.5.0
 ## explicit
@@ -146,9 +146,10 @@ github.com/google/go-containerregistry/pkg/v1/types
 github.com/google/go-containerregistry/pkg/v1/validate
 # github.com/google/gofuzz v1.1.0
 github.com/google/gofuzz
-# github.com/googleapis/gnostic v0.4.1
+# github.com/googleapis/gnostic v0.5.5
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
+github.com/googleapis/gnostic/jsonschema
 github.com/googleapis/gnostic/openapiv2
 # github.com/gregjones/httpcache v0.0.0-20190212212710-3befbb6ad0cc
 ## explicit
@@ -388,7 +389,7 @@ k8s.io/api/scheduling/v1beta1
 k8s.io/api/storage/v1
 k8s.io/api/storage/v1alpha1
 k8s.io/api/storage/v1beta1
-# k8s.io/apimachinery v0.21.3
+# k8s.io/apimachinery v0.22.0
 ## explicit
 k8s.io/apimachinery/pkg/api/equality
 k8s.io/apimachinery/pkg/api/errors
@@ -476,11 +477,12 @@ k8s.io/client-go/util/homedir
 k8s.io/client-go/util/jsonpath
 k8s.io/client-go/util/keyutil
 k8s.io/client-go/util/workqueue
-# k8s.io/klog/v2 v2.8.0
+# k8s.io/klog/v2 v2.9.0
 k8s.io/klog/v2
-# k8s.io/kube-openapi v0.0.0-20210305001622-591a79e4bda7
+# k8s.io/kube-openapi v0.0.0-20210421082810-95288971da7e
 k8s.io/kube-openapi/pkg/common
 k8s.io/kube-openapi/pkg/util/proto
+k8s.io/kube-openapi/pkg/validation/spec
 # k8s.io/utils v0.0.0-20201110183641-67b214c5f920
 k8s.io/utils/integer
 # sigs.k8s.io/kind v0.11.1
