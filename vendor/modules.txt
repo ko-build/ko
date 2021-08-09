@@ -29,7 +29,7 @@ github.com/docker/distribution/digestset
 github.com/docker/distribution/reference
 github.com/docker/distribution/registry/api/errcode
 github.com/docker/distribution/registry/client/auth/challenge
-# github.com/docker/docker v20.10.7+incompatible
+# github.com/docker/docker v20.10.8+incompatible
 ## explicit
 github.com/docker/docker/api
 github.com/docker/docker/api/types
