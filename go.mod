@@ -25,7 +25,7 @@ require (
 	golang.org/x/tools v0.1.5
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	k8s.io/apimachinery v0.21.3
-	k8s.io/cli-runtime v0.20.6
+	k8s.io/apimachinery v0.22.0
+	k8s.io/cli-runtime v0.22.0
 	sigs.k8s.io/kind v0.11.1
 )
