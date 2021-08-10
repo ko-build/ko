@@ -1,0 +1,85 @@
+## ko apply
+
+Apply the input files with image references resolved to built/pushed image digests.
+
+### Synopsis
+
+This sub-command finds import path references within the provided files, builds them into Go binaries, containerizes them, publishes them, and then feeds the resulting yaml into "kubectl apply".
+
+```
+ko apply -f FILENAME [flags]
+```
+
+### Examples
+
+```
+
+  # Build and publish import path references to a Docker
+  # Registry as:
+  #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
+  # Then, feed the resulting yaml into "kubectl apply".
+  # When KO_DOCKER_REPO is ko.local, it is the same as if
+  # --local was passed.
+  ko apply -f config/
+
+  # Build and publish import path references to a Docker
+  # Registry preserving import path names as:
+  #   ${KO_DOCKER_REPO}/<import path>
+  # Then, feed the resulting yaml into "kubectl apply".
+  ko apply --preserve-import-paths -f config/
+
+  # Build and publish import path references to a Docker
+  # daemon as:
+  #   ko.local/<import path>
+  # Then, feed the resulting yaml into "kubectl apply".
+  ko apply --local -f config/
+
+  # Apply from stdin:
+  cat config.yaml | ko apply -f -
+```
+
+### Options
+
+```
+      --as string                      Username to impersonate for the operation
+      --as-group stringArray           Group to impersonate for the operation, this flag can be repeated to specify multiple groups.
+      --bare                           Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).
+  -B, --base-import-paths              Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).
+      --cache-dir string               Default cache directory (default "/Users/jasonhall/.kube/cache")
+      --certificate-authority string   Path to a cert file for the certificate authority
+      --client-certificate string      Path to a client certificate file for TLS
+      --client-key string              Path to a client key file for TLS
+      --cluster string                 The name of the kubeconfig cluster to use
+      --context string                 The name of the kubeconfig context to use
+      --disable-optimizations          Disable optimizations when building Go code. Useful when you want to interactively debug the created container.
+  -f, --filename strings               Filename, directory, or URL to files to use to create the resource
+  -h, --help                           help for apply
+      --image-label strings            Which labels (key=value) to add to the image.
+      --insecure-registry              Whether to skip TLS verification on the registry
+      --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
+  -j, --jobs int                       The maximum number of concurrent builds (default 8)
+      --kubeconfig string              Path to the kubeconfig file to use for CLI requests.
+  -L, --local                          Load into images to local docker daemon.
+  -n, --namespace string               If present, the namespace scope for this CLI request
+      --oci-layout-path string         Path to save the OCI image layout of the built images
+      --platform string                Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
+  -P, --preserve-import-paths          Whether to preserve the full import path after KO_DOCKER_REPO.
+      --push                           Push images to KO_DOCKER_REPO (default true)
+  -R, --recursive                      Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.
+      --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (default "0")
+  -l, --selector string                Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)
+  -s, --server string                  The address and port of the Kubernetes API server
+      --tag-only                       Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.
+  -t, --tags strings                   Which tags to use for the produced image instead of the default 'latest' tag (may not work properly with --base-import-paths or --bare). (default [latest])
+      --tarball string                 File to save images tarballs
+      --tls-server-name string         Server name to use for server certificate validation. If it is not provided, the hostname used to contact the server is used
+      --token string                   Bearer token for authentication to the API server
+      --user string                    The name of the kubeconfig user to use
+  -W, --watch                          Continuously monitor the transitive dependencies of the passed yaml files, and redeploy whenever anything changes.
+```
+
+### SEE ALSO
+
+* [ko](ko.md)	 - Rapidly iterate with Go, Containers, and Kubernetes.
+
+###### Auto generated by spf13/cobra on 10-Aug-2021

@@ -20,10 +20,7 @@ import (
 	"log"
 	"os"
 
-	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/logs"
-	"github.com/spf13/cobra"
-
 	"github.com/google/ko/pkg/commands"
 )
 
@@ -31,28 +28,7 @@ func main() {
 	logs.Warn.SetOutput(os.Stderr)
 	logs.Progress.SetOutput(os.Stderr)
 
-	// Parent command to which all subcommands are added.
-	cmds := &cobra.Command{
-		Use:          "ko",
-		Short:        "Rapidly iterate with Go, Containers, and Kubernetes.",
-		SilenceUsage: true, // Don't show usage on errors
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
-		},
-	}
-	commands.AddKubeCommands(cmds)
-
-	// Also add the auth group from crane to facilitate logging into a
-	// registry.
-	authCmd := cranecmd.NewCmdAuth("ko", "auth")
-	// That was a mistake, but just set it to Hidden so we don't break people.
-	authCmd.Hidden = true
-	cmds.AddCommand(authCmd)
-
-	// Just add a `ko login` command:
-	cmds.AddCommand(cranecmd.NewCmdAuthLogin())
-
-	if err := cmds.Execute(); err != nil {
+	if err := commands.Root.Execute(); err != nil {
 		log.Fatal("error during command execution:", err)
 	}
 }
