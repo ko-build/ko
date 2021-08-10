@@ -17,9 +17,12 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
+	"strings"
 
+	"github.com/google/ko/internal"
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
@@ -27,6 +30,7 @@ import (
 
 // addCreate augments our CLI surface with apply.
 func addCreate(topLevel *cobra.Command) {
+	var kf internal.KubectlFlags
 	po := &options.PublishOptions{}
 	fo := &options.FilenameOptions{}
 	so := &options.SelectorOptions{}
@@ -84,8 +88,16 @@ func addCreate(topLevel *cobra.Command) {
 			// Issue a "kubectl create" command reading from stdin,
 			// to which we will pipe the resolved files, and any
 			// remaining flags passed after '--'.
-			kubectlCmd := exec.CommandContext(ctx, "kubectl",
-				append([]string{"create", "-f", "-"}, args...)...)
+			argv := []string{"apply", "-f", "-"}
+			if kflags := kf.Values(); len(kflags) != 0 {
+				skflags := strings.Join(kflags, " ")
+				log.Printf(kubectlFlagsWarningTemplate,
+					"create", skflags,
+					"create", skflags)
+				argv = append(argv, kflags...)
+			}
+			argv = append(argv, args...)
+			kubectlCmd := exec.CommandContext(ctx, "kubectl", argv...)
 
 			// Pass through our environment
 			kubectlCmd.Env = os.Environ()
@@ -131,6 +143,7 @@ func addCreate(topLevel *cobra.Command) {
 	options.AddFileArg(create, fo)
 	options.AddSelectorArg(create, so)
 	options.AddBuildOptions(create, bo)
+	internal.AddFlags(&kf, create.Flags())
 
 	topLevel.AddCommand(create)
 }
