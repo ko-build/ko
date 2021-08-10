@@ -36,7 +36,7 @@ ko run IMPORTPATH [flags]
   -h, --help                     help for run
       --image-label strings      Which labels (key=value) to add to the image.
       --insecure-registry        Whether to skip TLS verification on the registry
-  -j, --jobs int                 The maximum number of concurrent builds (default 8)
+  -j, --jobs int                 The maximum number of concurrent builds (default GOMAXPROCS)
   -L, --local                    Load into images to local docker daemon.
       --oci-layout-path string   Path to save the OCI image layout of the built images
       --platform string          Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*

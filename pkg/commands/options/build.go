@@ -17,8 +17,6 @@ limitations under the License.
 package options
 
 import (
-	"runtime"
-
 	"github.com/spf13/cobra"
 )
 
@@ -44,8 +42,8 @@ type BuildOptions struct {
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
-	cmd.Flags().IntVarP(&bo.ConcurrentBuilds, "jobs", "j", runtime.GOMAXPROCS(0),
-		"The maximum number of concurrent builds")
+	cmd.Flags().IntVarP(&bo.ConcurrentBuilds, "jobs", "j", 0,
+		"The maximum number of concurrent builds (default GOMAXPROCS)")
 	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,
 		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
 	cmd.Flags().StringVar(&bo.Platform, "platform", "",

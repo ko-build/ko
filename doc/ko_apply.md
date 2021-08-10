@@ -57,7 +57,7 @@ ko apply -f FILENAME [flags]
       --image-label strings            Which labels (key=value) to add to the image.
       --insecure-registry              Whether to skip TLS verification on the registry
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure
-  -j, --jobs int                       The maximum number of concurrent builds (default 8)
+  -j, --jobs int                       The maximum number of concurrent builds (default GOMAXPROCS)
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests.
   -L, --local                          Load into images to local docker daemon.
   -n, --namespace string               If present, the namespace scope for this CLI request
