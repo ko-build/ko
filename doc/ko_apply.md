@@ -39,7 +39,7 @@ ko apply -f FILENAME [flags]
 
   # Any flags passed after '--' are passed to 'kubectl apply' directly:
   ko apply -f config -- --namespace=foo --kubeconfig=cfg.yaml
-  
+
 ```
 
 ### Options
