@@ -197,6 +197,8 @@ golang.org/x/sys/windows
 # golang.org/x/text v0.3.6
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
+# golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
+## explicit
 # golang.org/x/tools v0.1.5
 ## explicit
 golang.org/x/tools/go/gcexportdata
@@ -268,9 +270,6 @@ k8s.io/apimachinery/pkg/util/sets
 k8s.io/apimachinery/pkg/util/validation
 k8s.io/apimachinery/pkg/util/validation/field
 k8s.io/apimachinery/pkg/util/version
-# k8s.io/client-go v0.22.0
-## explicit
-k8s.io/client-go/util/homedir
 # k8s.io/klog/v2 v2.9.0
 k8s.io/klog/v2
 # sigs.k8s.io/kind v0.11.1

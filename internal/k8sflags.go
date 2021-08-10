@@ -15,19 +15,15 @@
 package internal
 
 import (
-	"path/filepath"
 	"strings"
 
 	"github.com/spf13/pflag"
-	"k8s.io/client-go/util/homedir"
 )
-
-var defaultCacheDir = filepath.Join(homedir.HomeDir(), ".kube", "cache")
 
 // AddFlags adds kubectl global flags to the given flagset.
 func AddFlags(f *KubectlFlags, flags *pflag.FlagSet) {
 	flags.StringVar(&f.kubeConfig, "kubeconfig", "", "Path to the kubeconfig file to use for CLI requests. (DEPRECATED)")
-	flags.StringVar(&f.cacheDir, "cache-dir", defaultCacheDir, "Default cache directory (DEPRECATED)")
+	flags.StringVar(&f.cacheDir, "cache-dir", "", "Default cache directory (DEPRECATED)")
 	flags.StringVar(&f.certFile, "client-certificate", "", "Path to a client certificate file for TLS (DEPRECATED)")
 	flags.StringVar(&f.keyFile, "client-key", "", "Path to a client key file for TLS (DEPRECATED)")
 	flags.StringVar(&f.bearerToken, "token", "", "Bearer token for authentication to the API server (DEPRECATED)")
@@ -74,7 +70,7 @@ func (f KubectlFlags) Values() []string {
 	if f.kubeConfig != "" {
 		v = append(v, "--kubeconfig="+f.kubeConfig)
 	}
-	if f.cacheDir != "" && f.cacheDir != defaultCacheDir {
+	if f.cacheDir != "" {
 		v = append(v, "--cache-dir="+f.cacheDir)
 	}
 	if f.certFile != "" {
