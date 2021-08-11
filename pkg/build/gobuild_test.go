@@ -343,7 +343,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 	})
 }
 
-func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1.Time) {
+func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1.Time, checkAnnotations bool) {
 	t.Helper()
 
 	ls, err := img.Layers()
@@ -483,6 +483,9 @@ func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1
 	})
 
 	t.Run("check annotations", func(t *testing.T) {
+		if !checkAnnotations {
+			t.Skip("skipping annotations check")
+		}
 		mf, err := img.Manifest()
 		if err != nil {
 			t.Fatalf("Manifest() = %v", err)
@@ -540,7 +543,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("Build() not an image: %v", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime)
+	validateImage(t, img, baseLayers, creationTime, true)
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
@@ -622,7 +625,7 @@ func TestGoBuildIndex(t *testing.T) {
 		if err != nil {
 			t.Fatalf("idx.Image(%s) = %v", desc.Digest, err)
 		}
-		validateImage(t, img, baseLayers, creationTime)
+		validateImage(t, img, baseLayers, creationTime, false)
 	}
 
 	if want, got := images, int64(len(im.Manifests)); want != got {

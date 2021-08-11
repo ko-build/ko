@@ -702,7 +702,7 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	return config
 }
 
-func (g *gobuild) buildOne(ctx context.Context, refStr string, baseRef name.Reference, baseDigest v1.Hash, base v1.Image, platform *v1.Platform) (v1.Image, error) {
+func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (v1.Image, error) {
 	ref := newRef(refStr)
 
 	cf, err := base.ConfigFile()
@@ -778,11 +778,6 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, baseRef name.Refe
 	if err != nil {
 		return nil, err
 	}
-
-	withApp = mutate.Annotations(withApp, map[string]string{
-		specsv1.AnnotationBaseImageDigest: baseDigest.String(),
-		specsv1.AnnotationBaseImageName:   baseRef.Name(),
-	}).(v1.Image)
 
 	// Start from a copy of the base image's config file, and set
 	// the entrypoint to our app.
@@ -863,26 +858,44 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		return nil, err
 	}
 
+	var res Result
 	switch mt {
 	case types.OCIImageIndex, types.DockerManifestList:
 		baseIndex, ok := base.(v1.ImageIndex)
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as index: %v", base)
 		}
-		return g.buildAll(ctx, s, baseRef, baseDigest, baseIndex)
+		res, err = g.buildAll(ctx, s, baseIndex)
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		baseImage, ok := base.(v1.Image)
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as image: %v", base)
 		}
-		return g.buildOne(ctx, s, baseRef, baseDigest, baseImage, nil)
+		res, err = g.buildOne(ctx, s, baseImage, nil)
 	default:
 		return nil, fmt.Errorf("base image media type: %s", mt)
 	}
+	if err != nil {
+		return nil, err
+	}
+
+	// Annotate the image or index with base image information.
+	// (Docker manifest lists don't support annotations)
+	if mt != types.DockerManifestList {
+		anns := map[string]string{
+			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
+		}
+		if _, ok := baseRef.(name.Tag); ok {
+			anns[specsv1.AnnotationBaseImageName] = baseRef.Name()
+		}
+		res = mutate.Annotations(res, anns).(Result)
+	}
+
+	return res, nil
 }
 
 // TODO(#192): Do these in parallel?
-func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Reference, baseDigest v1.Hash, baseIndex v1.ImageIndex) (v1.ImageIndex, error) {
+func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (v1.ImageIndex, error) {
 	im, err := baseIndex.IndexManifest()
 	if err != nil {
 		return nil, err
@@ -904,7 +917,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		if err != nil {
 			return nil, err
 		}
-		img, err := g.buildOne(ctx, ref, baseRef, baseDigest, baseImage, desc.Platform)
+		img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
 		if err != nil {
 			return nil, err
 		}
@@ -924,15 +937,6 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		return nil, err
 	}
 	idx := mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType)
-
-	// Annotate the index with base image information, if the index is an OCI image index.
-	// (Docker manifest lists don't support annotations)
-	if baseType == types.OCIImageIndex {
-		idx = mutate.Annotations(idx, map[string]string{
-			specsv1.AnnotationBaseImageName:   baseRef.Name(),
-			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
-		}).(v1.ImageIndex)
-	}
 
 	return idx, nil
 }
