@@ -26,6 +26,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -127,6 +128,9 @@ func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching,
 		return nil, err
 	}
 
+	if bo.ConcurrentBuilds == 0 {
+		bo.ConcurrentBuilds = runtime.GOMAXPROCS(0)
+	}
 	innerBuilder = build.NewLimiter(innerBuilder, bo.ConcurrentBuilds)
 
 	// tl;dr Wrap builder in a caching builder.

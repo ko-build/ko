@@ -4,6 +4,7 @@ go 1.15
 
 require (
 	github.com/containerd/stargz-snapshotter/estargz v0.7.0
+	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/docker/docker v20.10.8+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/evanphx/json-patch/v5 v5.5.0 // indirect

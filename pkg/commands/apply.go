@@ -80,7 +80,7 @@ func addApply(topLevel *cobra.Command) {
 
   # Any flags passed after '--' are passed to 'kubectl apply' directly:
   ko apply -f config -- --namespace=foo --kubeconfig=cfg.yaml
-  `,
+`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !isKubectlAvailable() {
 				return errors.New("error: kubectl is not available. kubectl must be installed to use ko apply")
