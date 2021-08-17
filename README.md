@@ -135,6 +135,8 @@ configuration section in your `.ko.yaml`.
 builds:
 - id: foo
   main: ./foobar/foo
+  env:
+  - GOPRIVATE=git.internal.example.com,source.developers.google.com
   flags:
   - -tags
   - netgo
@@ -144,6 +146,8 @@ builds:
   - -X main.version={{.Env.VERSION}}
 - id: bar
   main: ./foobar/bar/main.go
+  env:
+  - CGO_ENABLED=1
   ldflags:
   - -s
   - -w
@@ -156,7 +160,7 @@ with the intended import path.
 
 _Please note:_ Even though the configuration section is similar to the
 [GoReleaser `builds` section](https://goreleaser.com/customization/build/),
-only the `flags` and `ldflags` fields are currently supported. Also, the
+only the `env`, `flags` and `ldflags` fields are currently supported. Also, the
 templating support is currently limited to environment variables only.
 
 ## Naming Images
