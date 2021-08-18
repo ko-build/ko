@@ -147,7 +147,7 @@ builds:
 - id: bar
   main: ./foobar/bar/main.go
   env:
-  - CGO_ENABLED=1
+  - GOCACHE=/workspace/.gocache
   ldflags:
   - -s
   - -w
