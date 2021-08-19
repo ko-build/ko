@@ -156,24 +156,64 @@ kind: Bar
 	}
 }
 
-func TestNewBuilderCanBuild(t *testing.T) {
-	ctx := context.Background()
-	bo := &options.BuildOptions{
-		ConcurrentBuilds: 1,
+// TODO This test accesses the network and is slow. Implement a dry-run mode?
+func TestNewBuilder(t *testing.T) {
+	tests := []struct {
+		description             string
+		importpath              string
+		bo                      *options.BuildOptions
+		wantQualifiedImportpath string
+		shouldBuildError        bool
+	}{
+		{
+			description: "test app with already qualified import path",
+			importpath:  "ko://github.com/google/ko/test",
+			bo: &options.BuildOptions{
+				ConcurrentBuilds: 1,
+			},
+			wantQualifiedImportpath: "ko://github.com/google/ko/test",
+			shouldBuildError:        false,
+		},
+		{
+			description: "programmatic build config",
+			importpath:  "./test",
+			bo: &options.BuildOptions{
+				ConcurrentBuilds: 1,
+				BuildConfigs: map[string]build.Config{
+					"github.com/google/ko/test": {
+						ID:    "id-can-be-anything",
+						Flags: []string{"-invalid-flag-should-cause-error"},
+					},
+				},
+				WorkingDirectory: "../..",
+			},
+			wantQualifiedImportpath: "ko://github.com/google/ko/test",
+			shouldBuildError:        true,
+		},
 	}
-	builder, err := NewBuilder(ctx, bo)
-	if err != nil {
-		t.Fatalf("NewBuilder(): %v", err)
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			ctx := context.Background()
+			builder, err := NewBuilder(ctx, test.bo)
+			if err != nil {
+				t.Fatalf("NewBuilder(): %v", err)
+			}
+			qualifiedImportpath, err := builder.QualifyImport(test.importpath)
+			if err != nil {
+				t.Fatalf("builder.QualifyImport(%s): %v", test.importpath, err)
+			}
+			if qualifiedImportpath != test.wantQualifiedImportpath {
+				t.Fatalf("incorrect qualified import path, got %s, wanted %s", qualifiedImportpath, test.wantQualifiedImportpath)
+			}
+			_, err = builder.Build(ctx, qualifiedImportpath)
+			if err != nil && !test.shouldBuildError {
+				t.Fatalf("builder.Build(): %v", err)
+			}
+			if err == nil && test.shouldBuildError {
+				t.Fatalf("expected error got nil")
+			}
+		})
 	}
-	res, err := builder.Build(ctx, "ko://github.com/google/ko/test")
-	if err != nil {
-		t.Fatalf("builder.Build(): %v", err)
-	}
-	gotDigest, err := res.Digest()
-	if err != nil {
-		t.Fatalf("res.Digest(): %v", err)
-	}
-	fmt.Println(gotDigest.String())
 }
 
 func TestNewPublisherCanPublish(t *testing.T) {
@@ -224,26 +264,27 @@ func TestNewPublisherCanPublish(t *testing.T) {
 		},
 	}
 	for _, test := range tests {
-		publisher, err := NewPublisher(test.po)
-		if err != nil {
-			t.Fatalf("%s: NewPublisher(): %v", test.description, err)
-		}
-		defer publisher.Close()
-		ref, err := publisher.Publish(context.Background(), empty.Image, build.StrictScheme+importpath)
-		if test.shouldError {
-			if err == nil || !strings.HasSuffix(err.Error(), test.wantError.Error()) {
-				t.Errorf("%s: got error %v, wanted %v", test.description, err, test.wantError)
+		t.Run(test.description, func(t *testing.T) {
+			publisher, err := NewPublisher(test.po)
+			if err != nil {
+				t.Fatalf("NewPublisher(): %v", err)
 			}
-			continue
-		}
-		if err != nil {
-			t.Fatalf("%s: publisher.Publish(): %v", test.description, err)
-		}
-		fmt.Printf("ref: %+v\n", ref)
-		gotImageName := ref.Context().Name()
-		if gotImageName != test.wantImageName {
-			t.Errorf("%s: got %s, wanted %s", test.description, gotImageName, test.wantImageName)
-		}
+			defer publisher.Close()
+			ref, err := publisher.Publish(context.Background(), empty.Image, build.StrictScheme+importpath)
+			if test.shouldError {
+				if err == nil || !strings.HasSuffix(err.Error(), test.wantError.Error()) {
+					t.Errorf("%s: got error %v, wanted %v", test.description, err, test.wantError)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("publisher.Publish(): %v", err)
+			}
+			gotImageName := ref.Context().Name()
+			if gotImageName != test.wantImageName {
+				t.Errorf("got %s, wanted %s", gotImageName, test.wantImageName)
+			}
+		})
 	}
 }
 
