@@ -20,12 +20,13 @@ set -o pipefail
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-pushd ${PROJECT_ROOT}
+pushd "${PROJECT_ROOT}"
 trap popd EXIT
 
 # Verify that all source files are correctly formatted.
 find . -name "*.go" | grep -v vendor/ | xargs gofmt -d -e -l
 
 # Verify that generated Markdown docs are up-to-date.
-mkdir -p /tmp/gendoc && go run cmd/help/main.go --dir /tmp/gendoc
-diff -Naur /tmp/gendoc/ doc/
+tmpdir=$(mktemp -d)
+go run cmd/help/main.go --dir "$tmpdir"
+diff -Naur -I '###### Auto generated' "$tmpdir" doc/
