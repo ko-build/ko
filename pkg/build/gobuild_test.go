@@ -232,6 +232,83 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	}
 }
 
+func TestBuildEnv(t *testing.T) {
+	tests := []struct {
+		description  string
+		platform     v1.Platform
+		configEnv    []string
+		expectedEnvs map[string]string
+	}{
+		{
+			description: "defaults",
+			platform: v1.Platform{
+				OS:           "linux",
+				Architecture: "amd64",
+			},
+			expectedEnvs: map[string]string{
+				"GOOS":        "linux",
+				"GOARCH":      "amd64",
+				"CGO_ENABLED": "0",
+			},
+		},
+		{
+			description: "override a default value",
+			configEnv:   []string{"CGO_ENABLED=1"},
+			expectedEnvs: map[string]string{
+				"CGO_ENABLED": "1",
+			},
+		},
+		{
+			description: "override an envvar and add an envvar",
+			configEnv:   []string{"CGO_ENABLED=1", "GOPRIVATE=git.internal.example.com,source.developers.google.com"},
+			expectedEnvs: map[string]string{
+				"CGO_ENABLED": "1",
+				"GOPRIVATE":   "git.internal.example.com,source.developers.google.com",
+			},
+		},
+		{
+			description: "arm variant",
+			platform: v1.Platform{
+				Architecture: "arm",
+				Variant:      "v7",
+			},
+			expectedEnvs: map[string]string{
+				"GOARCH": "arm",
+				"GOARM":  "7",
+			},
+		},
+		{
+			description: "arm64 variant",
+			platform: v1.Platform{
+				Architecture: "arm64",
+				Variant:      "v8",
+			},
+			expectedEnvs: map[string]string{
+				"GOARCH": "arm64",
+				"GOARM":  "7",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			env, err := buildEnv(test.platform, test.configEnv)
+			if err != nil {
+				t.Fatalf("unexpected error running buildEnv(): %v", err)
+			}
+			envs := map[string]string{}
+			for _, e := range env {
+				split := strings.SplitN(e, "=", 2)
+				envs[split[0]] = split[1]
+			}
+			for key, val := range test.expectedEnvs {
+				if envs[key] != val {
+					t.Errorf("buildEnv(): expected %s=%s, got %s=%s", key, val, key, envs[key])
+				}
+			}
+		})
+	}
+}
+
 // A helper method we use to substitute for the default "build" method.
 func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ Config) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")

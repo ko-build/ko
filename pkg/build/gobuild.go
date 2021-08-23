@@ -378,24 +378,11 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = dir
 
-	// Last one wins
-	defaultEnv := []string{
-		"CGO_ENABLED=0",
-		"GOOS=" + platform.OS,
-		"GOARCH=" + platform.Architecture,
+	env, err := buildEnv(platform, config.Env)
+	if err != nil {
+		return "", fmt.Errorf("could not create env for %s: %v", ip, err)
 	}
-
-	if strings.HasPrefix(platform.Architecture, "arm") && platform.Variant != "" {
-		goarm, err := getGoarm(platform)
-		if err != nil {
-			return "", fmt.Errorf("goarm failure for %s: %v", ip, err)
-		}
-		if goarm != "" {
-			defaultEnv = append(defaultEnv, "GOARM="+goarm)
-		}
-	}
-
-	cmd.Env = append(defaultEnv, os.Environ()...)
+	cmd.Env = env
 
 	var output bytes.Buffer
 	cmd.Stderr = &output
@@ -408,6 +395,31 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 		return "", err
 	}
 	return file, nil
+}
+
+// buildEnv creates the environment variables used by the `go build` command.
+// From `os/exec.Cmd`: If Env contains duplicate environment keys, only the last
+// value in the slice for each duplicate key is used.
+func buildEnv(platform v1.Platform, configEnv []string) ([]string, error) {
+	defaultEnv := []string{
+		"CGO_ENABLED=0",
+		"GOOS=" + platform.OS,
+		"GOARCH=" + platform.Architecture,
+	}
+
+	if strings.HasPrefix(platform.Architecture, "arm") && platform.Variant != "" {
+		goarm, err := getGoarm(platform)
+		if err != nil {
+			return nil, fmt.Errorf("goarm failure: %v", err)
+		}
+		if goarm != "" {
+			defaultEnv = append(defaultEnv, "GOARM="+goarm)
+		}
+	}
+
+	env := append(defaultEnv, os.Environ()...)
+	env = append(env, configEnv...)
+	return env, nil
 }
 
 func appFilename(importpath string) string {
