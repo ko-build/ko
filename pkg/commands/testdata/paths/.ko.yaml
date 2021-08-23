@@ -1,0 +1,4 @@
+builds:
+- id: app-with-main-package-in-different-directory-to-go-mod-and-ko-yaml
+  dir: ./app
+  main: ./cmd/foo

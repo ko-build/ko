@@ -119,6 +119,7 @@ func NewBuilder(ctx context.Context, bo *options.BuildOptions) (build.Interface,
 }
 
 func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching, error) {
+	loadConfig(bo.WorkingDirectory)
 	opt, err := gobuildOptions(bo)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up builder options: %v", err)
