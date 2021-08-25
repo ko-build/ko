@@ -94,7 +94,11 @@ func TestCreateBuildConfigs(t *testing.T) {
 	}
 
 	for _, b := range buildConfigs {
-		for importPath, buildCfg := range createBuildConfigs("../..", []build.Config{b}) {
+		buildConfigMap, err := createBuildConfigMap("../..", []build.Config{b})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for importPath, buildCfg := range buildConfigMap {
 			switch buildCfg.ID {
 			case "defaults":
 				compare("github.com/google/ko", importPath)

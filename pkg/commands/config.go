@@ -173,7 +173,7 @@ func createCancellableContext() context.Context {
 	return ctx
 }
 
-func createBuildConfigs(workingDirectory string, configs []build.Config) map[string]build.Config {
+func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[string]build.Config, error) {
 	buildConfigsByImportPath := make(map[string]build.Config)
 	for i, config := range configs {
 		// Make sure to behave like GoReleaser by defaulting to the current
@@ -203,21 +203,21 @@ func createBuildConfigs(workingDirectory string, configs []build.Config) map[str
 
 		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: baseDir}, localImportPath)
 		if err != nil {
-			log.Fatalf("'builds': entry #%d does not contain a valid local import path (%s) for directory (%s): %v", i, localImportPath, baseDir, err)
+			return nil, fmt.Errorf("'builds': entry #%d does not contain a valid local import path (%s) for directory (%s): %v", i, localImportPath, baseDir, err)
 		}
 
 		if len(pkgs) != 1 {
-			log.Fatalf("'builds': entry #%d results in %d local packages, only 1 is expected", i, len(pkgs))
+			return nil, fmt.Errorf("'builds': entry #%d results in %d local packages, only 1 is expected", i, len(pkgs))
 		}
 		importPath := pkgs[0].PkgPath
 		buildConfigsByImportPath[importPath] = config
 	}
 
-	return buildConfigsByImportPath
+	return buildConfigsByImportPath, nil
 }
 
 // loadConfig reads build configuration from defaults, environment variables, and the `.ko.yaml` config file.
-func loadConfig(workingDirectory string) {
+func loadConfig(workingDirectory string) error {
 	v := viper.New()
 	if workingDirectory == "" {
 		workingDirectory = "."
@@ -236,13 +236,13 @@ func loadConfig(workingDirectory string) {
 
 	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			log.Fatalf("error reading config file: %v", err)
+			return fmt.Errorf("error reading config file: %v", err)
 		}
 	}
 
 	ref := v.GetString("defaultBaseImage")
 	if _, err := name.ParseReference(ref); err != nil {
-		log.Fatalf("'defaultBaseImage': error parsing %q as image reference: %v", ref, err)
+		return fmt.Errorf("'defaultBaseImage': error parsing %q as image reference: %v", ref, err)
 	}
 	defaultBaseImage = ref
 
@@ -250,14 +250,16 @@ func loadConfig(workingDirectory string) {
 	overrides := v.GetStringMapString("baseImageOverrides")
 	for key, value := range overrides {
 		if _, err := name.ParseReference(value); err != nil {
-			log.Fatalf("'baseImageOverrides': error parsing %q as image reference: %v", value, err)
+			return fmt.Errorf("'baseImageOverrides': error parsing %q as image reference: %v", value, err)
 		}
 		baseImageOverrides[key] = value
 	}
 
 	var builds []build.Config
 	if err := v.UnmarshalKey("builds", &builds); err != nil {
-		log.Fatalf("configuration section 'builds' cannot be parsed")
+		return fmt.Errorf("configuration section 'builds' cannot be parsed")
 	}
-	buildConfigs = createBuildConfigs(workingDirectory, builds)
+	var err error
+	buildConfigs, err = createBuildConfigMap(workingDirectory, builds)
+	return err
 }
