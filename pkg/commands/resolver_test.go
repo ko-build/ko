@@ -301,7 +301,7 @@ func TestNewPublisherCanPublish(t *testing.T) {
 	}
 }
 
-// registryServerWithImage starts a local registry and pushes a dummy image.
+// registryServerWithImage starts a local registry and pushes a random image.
 // Use this to speed up tests, by not having to reach out to gcr.io for the default base image.
 // The registry uses a NOP logger to avoid spamming test logs.
 // Remember to call `defer Close()` on the returned `httptest.Server`.
