@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
+	"net/http/httptest"
 	"path"
 	"strings"
 	"testing"
@@ -29,7 +31,9 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/registry"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -156,8 +160,14 @@ kind: Bar
 	}
 }
 
-// TODO This test accesses the network and is slow. Implement a dry-run mode?
 func TestNewBuilder(t *testing.T) {
+	namespace := "base"
+	s, err := registryServerWithImage(namespace)
+	if err != nil {
+		t.Fatalf("could not create test registry server: %v", err)
+	}
+	baseImage := fmt.Sprintf("%s/%s", s.Listener.Addr().String(), namespace)
+
 	tests := []struct {
 		description             string
 		importpath              string
@@ -169,6 +179,7 @@ func TestNewBuilder(t *testing.T) {
 			description: "test app with already qualified import path",
 			importpath:  "ko://github.com/google/ko/test",
 			bo: &options.BuildOptions{
+				BaseImage:        baseImage,
 				ConcurrentBuilds: 1,
 			},
 			wantQualifiedImportpath: "ko://github.com/google/ko/test",
@@ -178,13 +189,15 @@ func TestNewBuilder(t *testing.T) {
 			description: "programmatic build config",
 			importpath:  "./test",
 			bo: &options.BuildOptions{
-				ConcurrentBuilds: 1,
+				BaseImage: baseImage,
 				BuildConfigs: map[string]build.Config{
 					"github.com/google/ko/test": {
-						ID:    "id-can-be-anything",
+						ID: "id-can-be-anything",
+						// no easy way to assert on the output, so trigger error to ensure config is picked up
 						Flags: []string{"-invalid-flag-should-cause-error"},
 					},
 				},
+				ConcurrentBuilds: 1,
 				WorkingDirectory: "../..",
 			},
 			wantQualifiedImportpath: "ko://github.com/google/ko/test",
@@ -286,6 +299,23 @@ func TestNewPublisherCanPublish(t *testing.T) {
 			}
 		})
 	}
+}
+
+// registryServerWithImage starts a local registry and pushes a dummy image.
+// Use this to speed up tests, by not having to reach out to gcr.io for the default base image.
+// The registry uses a NOP logger to avoid spamming test logs.
+// Remember to call `defer Close()` on the returned `httptest.Server`.
+func registryServerWithImage(namespace string) (*httptest.Server, error) {
+	nopLog := log.New(ioutil.Discard, "", 0)
+	r := registry.New(registry.Logger(nopLog))
+	s := httptest.NewServer(r)
+	imageName := fmt.Sprintf("%s/%s", s.Listener.Addr().String(), namespace)
+	image, err := random.Image(1024, 1)
+	if err != nil {
+		return nil, fmt.Errorf("random.Image(): %v", err)
+	}
+	crane.Push(image, imageName)
+	return s, nil
 }
 
 func mustRepository(s string) name.Repository {
