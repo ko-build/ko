@@ -106,7 +106,10 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithLabel(parts[0], parts[1]))
 	}
 
-	if len(buildConfigs) > 0 {
+	// prefer buildConfigs from BuildOptions
+	if bo.BuildConfigs != nil {
+		opts = append(opts, build.WithConfig(bo.BuildConfigs))
+	} else if len(buildConfigs) > 0 {
 		opts = append(opts, build.WithConfig(buildConfigs))
 	}
 

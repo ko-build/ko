@@ -29,7 +29,13 @@ import (
 )
 
 func TestPublishImages(t *testing.T) {
-	repo := "registry.example.com/repository"
+	namespace := "base"
+	s, err := registryServerWithImage(namespace)
+	if err != nil {
+		t.Fatalf("could not create test registry server: %v", err)
+	}
+	repo := s.Listener.Addr().String()
+	baseImage := fmt.Sprintf("%s/%s", repo, namespace)
 	sampleAppDir, err := sampleAppRelDir()
 	if err != nil {
 		t.Fatalf("sampleAppRelDir(): %v", err)
@@ -58,6 +64,7 @@ func TestPublishImages(t *testing.T) {
 	for _, test := range tests {
 		ctx := context.Background()
 		bo := &options.BuildOptions{
+			BaseImage:        baseImage,
 			ConcurrentBuilds: 1,
 		}
 		builder, err := NewBuilder(ctx, bo)

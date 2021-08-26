@@ -17,6 +17,7 @@ limitations under the License.
 package options
 
 import (
+	"github.com/google/ko/pkg/build"
 	"github.com/spf13/cobra"
 )
 
@@ -39,6 +40,9 @@ type BuildOptions struct {
 	UserAgent string
 
 	InsecureRegistry bool
+
+	// BuildConfigs enables programmatic overriding of build config set in `.ko.yaml`.
+	BuildConfigs map[string]build.Config
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
