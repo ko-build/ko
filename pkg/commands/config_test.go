@@ -59,6 +59,37 @@ func TestOverrideDefaultBaseImageUsingBuildOption(t *testing.T) {
 	}
 }
 
+// TestDefaultBaseImage is a canary-type test for ensuring that config has been read when creating a builder.
+func TestDefaultBaseImage(t *testing.T) {
+	_, err := NewBuilder(context.Background(), &options.BuildOptions{
+		WorkingDirectory: "testdata/config",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantDefaultBaseImage := "gcr.io/distroless/base:nonroot" // matches value in ./testdata/.ko.yaml
+	if defaultBaseImage != wantDefaultBaseImage {
+		t.Fatalf("wanted defaultBaseImage %s, got %s", wantDefaultBaseImage, defaultBaseImage)
+	}
+}
+
+func TestBuildConfigWithWorkingDirectoryAndDirAndMain(t *testing.T) {
+	_, err := NewBuilder(context.Background(), &options.BuildOptions{
+		WorkingDirectory: "testdata/paths",
+	})
+	if err != nil {
+		t.Fatalf("NewBuilder(): %+v", err)
+	}
+
+	if len(buildConfigs) != 1 {
+		t.Fatalf("expected 1 build config, got %d", len(buildConfigs))
+	}
+	expectedImportPath := "example.com/testapp/cmd/foo" // module from app/go.mod + `main` from .ko.yaml
+	if _, exists := buildConfigs[expectedImportPath]; !exists {
+		t.Fatalf("expected build config for import path [%s], got %+v", expectedImportPath, buildConfigs)
+	}
+}
+
 func TestCreateBuildConfigs(t *testing.T) {
 	compare := func(expected string, actual string) {
 		if expected != actual {
@@ -75,7 +106,11 @@ func TestCreateBuildConfigs(t *testing.T) {
 	}
 
 	for _, b := range buildConfigs {
-		for importPath, buildCfg := range createBuildConfigs("../..", []build.Config{b}) {
+		buildConfigMap, err := createBuildConfigMap("../..", []build.Config{b})
+		if err != nil {
+			t.Fatal(err)
+		}
+		for importPath, buildCfg := range buildConfigMap {
 			switch buildCfg.ID {
 			case "defaults":
 				compare("github.com/google/ko", importPath)

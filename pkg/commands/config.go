@@ -41,6 +41,11 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+const (
+	// configDefaultBaseImage is the default base image if not specified in .ko.yaml.
+	configDefaultBaseImage = "gcr.io/distroless/static:nonroot"
+)
+
 var (
 	defaultBaseImage   string
 	baseImageOverrides map[string]string
@@ -168,8 +173,8 @@ func createCancellableContext() context.Context {
 	return ctx
 }
 
-func createBuildConfigs(baseDir string, configs []build.Config) map[string]build.Config {
-	buildConfigs = make(map[string]build.Config)
+func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[string]build.Config, error) {
+	buildConfigsByImportPath := make(map[string]build.Config)
 	for i, config := range configs {
 		// Make sure to behave like GoReleaser by defaulting to the current
 		// directory in case the build or main field is not set, check
@@ -181,74 +186,80 @@ func createBuildConfigs(baseDir string, configs []build.Config) map[string]build
 			config.Main = "."
 		}
 
-		// To behave like GoReleaser, check whether the configured path points to a
-		// source file, and if so, just use the directory it is in
-		var path string
-		if fi, err := os.Stat(filepath.Join(baseDir, config.Dir, config.Main)); err == nil && fi.Mode().IsRegular() {
-			path = filepath.Dir(filepath.Join(config.Dir, config.Main))
+		// baseDir is the directory where `go list` will be run to look for package information
+		baseDir := filepath.Join(workingDirectory, config.Dir)
 
-		} else {
-			path = filepath.Join(config.Dir, config.Main)
+		// To behave like GoReleaser, check whether the configured `main` config value points to a
+		// source file, and if so, just use the directory it is in
+		path := config.Main
+		if fi, err := os.Stat(filepath.Join(baseDir, config.Main)); err == nil && fi.Mode().IsRegular() {
+			path = filepath.Dir(config.Main)
 		}
 
 		// By default, paths configured in the builds section are considered
 		// local import paths, therefore add a "./" equivalent as a prefix to
 		// the constructured import path
-		importPath := fmt.Sprint(".", string(filepath.Separator), path)
+		localImportPath := fmt.Sprint(".", string(filepath.Separator), path)
 
-		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: baseDir}, importPath)
+		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: baseDir}, localImportPath)
 		if err != nil {
-			log.Fatalf("'builds': entry #%d does not contain a usuable path (%s): %v", i, importPath, err)
+			return nil, fmt.Errorf("'builds': entry #%d does not contain a valid local import path (%s) for directory (%s): %v", i, localImportPath, baseDir, err)
 		}
 
 		if len(pkgs) != 1 {
-			log.Fatalf("'builds': entry #%d results in %d local packages, only 1 is expected", i, len(pkgs))
+			return nil, fmt.Errorf("'builds': entry #%d results in %d local packages, only 1 is expected", i, len(pkgs))
 		}
-
-		importPath = pkgs[0].PkgPath
-		buildConfigs[importPath] = config
+		importPath := pkgs[0].PkgPath
+		buildConfigsByImportPath[importPath] = config
 	}
 
-	return buildConfigs
+	return buildConfigsByImportPath, nil
 }
 
-func init() {
+// loadConfig reads build configuration from defaults, environment variables, and the `.ko.yaml` config file.
+func loadConfig(workingDirectory string) error {
+	v := viper.New()
+	if workingDirectory == "" {
+		workingDirectory = "."
+	}
 	// If omitted, use this base image.
-	viper.SetDefault("defaultBaseImage", "gcr.io/distroless/static:nonroot")
-	viper.SetConfigName(".ko") // .yaml is implicit
-	viper.SetEnvPrefix("KO")
-	viper.AutomaticEnv()
+	v.SetDefault("defaultBaseImage", configDefaultBaseImage)
+	v.SetConfigName(".ko") // .yaml is implicit
+	v.SetEnvPrefix("KO")
+	v.AutomaticEnv()
 
 	if override := os.Getenv("KO_CONFIG_PATH"); override != "" {
-		viper.AddConfigPath(override)
+		v.AddConfigPath(override)
 	}
 
-	viper.AddConfigPath("./")
+	v.AddConfigPath(workingDirectory)
 
-	if err := viper.ReadInConfig(); err != nil {
+	if err := v.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			log.Fatalf("error reading config file: %v", err)
+			return fmt.Errorf("error reading config file: %v", err)
 		}
 	}
 
-	ref := viper.GetString("defaultBaseImage")
+	ref := v.GetString("defaultBaseImage")
 	if _, err := name.ParseReference(ref); err != nil {
-		log.Fatalf("'defaultBaseImage': error parsing %q as image reference: %v", ref, err)
+		return fmt.Errorf("'defaultBaseImage': error parsing %q as image reference: %v", ref, err)
 	}
 	defaultBaseImage = ref
 
 	baseImageOverrides = make(map[string]string)
-	overrides := viper.GetStringMapString("baseImageOverrides")
-	for k, v := range overrides {
-		if _, err := name.ParseReference(v); err != nil {
-			log.Fatalf("'baseImageOverrides': error parsing %q as image reference: %v", v, err)
+	overrides := v.GetStringMapString("baseImageOverrides")
+	for key, value := range overrides {
+		if _, err := name.ParseReference(value); err != nil {
+			return fmt.Errorf("'baseImageOverrides': error parsing %q as image reference: %v", value, err)
 		}
-		baseImageOverrides[k] = v
+		baseImageOverrides[key] = value
 	}
 
 	var builds []build.Config
-	if err := viper.UnmarshalKey("builds", &builds); err != nil {
-		log.Fatalf("configuration section 'builds' cannot be parsed")
+	if err := v.UnmarshalKey("builds", &builds); err != nil {
+		return fmt.Errorf("configuration section 'builds' cannot be parsed")
 	}
-	buildConfigs = createBuildConfigs(".", builds)
+	var err error
+	buildConfigs, err = createBuildConfigMap(workingDirectory, builds)
+	return err
 }
