@@ -166,6 +166,7 @@ func TestNewBuilder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("could not create test registry server: %v", err)
 	}
+	defer s.Close()
 	baseImage := fmt.Sprintf("%s/%s", s.Listener.Addr().String(), namespace)
 
 	tests := []struct {
