@@ -18,15 +18,27 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 )
 
 func TestOverrideDefaultBaseImageUsingBuildOption(t *testing.T) {
-	wantDigest := "sha256:76c39a6f76890f8f8b026f89e081084bc8c64167d74e6c93da7a053cb4ccb5dd"
-	wantImage := "gcr.io/distroless/static-debian9@" + wantDigest
+	namespace := "base"
+	s, err := registryServerWithImage(namespace)
+	if err != nil {
+		t.Fatalf("could not create test registry server: %v", err)
+	}
+	defer s.Close()
+	baseImage := fmt.Sprintf("%s/%s", s.Listener.Addr().String(), namespace)
+	wantDigest, err := crane.Digest(baseImage)
+	if err != nil {
+		t.Fatalf("crane.Digest(%s): %v", baseImage, err)
+	}
+	wantImage := fmt.Sprintf("%s@%s", baseImage, wantDigest)
 	bo := &options.BuildOptions{
 		BaseImage: wantImage,
 	}
