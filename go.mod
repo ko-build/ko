@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v20.10.8+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/evanphx/json-patch/v5 v5.5.0 // indirect
-	github.com/fsnotify/fsnotify v1.4.9
+	github.com/fsnotify/fsnotify v1.5.1
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-cmp v0.5.6
@@ -21,7 +21,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.8.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c // indirect
 	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
 	golang.org/x/tools v0.1.5
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
