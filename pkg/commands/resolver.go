@@ -24,6 +24,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"path"
 	"runtime"
@@ -32,14 +33,27 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/google/ko/pkg/publish"
 	"github.com/google/ko/pkg/resolve"
 	"github.com/mattmoor/dep-notify/pkg/graph"
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio"
+	"github.com/sigstore/cosign/pkg/cosign"
+	cremote "github.com/sigstore/cosign/pkg/cosign/remote"
+	"github.com/sigstore/cosign/pkg/providers"
+	fulcioclient "github.com/sigstore/fulcio/pkg/client"
+	"github.com/sigstore/sigstore/pkg/signature/payload"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/util/sets"
+
+	// Support these ambient OIDC auth plugins.
+	_ "github.com/sigstore/cosign/pkg/providers/github"
+	_ "github.com/sigstore/cosign/pkg/providers/google"
 )
 
 // ua returns the ko user agent.
@@ -218,6 +232,14 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			if err != nil {
 				return nil, err
 			}
+
+			if os.Getenv("COSIGN_EXPERIMENTAL") == "true" {
+				dp = &signPublisher{
+					digests: sets.NewString(),
+					inner:   dp,
+				}
+			}
+
 			publishers = append(publishers, dp)
 		}
 
@@ -257,6 +279,98 @@ func (n nopPublisher) Publish(_ context.Context, br build.Result, s string) (nam
 }
 
 func (n nopPublisher) Close() error { return nil }
+
+// signPublisher signs the collection of images
+type signPublisher struct {
+	// m guards digests
+	m       sync.Mutex
+	digests sets.String
+
+	inner publish.Interface
+}
+
+var _ publish.Interface = (*signPublisher)(nil)
+
+// Publish implements publish.Interface
+func (n *signPublisher) Publish(ctx context.Context, br build.Result, s string) (name.Reference, error) {
+	ref, err := n.inner.Publish(ctx, br, s)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := ref.(*name.Digest); ok {
+		n.m.Lock()
+		defer n.m.Unlock()
+		n.digests.Insert(ref.String())
+	} else {
+		log.Printf("Skipping non-digest reference: %v", ref)
+	}
+	return ref, nil
+}
+
+// Close implements publish.Interface
+func (n *signPublisher) Close() error {
+	if err := func() error {
+		n.m.Lock()
+		defer n.m.Unlock()
+
+		ctx := context.Background()
+
+		fc := fulcioclient.New(&url.URL{
+			Scheme: "https",
+			Host:   "fulcio.sigstore.dev",
+		})
+		var tok string
+		if providers.Enabled(ctx) {
+			amb, err := providers.Provide(ctx, "sigstore")
+			if err != nil {
+				return err
+			}
+			tok = amb
+		}
+		k, err := fulcio.NewSigner(ctx, tok, "https://oauth2.sigstore.dev/auth", "sigstore", fc)
+		if err != nil {
+			return err
+		}
+
+		for _, d := range n.digests.List() {
+			digest, _ := name.NewDigest(d)
+			p, err := (&payload.Cosign{
+				Image: digest,
+			}).MarshalJSON()
+			if err != nil {
+				return err
+			}
+
+			sig, err := k.SignMessage(bytes.NewReader(p))
+			if err != nil {
+				return err
+			}
+
+			h, _ := v1.NewHash(digest.DigestStr())
+			sigRef := cosign.AttachedImageTag(digest.Repository, h, cosign.SignatureTagSuffix)
+
+			uo := cremote.UploadOpts{
+				Cert:         k.Cert,
+				Chain:        k.Chain,
+				DupeDetector: k,
+				RemoteOpts: []remote.Option{
+					remote.WithAuthFromKeychain(authn.DefaultKeychain),
+				},
+			}
+
+			if _, err = cremote.UploadSignature(sig, p, sigRef, uo); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}(); err != nil {
+		return err
+	}
+
+	return n.inner.Close()
+}
 
 // resolvedFuture represents a "future" for the bytes of a resolved file.
 type resolvedFuture chan []byte

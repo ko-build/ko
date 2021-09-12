@@ -26,11 +26,7 @@ func Pipe(p []int) (err error) {
 		return EINVAL
 	}
 	var pp [2]_C_int
-	// Try pipe2 first for Android O, then try pipe for kernel 2.6.23.
 	err = pipe2(&pp, 0)
-	if err == ENOSYS {
-		err = pipe(&pp)
-	}
 	p[0] = int(pp[0])
 	p[1] = int(pp[1])
 	return
@@ -184,7 +180,7 @@ const rlimInf32 = ^uint32(0)
 const rlimInf64 = ^uint64(0)
 
 func Getrlimit(resource int, rlim *Rlimit) (err error) {
-	err = prlimit(0, resource, nil, rlim)
+	err = Prlimit(0, resource, nil, rlim)
 	if err != ENOSYS {
 		return err
 	}
@@ -212,7 +208,7 @@ func Getrlimit(resource int, rlim *Rlimit) (err error) {
 //sysnb	setrlimit(resource int, rlim *rlimit32) (err error) = SYS_SETRLIMIT
 
 func Setrlimit(resource int, rlim *Rlimit) (err error) {
-	err = prlimit(0, resource, rlim, nil)
+	err = Prlimit(0, resource, rlim, nil)
 	if err != ENOSYS {
 		return err
 	}

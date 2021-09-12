@@ -21,15 +21,9 @@ package unix
 //sysnb	Getgid() (gid int)
 //sysnb	Getrlimit(resource int, rlim *Rlimit) (err error)
 //sysnb	Getuid() (uid int)
-//sysnb	inotifyInit() (fd int, err error)
 
 func InotifyInit() (fd int, err error) {
-	// First try inotify_init1, because Android's seccomp policy blocks the latter.
-	fd, err = InotifyInit1(0)
-	if err == ENOSYS {
-		fd, err = inotifyInit()
-	}
-	return
+	return InotifyInit1(0)
 }
 
 //sys	Ioperm(from int, num int, on int) (err error)
