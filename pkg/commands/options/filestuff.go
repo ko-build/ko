@@ -23,6 +23,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const deprecation412 = `NOTICE!
+-----------------------------------------------------------------
+Watch mode is deprecated and unsupported, and will be removed in
+a future release.
+
+For more information see:
+   https://github.com/google/ko/issues/412
+-----------------------------------------------------------------
+`
+
 // FilenameOptions is from pkg/kubectl.
 type FilenameOptions struct {
 	Filenames []string
@@ -37,7 +47,7 @@ func AddFileArg(cmd *cobra.Command, fo *FilenameOptions) {
 	cmd.Flags().BoolVarP(&fo.Recursive, "recursive", "R", fo.Recursive,
 		"Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.")
 	cmd.Flags().BoolVarP(&fo.Watch, "watch", "W", fo.Watch,
-		"Continuously monitor the transitive dependencies of the passed yaml files, and redeploy whenever anything changes.")
+		"Continuously monitor the transitive dependencies of the passed yaml files, and redeploy whenever anything changes. (DEPRECATED)")
 }
 
 // Based heavily on pkg/kubectl
@@ -51,6 +61,7 @@ func EnumerateFiles(fo *FilenameOptions) chan string {
 		// interrupt.
 		var watcher *fsnotify.Watcher
 		if fo.Watch {
+			log.Print(deprecation412)
 			var err error
 			watcher, err = fsnotify.NewWatcher()
 			if err != nil {

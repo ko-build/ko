@@ -23,9 +23,10 @@ var Root = New()
 
 func New() *cobra.Command {
 	root := &cobra.Command{
-		Use:          "ko",
-		Short:        "Rapidly iterate with Go, Containers, and Kubernetes.",
-		SilenceUsage: true, // Don't show usage on errors
+		Use:               "ko",
+		Short:             "Rapidly iterate with Go, Containers, and Kubernetes.",
+		SilenceUsage:      true, // Don't show usage on errors
+		DisableAutoGenTag: true,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
