@@ -1,6 +1,6 @@
 module github.com/google/ko
 
-go 1.15
+go 1.16
 
 require (
 	github.com/containerd/stargz-snapshotter/estargz v0.8.0
