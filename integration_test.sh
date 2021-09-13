@@ -20,7 +20,7 @@ mkdir -p "$GOPATH/src/github.com/google/ko"
 cp -r "$ROOT_DIR/"* "$GOPATH/src/github.com/google/ko/"
 
 echo "Downloading github.com/go-training/helloworld"
-go get -d github.com/go-training/helloworld
+GO111MODULE=off go get -d github.com/go-training/helloworld
 
 pushd "$GOPATH/src/github.com/google/ko" || exit 1
 
