@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -37,6 +38,8 @@ import (
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/google/ko/pkg/publish"
+	"github.com/sigstore/cosign/cmd/cosign/cli/fulcio/fulcioroots"
+	"github.com/sigstore/cosign/pkg/cosign"
 	"github.com/spf13/viper"
 	"golang.org/x/tools/go/packages"
 )
@@ -55,6 +58,7 @@ var (
 // getBaseImage returns a function that determines the base image for a given import path.
 // If the `bo.BaseImage` parameter is non-empty, it overrides base image configuration from `.ko.yaml`.
 func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
+	v := &verifier{entries: make(map[name.Digest]*entry, 10)}
 	return func(ctx context.Context, s string) (name.Reference, build.Result, error) {
 		s = strings.TrimPrefix(s, build.StrictScheme)
 		// Viper configuration file keys are case insensitive, and are
@@ -124,6 +128,22 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 		if err != nil {
 			return nil, nil, err
 		}
+
+		// With the resolved digest in hand (in descriptor), we verify the
+		// signature of the base image.
+		// TODO(mattmoor): Once Fulcio and Rekor have been declared
+		// non-experimental, we should remove this guard and use the warning
+		// to push folks to sign their base images.
+		if os.Getenv("COSIGN_EXPERIMENTAL") == "true" {
+			digest := ref.Context().Digest(desc.Digest.String())
+			if err := v.verify(ctx, digest); err != nil {
+				if bo.Strict {
+					return nil, nil, err
+				}
+				log.Printf("WARNING: unabled to verify %s: %v", digest, err)
+			}
+		}
+
 		switch desc.MediaType {
 		case types.OCIImageIndex, types.DockerManifestList:
 			if multiplatform {
@@ -137,6 +157,55 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 			return ref, img, err
 		}
 	}
+}
+
+// verifier memoizes digest verification results, so that we avoid redundant
+// digest verification.
+type verifier struct {
+	m       sync.Mutex
+	entries map[name.Digest]*entry
+}
+
+// entry is used to hold the sync.Once used to execute the digest verification,
+// and the resulting error (possibly nil), that results from verification.
+type entry struct {
+	once   sync.Once
+	result error
+}
+
+func (v *verifier) verify(ctx context.Context, digest name.Digest) error {
+	e := v.getEntry(digest)
+	e.once.Do(func() {
+		co := &cosign.CheckOpts{
+			RegistryClientOpts: []remote.Option{
+				remote.WithAuthFromKeychain(authn.DefaultKeychain),
+				remote.WithContext(ctx),
+			},
+			ClaimVerifier: cosign.SimpleClaimVerifier,
+			RekorURL:      "https://rekor.sigstore.dev",
+			RootCerts:     fulcioroots.Get(),
+			SignatureRepo: digest.Repository,
+		}
+
+		_, e.result = cosign.Verify(ctx, digest, co)
+		if e.result == nil {
+			log.Printf("Verified %s", digest)
+		}
+	})
+	return e.result
+}
+
+func (v *verifier) getEntry(digest name.Digest) *entry {
+	v.m.Lock()
+	defer v.m.Unlock()
+	// See if there's already an entry for this digest.
+	if e, ok := v.entries[digest]; ok {
+		return e
+	}
+	// If not, then create one, register and return it.
+	e := &entry{}
+	v.entries[digest] = e
+	return e
 }
 
 func getTimeFromEnv(env string) (*v1.Time, error) {

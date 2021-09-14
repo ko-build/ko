@@ -55,6 +55,7 @@ ko publish IMPORTPATH... [flags]
       --platform string          Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths    Whether to preserve the full import path after KO_DOCKER_REPO.
       --push                     Push images to KO_DOCKER_REPO (default true)
+      --strict                   Whether warnings should be made fatal.
       --tag-only                 Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.
   -t, --tags strings             Which tags to use for the produced image instead of the default 'latest' tag (may not work properly with --base-import-paths or --bare). (default [latest])
       --tarball string           File to save images tarballs

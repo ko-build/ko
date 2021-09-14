@@ -31,6 +31,9 @@ type BuildOptions struct {
 	// Empty string means the current working directory.
 	WorkingDirectory string
 
+	// Strict mode directs us to turn "warnings" into fatal errors.
+	Strict bool
+
 	ConcurrentBuilds     int
 	DisableOptimizations bool
 	Platform             string
@@ -46,6 +49,8 @@ type BuildOptions struct {
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
+	cmd.Flags().BoolVar(&bo.Strict, "strict", false, "Whether warnings should be made fatal.")
+
 	cmd.Flags().IntVarP(&bo.ConcurrentBuilds, "jobs", "j", 0,
 		"The maximum number of concurrent builds (default GOMAXPROCS)")
 	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,

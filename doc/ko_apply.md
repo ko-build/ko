@@ -74,6 +74,7 @@ ko apply -f FILENAME [flags]
       --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (DEPRECATED)
   -l, --selector string                Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)
   -s, --server string                  The address and port of the Kubernetes API server (DEPRECATED)
+      --strict                         Whether warnings should be made fatal.
       --tag-only                       Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.
   -t, --tags strings                   Which tags to use for the produced image instead of the default 'latest' tag (may not work properly with --base-import-paths or --bare). (default [latest])
       --tarball string                 File to save images tarballs
