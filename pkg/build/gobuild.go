@@ -48,22 +48,6 @@ import (
 
 const (
 	defaultAppFilename = "ko-app"
-
-	gorootWarningTemplate = `NOTICE!
------------------------------------------------------------------
-ko and go have mismatched GOROOT:
-    go/build.Default.GOROOT = %q
-    $(go env GOROOT) = %q
-
-Inferring GOROOT=%q
-
-Run this to remove this warning:
-    export GOROOT=$(go env GOROOT)
-
-For more information see:
-    https://github.com/google/ko/issues/106
------------------------------------------------------------------
-`
 )
 
 // GetBase takes an importpath and returns a base image reference and base image (or index).
@@ -233,11 +217,10 @@ func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error
 	}
 
 	// If $(go env GOROOT) successfully returns a non-empty string that differs from
-	// the default build context GOROOT, print a warning and use $(go env GOROOT).
+	// the default build context GOROOT, use $(go env GOROOT) instead.
 	bc := gb.Default
 	bc.Dir = dir
 	if goroot != "" && bc.GOROOT != goroot {
-		log.Printf(gorootWarningTemplate, bc.GOROOT, goroot, goroot)
 		bc.GOROOT = goroot
 	}
 
