@@ -264,6 +264,7 @@ func TestNewPublisherCanPublish(t *testing.T) {
 				Local:               true,
 				LocalDomain:         localDomain,
 				PreserveImportPaths: true,
+				DockerClient:        &kotesting.MockDaemon{},
 			},
 		},
 		{

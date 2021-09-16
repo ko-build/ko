@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package publish
+package publish_test
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/publish"
 )
 
 var (
@@ -56,7 +57,7 @@ func TestDefault(t *testing.T) {
 		}
 
 		repoName := fmt.Sprintf("%s/%s", u.Host, base)
-		def, err := NewDefault(repoName)
+		def, err := publish.NewDefault(repoName)
 		if err != nil {
 			t.Errorf("NewDefault() = %v", err)
 		}
@@ -94,7 +95,7 @@ func TestDefaultWithCustomNamer(t *testing.T) {
 
 		repoName := fmt.Sprintf("%s/%s", u.Host, base)
 
-		def, err := NewDefault(repoName, WithNamer(md5Hash))
+		def, err := publish.NewDefault(repoName, publish.WithNamer(md5Hash))
 		if err != nil {
 			t.Errorf("NewDefault() = %v", err)
 		}
@@ -126,7 +127,7 @@ func TestDefaultWithTags(t *testing.T) {
 
 		repoName := fmt.Sprintf("%s/%s", u.Host, base)
 
-		def, err := NewDefault(repoName, WithTags([]string{"notLatest", "v1.2.3"}))
+		def, err := publish.NewDefault(repoName, publish.WithTags([]string{"notLatest", "v1.2.3"}))
 		if err != nil {
 			t.Errorf("NewDefault() = %v", err)
 		}
@@ -207,7 +208,7 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 
 	repoName := fmt.Sprintf("%s/%s", u.Host, base)
 
-	def, err := NewDefault(repoName, WithTags([]string{releaseTag}))
+	def, err := publish.NewDefault(repoName, publish.WithTags([]string{releaseTag}))
 	if err != nil {
 		t.Errorf("NewDefault() = %v", err)
 	}
@@ -225,7 +226,7 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 		t.Errorf("Tag v1.2.3 was not created.")
 	}
 
-	def, err = NewDefault(repoName, WithTags([]string{releaseTag}), WithTagOnly(true))
+	def, err = publish.NewDefault(repoName, publish.WithTags([]string{releaseTag}), publish.WithTagOnly(true))
 	if err != nil {
 		t.Errorf("NewDefault() = %v", err)
 	}
