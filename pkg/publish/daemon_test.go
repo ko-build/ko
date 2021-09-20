@@ -14,37 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package publish
+package publish_test
 
 import (
 	"context"
-	"io"
-	"io/ioutil"
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/api/types"
-	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	kotesting "github.com/google/ko/pkg/internal/testing"
+	"github.com/google/ko/pkg/publish"
 )
-
-type mockClient struct {
-	daemon.Client
-}
-
-func (m *mockClient) NegotiateAPIVersion(context.Context) {}
-func (m *mockClient) ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error) {
-	return types.ImageLoadResponse{
-		Body: ioutil.NopCloser(strings.NewReader("Loaded")),
-	}, nil
-}
-
-func (m *mockClient) ImageTag(_ context.Context, _ string, tag string) error {
-	Tags = append(Tags, tag)
-	return nil
-}
-
-var Tags []string
 
 func TestDaemon(t *testing.T) {
 	importpath := "github.com/google/ko"
@@ -53,7 +33,8 @@ func TestDaemon(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	def, err := NewDaemon(md5Hash, []string{}, WithDockerClient(&mockClient{}))
+	client := &kotesting.MockDaemon{}
+	def, err := publish.NewDaemon(md5Hash, []string{}, publish.WithDockerClient(client))
 	if err != nil {
 		t.Fatalf("NewDaemon() = %v", err)
 	}
@@ -66,15 +47,14 @@ func TestDaemon(t *testing.T) {
 }
 
 func TestDaemonTags(t *testing.T) {
-	Tags = nil
-
 	importpath := "github.com/google/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	def, err := NewDaemon(md5Hash, []string{"v2.0.0", "v1.2.3", "production"}, WithDockerClient(&mockClient{}))
+	client := &kotesting.MockDaemon{}
+	def, err := publish.NewDaemon(md5Hash, []string{"v2.0.0", "v1.2.3", "production"}, publish.WithDockerClient(client))
 	if err != nil {
 		t.Fatalf("NewDaemon() = %v", err)
 	}
@@ -88,15 +68,13 @@ func TestDaemonTags(t *testing.T) {
 	expected := []string{"ko.local/98b8c7facdad74510a7cae0cd368eb4e:v2.0.0", "ko.local/98b8c7facdad74510a7cae0cd368eb4e:v1.2.3", "ko.local/98b8c7facdad74510a7cae0cd368eb4e:production"}
 
 	for i, v := range expected {
-		if Tags[i] != v {
-			t.Errorf("Expected tag %v got %v", v, Tags[i])
+		if client.Tags[i] != v {
+			t.Errorf("Expected tag %v got %v", v, client.Tags[i])
 		}
 	}
 }
 
 func TestDaemonDomain(t *testing.T) {
-	Tags = nil
-
 	importpath := "github.com/google/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
@@ -104,7 +82,8 @@ func TestDaemonDomain(t *testing.T) {
 	}
 
 	localDomain := "registry.example.com/repository"
-	def, err := NewDaemon(md5Hash, []string{}, WithLocalDomain(localDomain), WithDockerClient(&mockClient{}))
+	client := &kotesting.MockDaemon{}
+	def, err := publish.NewDaemon(md5Hash, []string{}, publish.WithLocalDomain(localDomain), publish.WithDockerClient(client))
 	if err != nil {
 		t.Fatalf("NewDaemon() = %v", err)
 	}

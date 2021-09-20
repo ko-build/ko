@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package publish
+package publish_test
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/ko/pkg/publish"
 )
 
 func TestTarball(t *testing.T) {
@@ -60,7 +61,7 @@ func TestTarball(t *testing.T) {
 		"debug",
 	}}
 	for _, tags := range tagss {
-		tp := NewTarball(fp.Name(), repoName, md5Hash, tags)
+		tp := publish.NewTarball(fp.Name(), repoName, md5Hash, tags)
 		if d, err := tp.Publish(context.Background(), img, importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), tag.Repository.String()) {

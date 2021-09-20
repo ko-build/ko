@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package publish
+package publish_test
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/ko/pkg/publish"
 )
 
 func TestMulti(t *testing.T) {
@@ -40,7 +41,7 @@ func TestMulti(t *testing.T) {
 	defer fp.Close()
 	defer os.Remove(fp.Name())
 
-	tp := NewTarball(fp.Name(), repoName, md5Hash, []string{})
+	tp := publish.NewTarball(fp.Name(), repoName, md5Hash, []string{})
 
 	tmp, err := ioutil.TempDir("/tmp", "ko")
 	if err != nil {
@@ -48,12 +49,12 @@ func TestMulti(t *testing.T) {
 	}
 	defer os.RemoveAll(tmp)
 
-	lp, err := NewLayout(tmp)
+	lp, err := publish.NewLayout(tmp)
 	if err != nil {
 		t.Errorf("NewLayout() = %v", err)
 	}
 
-	p := MultiPublisher(lp, tp)
+	p := publish.MultiPublisher(lp, tp)
 	if _, err := p.Publish(context.Background(), img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	}
@@ -69,7 +70,7 @@ func TestMulti_Zero(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	p := MultiPublisher() // No publishers.
+	p := publish.MultiPublisher() // No publishers.
 	if _, err := p.Publish(context.Background(), img, "foo"); err == nil {
 		t.Errorf("Publish() got nil error")
 	}
