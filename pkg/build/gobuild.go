@@ -686,7 +686,7 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	config, ok := g.buildConfigs[ip]
 	if !ok {
 		// Apply default build flags in case none were supplied
-		config.Flags = addGo113TrimPathFlag(config.Flags)
+		config.Flags = append(config.Flags, "-trimpath")
 	}
 
 	if g.disableOptimizations {
