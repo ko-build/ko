@@ -23,14 +23,10 @@ jobs:
           importpath: golang.org/x/tools/cmd/goimports
 
     steps:
-      - name: Set up Go 1.16.x
-        uses: actions/setup-go@v2
+      - uses: actions/setup-go@v2
         with:
-          go-version: 1.16.x
-        id: go
-
-      - name: Check out code
-        uses: actions/checkout@v2
+          go-version: 1.17.x
+      - uses: actions/checkout@v2
 
       - name: Install Dependencies
         if: ${{ matrix.importpath != '' }}
@@ -39,7 +35,6 @@ jobs:
           GO111MODULE=on go get ${{ matrix.importpath }}
 
       - name: ${{ matrix.tool }} ${{ matrix.options }}
-        shell: bash
         run: >
           ${{ matrix.tool }} ${{ matrix.options }} -w
           $(find .
@@ -50,7 +45,6 @@ jobs:
           -o -type f -name '*.go' -print)
 
       - name: Verify ${{ matrix.tool }}
-        shell: bash
         run: |
           # From: https://backreference.org/2009/12/23/how-to-match-newlines-in-sed/
           # This is to leverage this workaround:
@@ -72,14 +66,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Set up Go 1.16.x
-        uses: actions/setup-go@v2
+      - uses: actions/setup-go@v2
         with:
-          go-version: 1.16.x
-        id: go
-
-      - name: Check out code
-        uses: actions/checkout@v2
+          go-version: 1.17.x
+      - uses: actions/checkout@v2
 
       - name: Install Tools
         env:
@@ -102,18 +92,11 @@ jobs:
 
           echo "${TEMP_PATH}" >> $GITHUB_PATH
 
-      - id: golangci_configuration
-        uses: andstor/file-existence-action@v1
-        with:
-          files: .golangci.yaml
-      - name: Go Lint
-        if: steps.golangci_configuration.outputs.files_exists == 'true'
-        uses: golangci/golangci-lint-action@v2
+      - uses: golangci/golangci-lint-action@v2
         with:
           version: v1.38
 
       - name: misspell
-        shell: bash
         if: ${{ always() }}
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
@@ -141,7 +124,6 @@ jobs:
           echo '::endgroup::'
 
       - name: trailing whitespace
-        shell: bash
         if: ${{ always() }}
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
@@ -170,7 +152,6 @@ jobs:
           echo '::endgroup::'
 
       - name: EOF newline
-        shell: bash
         if: ${{ always() }}
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
@@ -213,7 +194,6 @@ jobs:
       # since their action is not yet released under a stable version.
       - name: Language
         if: ${{ always() && github.event_name == 'pull_request' }}
-        shell: bash
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
         run: |
