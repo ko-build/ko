@@ -742,7 +742,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		},
 	})
 
-	appPath := path.Join("/ko-app", appFilename(ref.Path()))
+	appDir := "/ko-app"
+	appPath := path.Join(appDir, appFilename(ref.Path()))
 
 	// Construct a tarball with the binary and produce a layer.
 	binaryLayerBuf, err := tarBinary(appPath, file, v1.Time{}, platform)
@@ -788,7 +789,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		updatePath(cfg, `C:\ko-app`)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
 	} else {
-		updatePath(cfg, appPath)
+		updatePath(cfg, appDir)
 		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	}
 	cfg.Author = "github.com/google/ko"
