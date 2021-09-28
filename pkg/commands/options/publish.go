@@ -92,6 +92,11 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 
 	cmd.Flags().BoolVarP(&po.PreserveImportPaths, "preserve-import-paths", "P", po.PreserveImportPaths,
 		"Whether to preserve the full import path after KO_DOCKER_REPO.")
+
+	// Set Base import Path if the KO_BASE_IMPORT_PATHS variable is set
+	if _, exists := os.LookupEnv("KO_BASE_IMPORT_PATHS"); exists {
+		po.BaseImportPaths = true
+	}
 	cmd.Flags().BoolVarP(&po.BaseImportPaths, "base-import-paths", "B", po.BaseImportPaths,
 		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).")
 	cmd.Flags().BoolVar(&po.Bare, "bare", po.Bare,
