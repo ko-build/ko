@@ -1,30 +1,43 @@
-## ko run
+## ko build
 
-A variant of `kubectl run` that containerizes IMPORTPATH first.
+Build and publish container images from the given importpaths.
 
 ### Synopsis
 
-This sub-command combines "ko build" and "kubectl run" to support containerizing and running Go binaries on Kubernetes in a single command.
+This sub-command builds the provided import paths into Go binaries, containerizes them, and publishes them.
 
 ```
-ko run IMPORTPATH [flags]
+ko build IMPORTPATH... [flags]
 ```
 
 ### Examples
 
 ```
 
-  # Publish the image and run it on Kubernetes as:
+  # Build and publish import path references to a Docker
+  # Registry as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
   # When KO_DOCKER_REPO is ko.local, it is the same as if
   # --local and --preserve-import-paths were passed.
-  ko run github.com/foo/bar/cmd/baz
+  ko build github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
 
-  # This supports relative import paths as well.
-  ko run ./cmd/baz
+  # Build and publish a relative import path as:
+  #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
+  # When KO_DOCKER_REPO is ko.local, it is the same as if
+  # --local and --preserve-import-paths were passed.
+  ko build ./cmd/blah
 
-  # You can also supply args and flags to the command.
-  ko run ./cmd/baz -- -v arg1 arg2 --yes
+  # Build and publish a relative import path as:
+  #   ${KO_DOCKER_REPO}/<import path>
+  # When KO_DOCKER_REPO is ko.local, it is the same as if
+  # --local was passed.
+  ko build --preserve-import-paths ./cmd/blah
+
+  # Build and publish import path references to a Docker
+  # daemon as:
+  #   ko.local/<import path>
+  # This always preserves import paths.
+  ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
 ```
 
 ### Options
@@ -33,7 +46,7 @@ ko run IMPORTPATH [flags]
       --bare                     Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).
   -B, --base-import-paths        Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).
       --disable-optimizations    Disable optimizations when building Go code. Useful when you want to interactively debug the created container.
-  -h, --help                     help for run
+  -h, --help                     help for build
       --image-label strings      Which labels (key=value) to add to the image.
       --insecure-registry        Whether to skip TLS verification on the registry
   -j, --jobs int                 The maximum number of concurrent builds (default GOMAXPROCS)

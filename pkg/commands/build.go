@@ -21,40 +21,41 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// addPublish augments our CLI surface with publish.
-func addPublish(topLevel *cobra.Command) {
+// addBuild augments our CLI surface with build.
+func addBuild(topLevel *cobra.Command) {
 	po := &options.PublishOptions{}
 	bo := &options.BuildOptions{}
 
-	publish := &cobra.Command{
-		Use:   "publish IMPORTPATH...",
-		Short: "Build and publish container images from the given importpaths.",
-		Long:  `This sub-command builds the provided import paths into Go binaries, containerizes them, and publishes them.`,
+	build := &cobra.Command{
+		Use:     "build IMPORTPATH...",
+		Short:   "Build and publish container images from the given importpaths.",
+		Long:    `This sub-command builds the provided import paths into Go binaries, containerizes them, and publishes them.`,
+		Aliases: []string{"publish"},
 		Example: `
   # Build and publish import path references to a Docker
   # Registry as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
   # When KO_DOCKER_REPO is ko.local, it is the same as if
   # --local and --preserve-import-paths were passed.
-  ko publish github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
+  ko build github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
 
   # Build and publish a relative import path as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
   # When KO_DOCKER_REPO is ko.local, it is the same as if
   # --local and --preserve-import-paths were passed.
-  ko publish ./cmd/blah
+  ko build ./cmd/blah
 
   # Build and publish a relative import path as:
   #   ${KO_DOCKER_REPO}/<import path>
   # When KO_DOCKER_REPO is ko.local, it is the same as if
   # --local was passed.
-  ko publish --preserve-import-paths ./cmd/blah
+  ko build --preserve-import-paths ./cmd/blah
 
   # Build and publish import path references to a Docker
   # daemon as:
   #   ko.local/<import path>
   # This always preserves import paths.
-  ko publish --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
+  ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(_ *cobra.Command, args []string) error {
 			ctx := createCancellableContext()
@@ -78,7 +79,7 @@ func addPublish(topLevel *cobra.Command) {
 			return nil
 		},
 	}
-	options.AddPublishArg(publish, po)
-	options.AddBuildOptions(publish, bo)
-	topLevel.AddCommand(publish)
+	options.AddPublishArg(build, po)
+	options.AddBuildOptions(build, bo)
+	topLevel.AddCommand(build)
 }

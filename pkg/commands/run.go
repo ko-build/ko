@@ -35,7 +35,7 @@ func addRun(topLevel *cobra.Command) {
 	run := &cobra.Command{
 		Use:   "run IMPORTPATH",
 		Short: "A variant of `kubectl run` that containerizes IMPORTPATH first.",
-		Long:  `This sub-command combines "ko publish" and "kubectl run" to support containerizing and running Go binaries on Kubernetes in a single command.`,
+		Long:  `This sub-command combines "ko build" and "kubectl run" to support containerizing and running Go binaries on Kubernetes in a single command.`,
 		Example: `
   # Publish the image and run it on Kubernetes as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
