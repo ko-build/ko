@@ -24,6 +24,7 @@ ko deps IMAGE [flags]
 
 ```
   -h, --help   help for deps
+      --spdx   Generate output in SPDX format
 ```
 
 ### SEE ALSO

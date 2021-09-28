@@ -18,6 +18,7 @@ import (
 	"go/types"
 	"io"
 	"sort"
+	"strings"
 
 	"golang.org/x/tools/internal/typeparams"
 )
@@ -352,8 +353,7 @@ func (r *importReader) obj(name string) {
 		if tag == 'G' {
 			tparams = r.tparamList()
 		}
-		sig := r.signature(nil)
-		typeparams.SetForSignature(sig, tparams)
+		sig := r.signature(nil, nil, tparams)
 		r.declare(types.NewFunc(pos, r.currPkg, name, sig))
 
 	case 'T', 'U':
@@ -377,12 +377,12 @@ func (r *importReader) obj(name string) {
 				mpos := r.pos()
 				mname := r.ident()
 				recv := r.param()
-				msig := r.signature(recv)
 
 				// If the receiver has any targs, set those as the
 				// rparams of the method (since those are the
 				// typeparams being used in the method sig/body).
-				targs := typeparams.NamedTypeArgs(baseType(msig.Recv().Type()))
+				targs := typeparams.NamedTypeArgs(baseType(recv.Type()))
+				var rparams []*typeparams.TypeParam
 				if targs.Len() > 0 {
 					rparams := make([]*typeparams.TypeParam, targs.Len())
 					for i := range rparams {
@@ -392,8 +392,8 @@ func (r *importReader) obj(name string) {
 						// library importer stricter.
 						rparams[i] = targs.At(i).(*typeparams.TypeParam)
 					}
-					typeparams.SetRecvTypeParams(msig, rparams)
 				}
+				msig := r.signature(recv, rparams, nil)
 
 				named.AddMethod(types.NewFunc(mpos, r.currPkg, mname, msig))
 			}
@@ -406,12 +406,21 @@ func (r *importReader) obj(name string) {
 		if r.p.exportVersion < iexportVersionGenerics {
 			errorf("unexpected type param type")
 		}
-		name0, sub := parseSubscript(name)
+		// Temporarily strip both type parameter subscripts and path prefixes,
+		// while we replace subscripts with prefixes in the compiler.
+		// TODO(rfindley): remove support for subscripts once the compiler changes
+		// have landed.
+		name0, _ := parseSubscript(name)
+		ix := strings.LastIndex(name, ".")
+		name0 = name0[ix+1:]
 		tn := types.NewTypeName(pos, r.currPkg, name0, nil)
 		t := typeparams.NewTypeParam(tn, nil)
-		if sub == 0 {
-			errorf("name %q missing subscript", name)
-		}
+
+		// The check below is disabled so that we can support both path-prefixed
+		// and subscripted type parameter names.
+		// if sub == 0 {
+		// 	errorf("name %q missing subscript", name)
+		// }
 
 		// TODO(rfindley): can we use a different, stable ID?
 		// t.SetId(sub)
@@ -653,7 +662,7 @@ func (r *importReader) doType(base *types.Named) types.Type {
 		return types.NewMap(r.typ(), r.typ())
 	case signatureType:
 		r.currPkg = r.pkg()
-		return r.signature(nil)
+		return r.signature(nil, nil, nil)
 
 	case structType:
 		r.currPkg = r.pkg()
@@ -693,7 +702,7 @@ func (r *importReader) doType(base *types.Named) types.Type {
 				recv = types.NewVar(token.NoPos, r.currPkg, "", base)
 			}
 
-			msig := r.signature(recv)
+			msig := r.signature(recv, nil, nil)
 			methods[i] = types.NewFunc(mpos, r.currPkg, mname, msig)
 		}
 
@@ -750,11 +759,11 @@ func (r *importReader) kind() itag {
 	return itag(r.uint64())
 }
 
-func (r *importReader) signature(recv *types.Var) *types.Signature {
+func (r *importReader) signature(recv *types.Var, rparams []*typeparams.TypeParam, tparams []*typeparams.TypeParam) *types.Signature {
 	params := r.paramList()
 	results := r.paramList()
 	variadic := params.Len() > 0 && r.bool()
-	return types.NewSignature(recv, params, results, variadic)
+	return typeparams.NewSignatureType(recv, rparams, tparams, params, results, variadic)
 }
 
 func (r *importReader) tparamList() []*typeparams.TypeParam {

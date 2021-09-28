@@ -16,6 +16,7 @@ package commands
 
 import (
 	"archive/tar"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -28,11 +29,13 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/ko/internal/sbom"
 	"github.com/spf13/cobra"
 )
 
 // addDeps augments our CLI surface with deps.
 func addDeps(topLevel *cobra.Command) {
+	var spdx bool
 	deps := &cobra.Command{
 		Use:   "deps IMAGE",
 		Short: "Print Go module dependency information about the ko-built binary in the image",
@@ -112,10 +115,24 @@ If the image was not built using ko, or if it was built without embedding depend
 				cmd := exec.CommandContext(ctx, "go", "version", "-m", n)
 				cmd.Stdout = os.Stdout
 				cmd.Stderr = os.Stderr
+				if spdx {
+					var buf bytes.Buffer
+					cmd.Stdout = &buf
+					if err := cmd.Run(); err != nil {
+						return err
+					}
+					b, err := sbom.GenerateSPDX(Version, h.ModTime, buf.Bytes())
+					if err != nil {
+						return err
+					}
+					fmt.Fprintln(os.Stdout, string(b))
+					return nil
+				}
 				return cmd.Run()
 			}
 			// unreachable
 		},
 	}
+	deps.Flags().BoolVar(&spdx, "spdx", false, "Generate output in SPDX format")
 	topLevel.AddCommand(deps)
 }
