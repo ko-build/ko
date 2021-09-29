@@ -163,13 +163,34 @@ func NewPublisher(po *options.PublishOptions) (publish.Interface, error) {
 	return makePublisher(po)
 }
 
+// qualifyDockerRepo resolves a KO_DOCKER_REPO value to its fully qualified
+// equivalent.
+//
+// e.g., KO_DOCKER_REPO=my-dockerhub-user becomes index.docker.io/library/my-dockerhub-user.
+//
+// If there are any errors parsing the repo, they are ignored and will be
+// handled later.
+func qualifyDockerRepo(r string) string {
+	repo, err := name.NewRepository(r)
+	if err != nil {
+		return r
+	}
+	return path.Join(repo.Registry.RegistryStr(), repo.RepositoryStr())
+}
+
 func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
+	repoName := po.DockerRepo
+	if repoName != po.LocalDomain &&
+		!po.Local &&
+		repoName != publish.KindDomain {
+		repoName = qualifyDockerRepo(po.DockerRepo)
+	}
+
 	// Create the publish.Interface that we will use to publish image references
 	// to either a docker daemon or a container image registry.
 	innerPublisher, err := func() (publish.Interface, error) {
-		repoName := po.DockerRepo
 		namer := options.MakeNamer(po)
-		if repoName == publish.LocalDomain || po.Local {
+		if repoName == po.LocalDomain || po.Local {
 			// TODO(jonjohnsonjr): I'm assuming that nobody will
 			// use local with other publishers, but that might
 			// not be true.

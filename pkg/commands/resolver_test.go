@@ -240,44 +240,45 @@ func TestNewPublisherCanPublish(t *testing.T) {
 		po            *options.PublishOptions
 		shouldError   bool
 		wantError     error
-	}{
-		{
-			description:   "base import path",
-			wantImageName: fmt.Sprintf("%s/%s", dockerRepo, path.Base(importpath)),
-			po: &options.PublishOptions{
-				BaseImportPaths: true,
-				DockerRepo:      dockerRepo,
-			},
+	}{{
+		description:   "base import path",
+		wantImageName: fmt.Sprintf("%s/%s", dockerRepo, path.Base(importpath)),
+		po: &options.PublishOptions{
+			BaseImportPaths: true,
+			DockerRepo:      dockerRepo,
 		},
-		{
-			description:   "preserve import path",
-			wantImageName: fmt.Sprintf("%s/%s", dockerRepo, importpath),
-			po: &options.PublishOptions{
-				DockerRepo:          dockerRepo,
-				PreserveImportPaths: true,
-			},
+	}, {
+		description:   "preserve import path",
+		wantImageName: fmt.Sprintf("%s/%s", dockerRepo, importpath),
+		po: &options.PublishOptions{
+			DockerRepo:          dockerRepo,
+			PreserveImportPaths: true,
 		},
-		{
-			description:   "override LocalDomain",
-			wantImageName: fmt.Sprintf("%s/%s", localDomain, importpath),
-			po: &options.PublishOptions{
-				Local:               true,
-				LocalDomain:         localDomain,
-				PreserveImportPaths: true,
-				DockerClient:        &kotesting.MockDaemon{},
-			},
+	}, {
+		description:   "override LocalDomain",
+		wantImageName: fmt.Sprintf("%s/%s", localDomain, importpath),
+		po: &options.PublishOptions{
+			Local:               true,
+			LocalDomain:         localDomain,
+			PreserveImportPaths: true,
+			DockerClient:        &kotesting.MockDaemon{},
 		},
-		{
-			description:   "override DockerClient",
-			wantImageName: strings.ToLower(fmt.Sprintf("%s/%s", localDomain, importpath)),
-			po: &options.PublishOptions{
-				DockerClient: &erroringClient{},
-				Local:        true,
-			},
-			shouldError: true,
-			wantError:   errImageLoad,
+	}, {
+		description: "override DockerClient",
+		po: &options.PublishOptions{
+			DockerClient: &erroringClient{},
+			Local:        true,
 		},
-	}
+		shouldError: true,
+		wantError:   errImageLoad,
+	}, {
+		description:   "qualify default repository",
+		wantImageName: fmt.Sprintf("index.docker.io/library/my-dockerhub-user/%s", importpath),
+		po: &options.PublishOptions{
+			DockerRepo:          "my-dockerhub-user",
+			PreserveImportPaths: true,
+		},
+	}}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			publisher, err := NewPublisher(test.po)

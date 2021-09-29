@@ -74,6 +74,8 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 		po.DockerRepo = dockerRepo
 	}
 
+	po.LocalDomain = publish.LocalDomain
+
 	cmd.Flags().StringSliceVarP(&po.Tags, "tags", "t", []string{"latest"},
 		"Which tags to use for the produced image instead of the default 'latest' tag "+
 			"(may not work properly with --base-import-paths or --bare).")
