@@ -745,11 +745,17 @@ func TestGoBuildIndex(t *testing.T) {
 	t.Run("check OCI media type", func(t *testing.T) {
 		mt, err := idx.MediaType()
 		if err != nil {
-			t.Errorf("MediaType() = %v", err)
+			t.Fatalf("MediaType() = %v", err)
 		}
 
 		if got, want := mt, types.OCIImageIndex; got != want {
 			t.Errorf("mediaType = %v, want %v", got, want)
+		}
+
+		for i, mf := range im.Manifests {
+			if got, want := mf.MediaType, types.OCIManifestSchema1; got != want {
+				t.Errorf("manifest[%d] mediaType = %s, want %s", i, got, want)
+			}
 		}
 	})
 }

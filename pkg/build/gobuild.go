@@ -923,7 +923,6 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			Add: img,
 			Descriptor: v1.Descriptor{
 				URLs:        desc.URLs,
-				MediaType:   types.OCIManifestSchema1,
 				Annotations: desc.Annotations,
 				Platform:    desc.Platform,
 			},
