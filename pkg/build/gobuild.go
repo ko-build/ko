@@ -361,7 +361,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	cmd := exec.CommandContext(ctx, "go", args...)
 	cmd.Dir = dir
 
-	env, err := buildEnv(platform, config.Env)
+	env, err := buildEnv(platform, os.Environ(), config.Env)
 	if err != nil {
 		return "", fmt.Errorf("could not create env for %s: %v", ip, err)
 	}
@@ -383,8 +383,9 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 // buildEnv creates the environment variables used by the `go build` command.
 // From `os/exec.Cmd`: If Env contains duplicate environment keys, only the last
 // value in the slice for each duplicate key is used.
-func buildEnv(platform v1.Platform, configEnv []string) ([]string, error) {
-	defaultEnv := []string{
+func buildEnv(platform v1.Platform, userEnv, configEnv []string) ([]string, error) {
+	// Default env
+	env := []string{
 		"CGO_ENABLED=0",
 		"GOOS=" + platform.OS,
 		"GOARCH=" + platform.Architecture,
@@ -396,11 +397,11 @@ func buildEnv(platform v1.Platform, configEnv []string) ([]string, error) {
 			return nil, fmt.Errorf("goarm failure: %v", err)
 		}
 		if goarm != "" {
-			defaultEnv = append(defaultEnv, "GOARM="+goarm)
+			env = append(env, "GOARM="+goarm)
 		}
 	}
 
-	env := append(defaultEnv, os.Environ()...)
+	env = append(env, userEnv...)
 	env = append(env, configEnv...)
 	return env, nil
 }
