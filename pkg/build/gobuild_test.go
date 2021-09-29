@@ -236,6 +236,7 @@ func TestBuildEnv(t *testing.T) {
 	tests := []struct {
 		description  string
 		platform     v1.Platform
+		userEnv      []string
 		configEnv    []string
 		expectedEnvs map[string]string
 	}{
@@ -260,6 +261,7 @@ func TestBuildEnv(t *testing.T) {
 		},
 		{
 			description: "override an envvar and add an envvar",
+			userEnv:     []string{"CGO_ENABLED=0"},
 			configEnv:   []string{"CGO_ENABLED=1", "GOPRIVATE=git.internal.example.com,source.developers.google.com"},
 			expectedEnvs: map[string]string{
 				"CGO_ENABLED": "1",
@@ -291,7 +293,7 @@ func TestBuildEnv(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			env, err := buildEnv(test.platform, test.configEnv)
+			env, err := buildEnv(test.platform, test.userEnv, test.configEnv)
 			if err != nil {
 				t.Fatalf("unexpected error running buildEnv(): %v", err)
 			}
