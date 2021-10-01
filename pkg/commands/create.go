@@ -90,7 +90,7 @@ func addCreate(topLevel *cobra.Command) {
 			// remaining flags passed after '--'.
 			argv := []string{"apply", "-f", "-"}
 			if kflags := kf.Values(); len(kflags) != 0 {
-				skflags := strings.Join(kflags, " ")
+				skflags := strings.Join(stripPassword(kflags), " ")
 				log.Printf(kubectlFlagsWarningTemplate,
 					"create", skflags,
 					"create", skflags)
@@ -146,4 +146,15 @@ func addCreate(topLevel *cobra.Command) {
 	internal.AddFlags(&kf, create.Flags())
 
 	topLevel.AddCommand(create)
+}
+
+func stripPassword(flags []string) []string {
+	cp := make([]string, len(flags))
+	for _, f := range flags {
+		if strings.HasPrefix(f, "--password=") {
+			f = "--password=REDACTED"
+		}
+		cp = append(cp, f)
+	}
+	return cp
 }
