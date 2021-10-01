@@ -94,7 +94,7 @@ If the image was not built using ko, or if it was built without embedding depend
 					continue
 				}
 
-				tmp, err := ioutil.TempFile("", filepath.Base(h.Name))
+				tmp, err := ioutil.TempFile("", filepath.Base(filepath.Clean(h.Name)))
 				if err != nil {
 					return err
 				}
