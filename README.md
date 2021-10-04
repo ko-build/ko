@@ -81,18 +81,39 @@ gcr.io/my-project/app-099ba5bcefdead87f92606265fb99ac0@sha256:6e398316742b7aa4a9
 Because the output of `ko publish` is an image reference, you can easily pass it
 to other tools that expect to take an image reference:
 
-To run the container:
+To run the container locally:
 
 ```
 docker run -p 8080:8080 $(ko publish ./cmd/app)
 ```
 
-Or, for example, to deploy it to other services like
+Or to deploy it to other services like
 [Cloud Run](https://cloud.google.com/run):
 
 ```
 gcloud run deploy --image=$(ko publish ./cmd/app)
 ```
+
+* Note: The image must be pushed to [Google Container Registry](https://cloud.google.com/container-registry) or [Artifact Registry](https://cloud.google.com/artifact-registry).
+
+Or [fly.io](https://fly.io):
+
+```
+flyctl launch --image=$(ko publish ./cmd/app)
+```
+
+* Note: The image must be publicly available.
+
+Or [AWS Lambda](https://aws.amazon.com/lambda/):
+
+```
+aws lambda update-function-code \
+  --function-name=my-function-name \
+  --image-uri=$(ko publish ./cmd/app)
+```
+
+* Note: The image must be pushed to [ECR](https://aws.amazon.com/ecr/), based on the AWS provided base image, and use the [`aws-lambda-go`](https://github.com/aws/aws-lambda-go) framework.
+See [official docs](https://docs.aws.amazon.com/lambda/latest/dg/go-image.html) for more information.
 
 ## Configuration
 
