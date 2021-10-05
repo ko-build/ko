@@ -701,6 +701,9 @@ func (g *gobuild) configForImportPath(ip string) Config {
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (v1.Image, error) {
 	ref := newRef(refStr)
 
+	// Always produce OCI images, even if the base image isn't an OCI image.
+	base = mutate.MediaType(base, types.OCIManifestSchema1)
+
 	cf, err := base.ConfigFile()
 	if err != nil {
 		return nil, err
@@ -877,16 +880,15 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	}
 
 	// Annotate the image or index with base image information.
-	// (Docker manifest lists don't support annotations)
-	if mt != types.DockerManifestList {
-		anns := map[string]string{
-			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
-		}
-		if _, ok := baseRef.(name.Tag); ok {
-			anns[specsv1.AnnotationBaseImageName] = baseRef.Name()
-		}
-		res = mutate.Annotations(res, anns).(Result)
+	// If the result is an Index, it should be an OCI index that supports
+	// annotations.
+	anns := map[string]string{
+		specsv1.AnnotationBaseImageDigest: baseDigest.String(),
 	}
+	if _, ok := baseRef.(name.Tag); ok {
+		anns[specsv1.AnnotationBaseImageName] = baseRef.Name()
+	}
+	res = mutate.Annotations(res, anns).(Result)
 
 	return res, nil
 }
@@ -922,18 +924,13 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			Add: img,
 			Descriptor: v1.Descriptor{
 				URLs:        desc.URLs,
-				MediaType:   desc.MediaType,
 				Annotations: desc.Annotations,
 				Platform:    desc.Platform,
 			},
 		})
 	}
 
-	baseType, err := baseIndex.MediaType()
-	if err != nil {
-		return nil, err
-	}
-	idx := mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType)
+	idx := mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), types.OCIImageIndex)
 
 	return idx, nil
 }
