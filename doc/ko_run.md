@@ -4,7 +4,7 @@ A variant of `kubectl run` that containerizes IMPORTPATH first.
 
 ### Synopsis
 
-This sub-command combines "ko publish" and "kubectl run" to support containerizing and running Go binaries on Kubernetes in a single command.
+This sub-command combines "ko build" and "kubectl run" to support containerizing and running Go binaries on Kubernetes in a single command.
 
 ```
 ko run IMPORTPATH [flags]

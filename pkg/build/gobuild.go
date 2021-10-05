@@ -738,7 +738,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		Layer: dataLayer,
 		History: v1.History{
 			Author:    "ko",
-			CreatedBy: "ko publish " + ref.String(),
+			CreatedBy: "ko build " + ref.String(),
 			Comment:   "kodata contents, at $KO_DATA_PATH",
 		},
 	})
@@ -765,7 +765,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		Layer: binaryLayer,
 		History: v1.History{
 			Author:    "ko",
-			CreatedBy: "ko publish " + ref.String(),
+			CreatedBy: "ko build " + ref.String(),
 			Comment:   "go build output, at " + appPath,
 		},
 	})
