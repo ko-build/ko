@@ -36,7 +36,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/go-containerregistry/pkg/v1/types"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -421,17 +420,6 @@ func TestGoBuildNoKoData(t *testing.T) {
 			t.Errorf("created = %v, want %v", actual, creationTime)
 		}
 	})
-
-	t.Run("check OCI media type", func(t *testing.T) {
-		mt, err := img.MediaType()
-		if err != nil {
-			t.Errorf("MediaType() = %v", err)
-		}
-
-		if got, want := mt, types.OCIManifestSchema1; got != want {
-			t.Errorf("mediaType = %v, want %v", got, want)
-		}
-	})
 }
 
 func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1.Time, checkAnnotations bool) {
@@ -741,23 +729,6 @@ func TestGoBuildIndex(t *testing.T) {
 
 		if d1 != d2 {
 			t.Errorf("Digest mismatch: %s != %s", d1, d2)
-		}
-	})
-
-	t.Run("check OCI media type", func(t *testing.T) {
-		mt, err := idx.MediaType()
-		if err != nil {
-			t.Fatalf("MediaType() = %v", err)
-		}
-
-		if got, want := mt, types.OCIImageIndex; got != want {
-			t.Errorf("mediaType = %v, want %v", got, want)
-		}
-
-		for i, mf := range im.Manifests {
-			if got, want := mf.MediaType, types.OCIManifestSchema1; got != want {
-				t.Errorf("manifest[%d] mediaType = %s, want %s", i, got, want)
-			}
 		}
 	})
 }
