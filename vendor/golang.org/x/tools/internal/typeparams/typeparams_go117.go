@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build !go1.18
-// +build !go1.18
+//go:build !typeparams || !go1.18
+// +build !typeparams !go1.18
 
 package typeparams
 
@@ -30,21 +30,24 @@ func GetIndexExprData(n ast.Node) *IndexExprData {
 	return nil
 }
 
-// ForTypeDecl returns an empty field list, as type parameters on not supported
+// ForTypeSpec returns an empty field list, as type parameters on not supported
 // at this Go version.
-func ForTypeDecl(*ast.TypeSpec) *ast.FieldList {
+func ForTypeSpec(*ast.TypeSpec) *ast.FieldList {
 	return nil
 }
 
-// ForFuncDecl returns an empty field list, as type parameters are not
+// ForFuncType returns an empty field list, as type parameters are not
 // supported at this Go version.
-func ForFuncDecl(*ast.FuncDecl) *ast.FieldList {
+func ForFuncType(*ast.FuncType) *ast.FieldList {
 	return nil
 }
 
 // TypeParam is a placeholder type, as type parameters are not supported at
 // this Go version. Its methods panic on use.
 type TypeParam struct{ types.Type }
+
+func (*TypeParam) Constraint() types.Type { unsupported(); return nil }
+func (*TypeParam) Obj() *types.TypeName   { unsupported(); return nil }
 
 // TypeParamList is a placeholder for an empty type parameter list.
 type TypeParamList struct{}
@@ -118,14 +121,24 @@ func SetForNamed(_ *types.Named, tparams []*TypeParam) {
 	}
 }
 
-// NamedTypeArgs extracts the (possibly empty) type argument list from named.
-func NamedTypeArgs(*types.Named) []types.Type {
+// NamedTypeArgs returns nil.
+func NamedTypeArgs(*types.Named) *TypeList {
 	return nil
+}
+
+// NamedTypeOrigin is the identity method at this Go version.
+func NamedTypeOrigin(named *types.Named) types.Type {
+	return named
 }
 
 // Term is a placeholder type, as type parameters are not supported at this Go
 // version. Its methods panic on use.
-type Term struct{ types.Type }
+type Term struct{}
+
+func (*Term) Tilde() bool            { unsupported(); return false }
+func (*Term) Type() types.Type       { unsupported(); return nil }
+func (*Term) String() string         { unsupported(); return "" }
+func (*Term) Underlying() types.Type { unsupported(); return nil }
 
 // NewTerm is unsupported at this Go version, and panics.
 func NewTerm(tilde bool, typ types.Type) *Term {
@@ -137,21 +150,21 @@ func NewTerm(tilde bool, typ types.Type) *Term {
 // version. Its methods panic on use.
 type Union struct{ types.Type }
 
+func (*Union) Len() int         { return 0 }
+func (*Union) Term(i int) *Term { unsupported(); return nil }
+
 // NewUnion is unsupported at this Go version, and panics.
 func NewUnion(terms []*Term) *Union {
 	unsupported()
 	return nil
 }
 
-// InitInferred is a noop at this Go version.
-func InitInferred(*types.Info) {
-}
+// InitInstanceInfo is a noop at this Go version.
+func InitInstanceInfo(*types.Info) {}
 
-// GetInferred returns nothing, as type parameters are not supported at this Go
+// GetInstance returns nothing, as type parameters are not supported at this Go
 // version.
-func GetInferred(*types.Info, ast.Expr) ([]types.Type, *types.Signature) {
-	return nil, nil
-}
+func GetInstance(*types.Info, *ast.Ident) (*TypeList, types.Type) { return nil, nil }
 
 // Environment is a placeholder type, as type parameters are not supported at
 // this Go version.

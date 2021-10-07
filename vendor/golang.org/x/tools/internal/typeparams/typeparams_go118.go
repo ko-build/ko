@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build go1.18
-// +build go1.18
+//go:build typeparams && go1.18
+// +build typeparams,go1.18
 
 package typeparams
 
@@ -36,17 +36,20 @@ func GetIndexExprData(n ast.Node) *IndexExprData {
 	return nil
 }
 
-// ForTypeDecl returns n.TypeParams.
-func ForTypeDecl(n *ast.TypeSpec) *ast.FieldList {
+// ForTypeSpec returns n.TypeParams.
+func ForTypeSpec(n *ast.TypeSpec) *ast.FieldList {
+	if n == nil {
+		return nil
+	}
 	return n.TypeParams
 }
 
-// ForFuncDecl returns n.Type.TypeParams.
-func ForFuncDecl(n *ast.FuncDecl) *ast.FieldList {
-	if n.Type != nil {
-		return n.Type.TypeParams
+// ForFuncType returns n.TypeParams.
+func ForFuncType(n *ast.FuncType) *ast.FieldList {
+	if n == nil {
+		return nil
 	}
-	return nil
+	return n.TypeParams
 }
 
 // TypeParam is an alias for types.TypeParam
@@ -110,17 +113,14 @@ func SetForNamed(n *types.Named, tparams []*TypeParam) {
 	n.SetTypeParams(tparams)
 }
 
-// NamedTypeArgs extracts the (possibly empty) type argument list from named.
-func NamedTypeArgs(named *types.Named) []types.Type {
-	targs := named.TypeArgs()
-	numArgs := targs.Len()
+// NamedTypeArgs returns named.TypeArgs().
+func NamedTypeArgs(named *types.Named) *TypeList {
+	return named.TypeArgs()
+}
 
-	typs := make([]types.Type, numArgs)
-	for i := 0; i < numArgs; i++ {
-		typs[i] = targs.At(i)
-	}
-
-	return typs
+// NamedTypeOrigin returns named.Orig().
+func NamedTypeOrigin(named *types.Named) types.Type {
+	return named.Origin()
 }
 
 // Term is an alias for types.Term.
@@ -139,32 +139,21 @@ func NewUnion(terms []*Term) *Union {
 	return types.NewUnion(terms)
 }
 
-// InitInferred initializes info to record inferred type information.
-func InitInferred(info *types.Info) {
-	info.Inferred = make(map[ast.Expr]types.Inferred)
+// InitInstanceInfo initializes info to record information about type and
+// function instances.
+func InitInstanceInfo(info *types.Info) {
+	info.Instances = make(map[*ast.Ident]types.Instance)
 }
 
-// GetInferred extracts inferred type information from info for e.
-//
-// The expression e may have an inferred type if it is an *ast.IndexExpr
-// representing partial instantiation of a generic function type for which type
-// arguments have been inferred using constraint type inference, or if it is an
-// *ast.CallExpr for which type type arguments have be inferred using both
-// constraint type inference and function argument inference.
-func GetInferred(info *types.Info, e ast.Expr) ([]types.Type, *types.Signature) {
-	if info.Inferred == nil {
-		return nil, nil
+// GetInstance extracts information about the instantiation occurring at the
+// identifier id. id should be the identifier denoting a parameterized type or
+// function in an instantiation expression or function call.
+func GetInstance(info *types.Info, id *ast.Ident) (*TypeList, types.Type) {
+	if info.Instances != nil {
+		inf := info.Instances[id]
+		return inf.TypeArgs, inf.Type
 	}
-	inf := info.Inferred[e]
-
-	length := inf.TArgs.Len()
-
-	typs := make([]types.Type, length)
-	for i := 0; i < length; i++ {
-		typs[i] = inf.TArgs.At(i)
-	}
-
-	return typs, inf.Sig
+	return nil, nil
 }
 
 // Environment is an alias for types.Environment.
