@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/containerd/containerd v1.5.7 // indirect
-	github.com/containerd/stargz-snapshotter/estargz v0.8.0
+	github.com/containerd/stargz-snapshotter/estargz v0.9.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/docker/docker v20.10.8+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
@@ -13,7 +13,6 @@ require (
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/google/go-cmp v0.5.6
 	github.com/google/go-containerregistry v0.6.0
-	github.com/klauspost/compress v1.13.6 // indirect
 	github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
 	github.com/mattn/go-isatty v0.0.13 // indirect
 	github.com/opencontainers/image-spec v1.0.2-0.20210730191737-8e42a01fb1b7
