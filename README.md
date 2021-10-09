@@ -69,29 +69,31 @@ e.g.:
 
 # Build an Image
 
-`ko build ./cmd/app` builds and pushes a container image, and prints the
+`ko publish ./cmd/app` builds and pushes a container image, and prints the
 resulting image digest to stdout.
 
+In this example, `./cmd/app` must be a `package main` that defines `func main()`.
+
 ```
-ko build ./cmd/app
+ko publish ./cmd/app
 ...
 gcr.io/my-project/app-099ba5bcefdead87f92606265fb99ac0@sha256:6e398316742b7aa4a93161dce4a23bc5c545700b862b43347b941000b112ec3e
 ```
 
-Because the output of `ko build` is an image reference, you can easily pass it
+Because the output of `ko publish` is an image reference, you can easily pass it
 to other tools that expect to take an image reference:
 
 To run the container:
 
 ```
-docker run -p 8080:8080 $(ko build ./cmd/app)
+docker run -p 8080:8080 $(ko publish ./cmd/app)
 ```
 
 Or, for example, to deploy it to other services like
 [Cloud Run](https://cloud.google.com/run):
 
 ```
-gcloud run deploy --image=$(ko build ./cmd/app)
+gcloud run deploy --image=$(ko publish ./cmd/app)
 ```
 
 ## Configuration
@@ -168,7 +170,7 @@ templating support is currently limited to environment variables only.
 workaround certain registry limitations and user preferences:
 
 Given `KO_DOCKER_REPO=registry.example.com/repo`, by default,
-`ko build ./cmd/app` will produce an image named like
+`ko publish ./cmd/app` will produce an image named like
 `registry.example.com/repo/app-<md5>`, which includes the MD5 hash of the full
 import path, to avoid collisions.
 
@@ -311,7 +313,7 @@ With this small change, running `ko resolve -f deployment.yaml` will instruct
 `ko` to:
 
 1. scan the YAML file(s) for values with the `ko://` prefix,
-2. for each unique `ko://`-prefixed string, execute `ko build <importpath>` to
+2. for each unique `ko://`-prefixed string, execute `ko publish <importpath>` to
    build and push an image,
 3. replace `ko://`-prefixed string(s) in the input YAML with the fully-specified
    image reference of the built image(s), for example:
@@ -375,7 +377,7 @@ this flag directly; however, you can use the `GOFLAGS` environment variable
 instead:
 
 ```sh
-GOFLAGS="-ldflags=-X=main.version=1.2.3" ko build .
+GOFLAGS="-ldflags=-X=main.version=1.2.3" ko publish .
 ```
 
 ## How can I set multiple `ldflags`?
@@ -421,7 +423,7 @@ You can try out building a Windows container image by [setting the base image](#
 For example, to build a Windows container image for `ko`, from within this repo:
 
 ```
-KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:1809 ko build ./ --platform=windows/amd64
+KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:1809 ko publish ./ --platform=windows/amd64
 ```
 
 ### Known issues 🐛
