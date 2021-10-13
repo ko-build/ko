@@ -21,6 +21,7 @@ import (
 	"encoding/hex"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/ko/pkg/publish"
@@ -65,6 +66,14 @@ type PublishOptions struct {
 	BaseImportPaths bool
 	// Bare uses a tag on the KO_DOCKER_REPO without anything additional.
 	Bare bool
+	// ImageNameSeparator is used to create the image name from base repo and
+	// specific import path.
+	ImageNameSeparator string
+
+	// ImageNamer can be used to pass a custom image name function. When given
+	// PreserveImportPaths, BaseImportPaths, Bare, and ImageNameSeparator has
+	// no effect.
+	ImageNamer publish.Namer
 }
 
 func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
@@ -96,20 +105,37 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).")
 	cmd.Flags().BoolVar(&po.Bare, "bare", po.Bare,
 		"Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).")
+	cmd.Flags().StringVar(&po.ImageNameSeparator, "image-name-separator", defaultImageNameSeparator,
+		"A separator to be used to concatenate KO_DOCKER_REPO with specific image name.")
 }
 
-func packageWithMD5(base, importpath string) string {
+const defaultImageNameSeparator = "/"
+
+func pathJoin(sep string, paths ...string) string {
+	if sep == "" {
+		sep = defaultImageNameSeparator
+	}
+	for i, e := range paths {
+		if e != "" {
+			return path.Clean(strings.Join(paths[i:], sep))
+		}
+	}
+	return ""
+}
+
+func (po *PublishOptions) packageWithMD5(base, importpath string) string {
 	hasher := md5.New() //nolint: gosec // No strong cryptography needed.
 	hasher.Write([]byte(importpath))
-	return path.Join(base, path.Base(importpath)+"-"+hex.EncodeToString(hasher.Sum(nil)))
+	return pathJoin(po.ImageNameSeparator,
+		base, path.Base(importpath)+"-"+hex.EncodeToString(hasher.Sum(nil)))
 }
 
-func preserveImportPath(base, importpath string) string {
-	return path.Join(base, importpath)
+func (po *PublishOptions) preserveImportPath(base, importpath string) string {
+	return pathJoin(po.ImageNameSeparator, base, importpath)
 }
 
-func baseImportPaths(base, importpath string) string {
-	return path.Join(base, path.Base(importpath))
+func (po *PublishOptions) baseImportPaths(base, importpath string) string {
+	return pathJoin(po.ImageNameSeparator, base, path.Base(importpath))
 }
 
 func bareDockerRepo(base, _ string) string {
@@ -117,12 +143,14 @@ func bareDockerRepo(base, _ string) string {
 }
 
 func MakeNamer(po *PublishOptions) publish.Namer {
-	if po.PreserveImportPaths {
-		return preserveImportPath
+	if po.ImageNamer != nil {
+		return po.ImageNamer
+	} else if po.PreserveImportPaths {
+		return po.preserveImportPath
 	} else if po.BaseImportPaths {
-		return baseImportPaths
+		return po.baseImportPaths
 	} else if po.Bare {
 		return bareDockerRepo
 	}
-	return packageWithMD5
+	return po.packageWithMD5
 }
