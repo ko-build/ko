@@ -49,3 +49,14 @@ jobs:
         if [[ "$RUNNER_OS" == "Linux" ]]; then
           docker run ${testimg} --wait=false -f HEAD
         fi
+
+        # Check that using ldflags to set variables works.
+        cat > .ko.yaml << EOF
+        builds:
+        - id: test
+          main: ./test/
+          ldflags:
+          - "-X main.version=${{ github.sha }}"
+        EOF
+        docker run $(go run ./ publish ./test/ --platform=${GOOS}/${GOARCH}) --wait=false 2>&1 | grep "${{ github.sha }}"
+
