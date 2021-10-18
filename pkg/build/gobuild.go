@@ -33,6 +33,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"text/template"
 
 	"github.com/containerd/stargz-snapshotter/estargz"
@@ -141,7 +142,7 @@ func moduleInfo(ctx context.Context, dir string) (*modules, error) {
 
 	// TODO we read all the output as a single byte array - it may
 	// be possible & more efficient to stream it
-	cmd := exec.CommandContext(ctx, "go", "list", "-mod=readonly", "-json", "-m", "all")
+	cmd := exec.CommandContext(ctx, gocmd(), "list", "-mod=readonly", "-json", "-m", "all")
 	cmd.Dir = dir
 	output, err := cmd.Output()
 	if err != nil {
@@ -186,7 +187,7 @@ func moduleInfo(ctx context.Context, dir string) (*modules, error) {
 //
 // See https://github.com/google/ko/issues/106
 func getGoroot(ctx context.Context, dir string) (string, error) {
-	cmd := exec.CommandContext(ctx, "go", "env", "GOROOT")
+	cmd := exec.CommandContext(ctx, gocmd(), "env", "GOROOT")
 	// It's probably not necessary to set the command working directory here,
 	// but it helps keep everything consistent.
 	cmd.Dir = dir
@@ -358,7 +359,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	args = append(args, buildArgs...)
 	args = append(args, "-o", file)
 	args = append(args, ip)
-	cmd := exec.CommandContext(ctx, "go", args...)
+	cmd := exec.CommandContext(ctx, gocmd(), args...)
 	cmd.Dir = dir
 
 	env, err := buildEnv(platform, os.Environ(), config.Env)
@@ -991,4 +992,22 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 	}
 
 	return false
+}
+
+var (
+	gocmdOnce sync.Once
+	gocmdVal  = "go"
+)
+
+// gocmd returns the name of the "go" command to use to invoke go.
+//
+// This will usually return "go", unless KO_USE_GOTIP is set, in which case it
+// will return "gotip".
+func gocmd() string {
+	gocmdOnce.Do(func() {
+		if val := os.Getenv("KO_USE_GOTIP"); val != "" {
+			gocmdVal = "gotip"
+		}
+	})
+	return gocmdVal
 }
