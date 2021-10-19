@@ -85,9 +85,7 @@ func addApply(topLevel *cobra.Command) {
 			if !isKubectlAvailable() {
 				return errors.New("error: kubectl is not available. kubectl must be installed to use ko apply")
 			}
-
-			// Cancel on signals.
-			ctx := createCancellableContext()
+			ctx := cmd.Context()
 
 			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)

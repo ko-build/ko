@@ -57,8 +57,9 @@ func addBuild(topLevel *cobra.Command) {
   # This always preserves import paths.
   ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
 		Args: cobra.MinimumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
-			ctx := createCancellableContext()
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx := cmd.Context()
+
 			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
