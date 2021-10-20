@@ -47,6 +47,17 @@ With Go 1.16+, build and install the latest released version:
 go install github.com/google/ko@latest
 ```
 
+### Setup on GitHub Actions
+
+You can use the [`setup-ko`](https://github.com/imjasonh/setup-ko) action
+to install `ko` and setup auth to [GitHub Container
+Registry](https://github.com/features/packages) in a GitHub Action workflow:
+
+```
+steps:
+- uses: imjasonh/setup-ko@v0.4
+```
+
 ## Authenticate
 
 `ko` depends on the authentication configured in your Docker config (typically
