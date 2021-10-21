@@ -22,7 +22,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -34,26 +33,13 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/google/ko/pkg/publish"
-	"github.com/spf13/viper"
-	"golang.org/x/tools/go/packages"
-)
-
-const (
-	// configDefaultBaseImage is the default base image if not specified in .ko.yaml.
-	configDefaultBaseImage = "gcr.io/distroless/static:nonroot"
-)
-
-var (
-	defaultBaseImage   string
-	baseImageOverrides map[string]string
-	buildConfigs       map[string]build.Config
 )
 
 // getBaseImage returns a function that determines the base image for a given import path.
-// If the `bo.BaseImage` parameter is non-empty, it overrides base image configuration from `.ko.yaml`.
 func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 	return func(ctx context.Context, s string) (name.Reference, build.Result, error) {
 		s = strings.TrimPrefix(s, build.StrictScheme)
@@ -63,14 +49,11 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 		//    github.com/GoogleCloudPlatform/foo/cmd/bar
 		// comes through as:
 		//    github.com/googlecloudplatform/foo/cmd/bar
-		baseImage, ok := baseImageOverrides[strings.ToLower(s)]
-		if !ok {
-			baseImage = defaultBaseImage
-		}
-		if bo.BaseImage != "" {
+		baseImage, ok := bo.BaseImageOverrides[strings.ToLower(s)]
+		if !ok || baseImage == "" {
 			baseImage = bo.BaseImage
 		}
-		nameOpts := []name.Option{}
+		var nameOpts []name.Option
 		if bo.InsecureRegistry {
 			nameOpts = append(nameOpts, name.Insecure)
 		}
@@ -171,95 +154,4 @@ func createCancellableContext() context.Context {
 	}()
 
 	return ctx
-}
-
-func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[string]build.Config, error) {
-	buildConfigsByImportPath := make(map[string]build.Config)
-	for i, config := range configs {
-		// Make sure to behave like GoReleaser by defaulting to the current
-		// directory in case the build or main field is not set, check
-		// https://goreleaser.com/customization/build/ for details
-		if config.Dir == "" {
-			config.Dir = "."
-		}
-		if config.Main == "" {
-			config.Main = "."
-		}
-
-		// baseDir is the directory where `go list` will be run to look for package information
-		baseDir := filepath.Join(workingDirectory, config.Dir)
-
-		// To behave like GoReleaser, check whether the configured `main` config value points to a
-		// source file, and if so, just use the directory it is in
-		path := config.Main
-		if fi, err := os.Stat(filepath.Join(baseDir, config.Main)); err == nil && fi.Mode().IsRegular() {
-			path = filepath.Dir(config.Main)
-		}
-
-		// By default, paths configured in the builds section are considered
-		// local import paths, therefore add a "./" equivalent as a prefix to
-		// the constructured import path
-		localImportPath := fmt.Sprint(".", string(filepath.Separator), path)
-
-		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: baseDir}, localImportPath)
-		if err != nil {
-			return nil, fmt.Errorf("'builds': entry #%d does not contain a valid local import path (%s) for directory (%s): %v", i, localImportPath, baseDir, err)
-		}
-
-		if len(pkgs) != 1 {
-			return nil, fmt.Errorf("'builds': entry #%d results in %d local packages, only 1 is expected", i, len(pkgs))
-		}
-		importPath := pkgs[0].PkgPath
-		buildConfigsByImportPath[importPath] = config
-	}
-
-	return buildConfigsByImportPath, nil
-}
-
-// loadConfig reads build configuration from defaults, environment variables, and the `.ko.yaml` config file.
-func loadConfig(workingDirectory string) error {
-	v := viper.New()
-	if workingDirectory == "" {
-		workingDirectory = "."
-	}
-	// If omitted, use this base image.
-	v.SetDefault("defaultBaseImage", configDefaultBaseImage)
-	v.SetConfigName(".ko") // .yaml is implicit
-	v.SetEnvPrefix("KO")
-	v.AutomaticEnv()
-
-	if override := os.Getenv("KO_CONFIG_PATH"); override != "" {
-		v.AddConfigPath(override)
-	}
-
-	v.AddConfigPath(workingDirectory)
-
-	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return fmt.Errorf("error reading config file: %v", err)
-		}
-	}
-
-	ref := v.GetString("defaultBaseImage")
-	if _, err := name.ParseReference(ref); err != nil {
-		return fmt.Errorf("'defaultBaseImage': error parsing %q as image reference: %v", ref, err)
-	}
-	defaultBaseImage = ref
-
-	baseImageOverrides = make(map[string]string)
-	overrides := v.GetStringMapString("baseImageOverrides")
-	for key, value := range overrides {
-		if _, err := name.ParseReference(value); err != nil {
-			return fmt.Errorf("'baseImageOverrides': error parsing %q as image reference: %v", value, err)
-		}
-		baseImageOverrides[key] = value
-	}
-
-	var builds []build.Config
-	if err := v.UnmarshalKey("builds", &builds); err != nil {
-		return fmt.Errorf("configuration section 'builds' cannot be parsed")
-	}
-	var err error
-	buildConfigs, err = createBuildConfigMap(workingDirectory, builds)
-	return err
 }

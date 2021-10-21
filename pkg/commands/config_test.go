@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/crane"
-	"github.com/google/ko/pkg/build"
+
 	"github.com/google/ko/pkg/commands/options"
 )
 
@@ -56,71 +56,5 @@ func TestOverrideDefaultBaseImageUsingBuildOption(t *testing.T) {
 	gotDigest := digest.String()
 	if gotDigest != wantDigest {
 		t.Errorf("got digest %s, wanted %s", gotDigest, wantDigest)
-	}
-}
-
-// TestDefaultBaseImage is a canary-type test for ensuring that config has been read when creating a builder.
-func TestDefaultBaseImage(t *testing.T) {
-	_, err := NewBuilder(context.Background(), &options.BuildOptions{
-		WorkingDirectory: "testdata/config",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	wantDefaultBaseImage := "gcr.io/distroless/base:nonroot" // matches value in ./testdata/.ko.yaml
-	if defaultBaseImage != wantDefaultBaseImage {
-		t.Fatalf("wanted defaultBaseImage %s, got %s", wantDefaultBaseImage, defaultBaseImage)
-	}
-}
-
-func TestBuildConfigWithWorkingDirectoryAndDirAndMain(t *testing.T) {
-	_, err := NewBuilder(context.Background(), &options.BuildOptions{
-		WorkingDirectory: "testdata/paths",
-	})
-	if err != nil {
-		t.Fatalf("NewBuilder(): %+v", err)
-	}
-
-	if len(buildConfigs) != 1 {
-		t.Fatalf("expected 1 build config, got %d", len(buildConfigs))
-	}
-	expectedImportPath := "example.com/testapp/cmd/foo" // module from app/go.mod + `main` from .ko.yaml
-	if _, exists := buildConfigs[expectedImportPath]; !exists {
-		t.Fatalf("expected build config for import path [%s], got %+v", expectedImportPath, buildConfigs)
-	}
-}
-
-func TestCreateBuildConfigs(t *testing.T) {
-	compare := func(expected string, actual string) {
-		if expected != actual {
-			t.Errorf("test case failed: expected '%#v', but actual value is '%#v'", expected, actual)
-		}
-	}
-
-	buildConfigs := []build.Config{
-		{ID: "defaults"},
-		{ID: "OnlyMain", Main: "test"},
-		{ID: "OnlyMainWithFile", Main: "test/main.go"},
-		{ID: "OnlyDir", Dir: "test"},
-		{ID: "DirAndMain", Dir: "test", Main: "main.go"},
-	}
-
-	for _, b := range buildConfigs {
-		buildConfigMap, err := createBuildConfigMap("../..", []build.Config{b})
-		if err != nil {
-			t.Fatal(err)
-		}
-		for importPath, buildCfg := range buildConfigMap {
-			switch buildCfg.ID {
-			case "defaults":
-				compare("github.com/google/ko", importPath)
-
-			case "OnlyMain", "OnlyMainWithFile", "OnlyDir", "DirAndMain":
-				compare("github.com/google/ko/test", importPath)
-
-			default:
-				t.Fatalf("unknown test case: %s", buildCfg.ID)
-			}
-		}
 	}
 }

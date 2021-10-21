@@ -3,7 +3,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-ROOT_DIR=$(dirname $0)
+ROOT_DIR=$(dirname "$0")
 
 pushd "$ROOT_DIR"
 
@@ -11,7 +11,8 @@ ROOT_DIR="$(pwd)"
 
 echo "Moving GOPATH into /tmp/ to test modules behavior."
 export ORIGINAL_GOPATH="$GOPATH"
-export GOPATH="$(mktemp -d)"
+GOPATH="$(mktemp -d)"
+export GOPATH
 
 pushd "$GOPATH" || exit 1
 
@@ -91,8 +92,49 @@ fi
 echo "7. On outside the module should fail."
 pushd .. || exit 1
 GO111MODULE=on ./ko/ko build --local github.com/go-training/helloworld && exit 1
-
 popd || exit 1
+
+echo "8. On outside with build config specifying the test module builds."
+ko_exec_dir=$(pwd)
+pushd "$(mktemp -d)" || exit 1
+for app in foo bar ; do
+  mkdir -p $app/cmd || exit 1
+  pushd $app || exit 1
+  GO111MODULE=on go mod init example.com/$app || exit 1
+  cat << EOF > ./cmd/main.go || exit 1
+package main
+
+import "fmt"
+
+func main() {
+	fmt.Println("$app")
+}
+EOF
+  popd || exit 1
+done
+cat << EOF > .ko.yaml || exit 1
+builds:
+- id: foo-app
+  dir: ./foo
+  main: ./cmd
+- id: bar-app
+  dir: ./bar
+  main: ./cmd
+EOF
+for app in foo bar ; do
+  # test both local and fully qualified import paths
+  for prefix in example.com . ; do
+    import_path=$prefix/$app/cmd
+    RESULT="$(GO111MODULE=on GOFLAGS="" "$ko_exec_dir"/ko publish --local $import_path | grep "$FILTER" | xargs -I% docker run %)"
+    if [[ "$RESULT" != *"$app"* ]]; then
+      echo "Test FAILED for $import_path. Saw $RESULT but expected $app" && exit 1
+    else
+      echo "Test PASSED for $import_path"
+    fi
+  done
+done
+popd || exit 1
+
 popd || exit 1
 popd || exit 1
 
