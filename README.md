@@ -135,6 +135,7 @@ configuration section in your `.ko.yaml`.
 ```yaml
 builds:
 - id: foo
+  dir: .
   main: ./foobar/foo
   env:
   - GOPRIVATE=git.internal.example.com,source.developers.google.com
@@ -146,7 +147,8 @@ builds:
   - -extldflags "-static"
   - -X main.version={{.Env.VERSION}}
 - id: bar
-  main: ./foobar/bar/main.go
+  dir: ./bar
+  main: .
   env:
   - GOCACHE=/workspace/.gocache
   ldflags:
@@ -154,15 +156,22 @@ builds:
   - -w
 ```
 
-For the build, `ko` will pick the entry based on the respective import path
-being used. It will be matched against the local path that is configured using
-`dir` and `main`. In the context of `ko`, it is fine just to specify `main`
-with the intended import path.
+If your repository contains multiple modules (multiple `go.mod` files in
+different directories), use the `dir` field to specify the directory where
+`ko` should run `go build`.
+
+`ko` picks the entry from `builds` based on the import path you request. The
+import path is matched against the result of joining `dir` and `main`.
+
+The paths specified in `dir` and `main` are relative to the working directory
+of the `ko` process.
+
+The `ldflags` default value is `[]`.
 
 _Please note:_ Even though the configuration section is similar to the
 [GoReleaser `builds` section](https://goreleaser.com/customization/build/),
 only the `env`, `flags` and `ldflags` fields are currently supported. Also, the
-templating support is currently limited to environment variables only.
+templating support is currently limited to using environment variables only.
 
 ## Naming Images
 

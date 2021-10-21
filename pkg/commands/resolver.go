@@ -32,14 +32,15 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/commands/options"
-	"github.com/google/ko/pkg/publish"
-	"github.com/google/ko/pkg/resolve"
 	"github.com/mattmoor/dep-notify/pkg/graph"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/labels"
+
+	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/publish"
+	"github.com/google/ko/pkg/resolve"
 )
 
 // ua returns the ko user agent.
@@ -106,11 +107,8 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithLabel(parts[0], parts[1]))
 	}
 
-	// prefer buildConfigs from BuildOptions
 	if bo.BuildConfigs != nil {
 		opts = append(opts, build.WithConfig(bo.BuildConfigs))
-	} else if len(buildConfigs) > 0 {
-		opts = append(opts, build.WithConfig(buildConfigs))
 	}
 
 	return opts, nil
@@ -122,14 +120,14 @@ func NewBuilder(ctx context.Context, bo *options.BuildOptions) (build.Interface,
 }
 
 func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching, error) {
-	if err := loadConfig(bo.WorkingDirectory); err != nil {
+	if err := bo.LoadConfig(); err != nil {
 		return nil, err
 	}
 	opt, err := gobuildOptions(bo)
 	if err != nil {
 		return nil, fmt.Errorf("error setting up builder options: %v", err)
 	}
-	innerBuilder, err := build.NewGo(ctx, bo.WorkingDirectory, opt...)
+	innerBuilder, err := build.NewGobuilds(ctx, bo.WorkingDirectory, bo.BuildConfigs, opt...)
 	if err != nil {
 		return nil, err
 	}
