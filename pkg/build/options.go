@@ -98,20 +98,3 @@ func withBuilder(b builder) Option {
 		return nil
 	}
 }
-
-// withModulePath is a functional option for overriding the module path for
-// the current ko invocation.
-// This is exposed for testing.
-func withModuleInfo(m *modules) Option {
-	return func(gbo *gobuildOpener) error {
-		gbo.mod = m
-		return nil
-	}
-}
-
-func withBuildContext(b buildContext) Option {
-	return func(gbo *gobuildOpener) error {
-		gbo.buildContext = b
-		return nil
-	}
-}

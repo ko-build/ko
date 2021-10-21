@@ -20,7 +20,6 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	gb "go/build"
@@ -55,10 +54,6 @@ type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
 
-type buildContext interface {
-	Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error)
-}
-
 type platformMatcher struct {
 	spec      string
 	platforms []v1.Platform
@@ -71,8 +66,6 @@ type gobuild struct {
 	build                builder
 	disableOptimizations bool
 	buildConfigs         map[string]Config
-	mod                  *modules
-	buildContext         buildContext
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
@@ -88,8 +81,6 @@ type gobuildOpener struct {
 	build                builder
 	disableOptimizations bool
 	buildConfigs         map[string]Config
-	mod                  *modules
-	buildContext         buildContext
 	platform             string
 	labels               map[string]string
 	dir                  string
@@ -110,88 +101,10 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
 		buildConfigs:         gbo.buildConfigs,
-		mod:                  gbo.mod,
-		buildContext:         gbo.buildContext,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
 		platformMatcher:      matcher,
 	}, nil
-}
-
-// https://golang.org/pkg/cmd/go/internal/modinfo/#ModulePublic
-type modules struct {
-	main *modInfo
-	deps map[string]*modInfo
-}
-
-type modInfo struct {
-	Path string
-	Dir  string
-	Main bool
-}
-
-// moduleInfo returns the module path and module root directory for a project
-// using go modules, otherwise returns nil.
-//
-// Related: https://github.com/golang/go/issues/26504
-func moduleInfo(ctx context.Context, dir string) (*modules, error) {
-	modules := modules{
-		deps: make(map[string]*modInfo),
-	}
-
-	// TODO we read all the output as a single byte array - it may
-	// be possible & more efficient to stream it
-	cmd := exec.CommandContext(ctx, "go", "list", "-mod=readonly", "-json", "-m", "all")
-	cmd.Dir = dir
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, nil
-	}
-
-	dec := json.NewDecoder(bytes.NewReader(output))
-
-	for {
-		var info modInfo
-		err := dec.Decode(&info)
-		if err == io.EOF {
-			// all done
-			break
-		}
-
-		modules.deps[info.Path] = &info
-
-		if info.Main {
-			modules.main = &info
-		}
-
-		if err != nil {
-			return nil, fmt.Errorf("error reading module data %w", err)
-		}
-	}
-
-	if modules.main == nil {
-		return nil, fmt.Errorf("couldn't find main module")
-	}
-
-	return &modules, nil
-}
-
-// getGoroot shells out to `go env GOROOT` to determine
-// the GOROOT for the installed version of go so that we
-// can set it in our buildContext. By default, the GOROOT
-// of our buildContext is set to the GOROOT at install
-// time for `ko`, which means that we break when certain
-// package managers update go or when using a pre-built
-// `ko` binary that expects a different GOROOT.
-//
-// See https://github.com/google/ko/issues/106
-func getGoroot(ctx context.Context, dir string) (string, error) {
-	cmd := exec.CommandContext(ctx, "go", "env", "GOROOT")
-	// It's probably not necessary to set the command working directory here,
-	// but it helps keep everything consistent.
-	cmd.Dir = dir
-	output, err := cmd.Output()
-	return strings.TrimSpace(string(output)), err
 }
 
 // NewGo returns a build.Interface implementation that:
@@ -201,36 +114,9 @@ func getGoroot(ctx context.Context, dir string) (string, error) {
 // The `dir` argument is the working directory for executing the `go` tool.
 // If `dir` is empty, the function uses the current process working directory.
 func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error) {
-	// TODO: We could do moduleInfo() and getGoroot() concurrently.
-	module, err := moduleInfo(ctx, dir)
-	if err != nil {
-		return nil, err
-	}
-
-	goroot, err := getGoroot(ctx, dir)
-	if err != nil {
-		// On error, print the output and set goroot to "" to avoid using it later.
-		log.Printf("Unexpected error running \"go env GOROOT\": %v\n%v", err, goroot)
-		goroot = ""
-	} else if goroot == "" {
-		log.Printf(`Unexpected: $(go env GOROOT) == ""`)
-	}
-
-	// If $(go env GOROOT) successfully returns a non-empty string that differs from
-	// the default build context GOROOT, use $(go env GOROOT) instead.
-	bc := gb.Default
-	bc.Dir = dir
-	if goroot != "" && bc.GOROOT != goroot {
-		bc.GOROOT = goroot
-	}
-
 	gbo := &gobuildOpener{
-		build:        build,
-		mod:          module,
-		buildContext: &bc,
-		// dir is set on both buildContext and on gbo. Not ideal, but the
-		// build.Context interface doesn't expose
-		dir: dir,
+		build: build,
+		dir:   dir,
 	}
 
 	for _, option := range options {
@@ -280,37 +166,17 @@ func (g *gobuild) IsSupportedReference(s string) error {
 	if !ref.IsStrict() {
 		return errors.New("importpath does not start with ko://")
 	}
-	p, err := g.importPackage(ref)
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, ref.Path())
 	if err != nil {
-		return err
+		return fmt.Errorf("error loading package from %s: %w", ref.Path(), err)
 	}
-	if !p.IsCommand() {
+	if len(pkgs) != 1 {
+		return fmt.Errorf("found %d local packages, expected 1", len(pkgs))
+	}
+	if pkgs[0].Name != "main" {
 		return errors.New("importpath is not `package main`")
 	}
 	return nil
-}
-
-// importPackage wraps go/build.Import to handle go modules.
-//
-// Note that we will fall back to GOPATH if the project isn't using go modules.
-func (g *gobuild) importPackage(ref reference) (*gb.Package, error) {
-	if g.mod == nil {
-		return g.buildContext.Import(ref.Path(), gb.Default.GOPATH, gb.ImportComment)
-	}
-
-	// If we're inside a go modules project, try to use the module's directory
-	// as our source root to import:
-	// * any strict reference we get
-	// * paths that match module path prefix (they should be in this project)
-	// * relative paths (they should also be in this project)
-	// * path is a module
-
-	_, isDep := g.mod.deps[ref.Path()]
-	if ref.IsStrict() || strings.HasPrefix(ref.Path(), g.mod.main.Path) || gb.IsLocalImport(ref.Path()) || isDep {
-		return g.buildContext.Import(ref.Path(), g.mod.main.Dir, gb.ImportComment)
-	}
-
-	return nil, fmt.Errorf("unmatched importPackage %q with gomodules", ref.String())
 }
 
 func getGoarm(platform v1.Platform) (string, error) {
@@ -495,11 +361,17 @@ func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform)
 }
 
 func (g *gobuild) kodataPath(ref reference) (string, error) {
-	p, err := g.importPackage(ref)
+	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedFiles}, ref.Path())
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("error loading package from %s: %w", ref.Path(), err)
 	}
-	return filepath.Join(p.Dir, "kodata"), nil
+	if len(pkgs) != 1 {
+		return "", fmt.Errorf("found %d local packages, expected 1", len(pkgs))
+	}
+	if len(pkgs[0].GoFiles) == 0 {
+		return "", fmt.Errorf("package %s contains no Go files", pkgs[0])
+	}
+	return filepath.Join(pkgs[0].GoFiles[0], "..", "kodata"), nil
 }
 
 // Where kodata lives in the image.
