@@ -166,7 +166,7 @@ func (g *gobuild) IsSupportedReference(s string) error {
 	if !ref.IsStrict() {
 		return errors.New("importpath does not start with ko://")
 	}
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName}, ref.Path())
+	pkgs, err := packages.Load(&packages.Config{Dir: g.dir, Mode: packages.NeedName}, ref.Path())
 	if err != nil {
 		return fmt.Errorf("error loading package from %s: %w", ref.Path(), err)
 	}
@@ -361,7 +361,7 @@ func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform)
 }
 
 func (g *gobuild) kodataPath(ref reference) (string, error) {
-	pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedFiles}, ref.Path())
+	pkgs, err := packages.Load(&packages.Config{Dir: g.dir, Mode: packages.NeedFiles}, ref.Path())
 	if err != nil {
 		return "", fmt.Errorf("error loading package from %s: %w", ref.Path(), err)
 	}
