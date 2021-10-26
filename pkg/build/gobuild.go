@@ -371,7 +371,7 @@ func (g *gobuild) kodataPath(ref reference) (string, error) {
 	if len(pkgs[0].GoFiles) == 0 {
 		return "", fmt.Errorf("package %s contains no Go files", pkgs[0])
 	}
-	return filepath.Join(pkgs[0].GoFiles[0], "..", "kodata"), nil
+	return filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), "kodata"), nil
 }
 
 // Where kodata lives in the image.
