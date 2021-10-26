@@ -135,7 +135,7 @@ configuration section in your `.ko.yaml`.
 ```yaml
 builds:
 - id: foo
-  dir: .
+  dir: .  # default is .
   main: ./foobar/foo
   env:
   - GOPRIVATE=git.internal.example.com,source.developers.google.com
@@ -148,7 +148,7 @@ builds:
   - -X main.version={{.Env.VERSION}}
 - id: bar
   dir: ./bar
-  main: .
+  main: .  # default is .
   env:
   - GOCACHE=/workspace/.gocache
   ldflags:

@@ -95,37 +95,12 @@ GO111MODULE=on ./ko/ko build --local github.com/go-training/helloworld && exit 1
 popd || exit 1
 
 echo "8. On outside with build config specifying the test module builds."
-ko_exec_dir=$(pwd)
-pushd "$(mktemp -d)" || exit 1
-for app in foo bar ; do
-  mkdir -p $app/cmd || exit 1
-  pushd $app || exit 1
-  GO111MODULE=on go mod init example.com/$app || exit 1
-  cat << EOF > ./cmd/main.go || exit 1
-package main
-
-import "fmt"
-
-func main() {
-	fmt.Println("$app")
-}
-EOF
-  popd || exit 1
-done
-cat << EOF > .ko.yaml || exit 1
-builds:
-- id: foo-app
-  dir: ./foo
-  main: ./cmd
-- id: bar-app
-  dir: ./bar
-  main: ./cmd
-EOF
+pushd test/build-configs || exit 1
 for app in foo bar ; do
   # test both local and fully qualified import paths
   for prefix in example.com . ; do
     import_path=$prefix/$app/cmd
-    RESULT="$(GO111MODULE=on GOFLAGS="" "$ko_exec_dir"/ko publish --local $import_path | grep "$FILTER" | xargs -I% docker run %)"
+    RESULT="$(GO111MODULE=on GOFLAGS="" ../../ko build --local $import_path | grep "$FILTER" | xargs -I% docker run %)"
     if [[ "$RESULT" != *"$app"* ]]; then
       echo "Test FAILED for $import_path. Saw $RESULT but expected $app" && exit 1
     else
