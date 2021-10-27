@@ -20,7 +20,6 @@ import (
 	"archive/tar"
 	"context"
 	"fmt"
-	gb "go/build"
 	"io"
 	"io/ioutil"
 	"path"
@@ -176,29 +175,8 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 		t.Fatalf("random.Image() = %v", err)
 	}
 
-	mods := &modules{
-		main: &modInfo{
-			Path: "github.com/google/ko/test",
-			Dir:  ".",
-		},
-		deps: map[string]*modInfo{
-			"github.com/some/module/cmd": {
-				Path: "github.com/some/module/cmd",
-				Dir:  ".",
-			},
-		},
-	}
-
 	opts := []Option{
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-		withModuleInfo(mods),
-		withBuildContext(stubBuildContext{
-			// make all referenced deps commands
-			"github.com/google/ko/test":  &gb.Package{Name: "main"},
-			"github.com/some/module/cmd": &gb.Package{Name: "main"},
-
-			"github.com/google/ko/pkg/build": &gb.Package{Name: "build"},
-		}),
 	}
 
 	ng, err := NewGo(context.Background(), "", opts...)
@@ -208,8 +186,8 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 
 	// Supported import paths.
 	for _, importpath := range []string{
-		"ko://github.com/google/ko/test",  // ko can build the test package.
-		"ko://github.com/some/module/cmd", // ko can build commands in dependent modules
+		"ko://github.com/google/ko/test",         // ko can build the test package.
+		"ko://github.com/go-training/helloworld", // ko can build commands in dependent modules
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if err := ng.IsSupportedReference(importpath); err != nil {
@@ -222,7 +200,7 @@ func TestGoBuildIsSupportedRefWithModules(t *testing.T) {
 	for _, importpath := range []string{
 		"ko://github.com/google/ko/pkg/build",       // not a command.
 		"ko://github.com/google/ko/pkg/nonexistent", // does not exist.
-		"ko://github.com/google/ko",                 // not in this module.
+		"ko://github.com/google/go-github",          // not in this module.
 	} {
 		t.Run(importpath, func(t *testing.T) {
 			if err := ng.IsSupportedReference(importpath); err == nil {
@@ -578,16 +556,6 @@ func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1
 			t.Errorf("base image ref; got %q, want %q", got, want)
 		}
 	})
-}
-
-type stubBuildContext map[string]*gb.Package
-
-func (s stubBuildContext) Import(path string, srcDir string, mode gb.ImportMode) (*gb.Package, error) {
-	p, ok := s[path]
-	if ok {
-		return p, nil
-	}
-	return nil, fmt.Errorf("not found: %s", path)
 }
 
 func TestGoBuild(t *testing.T) {
