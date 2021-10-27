@@ -695,6 +695,10 @@ func (g *gobuild) configForImportPath(ip string) Config {
 		config.Flags = append(config.Flags, "-gcflags", "all=-N -l")
 	}
 
+	if config.ID != "" {
+		log.Printf("Using build config %s for %s", config.ID, ip)
+	}
+
 	return config
 }
 

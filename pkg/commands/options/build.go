@@ -134,6 +134,12 @@ func (bo *BuildOptions) LoadConfig() error {
 func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[string]build.Config, error) {
 	buildConfigsByImportPath := make(map[string]build.Config)
 	for i, config := range configs {
+		// In case no ID is specified, use the index of the build config in
+		// the ko YAML file as a reference (debug help).
+		if config.ID == "" {
+			config.ID = fmt.Sprintf("#%d", i)
+		}
+
 		// Make sure to behave like GoReleaser by defaulting to the current
 		// directory in case the build or main field is not set, check
 		// https://goreleaser.com/customization/build/ for details
@@ -152,6 +158,11 @@ func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[
 		path := config.Main
 		if fi, err := os.Stat(filepath.Join(baseDir, config.Main)); err == nil && fi.Mode().IsRegular() {
 			path = filepath.Dir(config.Main)
+		}
+
+		// Verify that the path actually leads to a local file (https://github.com/google/ko/issues/483)
+		if _, err := os.Stat(filepath.Join(baseDir, path)); err != nil {
+			return nil, err
 		}
 
 		// By default, paths configured in the builds section are considered
