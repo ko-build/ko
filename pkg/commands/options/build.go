@@ -160,6 +160,11 @@ func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[
 			path = filepath.Dir(config.Main)
 		}
 
+		// Verify that the path actually leads to a local file (https://github.com/google/ko/issues/483)
+		if _, err := os.Stat(filepath.Join(baseDir, path)); err != nil {
+			return nil, err
+		}
+
 		// By default, paths configured in the builds section are considered
 		// local import paths, therefore add a "./" equivalent as a prefix to
 		// the constructured import path
