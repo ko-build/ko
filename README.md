@@ -127,7 +127,7 @@ baseImageOverrides:
 ### Overriding Go build settings
 
 By default, `ko` builds the binary with no additional build flags other than
-`--trimpath` (depending on the Go version). You can replace the default build
+`-trimpath`. You can replace the default build
 arguments by providing build flags and ldflags using a
 [GoReleaser](https://github.com/goreleaser/goreleaser) influenced `builds`
 configuration section in your `.ko.yaml`.
