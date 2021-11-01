@@ -29,6 +29,6 @@ require (
 	google.golang.org/grpc v1.41.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20200902074654-038fdea0a05b // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	k8s.io/apimachinery v0.22.2
+	k8s.io/apimachinery v0.22.3
 	sigs.k8s.io/kind v0.11.1
 )
