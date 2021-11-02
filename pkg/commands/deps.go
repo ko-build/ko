@@ -43,7 +43,7 @@ If the image was not built using ko, or if it was built without embedding depend
   ko deps docker.io/my-user/my-image:v3`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ctx := createCancellableContext()
+			ctx := cmd.Context()
 
 			ref, err := name.ParseReference(args[0])
 			if err != nil {

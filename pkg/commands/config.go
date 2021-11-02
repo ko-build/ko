@@ -21,10 +21,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/signal"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -141,17 +139,4 @@ func getCreationTime() (*v1.Time, error) {
 
 func getKoDataCreationTime() (*v1.Time, error) {
 	return getTimeFromEnv("KO_DATA_DATE_EPOCH")
-}
-
-func createCancellableContext() context.Context {
-	signals := make(chan os.Signal)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-	ctx, cancel := context.WithCancel(context.Background())
-
-	go func() {
-		<-signals
-		cancel()
-	}()
-
-	return ctx
 }

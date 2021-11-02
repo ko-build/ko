@@ -17,8 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"log"
 	"os"
+	"os/signal"
 
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/ko/pkg/commands"
@@ -28,7 +30,9 @@ func main() {
 	logs.Warn.SetOutput(os.Stderr)
 	logs.Progress.SetOutput(os.Stderr)
 
-	if err := commands.Root.Execute(); err != nil {
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+	if err := commands.Root.ExecuteContext(ctx); err != nil {
 		log.Fatal("error during command execution:", err)
 	}
 }

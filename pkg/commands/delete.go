@@ -28,27 +28,25 @@ type runCmd func(*cobra.Command, []string) error
 // passthru returns a runCmd that simply passes our CLI arguments
 // through to a binary named command.
 func passthru(command string) runCmd {
-	return func(_ *cobra.Command, _ []string) error {
+	return func(cmd *cobra.Command, _ []string) error {
 		if !isKubectlAvailable() {
 			return errors.New("error: kubectl is not available. kubectl must be installed to use ko delete")
 		}
-
-		// Cancel on signals.
-		ctx := createCancellableContext()
+		ctx := cmd.Context()
 
 		// Start building a command line invocation by passing
 		// through our arguments to command's CLI.
-		cmd := exec.CommandContext(ctx, command, os.Args[1:]...)
+		ecmd := exec.CommandContext(ctx, command, os.Args[1:]...)
 
 		// Pass through our environment
-		cmd.Env = os.Environ()
+		ecmd.Env = os.Environ()
 		// Pass through our stdfoo
-		cmd.Stderr = os.Stderr
-		cmd.Stdout = os.Stdout
-		cmd.Stdin = os.Stdin
+		ecmd.Stderr = os.Stderr
+		ecmd.Stdout = os.Stdout
+		ecmd.Stdin = os.Stdin
 
 		// Run it.
-		return cmd.Run()
+		return ecmd.Run()
 	}
 }
 
