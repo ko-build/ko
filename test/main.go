@@ -29,8 +29,13 @@ var (
 	wait = flag.Bool("wait", true, "Whether to wait for SIGTERM")
 )
 
+// This is defined so we can test build-time variable setting using ldflags.
+var version = "default"
+
 func main() {
 	flag.Parse()
+
+	log.Println("version =", version)
 
 	dp := os.Getenv("KO_DATA_PATH")
 	file := filepath.Join(dp, *f)
