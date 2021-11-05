@@ -60,11 +60,11 @@ func addResolve(topLevel *cobra.Command) {
 			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
-				return fmt.Errorf("error creating builder: %v", err)
+				return fmt.Errorf("error creating builder: %w", err)
 			}
 			publisher, err := makePublisher(po)
 			if err != nil {
-				return fmt.Errorf("error creating publisher: %v", err)
+				return fmt.Errorf("error creating publisher: %w", err)
 			}
 			defer publisher.Close()
 			return resolveFilesToWriter(ctx, builder, publisher, fo, so, os.Stdout)

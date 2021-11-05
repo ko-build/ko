@@ -241,5 +241,4 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 	} else if strings.Contains(d.String(), "@sha256:") {
 		t.Errorf("Publish() = %v, wanted no digest", d.String())
 	}
-
 }

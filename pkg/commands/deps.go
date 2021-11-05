@@ -16,6 +16,7 @@ package commands
 
 import (
 	"archive/tar"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -80,7 +81,7 @@ If the image was not built using ko, or if it was built without embedding depend
 					// keep reading.
 				}
 				h, err := tr.Next()
-				if err == io.EOF {
+				if errors.Is(err, io.EOF) {
 					return fmt.Errorf("no ko-built executable named %q found", bin)
 				}
 				if err != nil {

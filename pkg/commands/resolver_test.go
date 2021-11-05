@@ -19,6 +19,7 @@ package commands
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -109,7 +110,7 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 		var output string
 		if err := decoder.Decode(&output); err == nil {
 			outStructured = append(outStructured, output)
-		} else if err == io.EOF {
+		} else if errors.Is(err, io.EOF) {
 			break
 		} else {
 			t.Errorf("yaml.Unmarshal(%v) = %v", string(outYAML), err)
@@ -314,7 +315,7 @@ func registryServerWithImage(namespace string) (*httptest.Server, error) {
 	imageName := fmt.Sprintf("%s/%s", s.Listener.Addr().String(), namespace)
 	image, err := random.Image(1024, 1)
 	if err != nil {
-		return nil, fmt.Errorf("random.Image(): %v", err)
+		return nil, fmt.Errorf("random.Image(): %w", err)
 	}
 	crane.Push(image, imageName)
 	return s, nil

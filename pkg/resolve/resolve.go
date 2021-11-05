@@ -42,7 +42,7 @@ func ImageReferences(ctx context.Context, docs []*yaml.Node, builder build.Inter
 			ref := strings.TrimSpace(node.Value)
 
 			if err := builder.IsSupportedReference(ref); err != nil {
-				return fmt.Errorf("found strict reference but %s is not a valid import path: %v", ref, err)
+				return fmt.Errorf("found strict reference but %s is not a valid import path: %w", ref, err)
 			}
 
 			refs[ref] = append(refs[ref], node)

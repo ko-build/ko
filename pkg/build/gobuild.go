@@ -148,7 +148,7 @@ func (g *gobuild) QualifyImport(importpath string) (string, error) {
 		var err error
 		importpath, err = g.qualifyLocalImport(importpath)
 		if err != nil {
-			return "", fmt.Errorf("qualifying local import %s: %v", importpath, err)
+			return "", fmt.Errorf("qualifying local import %s: %w", importpath, err)
 		}
 	}
 	if !strings.HasPrefix(importpath, StrictScheme) {
@@ -187,7 +187,7 @@ func getGoarm(platform v1.Platform) (string, error) {
 	vs := strings.TrimPrefix(platform.Variant, "v")
 	variant, err := strconv.Atoi(vs)
 	if err != nil {
-		return "", fmt.Errorf("cannot parse arm variant %q: %v", platform.Variant, err)
+		return "", fmt.Errorf("cannot parse arm variant %q: %w", platform.Variant, err)
 	}
 	if variant >= 5 {
 		// TODO(golang/go#29373): Allow for 8 in later go versions if this is fixed.
@@ -229,7 +229,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	env, err := buildEnv(platform, os.Environ(), config.Env)
 	if err != nil {
-		return "", fmt.Errorf("could not create env for %s: %v", ip, err)
+		return "", fmt.Errorf("could not create env for %s: %w", ip, err)
 	}
 	cmd.Env = env
 
@@ -260,7 +260,7 @@ func buildEnv(platform v1.Platform, userEnv, configEnv []string) ([]string, erro
 	if strings.HasPrefix(platform.Architecture, "arm") && platform.Variant != "" {
 		goarm, err := getGoarm(platform)
 		if err != nil {
-			return nil, fmt.Errorf("goarm failure: %v", err)
+			return nil, fmt.Errorf("goarm failure: %w", err)
 		}
 		if goarm != "" {
 			env = append(env, "GOARM="+goarm)
@@ -318,7 +318,7 @@ func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform)
 			Mode:    0555,
 			ModTime: creationTime.Time,
 		}); err != nil {
-			return nil, fmt.Errorf("writing dir %q: %v", dir, err)
+			return nil, fmt.Errorf("writing dir %q: %w", dir, err)
 		}
 	}
 
@@ -494,7 +494,7 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 			Mode:    0555,
 			ModTime: creationTime.Time,
 		}); err != nil {
-			return nil, fmt.Errorf("writing dir %q: %v", dir, err)
+			return nil, fmt.Errorf("writing dir %q: %w", dir, err)
 		}
 	}
 

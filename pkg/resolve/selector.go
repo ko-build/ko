@@ -17,7 +17,7 @@ package resolve
 import (
 	"errors"
 
-	. "github.com/dprotaso/go-yit" //nolint: stylecheck // Allow this dot import.
+	y "github.com/dprotaso/go-yit"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/labels"
 )
@@ -52,19 +52,19 @@ func docKind(doc *yaml.Node) (string, error) {
 		return "", nil
 	}
 
-	it := FromNode(doc).
-		Filter(Intersect(
-			WithKind(yaml.MappingNode),
-			WithMapKeyValue(
-				WithStringValue("apiVersion"),
-				StringValue,
+	it := y.FromNode(doc).
+		Filter(y.Intersect(
+			y.WithKind(yaml.MappingNode),
+			y.WithMapKeyValue(
+				y.WithStringValue("apiVersion"),
+				y.StringValue,
 			),
 		)).
 		ValuesForMap(
 			// Key Predicate
-			WithStringValue("kind"),
+			y.WithStringValue("kind"),
 			// Value Predicate
-			StringValue,
+			y.StringValue,
 		)
 
 	node, ok := it()
@@ -77,21 +77,21 @@ func docKind(doc *yaml.Node) (string, error) {
 }
 
 func objMatchesSelector(doc *yaml.Node, selector labels.Selector) bool {
-	it := FromNode(doc).
-		Filter(WithKind(yaml.MappingNode)).
+	it := y.FromNode(doc).
+		Filter(y.WithKind(yaml.MappingNode)).
 		// Return the metadata map
 		ValuesForMap(
 			// Key Predicate
-			WithStringValue("metadata"),
+			y.WithStringValue("metadata"),
 			// Value Predicate
-			WithKind(yaml.MappingNode),
+			y.WithKind(yaml.MappingNode),
 		).
 		// Return the labels map
 		ValuesForMap(
 			// Key Predicate
-			WithStringValue("labels"),
+			y.WithStringValue("labels"),
 			// Value Predicate
-			WithKind(yaml.MappingNode),
+			y.WithKind(yaml.MappingNode),
 		)
 
 	node, ok := it()
@@ -104,11 +104,11 @@ func objMatchesSelector(doc *yaml.Node, selector labels.Selector) bool {
 }
 
 func listMatchesSelector(doc *yaml.Node, selector labels.Selector) (bool, error) {
-	it := FromNode(doc).ValuesForMap(
+	it := y.FromNode(doc).ValuesForMap(
 		// Key Predicate
-		WithStringValue("items"),
+		y.WithStringValue("items"),
 		// Value Predicate
-		WithKind(yaml.SequenceNode),
+		y.WithKind(yaml.SequenceNode),
 	)
 
 	node, ok := it()
@@ -120,7 +120,6 @@ func listMatchesSelector(doc *yaml.Node, selector labels.Selector) (bool, error)
 
 	var matches []*yaml.Node
 	for _, content := range node.Content {
-
 		if _, err := docKind(content); err != nil {
 			return false, err
 		}

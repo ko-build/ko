@@ -38,16 +38,16 @@ func publishImages(ctx context.Context, importpaths []string, pub publish.Interf
 			return nil, err
 		}
 		if err := b.IsSupportedReference(importpath); err != nil {
-			return nil, fmt.Errorf("importpath %q is not supported: %v", importpath, err)
+			return nil, fmt.Errorf("importpath %q is not supported: %w", importpath, err)
 		}
 
 		img, err := b.Build(ctx, importpath)
 		if err != nil {
-			return nil, fmt.Errorf("error building %q: %v", importpath, err)
+			return nil, fmt.Errorf("error building %q: %w", importpath, err)
 		}
 		ref, err := pub.Publish(ctx, img, importpath)
 		if err != nil {
-			return nil, fmt.Errorf("error publishing %s: %v", importpath, err)
+			return nil, fmt.Errorf("error publishing %s: %w", importpath, err)
 		}
 		imgs[importpath] = ref
 	}

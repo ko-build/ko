@@ -70,11 +70,11 @@ func addRun(topLevel *cobra.Command) {
 			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
-				return fmt.Errorf("error creating builder: %v", err)
+				return fmt.Errorf("error creating builder: %w", err)
 			}
 			publisher, err := makePublisher(po)
 			if err != nil {
-				return fmt.Errorf("error creating publisher: %v", err)
+				return fmt.Errorf("error creating publisher: %w", err)
 			}
 			defer publisher.Close()
 
@@ -87,7 +87,7 @@ func addRun(topLevel *cobra.Command) {
 			}
 			imgs, err := publishImages(ctx, importPaths, publisher, builder)
 			if err != nil {
-				return fmt.Errorf("failed to publish images: %v", err)
+				return fmt.Errorf("failed to publish images: %w", err)
 			}
 
 			// Usually only one, but this is the simple way to access the

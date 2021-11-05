@@ -148,7 +148,6 @@ func TestMatchesSelector(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.desc, func(t *testing.T) {
-
 			doc := strToYAML(t, test.input)
 			matches, err := MatchesSelector(doc, test.selector)
 			if err != nil {

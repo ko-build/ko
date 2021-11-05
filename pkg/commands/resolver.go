@@ -125,7 +125,7 @@ func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching,
 	}
 	opt, err := gobuildOptions(bo)
 	if err != nil {
-		return nil, fmt.Errorf("error setting up builder options: %v", err)
+		return nil, fmt.Errorf("error setting up builder options: %w", err)
 	}
 	innerBuilder, err := build.NewGobuilds(ctx, bo.WorkingDirectory, bo.BuildConfigs, opt...)
 	if err != nil {
@@ -185,7 +185,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		}
 		if _, err := name.NewRegistry(repoName); err != nil {
 			if _, err := name.NewRepository(repoName); err != nil {
-				return nil, fmt.Errorf("failed to parse %q as repository: %v", repoName, err)
+				return nil, fmt.Errorf("failed to parse %q as repository: %w", repoName, err)
 			}
 		}
 
@@ -193,7 +193,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		if po.OCILayoutPath != "" {
 			lp, err := publish.NewLayout(po.OCILayoutPath)
 			if err != nil {
-				return nil, fmt.Errorf("failed to create LayoutPublisher for %q: %v", po.OCILayoutPath, err)
+				return nil, fmt.Errorf("failed to create LayoutPublisher for %q: %w", po.OCILayoutPath, err)
 			}
 			publishers = append(publishers, lp)
 		}
@@ -303,7 +303,7 @@ func resolveFilesToWriter(
 			})
 		})
 		if err != nil {
-			return fmt.Errorf("creating dep-notify graph: %v", err)
+			return fmt.Errorf("creating dep-notify graph: %w", err)
 		}
 		// Cleanup the fsnotify hooks when we're done.
 		defer g.Shutdown()
@@ -358,7 +358,7 @@ func resolveFilesToWriter(
 				if err != nil {
 					// This error is sometimes expected during watch mode, so this
 					// isn't fatal. Just print it and keep the watch open.
-					err := fmt.Errorf("error processing import paths in %q: %v", f, err)
+					err := fmt.Errorf("error processing import paths in %q: %w", f, err)
 					if fo.Watch {
 						log.Print(err)
 						return nil
@@ -379,7 +379,7 @@ func resolveFilesToWriter(
 						// yamls, and no new builds or deploys.
 						if err := g.Add(ip); err != nil {
 							// If we're in watch mode, just fail.
-							err := fmt.Errorf("adding importpath %q to dep graph: %v", ip, err)
+							err := fmt.Errorf("adding importpath %q to dep graph: %w", ip, err)
 							errCh <- err
 							return err
 						}
@@ -402,7 +402,7 @@ func resolveFilesToWriter(
 			}
 
 		case err := <-errCh:
-			return fmt.Errorf("watching dependencies: %v", err)
+			return fmt.Errorf("watching dependencies: %w", err)
 		}
 	}
 
@@ -417,14 +417,13 @@ func resolveFile(
 	builder build.Interface,
 	pub publish.Interface,
 	so *options.SelectorOptions) (b []byte, err error) {
-
 	var selector labels.Selector
 	if so.Selector != "" {
 		var err error
 		selector, err = labels.Parse(so.Selector)
 
 		if err != nil {
-			return nil, fmt.Errorf("unable to parse selector: %v", err)
+			return nil, fmt.Errorf("unable to parse selector: %w", err)
 		}
 	}
 
@@ -446,7 +445,7 @@ func resolveFile(
 	for {
 		var doc yaml.Node
 		if err := decoder.Decode(&doc); err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			}
 			return nil, err
@@ -454,18 +453,17 @@ func resolveFile(
 
 		if selector != nil {
 			if match, err := resolve.MatchesSelector(&doc, selector); err != nil {
-				return nil, fmt.Errorf("error evaluating selector: %v", err)
+				return nil, fmt.Errorf("error evaluating selector: %w", err)
 			} else if !match {
 				continue
 			}
 		}
 
 		docNodes = append(docNodes, &doc)
-
 	}
 
 	if err := resolve.ImageReferences(ctx, docNodes, builder, pub); err != nil {
-		return nil, fmt.Errorf("error resolving image references: %v", err)
+		return nil, fmt.Errorf("error resolving image references: %w", err)
 	}
 
 	buf := &bytes.Buffer{}
@@ -475,7 +473,7 @@ func resolveFile(
 	for _, doc := range docNodes {
 		err := e.Encode(doc)
 		if err != nil {
-			return nil, fmt.Errorf("failed to encode output: %v", err)
+			return nil, fmt.Errorf("failed to encode output: %w", err)
 		}
 	}
 	e.Close()

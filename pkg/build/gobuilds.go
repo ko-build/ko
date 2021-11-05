@@ -142,7 +142,7 @@ func relativePath(baseDir string, importpath string) (string, error) {
 	}
 	relPath, err := filepath.Rel(baseDir, importpath)
 	if err != nil {
-		return "", fmt.Errorf("cannot determine relative path of baseDir (%q) and local path (%q): %v", baseDir, importpath, err)
+		return "", fmt.Errorf("cannot determine relative path of baseDir (%q) and local path (%q): %w", baseDir, importpath, err)
 	}
 	if strings.HasPrefix(relPath, "..") {
 		// TODO Is this assumption correct?
