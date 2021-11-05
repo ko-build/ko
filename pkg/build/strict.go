@@ -43,7 +43,6 @@ func (r reference) Path() string {
 func (r reference) String() string {
 	if r.IsStrict() {
 		return StrictScheme + r.Path()
-	} else {
-		return r.Path()
 	}
+	return r.Path()
 }

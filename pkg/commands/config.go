@@ -57,7 +57,7 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 		}
 		ref, err := name.ParseReference(baseImage, nameOpts...)
 		if err != nil {
-			return nil, nil, fmt.Errorf("parsing base image (%q): %v", baseImage, err)
+			return nil, nil, fmt.Errorf("parsing base image (%q): %w", baseImage, err)
 		}
 
 		// For ko.local, look in the daemon.
@@ -128,7 +128,7 @@ func getTimeFromEnv(env string) (*v1.Time, error) {
 
 	seconds, err := strconv.ParseInt(epoch, 10, 64)
 	if err != nil {
-		return nil, fmt.Errorf("the environment variable %s should be the number of seconds since January 1st 1970, 00:00 UTC, got: %v", env, err)
+		return nil, fmt.Errorf("the environment variable %s should be the number of seconds since January 1st 1970, 00:00 UTC, got: %w", env, err)
 	}
 	return &v1.Time{Time: time.Unix(seconds, 0)}, nil
 }

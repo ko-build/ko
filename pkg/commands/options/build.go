@@ -17,6 +17,7 @@ limitations under the License.
 package options
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -91,15 +92,15 @@ func (bo *BuildOptions) LoadConfig() error {
 	v.AddConfigPath(bo.WorkingDirectory)
 
 	if err := v.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			return fmt.Errorf("error reading config file: %v", err)
+		if !errors.As(err, &viper.ConfigFileNotFoundError{}) {
+			return fmt.Errorf("error reading config file: %w", err)
 		}
 	}
 
 	if bo.BaseImage == "" {
 		ref := v.GetString("defaultBaseImage")
 		if _, err := name.ParseReference(ref); err != nil {
-			return fmt.Errorf("'defaultBaseImage': error parsing %q as image reference: %v", ref, err)
+			return fmt.Errorf("'defaultBaseImage': error parsing %q as image reference: %w", ref, err)
 		}
 		bo.BaseImage = ref
 	}
@@ -109,7 +110,7 @@ func (bo *BuildOptions) LoadConfig() error {
 		overrides := v.GetStringMapString("baseImageOverrides")
 		for key, value := range overrides {
 			if _, err := name.ParseReference(value); err != nil {
-				return fmt.Errorf("'baseImageOverrides': error parsing %q as image reference: %v", value, err)
+				return fmt.Errorf("'baseImageOverrides': error parsing %q as image reference: %w", value, err)
 			}
 			baseImageOverrides[key] = value
 		}
@@ -172,7 +173,7 @@ func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[
 
 		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: baseDir}, localImportPath)
 		if err != nil {
-			return nil, fmt.Errorf("'builds': entry #%d does not contain a valid local import path (%s) for directory (%s): %v", i, localImportPath, baseDir, err)
+			return nil, fmt.Errorf("'builds': entry #%d does not contain a valid local import path (%s) for directory (%s): %w", i, localImportPath, baseDir, err)
 		}
 
 		if len(pkgs) != 1 {

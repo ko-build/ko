@@ -63,16 +63,16 @@ func addBuild(topLevel *cobra.Command) {
 			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
-				return fmt.Errorf("error creating builder: %v", err)
+				return fmt.Errorf("error creating builder: %w", err)
 			}
 			publisher, err := makePublisher(po)
 			if err != nil {
-				return fmt.Errorf("error creating publisher: %v", err)
+				return fmt.Errorf("error creating publisher: %w", err)
 			}
 			defer publisher.Close()
 			images, err := publishImages(ctx, args, publisher, builder)
 			if err != nil {
-				return fmt.Errorf("failed to publish images: %v", err)
+				return fmt.Errorf("failed to publish images: %w", err)
 			}
 			for _, img := range images {
 				fmt.Println(img)

@@ -19,6 +19,7 @@ package build
 import (
 	"archive/tar"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -431,7 +432,7 @@ func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1
 		}
 		defer r.Close()
 		tr := tar.NewReader(r)
-		if _, err := tr.Next(); err == io.EOF {
+		if _, err := tr.Next(); errors.Is(err, io.EOF) {
 			t.Errorf("Layer contained no files")
 		}
 	})
@@ -449,7 +450,7 @@ func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1
 		tr := tar.NewReader(r)
 		for {
 			header, err := tr.Next()
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				break
 			} else if err != nil {
 				t.Errorf("Next() = %v", err)

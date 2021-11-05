@@ -75,11 +75,11 @@ func addCreate(topLevel *cobra.Command) {
 			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
-				return fmt.Errorf("error creating builder: %v", err)
+				return fmt.Errorf("error creating builder: %w", err)
 			}
 			publisher, err := makePublisher(po)
 			if err != nil {
-				return fmt.Errorf("error creating publisher: %v", err)
+				return fmt.Errorf("error creating publisher: %w", err)
 			}
 			defer publisher.Close()
 
@@ -106,7 +106,7 @@ func addCreate(topLevel *cobra.Command) {
 			// Wire up kubectl stdin to resolveFilesToWriter.
 			stdin, err := kubectlCmd.StdinPipe()
 			if err != nil {
-				return fmt.Errorf("error piping to 'kubectl create': %v", err)
+				return fmt.Errorf("error piping to 'kubectl create': %w", err)
 			}
 
 			// Make sure builds are cancelled if kubectl create fails.
@@ -129,7 +129,7 @@ func addCreate(topLevel *cobra.Command) {
 			g.Go(func() error {
 				// Run it.
 				if err := kubectlCmd.Run(); err != nil {
-					return fmt.Errorf("error executing 'kubectl create': %v", err)
+					return fmt.Errorf("error executing 'kubectl create': %w", err)
 				}
 				return nil
 			})
