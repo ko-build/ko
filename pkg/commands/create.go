@@ -86,7 +86,7 @@ func addCreate(topLevel *cobra.Command) {
 			// Issue a "kubectl create" command reading from stdin,
 			// to which we will pipe the resolved files, and any
 			// remaining flags passed after '--'.
-			argv := []string{"apply", "-f", "-"}
+			argv := []string{"create", "-f", "-"}
 			if kflags := kf.Values(); len(kflags) != 0 {
 				skflags := strings.Join(stripPassword(kflags), " ")
 				log.Printf(kubectlFlagsWarningTemplate,
