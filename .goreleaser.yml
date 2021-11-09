@@ -34,8 +34,16 @@ archives:
     amd64: x86_64
 checksum:
   name_template: 'checksums.txt'
+signs:
+  - cmd: cosign
+    stdin: '{{ .Env.COSIGN_PASSWORD }}'
+    args: ["sign-blob", "-key=cosign.key", "-output=${signature}", "${artifact}"]
+    artifacts: checksum
 snapshot:
   name_template: "{{ .Tag }}-next"
+release:
+  extra_files:
+    - glob: ./cosign.pub
 changelog:
   sort: asc
   use: github
