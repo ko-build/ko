@@ -91,8 +91,10 @@ ko publish ./cmd/app
 gcr.io/my-project/app-099ba5bcefdead87f92606265fb99ac0@sha256:6e398316742b7aa4a93161dce4a23bc5c545700b862b43347b941000b112ec3e
 ```
 
+The executable binary that was built from `./cmd/app` is available in the image at `/ko-app/app` -- the binary name matches the base import path name -- and that binary is the image's entrypoint.
+
 Because the output of `ko publish` is an image reference, you can easily pass it
-to other tools that expect to take an image reference:
+to other tools that expect to take an image reference.
 
 To run the container locally:
 
