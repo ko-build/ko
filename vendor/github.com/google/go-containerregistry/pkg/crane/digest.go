@@ -19,7 +19,7 @@ import "github.com/google/go-containerregistry/pkg/logs"
 // Digest returns the sha256 hash of the remote image at ref.
 func Digest(ref string, opt ...Option) (string, error) {
 	o := makeOptions(opt...)
-	if o.platform != nil {
+	if o.Platform != nil {
 		desc, err := getManifest(ref, opt...)
 		if err != nil {
 			return "", err

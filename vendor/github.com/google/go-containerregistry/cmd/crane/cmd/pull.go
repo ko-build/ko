@@ -37,7 +37,7 @@ func NewCmdPull(options *[]crane.Option) *cobra.Command {
 			for _, src := range srcList {
 				img, err := crane.Pull(src, *options...)
 				if err != nil {
-					return fmt.Errorf("pulling %s: %v", src, err)
+					return fmt.Errorf("pulling %s: %w", src, err)
 				}
 				if cachePath != "" {
 					img = cache.Image(img, cache.NewFilesystemCache(cachePath))
@@ -49,15 +49,15 @@ func NewCmdPull(options *[]crane.Option) *cobra.Command {
 			switch format {
 			case "tarball":
 				if err := crane.MultiSave(imageMap, path); err != nil {
-					return fmt.Errorf("saving tarball %s: %v", path, err)
+					return fmt.Errorf("saving tarball %s: %w", path, err)
 				}
 			case "legacy":
 				if err := crane.MultiSaveLegacy(imageMap, path); err != nil {
-					return fmt.Errorf("saving legacy tarball %s: %v", path, err)
+					return fmt.Errorf("saving legacy tarball %s: %w", path, err)
 				}
 			case "oci":
 				if err := crane.MultiSaveOCI(imageMap, path); err != nil {
-					return fmt.Errorf("saving oci image layout %s: %v", path, err)
+					return fmt.Errorf("saving oci image layout %s: %w", path, err)
 				}
 			default:
 				return fmt.Errorf("unexpected --format: %q (valid values are: tarball, legacy, and oci)", format)

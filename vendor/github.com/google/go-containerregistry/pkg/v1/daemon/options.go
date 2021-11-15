@@ -99,4 +99,5 @@ type Client interface {
 	ImageSave(context.Context, []string) (io.ReadCloser, error)
 	ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error)
 	ImageTag(context.Context, string, string) error
+	ImageInspectWithRaw(context.Context, string) (types.ImageInspect, []byte, error)
 }

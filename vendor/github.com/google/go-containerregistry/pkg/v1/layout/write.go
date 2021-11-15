@@ -216,7 +216,6 @@ func (l Path) WriteFile(name string, data []byte, perm os.FileMode) error {
 	}
 
 	return ioutil.WriteFile(l.path(name), data, perm)
-
 }
 
 // WriteBlob copies a file to the blobs/ directory in the Path from the given ReadCloser at
@@ -410,7 +409,6 @@ func (l Path) WriteIndex(ii v1.ImageIndex) error {
 
 	indexFile := filepath.Join("blobs", h.Algorithm, h.Hex)
 	return l.writeIndexToFile(indexFile, ii)
-
 }
 
 // Write constructs a Path at path from an ImageIndex.

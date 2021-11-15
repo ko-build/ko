@@ -31,7 +31,7 @@ func NewCmdManifest(options *[]crane.Option) *cobra.Command {
 			src := args[0]
 			manifest, err := crane.Manifest(src, *options...)
 			if err != nil {
-				return fmt.Errorf("fetching manifest %s: %v", src, err)
+				return fmt.Errorf("fetching manifest %s: %w", src, err)
 			}
 			fmt.Print(string(manifest))
 			return nil

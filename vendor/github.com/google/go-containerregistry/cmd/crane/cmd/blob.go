@@ -33,14 +33,14 @@ func NewCmdBlob(options *[]crane.Option) *cobra.Command {
 			src := args[0]
 			layer, err := crane.PullLayer(src, *options...)
 			if err != nil {
-				return fmt.Errorf("pulling layer %s: %v", src, err)
+				return fmt.Errorf("pulling layer %s: %w", src, err)
 			}
 			blob, err := layer.Compressed()
 			if err != nil {
-				return fmt.Errorf("fetching blob %s: %v", src, err)
+				return fmt.Errorf("fetching blob %s: %w", src, err)
 			}
 			if _, err := io.Copy(cmd.OutOrStdout(), blob); err != nil {
-				return fmt.Errorf("copying blob %s: %v", src, err)
+				return fmt.Errorf("copying blob %s: %w", src, err)
 			}
 			return nil
 		},

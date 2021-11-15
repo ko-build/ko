@@ -197,7 +197,7 @@ func (i *index) IndexManifest() (*v1.IndexManifest, error) {
 	if err := i.compute(); err != nil {
 		return nil, err
 	}
-	return i.manifest, nil
+	return i.manifest.DeepCopy(), nil
 }
 
 // RawManifest returns the serialized bytes of Manifest()

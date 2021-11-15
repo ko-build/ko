@@ -22,6 +22,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/spf13/cobra"
 )
 
@@ -29,6 +31,7 @@ import (
 func NewCmdAppend(options *[]crane.Option) *cobra.Command {
 	var baseRef, newTag, outFile string
 	var newLayers []string
+	var annotate bool
 
 	appendCmd := &cobra.Command{
 		Use:   "append",
@@ -44,30 +47,49 @@ func NewCmdAppend(options *[]crane.Option) *cobra.Command {
 			} else {
 				base, err = crane.Pull(baseRef, *options...)
 				if err != nil {
-					return fmt.Errorf("pulling %s: %v", baseRef, err)
+					return fmt.Errorf("pulling %s: %w", baseRef, err)
 				}
 			}
 
 			img, err := crane.Append(base, newLayers...)
 			if err != nil {
-				return fmt.Errorf("appending %v: %v", newLayers, err)
+				return fmt.Errorf("appending %v: %w", newLayers, err)
+			}
+
+			if baseRef != "" && annotate {
+				ref, err := name.ParseReference(baseRef)
+				if err != nil {
+					return fmt.Errorf("parsing ref %q: %w", baseRef, err)
+				}
+
+				baseDigest, err := base.Digest()
+				if err != nil {
+					return err
+				}
+				anns := map[string]string{
+					specsv1.AnnotationBaseImageDigest: baseDigest.String(),
+				}
+				if _, ok := ref.(name.Tag); ok {
+					anns[specsv1.AnnotationBaseImageName] = ref.Name()
+				}
+				img = mutate.Annotations(img, anns).(v1.Image)
 			}
 
 			if outFile != "" {
 				if err := crane.Save(img, newTag, outFile); err != nil {
-					return fmt.Errorf("writing output %q: %v", outFile, err)
+					return fmt.Errorf("writing output %q: %w", outFile, err)
 				}
 			} else {
 				if err := crane.Push(img, newTag, *options...); err != nil {
-					return fmt.Errorf("pushing image %s: %v", newTag, err)
+					return fmt.Errorf("pushing image %s: %w", newTag, err)
 				}
 				ref, err := name.ParseReference(newTag)
 				if err != nil {
-					return fmt.Errorf("parsing reference %s: %v", newTag, err)
+					return fmt.Errorf("parsing reference %s: %w", newTag, err)
 				}
 				d, err := img.Digest()
 				if err != nil {
-					return fmt.Errorf("digest: %v", err)
+					return fmt.Errorf("digest: %w", err)
 				}
 				fmt.Println(ref.Context().Digest(d.String()))
 			}
@@ -78,6 +100,7 @@ func NewCmdAppend(options *[]crane.Option) *cobra.Command {
 	appendCmd.Flags().StringVarP(&newTag, "new_tag", "t", "", "Tag to apply to resulting image")
 	appendCmd.Flags().StringSliceVarP(&newLayers, "new_layer", "f", []string{}, "Path to tarball to append to image")
 	appendCmd.Flags().StringVarP(&outFile, "output", "o", "", "Path to new tarball of resulting image")
+	appendCmd.Flags().BoolVar(&annotate, "set-base-image-annotations", false, "If true, annotate the resulting image as being based on the base image")
 
 	appendCmd.MarkFlagRequired("new_tag")
 	appendCmd.MarkFlagRequired("new_layer")

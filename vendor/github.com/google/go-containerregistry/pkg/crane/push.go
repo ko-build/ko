@@ -36,9 +36,9 @@ func LoadTag(path, tag string, opt ...Option) (v1.Image, error) {
 	}
 
 	o := makeOptions(opt...)
-	t, err := name.NewTag(tag, o.name...)
+	t, err := name.NewTag(tag, o.Name...)
 	if err != nil {
-		return nil, fmt.Errorf("parsing tag %q: %v", tag, err)
+		return nil, fmt.Errorf("parsing tag %q: %w", tag, err)
 	}
 	return tarball.ImageFromPath(path, &t)
 }
@@ -46,9 +46,20 @@ func LoadTag(path, tag string, opt ...Option) (v1.Image, error) {
 // Push pushes the v1.Image img to a registry as dst.
 func Push(img v1.Image, dst string, opt ...Option) error {
 	o := makeOptions(opt...)
-	tag, err := name.ParseReference(dst, o.name...)
+	tag, err := name.ParseReference(dst, o.Name...)
 	if err != nil {
-		return fmt.Errorf("parsing reference %q: %v", dst, err)
+		return fmt.Errorf("parsing reference %q: %w", dst, err)
 	}
-	return remote.Write(tag, img, o.remote...)
+	return remote.Write(tag, img, o.Remote...)
+}
+
+// Upload pushes the v1.Layer to a given repo.
+func Upload(layer v1.Layer, repo string, opt ...Option) error {
+	o := makeOptions(opt...)
+	ref, err := name.NewRepository(repo, o.Name...)
+	if err != nil {
+		return fmt.Errorf("parsing repo %q: %w", repo, err)
+	}
+
+	return remote.WriteLayer(ref, layer, o.Remote...)
 }

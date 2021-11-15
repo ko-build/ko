@@ -22,6 +22,7 @@ import (
 	"github.com/docker/cli/cli/config"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/spf13/cobra"
 )
 
@@ -38,11 +39,12 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 	verbose := false
 	insecure := false
 	platform := &platformValue{}
+	var osVersion string
 
 	root := &cobra.Command{
 		Use:               use,
 		Short:             short,
-		Run:               func(cmd *cobra.Command, _ []string) { cmd.Usage() },
+		RunE:              func(cmd *cobra.Command, _ []string) error { return cmd.Usage() },
 		DisableAutoGenTag: true,
 		SilenceUsage:      true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
@@ -62,9 +64,13 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 				options = append(options, crane.WithUserAgent(fmt.Sprintf("%s/%s", binary, Version)))
 			}
 
+			if osVersion != "" {
+				platform.platform.OSVersion = osVersion
+			}
+
 			options = append(options, crane.WithPlatform(platform.platform))
 
-			transport := http.DefaultTransport.(*http.Transport).Clone()
+			transport := remote.DefaultTransport.Clone()
 			transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: insecure}
 
 			var rt http.RoundTripper = transport
@@ -93,6 +99,7 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 		NewCmdDelete(&options),
 		NewCmdDigest(&options),
 		NewCmdExport(&options),
+		NewCmdFlatten(&options),
 		NewCmdList(&options),
 		NewCmdManifest(&options),
 		NewCmdOptimize(&options),
@@ -110,6 +117,7 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable debug logs")
 	root.PersistentFlags().BoolVar(&insecure, "insecure", false, "Allow image references to be fetched without TLS")
 	root.PersistentFlags().Var(platform, "platform", "Specifies the platform in the form os/arch[/variant] (e.g. linux/amd64).")
+	root.PersistentFlags().StringVar(&osVersion, "osversion", "", "Specifies the OS version.")
 
 	return root
 }

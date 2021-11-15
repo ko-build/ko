@@ -45,7 +45,7 @@ func NewCmdValidate(options *[]crane.Option) *cobra.Command {
 				}
 				img, err := maker(flag, *options...)
 				if err != nil {
-					return fmt.Errorf("failed to read image %s: %v", flag, err)
+					return fmt.Errorf("failed to read image %s: %w", flag, err)
 				}
 
 				opt := []validate.Option{}
@@ -55,9 +55,8 @@ func NewCmdValidate(options *[]crane.Option) *cobra.Command {
 				if err := validate.Image(img, opt...); err != nil {
 					fmt.Printf("FAIL: %s: %v\n", flag, err)
 					return err
-				} else {
-					fmt.Printf("PASS: %s\n", flag)
 				}
+				fmt.Printf("PASS: %s\n", flag)
 			}
 			return nil
 		},
@@ -69,6 +68,6 @@ func NewCmdValidate(options *[]crane.Option) *cobra.Command {
 	return validateCmd
 }
 
-func makeTarball(path string, opts ...crane.Option) (v1.Image, error) {
+func makeTarball(path string, _ ...crane.Option) (v1.Image, error) {
 	return tarball.ImageFromPath(path, nil)
 }

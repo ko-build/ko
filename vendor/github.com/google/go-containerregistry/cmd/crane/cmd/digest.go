@@ -31,7 +31,9 @@ func NewCmdDigest(options *[]crane.Option) *cobra.Command {
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if tarball == "" && len(args) == 0 {
-				cmd.Help()
+				if err := cmd.Help(); err != nil {
+					return err
+				}
 				return errors.New("image reference required without --tarball")
 			}
 
@@ -65,11 +67,11 @@ func getTarballDigest(tarball string, args []string, options *[]crane.Option) (s
 
 	img, err := crane.LoadTag(tarball, tag, *options...)
 	if err != nil {
-		return "", fmt.Errorf("loading image from %q: %v", tarball, err)
+		return "", fmt.Errorf("loading image from %q: %w", tarball, err)
 	}
 	digest, err := img.Digest()
 	if err != nil {
-		return "", fmt.Errorf("computing digest: %v", err)
+		return "", fmt.Errorf("computing digest: %w", err)
 	}
 	return digest.String(), nil
 }

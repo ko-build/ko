@@ -141,7 +141,7 @@ func computeLayer(layer v1.Layer) (*computedLayer, error) {
 	files := make(map[string]struct{})
 	for {
 		hdr, err := tarReader.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

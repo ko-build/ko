@@ -31,7 +31,7 @@ func NewCmdCatalog(options *[]crane.Option) *cobra.Command {
 			reg := args[0]
 			repos, err := crane.Catalog(reg, *options...)
 			if err != nil {
-				return fmt.Errorf("reading repos for %s: %v", reg, err)
+				return fmt.Errorf("reading repos for %s: %w", reg, err)
 			}
 
 			for _, repo := range repos {
