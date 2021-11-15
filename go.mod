@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/containerd/containerd v1.5.7 // indirect
-	github.com/containerd/stargz-snapshotter/estargz v0.9.0
+	github.com/containerd/stargz-snapshotter/estargz v0.10.0
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/docker/docker v20.10.10+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
