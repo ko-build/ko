@@ -35,12 +35,12 @@ const iWasADigestTag = "i-was-a-digest"
 // Pull returns a v1.Image of the remote image src.
 func Pull(src string, opt ...Option) (v1.Image, error) {
 	o := makeOptions(opt...)
-	ref, err := name.ParseReference(src, o.name...)
+	ref, err := name.ParseReference(src, o.Name...)
 	if err != nil {
-		return nil, fmt.Errorf("parsing reference %q: %v", src, err)
+		return nil, fmt.Errorf("parsing reference %q: %w", src, err)
 	}
 
-	return remote.Image(ref, o.remote...)
+	return remote.Image(ref, o.Remote...)
 }
 
 // Save writes the v1.Image img as a tarball at path with tag src.
@@ -50,13 +50,14 @@ func Save(img v1.Image, src, path string) error {
 }
 
 // MultiSave writes collection of v1.Image img with tag as a tarball.
-func MultiSave(imgMap map[string]v1.Image, path string) error {
+func MultiSave(imgMap map[string]v1.Image, path string, opt ...Option) error {
+	o := makeOptions(opt...)
 	tagToImage := map[name.Tag]v1.Image{}
 
 	for src, img := range imgMap {
-		ref, err := name.ParseReference(src)
+		ref, err := name.ParseReference(src, o.Name...)
 		if err != nil {
-			return fmt.Errorf("parsing ref %q: %v", src, err)
+			return fmt.Errorf("parsing ref %q: %w", src, err)
 		}
 
 		// WriteToFile wants a tag to write to the tarball, but we might have
@@ -80,12 +81,12 @@ func MultiSave(imgMap map[string]v1.Image, path string) error {
 // PullLayer returns the given layer from a registry.
 func PullLayer(ref string, opt ...Option) (v1.Layer, error) {
 	o := makeOptions(opt...)
-	digest, err := name.NewDigest(ref, o.name...)
+	digest, err := name.NewDigest(ref, o.Name...)
 	if err != nil {
 		return nil, err
 	}
 
-	return remote.Layer(digest, o.remote...)
+	return remote.Layer(digest, o.Remote...)
 }
 
 // SaveLegacy writes the v1.Image img as a legacy tarball at path with tag src.
@@ -101,7 +102,7 @@ func MultiSaveLegacy(imgMap map[string]v1.Image, path string) error {
 	for src, img := range imgMap {
 		ref, err := name.ParseReference(src)
 		if err != nil {
-			return fmt.Errorf("parsing ref %q: %v", src, err)
+			return fmt.Errorf("parsing ref %q: %w", src, err)
 		}
 		refToImage[ref] = img
 	}

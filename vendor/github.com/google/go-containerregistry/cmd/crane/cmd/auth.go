@@ -36,9 +36,7 @@ func NewCmdAuth(argv ...string) *cobra.Command {
 		Use:   "auth",
 		Short: "Log in or access credentials",
 		Args:  cobra.NoArgs,
-		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Usage()
-		},
+		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Usage() },
 	}
 	cmd.AddCommand(NewCmdAuthGet(argv...), NewCmdAuthLogin(argv...))
 	return cmd

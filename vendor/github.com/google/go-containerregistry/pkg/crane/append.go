@@ -30,7 +30,7 @@ func Append(base v1.Image, paths ...string) (v1.Image, error) {
 	for _, path := range paths {
 		layer, err := getLayer(path)
 		if err != nil {
-			return nil, fmt.Errorf("reading layer %q: %v", path, err)
+			return nil, fmt.Errorf("reading layer %q: %w", path, err)
 		}
 
 		layers = append(layers, layer)

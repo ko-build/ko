@@ -31,7 +31,7 @@ func NewCmdList(options *[]crane.Option) *cobra.Command {
 			repo := args[0]
 			tags, err := crane.ListTags(repo, *options...)
 			if err != nil {
-				return fmt.Errorf("reading tags for %s: %v", repo, err)
+				return fmt.Errorf("reading tags for %s: %w", repo, err)
 			}
 
 			for _, tag := range tags {

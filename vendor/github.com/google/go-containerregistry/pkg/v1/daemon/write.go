@@ -49,13 +49,13 @@ func Write(tag name.Tag, img v1.Image, options ...Option) (string, error) {
 	// write the image in docker save format first, then load it
 	resp, err := o.client.ImageLoad(o.ctx, pr, false)
 	if err != nil {
-		return "", fmt.Errorf("error loading image: %v", err)
+		return "", fmt.Errorf("error loading image: %w", err)
 	}
 	defer resp.Body.Close()
 	b, err := ioutil.ReadAll(resp.Body)
 	response := string(b)
 	if err != nil {
-		return response, fmt.Errorf("error reading load response body: %v", err)
+		return response, fmt.Errorf("error reading load response body: %w", err)
 	}
 	return response, nil
 }

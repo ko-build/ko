@@ -227,7 +227,7 @@ func extractFileFromTar(opener Opener, filePath string) (io.ReadCloser, error) {
 	tf := tar.NewReader(f)
 	for {
 		hdr, err := tf.Next()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {

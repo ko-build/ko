@@ -84,7 +84,7 @@ func validateChildren(idx v1.ImageIndex, opt ...Option) error {
 			if wl, ok := idx.(withLayer); ok {
 				layer, err := wl.Layer(desc.Digest)
 				if err != nil {
-					return fmt.Errorf("failed to get layer Manifests[%d]: %v", i, err)
+					return fmt.Errorf("failed to get layer Manifests[%d]: %w", i, err)
 				}
 				if err := Layer(layer, opt...); err != nil {
 					lerr := fmt.Sprintf("failed to validate layer Manifests[%d](%s): %v", i, desc.Digest, err)

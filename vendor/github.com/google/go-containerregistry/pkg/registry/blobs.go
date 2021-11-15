@@ -72,7 +72,8 @@ func (b *blobs) handle(resp http.ResponseWriter, req *http.Request) *regError {
 	digest := req.URL.Query().Get("digest")
 	contentRange := req.Header.Get("Content-Range")
 
-	if req.Method == "HEAD" {
+	switch req.Method {
+	case http.MethodHead:
 		b.lock.Lock()
 		defer b.lock.Unlock()
 		b, ok := b.contents[target]
@@ -88,9 +89,8 @@ func (b *blobs) handle(resp http.ResponseWriter, req *http.Request) *regError {
 		resp.Header().Set("Docker-Content-Digest", target)
 		resp.WriteHeader(http.StatusOK)
 		return nil
-	}
 
-	if req.Method == "GET" {
+	case http.MethodGet:
 		b.lock.Lock()
 		defer b.lock.Unlock()
 		b, ok := b.contents[target]
@@ -107,65 +107,81 @@ func (b *blobs) handle(resp http.ResponseWriter, req *http.Request) *regError {
 		resp.WriteHeader(http.StatusOK)
 		io.Copy(resp, bytes.NewReader(b))
 		return nil
-	}
 
-	if req.Method == "POST" && target == "uploads" && digest != "" {
-		l := &bytes.Buffer{}
-		io.Copy(l, req.Body)
-		rd := sha256.Sum256(l.Bytes())
-		d := "sha256:" + hex.EncodeToString(rd[:])
-		if d != digest {
+	case http.MethodPost:
+		// It is weird that this is "target" instead of "service", but
+		// that's how the index math works out above.
+		if target != "uploads" {
 			return &regError{
 				Status:  http.StatusBadRequest,
-				Code:    "DIGEST_INVALID",
-				Message: "digest does not match contents",
+				Code:    "METHOD_UNKNOWN",
+				Message: fmt.Sprintf("POST to /blobs must be followed by /uploads, got %s", target),
 			}
 		}
 
-		b.lock.Lock()
-		defer b.lock.Unlock()
-		b.contents[d] = l.Bytes()
-		resp.Header().Set("Docker-Content-Digest", d)
-		resp.WriteHeader(http.StatusCreated)
-		return nil
-	}
+		if digest != "" {
+			l := &bytes.Buffer{}
+			io.Copy(l, req.Body)
+			rd := sha256.Sum256(l.Bytes())
+			d := "sha256:" + hex.EncodeToString(rd[:])
+			if d != digest {
+				return &regError{
+					Status:  http.StatusBadRequest,
+					Code:    "DIGEST_INVALID",
+					Message: "digest does not match contents",
+				}
+			}
 
-	if req.Method == "POST" && target == "uploads" && digest == "" {
+			b.lock.Lock()
+			defer b.lock.Unlock()
+			b.contents[d] = l.Bytes()
+			resp.Header().Set("Docker-Content-Digest", d)
+			resp.WriteHeader(http.StatusCreated)
+			return nil
+		}
+
 		id := fmt.Sprint(rand.Int63())
 		resp.Header().Set("Location", "/"+path.Join("v2", path.Join(elem[1:len(elem)-2]...), "blobs/uploads", id))
 		resp.Header().Set("Range", "0-0")
 		resp.WriteHeader(http.StatusAccepted)
 		return nil
-	}
 
-	if req.Method == "PATCH" && service == "uploads" && contentRange != "" {
-		start, end := 0, 0
-		if _, err := fmt.Sscanf(contentRange, "%d-%d", &start, &end); err != nil {
+	case http.MethodPatch:
+		if service != "uploads" {
 			return &regError{
-				Status:  http.StatusRequestedRangeNotSatisfiable,
-				Code:    "BLOB_UPLOAD_UNKNOWN",
-				Message: "We don't understand your Content-Range",
+				Status:  http.StatusBadRequest,
+				Code:    "METHOD_UNKNOWN",
+				Message: fmt.Sprintf("PATCH to /blobs must be followed by /uploads, got %s", service),
 			}
 		}
-		b.lock.Lock()
-		defer b.lock.Unlock()
-		if start != len(b.uploads[target]) {
-			return &regError{
-				Status:  http.StatusRequestedRangeNotSatisfiable,
-				Code:    "BLOB_UPLOAD_UNKNOWN",
-				Message: "Your content range doesn't match what we have",
-			}
-		}
-		l := bytes.NewBuffer(b.uploads[target])
-		io.Copy(l, req.Body)
-		b.uploads[target] = l.Bytes()
-		resp.Header().Set("Location", "/"+path.Join("v2", path.Join(elem[1:len(elem)-3]...), "blobs/uploads", target))
-		resp.Header().Set("Range", fmt.Sprintf("0-%d", len(l.Bytes())-1))
-		resp.WriteHeader(http.StatusNoContent)
-		return nil
-	}
 
-	if req.Method == "PATCH" && service == "uploads" && contentRange == "" {
+		if contentRange != "" {
+			start, end := 0, 0
+			if _, err := fmt.Sscanf(contentRange, "%d-%d", &start, &end); err != nil {
+				return &regError{
+					Status:  http.StatusRequestedRangeNotSatisfiable,
+					Code:    "BLOB_UPLOAD_UNKNOWN",
+					Message: "We don't understand your Content-Range",
+				}
+			}
+			b.lock.Lock()
+			defer b.lock.Unlock()
+			if start != len(b.uploads[target]) {
+				return &regError{
+					Status:  http.StatusRequestedRangeNotSatisfiable,
+					Code:    "BLOB_UPLOAD_UNKNOWN",
+					Message: "Your content range doesn't match what we have",
+				}
+			}
+			l := bytes.NewBuffer(b.uploads[target])
+			io.Copy(l, req.Body)
+			b.uploads[target] = l.Bytes()
+			resp.Header().Set("Location", "/"+path.Join("v2", path.Join(elem[1:len(elem)-3]...), "blobs/uploads", target))
+			resp.Header().Set("Range", fmt.Sprintf("0-%d", len(l.Bytes())-1))
+			resp.WriteHeader(http.StatusNoContent)
+			return nil
+		}
+
 		b.lock.Lock()
 		defer b.lock.Unlock()
 		if _, ok := b.uploads[target]; ok {
@@ -184,17 +200,24 @@ func (b *blobs) handle(resp http.ResponseWriter, req *http.Request) *regError {
 		resp.Header().Set("Range", fmt.Sprintf("0-%d", len(l.Bytes())-1))
 		resp.WriteHeader(http.StatusNoContent)
 		return nil
-	}
 
-	if req.Method == "PUT" && service == "uploads" && digest == "" {
-		return &regError{
-			Status:  http.StatusBadRequest,
-			Code:    "DIGEST_INVALID",
-			Message: "digest not specified",
+	case http.MethodPut:
+		if service != "uploads" {
+			return &regError{
+				Status:  http.StatusBadRequest,
+				Code:    "METHOD_UNKNOWN",
+				Message: fmt.Sprintf("PUT to /blobs must be followed by /uploads, got %s", service),
+			}
 		}
-	}
 
-	if req.Method == "PUT" && service == "uploads" && digest != "" {
+		if digest == "" {
+			return &regError{
+				Status:  http.StatusBadRequest,
+				Code:    "DIGEST_INVALID",
+				Message: "digest not specified",
+			}
+		}
+
 		b.lock.Lock()
 		defer b.lock.Unlock()
 		l := bytes.NewBuffer(b.uploads[target])
@@ -214,11 +237,12 @@ func (b *blobs) handle(resp http.ResponseWriter, req *http.Request) *regError {
 		resp.Header().Set("Docker-Content-Digest", d)
 		resp.WriteHeader(http.StatusCreated)
 		return nil
-	}
 
-	return &regError{
-		Status:  http.StatusBadRequest,
-		Code:    "METHOD_UNKNOWN",
-		Message: "We don't understand your method + url",
+	default:
+		return &regError{
+			Status:  http.StatusBadRequest,
+			Code:    "METHOD_UNKNOWN",
+			Message: "We don't understand your method + url",
+		}
 	}
 }

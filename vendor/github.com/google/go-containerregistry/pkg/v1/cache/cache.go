@@ -1,3 +1,17 @@
+// Copyright 2021 Google LLC All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // Package cache provides methods to cache layers.
 package cache
 
@@ -55,9 +69,9 @@ func (i *image) Layers() ([]v1.Layer, error) {
 		return nil, err
 	}
 
-	var out []v1.Layer
-	for _, l := range ls {
-		out = append(out, &lazyLayer{inner: l, c: i.c})
+	out := make([]v1.Layer, len(ls))
+	for idx, l := range ls {
+		out[idx] = &lazyLayer{inner: l, c: i.c}
 	}
 	return out, nil
 }
@@ -77,7 +91,7 @@ func (l *lazyLayer) Compressed() (io.ReadCloser, error) {
 		// Layer found in the cache.
 		logs.Progress.Printf("Layer %s found (compressed) in cache", digest)
 		return cl.Compressed()
-	} else if err != ErrNotFound {
+	} else if !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
 
@@ -99,7 +113,7 @@ func (l *lazyLayer) Uncompressed() (io.ReadCloser, error) {
 		// Layer found in the cache.
 		logs.Progress.Printf("Layer %s found (uncompressed) in cache", diffID)
 		return cl.Uncompressed()
-	} else if err != ErrNotFound {
+	} else if !errors.Is(err, ErrNotFound) {
 		return nil, err
 	}
 
@@ -119,7 +133,7 @@ func (l *lazyLayer) MediaType() (types.MediaType, error) { return l.inner.MediaT
 
 func (i *image) LayerByDigest(h v1.Hash) (v1.Layer, error) {
 	l, err := i.c.Get(h)
-	if err == ErrNotFound {
+	if errors.Is(err, ErrNotFound) {
 		// Not cached, get it and write it.
 		l, err := i.Image.LayerByDigest(h)
 		if err != nil {
@@ -132,7 +146,7 @@ func (i *image) LayerByDigest(h v1.Hash) (v1.Layer, error) {
 
 func (i *image) LayerByDiffID(h v1.Hash) (v1.Layer, error) {
 	l, err := i.c.Get(h)
-	if err == ErrNotFound {
+	if errors.Is(err, ErrNotFound) {
 		// Not cached, get it and write it.
 		l, err := i.Image.LayerByDiffID(h)
 		if err != nil {

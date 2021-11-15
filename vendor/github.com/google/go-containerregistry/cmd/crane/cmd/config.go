@@ -30,7 +30,7 @@ func NewCmdConfig(options *[]crane.Option) *cobra.Command {
 		RunE: func(_ *cobra.Command, args []string) error {
 			cfg, err := crane.Config(args[0], *options...)
 			if err != nil {
-				return fmt.Errorf("fetching config: %v", err)
+				return fmt.Errorf("fetching config: %w", err)
 			}
 			fmt.Print(string(cfg))
 			return nil

@@ -57,7 +57,7 @@ func (l *v1Layer) version() []byte {
 func v1LayerID(layer v1.Layer, parentID string, rawConfig []byte) (string, error) {
 	d, err := layer.Digest()
 	if err != nil {
-		return "", fmt.Errorf("unable to get layer digest to generate v1 layer ID: %v", err)
+		return "", fmt.Errorf("unable to get layer digest to generate v1 layer ID: %w", err)
 	}
 	s := fmt.Sprintf("%s %s", d.Hex, parentID)
 	if len(rawConfig) != 0 {
@@ -75,7 +75,7 @@ func newV1Layer(layer v1.Layer, parent *v1Layer, history v1.History) (*v1Layer, 
 	}
 	id, err := v1LayerID(layer, parentID, nil)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate v1 layer ID: %v", err)
+		return nil, fmt.Errorf("unable to generate v1 layer ID: %w", err)
 	}
 	result := &v1Layer{
 		layer: layer,
@@ -104,7 +104,7 @@ func newTopV1Layer(layer v1.Layer, parent *v1Layer, history v1.History, imgConfi
 	}
 	id, err := v1LayerID(layer, result.config.Parent, rawConfig)
 	if err != nil {
-		return nil, fmt.Errorf("unable to generate v1 layer ID for top layer: %v", err)
+		return nil, fmt.Errorf("unable to generate v1 layer ID for top layer: %w", err)
 	}
 	result.config.ID = id
 	result.config.Architecture = imgConfig.Architecture
@@ -240,7 +240,7 @@ func MultiWrite(refToImage map[name.Reference]v1.Image, w io.Writer) error {
 		var prev *v1Layer
 		for i, l := range layers {
 			if err := updateLayerSources(layerSources, l, img); err != nil {
-				return fmt.Errorf("unable to update image metadata to include undistributable layer source information: %v", err)
+				return fmt.Errorf("unable to update image metadata to include undistributable layer source information: %w", err)
 			}
 			var cur *v1Layer
 			if i < (len(layers) - 1) {

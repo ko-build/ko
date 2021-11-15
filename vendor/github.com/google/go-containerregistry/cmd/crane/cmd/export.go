@@ -38,13 +38,13 @@ func NewCmdExport(options *[]crane.Option) *cobra.Command {
 
 			f, err := openFile(dst)
 			if err != nil {
-				return fmt.Errorf("failed to open %s: %v", dst, err)
+				return fmt.Errorf("failed to open %s: %w", dst, err)
 			}
 			defer f.Close()
 
 			img, err := crane.Pull(src, *options...)
 			if err != nil {
-				return fmt.Errorf("pulling %s: %v", src, err)
+				return fmt.Errorf("pulling %s: %w", src, err)
 			}
 
 			return crane.Export(img, f)
