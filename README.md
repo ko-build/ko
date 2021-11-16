@@ -502,6 +502,15 @@ Yes! `ko resolve -f -` will read and process input from stdin, so you can have
 kustomize build config | ko resolve -f -
 ```
 
+## Does `ko` integrate with other build and development tools?
+
+Oh, you betcha. Here's a partial list:
+
+- `ko` support in [Carvel's `kbld`](https://carvel.dev/kbld/docs/latest/config/#ko)
+- `ko` support in [Skaffold](https://skaffold.dev/docs/pipeline-stages/builders/ko/)
+- `ko` extension for [Tilt](https://github.com/tilt-dev/tilt-extensions/tree/master/ko)
+- `ko` support for [goreleaser](https://github.com/goreleaser/goreleaser/pull/2564) (proposed)
+
 ## Does `ko` work with [OpenShift Internal Registry](https://docs.openshift.com/container-platform/latest/registry/registry-options.html#registry-integrated-openshift-registry_registry-options)?
 
 Yes! Follow these steps:
@@ -526,13 +535,11 @@ oc registry login --to=$HOME/.docker/config.json
 
 # Acknowledgements
 
-This work is based heavily on learnings from having built the
-[Docker](https://github.com/bazelbuild/rules_docker) and
-[Kubernetes](https://github.com/bazelbuild/rules_k8s) support for
-[Bazel](https://bazel.build). That work was presented
-[here](https://www.youtube.com/watch?v=RS1aiQqgUTA).
+This work is based heavily on experience from having built the [Docker](https://github.com/bazelbuild/rules_docker) and [Kubernetes](https://github.com/bazelbuild/rules_k8s) support for [Bazel](https://bazel.build).
+That work was presented [here](https://www.youtube.com/watch?v=RS1aiQqgUTA).
 
 # Discuss
 
-Questions? Comments? Ideas? Come discuss `ko` with us in the `#ko-project`
-channel on the [Kubernetes Slack](https://slack.k8s.io)! See you there!
+Questions? Comments? Ideas?
+Come discuss `ko` with us in the `#ko-project` channel on the [Kubernetes Slack](https://slack.k8s.io)!
+See you there!
