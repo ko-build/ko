@@ -58,6 +58,12 @@ type BuildOptions struct {
 
 	InsecureRegistry bool
 
+	// Trimpath controls whether ko adds the `-trimpath` flag to `go build` by default.
+	// The `-trimpath` flags aids in achieving reproducible builds, but it removes path information that is useful for interactive debugging.
+	// Set this field to `false` and `DisableOptimizations` to `true` if you want to interactively debug the binary in the resulting image.
+	// `AddBuildOptions()` defaults this field to `true`.
+	Trimpath bool
+
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
 }
@@ -71,6 +77,7 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
+	bo.Trimpath = true
 }
 
 // LoadConfig reads build configuration from defaults, environment variables, and the `.ko.yaml` config file.
