@@ -18,6 +18,7 @@ import (
 	"testing"
 
 	"github.com/google/ko/pkg/build"
+	"github.com/spf13/cobra"
 )
 
 func TestDefaultBaseImage(t *testing.T) {
@@ -85,5 +86,14 @@ func TestCreateBuildConfigs(t *testing.T) {
 				t.Fatalf("unknown test case: %s", buildCfg.ID)
 			}
 		}
+	}
+}
+
+func TestAddBuildOptionsSetsDefaultsForNonFlagOptions(t *testing.T) {
+	cmd := &cobra.Command{}
+	bo := &BuildOptions{}
+	AddBuildOptions(cmd, bo)
+	if !bo.Trimpath {
+		t.Error("expected Trimpath=true")
 	}
 }

@@ -54,6 +54,15 @@ func WithDisabledOptimizations() Option {
 	}
 }
 
+// WithTrimpath is a functional option that controls whether the `-trimpath`
+// flag is added to `go build`.
+func WithTrimpath(v bool) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.trimpath = v
+		return nil
+	}
+}
+
 // WithConfig is a functional option for providing GoReleaser Build influenced
 // build settings for importpaths.
 //

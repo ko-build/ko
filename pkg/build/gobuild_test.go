@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -288,6 +289,102 @@ func TestBuildEnv(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestBuildConfig(t *testing.T) {
+	tests := []struct {
+		description  string
+		options      []Option
+		importpath   string
+		expectConfig Config
+	}{
+		{
+			description: "minimal options",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+			},
+		},
+		{
+			description: "trimpath flag",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithTrimpath(true),
+			},
+			expectConfig: Config{
+				Flags: FlagArray{"-trimpath"},
+			},
+		},
+		{
+			description: "no trimpath flag",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithTrimpath(false),
+			},
+		},
+		{
+			description: "build config and trimpath",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithConfig(map[string]Config{
+					"example.com/foo": {
+						Flags: FlagArray{"-v"},
+					},
+				}),
+				WithTrimpath(true),
+			},
+			importpath: "example.com/foo",
+			expectConfig: Config{
+				Flags: FlagArray{"-v", "-trimpath"},
+			},
+		},
+		{
+			description: "no trimpath overridden by build config flag",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithConfig(map[string]Config{
+					"example.com/bar": {
+						Flags: FlagArray{"-trimpath"},
+					},
+				}),
+				WithTrimpath(false),
+			},
+			importpath: "example.com/bar",
+			expectConfig: Config{
+				Flags: FlagArray{"-trimpath"},
+			},
+		},
+		{
+			description: "disable optimizations",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithDisabledOptimizations(),
+			},
+			expectConfig: Config{
+				Flags: FlagArray{"-gcflags", "all=-N -l"},
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			i, err := NewGo(context.Background(), "", test.options...)
+			if err != nil {
+				t.Fatalf("NewGo(): unexpected error: %+v", err)
+			}
+			gb, ok := i.(*gobuild)
+			if !ok {
+				t.Fatal("NewGo() did not return *gobuild{} as expected")
+			}
+			config := gb.configForImportPath(test.importpath)
+			if diff := cmp.Diff(test.expectConfig, config, cmpopts.EquateEmpty(),
+				cmpopts.SortSlices(func(x, y string) bool { return x < y })); diff != "" {
+				t.Errorf("%T differ (-got, +want): %s", test.expectConfig, diff)
+			}
+		})
+	}
+}
+
+func nilGetBase(_ context.Context, _ string) (name.Reference, Result, error) {
+	return nil, nil, nil
 }
 
 // A helper method we use to substitute for the default "build" method.

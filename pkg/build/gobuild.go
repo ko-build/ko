@@ -65,6 +65,7 @@ type gobuild struct {
 	kodataCreationTime   v1.Time
 	build                builder
 	disableOptimizations bool
+	trimpath             bool
 	buildConfigs         map[string]Config
 	platformMatcher      *platformMatcher
 	dir                  string
@@ -80,6 +81,7 @@ type gobuildOpener struct {
 	kodataCreationTime   v1.Time
 	build                builder
 	disableOptimizations bool
+	trimpath             bool
 	buildConfigs         map[string]Config
 	platform             string
 	labels               map[string]string
@@ -100,6 +102,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		kodataCreationTime:   gbo.kodataCreationTime,
 		build:                gbo.build,
 		disableOptimizations: gbo.disableOptimizations,
+		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
@@ -556,9 +559,10 @@ func createBuildArgs(buildCfg Config) ([]string, error) {
 }
 
 func (g *gobuild) configForImportPath(ip string) Config {
-	config, ok := g.buildConfigs[ip]
-	if !ok {
-		// Apply default build flags in case none were supplied
+	config := g.buildConfigs[ip]
+	if g.trimpath {
+		// The `-trimpath` flag removes file system paths from the resulting binary, to aid reproducibility.
+		// Ref: https://pkg.go.dev/cmd/go#hdr-Compile_packages_and_dependencies
 		config.Flags = append(config.Flags, "-trimpath")
 	}
 
