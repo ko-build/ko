@@ -99,6 +99,10 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	if bo.DisableOptimizations {
 		opts = append(opts, build.WithDisabledOptimizations())
 	}
+	switch bo.SBOM {
+	case "none":
+		opts = append(opts, build.WithDisabledSBOM())
+	}
 	opts = append(opts, build.WithTrimpath(bo.Trimpath))
 	for _, lf := range bo.Labels {
 		parts := strings.SplitN(lf, "=", 2)

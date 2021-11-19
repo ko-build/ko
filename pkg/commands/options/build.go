@@ -50,6 +50,7 @@ type BuildOptions struct {
 
 	ConcurrentBuilds     int
 	DisableOptimizations bool
+	SBOM                 string
 	Platform             string
 	Labels               []string
 	// UserAgent enables overriding the default value of the `User-Agent` HTTP
@@ -73,6 +74,8 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"The maximum number of concurrent builds (default GOMAXPROCS)")
 	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,
 		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
+	cmd.Flags().StringVar(&bo.SBOM, "sbom", "go.version-m",
+		"The SBOM media type to use (none will disable SBOM synthesis and upload).")
 	cmd.Flags().StringVar(&bo.Platform, "platform", "",
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},

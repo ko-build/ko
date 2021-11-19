@@ -59,12 +59,11 @@ github.com/docker/go-units
 ## explicit
 github.com/dprotaso/go-yit
 # github.com/evanphx/json-patch/v5 v5.5.0
-## explicit
 github.com/evanphx/json-patch/v5
 # github.com/fsnotify/fsnotify v1.5.1
 ## explicit
 github.com/fsnotify/fsnotify
-# github.com/go-logr/logr v0.4.0
+# github.com/go-logr/logr v1.0.0
 github.com/go-logr/logr
 # github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 ## explicit
@@ -161,6 +160,19 @@ github.com/pelletier/go-toml
 github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.1.0
 github.com/russross/blackfriday/v2
+# github.com/sigstore/cosign v1.3.2-0.20211120003522-90e2dcfe7b92
+## explicit
+github.com/sigstore/cosign/pkg/oci
+github.com/sigstore/cosign/pkg/oci/empty
+github.com/sigstore/cosign/pkg/oci/internal/signature
+github.com/sigstore/cosign/pkg/oci/mutate
+github.com/sigstore/cosign/pkg/oci/remote
+github.com/sigstore/cosign/pkg/oci/signed
+github.com/sigstore/cosign/pkg/oci/static
+github.com/sigstore/cosign/pkg/oci/walk
+github.com/sigstore/cosign/pkg/types
+# github.com/sigstore/sigstore v1.0.2-0.20211115214857-534e133ebf9d
+github.com/sigstore/sigstore/pkg/cryptoutils
 # github.com/sirupsen/logrus v1.8.1
 github.com/sirupsen/logrus
 # github.com/spf13/afero v1.6.0
@@ -187,9 +199,18 @@ github.com/spf13/viper/internal/encoding/toml
 github.com/spf13/viper/internal/encoding/yaml
 # github.com/subosito/gotenv v1.2.0
 github.com/subosito/gotenv
+# github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396
+github.com/theupdateframework/go-tuf/encrypted
 # github.com/vbatts/tar-split v0.11.2
 github.com/vbatts/tar-split/archive/tar
-# golang.org/x/mod v0.4.2
+# golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/nacl/secretbox
+golang.org/x/crypto/pbkdf2
+golang.org/x/crypto/poly1305
+golang.org/x/crypto/salsa20/salsa
+golang.org/x/crypto/scrypt
+# golang.org/x/mod v0.5.1
 golang.org/x/mod/semver
 # golang.org/x/net v0.0.0-20211111160137-58aab5ef257a
 golang.org/x/net/internal/socks
@@ -199,16 +220,17 @@ golang.org/x/net/proxy
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20211110154304-99a53858aa08
+golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/plan9
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+# golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
+golang.org/x/term
 # golang.org/x/text v0.3.7
-## explicit
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac
-## explicit
 # golang.org/x/tools v0.1.7
 ## explicit
 golang.org/x/tools/go/gcexportdata
@@ -279,7 +301,7 @@ k8s.io/apimachinery/pkg/util/sets
 k8s.io/apimachinery/pkg/util/validation
 k8s.io/apimachinery/pkg/util/validation/field
 k8s.io/apimachinery/pkg/util/version
-# k8s.io/klog/v2 v2.9.0
+# k8s.io/klog/v2 v2.20.0
 k8s.io/klog/v2
 # sigs.k8s.io/kind v0.11.1
 ## explicit
@@ -319,5 +341,5 @@ sigs.k8s.io/kind/pkg/internal/apis/config/encoding
 sigs.k8s.io/kind/pkg/internal/cli
 sigs.k8s.io/kind/pkg/internal/env
 sigs.k8s.io/kind/pkg/log
-# sigs.k8s.io/yaml v1.2.0
+# sigs.k8s.io/yaml v1.3.0
 sigs.k8s.io/yaml

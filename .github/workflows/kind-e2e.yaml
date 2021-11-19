@@ -39,6 +39,7 @@ jobs:
           [plugins."io.containerd.grpc.v1.cri".registry.mirrors."$REGISTRY_NAME:$REGISTRY_PORT"]
             endpoint = ["http://$REGISTRY_NAME:$REGISTRY_PORT"]
         EOF
+
     - uses: helm/kind-action@v1.2.0
       with:
         cluster_name: kind
@@ -61,6 +62,11 @@ jobs:
       run: |
         kubectl wait --timeout=2m --for=condition=Ready nodes --all
 
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@main
+      with:
+        cosign-release: 'v1.3.1'
+
     - name: Run Smoke Test
       run: |
         # Test with kind load
@@ -72,6 +78,29 @@ jobs:
         ko apply --platform=all -f ./test
         kubectl wait --timeout=60s --for=condition=Ready pod/kodata
         kubectl delete pod kodata
+
+
+    - name: Check SBOM
+      run: |
+        set -o pipefail
+
+        IMAGE=$(ko publish ./test)
+        # Strip the first line of each which contains garbage filenames.
+        SBOM=$(cosign download sbom ${IMAGE} | sed 1d)
+        KO_DEPS=$(ko deps ${IMAGE} | sed 1d)
+
+        echo '::group:: SBOM'
+        echo "${SBOM}"
+        echo '::endgroup::'
+
+        echo '::group:: ko deps'
+        echo "${KO_DEPS}"
+        echo '::endgroup::'
+
+        if [ "${SBOM}" != "${KO_DEPS}" ] ; then
+          echo Wanted SBOM and 'ko deps' to match, got differences!
+          exit 1
+        fi
 
     - name: Collect logs
       if: ${{ always() }}

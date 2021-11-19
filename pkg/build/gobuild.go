@@ -42,6 +42,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/sigstore/cosign/pkg/oci"
+	ocimutate "github.com/sigstore/cosign/pkg/oci/mutate"
+	"github.com/sigstore/cosign/pkg/oci/signed"
+	"github.com/sigstore/cosign/pkg/oci/static"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -53,6 +57,7 @@ const (
 type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
+type sbomber func(context.Context, string, string) ([]byte, types.MediaType, error)
 
 type platformMatcher struct {
 	spec      string
@@ -64,7 +69,9 @@ type gobuild struct {
 	creationTime         v1.Time
 	kodataCreationTime   v1.Time
 	build                builder
+	sbom                 sbomber
 	disableOptimizations bool
+	disableSBOM          bool
 	trimpath             bool
 	buildConfigs         map[string]Config
 	platformMatcher      *platformMatcher
@@ -80,7 +87,9 @@ type gobuildOpener struct {
 	creationTime         v1.Time
 	kodataCreationTime   v1.Time
 	build                builder
+	sbom                 sbomber
 	disableOptimizations bool
+	disableSBOM          bool
 	trimpath             bool
 	buildConfigs         map[string]Config
 	platform             string
@@ -101,7 +110,9 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		creationTime:         gbo.creationTime,
 		kodataCreationTime:   gbo.kodataCreationTime,
 		build:                gbo.build,
+		sbom:                 gbo.sbom,
 		disableOptimizations: gbo.disableOptimizations,
+		disableSBOM:          gbo.disableSBOM,
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
 		labels:               gbo.labels,
@@ -119,6 +130,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error) {
 	gbo := &gobuildOpener{
 		build: build,
+		sbom:  sbom,
 		dir:   dir,
 	}
 
@@ -247,6 +259,23 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 		return "", err
 	}
 	return file, nil
+}
+
+func sbom(ctx context.Context, file string, appPath string) ([]byte, types.MediaType, error) {
+	sbom := bytes.NewBuffer(nil)
+	cmd := exec.CommandContext(ctx, "go", "version", "-m", file)
+	cmd.Stdout = sbom
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return nil, "", err
+	}
+
+	// TODO(imjasonh): Turn the output of `go version -m` on
+	// file into a standard format and attach here.
+
+	// In order to get deterministics SBOMs replace our randomized
+	// file name with the path the app will get inside of the container.
+	return []byte(strings.Replace(sbom.String(), file, appPath, 1)), "application/vnd.go.version-m", nil
 }
 
 // buildEnv creates the environment variables used by the `go build` command.
@@ -578,7 +607,7 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	return config
 }
 
-func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (v1.Image, error) {
+func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
 	ref := newRef(refStr)
 
 	cf, err := base.ConfigFile()
@@ -689,9 +718,32 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	empty := v1.Time{}
 	if g.creationTime != empty {
-		return mutate.CreatedAt(image, g.creationTime)
+		image, err = mutate.CreatedAt(image, g.creationTime)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return image, nil
+
+	si := signed.Image(image)
+
+	if !g.disableSBOM {
+		sbom, mt, err := g.sbom(ctx, file, appPath)
+		if err != nil {
+			return nil, err
+		}
+
+		f, err := static.NewFile(sbom,
+			static.WithLayerMediaType(mt))
+		if err != nil {
+			return nil, err
+		}
+		si, err = ocimutate.AttachFileToImage(si, "sbom", f)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return si, nil
 }
 
 // Append appPath to the PATH environment variable, if it exists. Otherwise,
@@ -735,6 +787,19 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		return nil, err
 	}
 
+	// Annotate the base image we pass to the build function with
+	// annotations indicating the digest (and possibly tag) of the
+	// base image.  This will be inherited by the image produced.
+	if mt != types.DockerManifestList {
+		anns := map[string]string{
+			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
+		}
+		if _, ok := baseRef.(name.Tag); ok {
+			anns[specsv1.AnnotationBaseImageName] = baseRef.Name()
+		}
+		base = mutate.Annotations(base, anns).(Result)
+	}
+
 	var res Result
 	switch mt {
 	case types.OCIImageIndex, types.DockerManifestList:
@@ -755,31 +820,18 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// Annotate the image or index with base image information.
-	// (Docker manifest lists don't support annotations)
-	if mt != types.DockerManifestList {
-		anns := map[string]string{
-			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
-		}
-		if _, ok := baseRef.(name.Tag); ok {
-			anns[specsv1.AnnotationBaseImageName] = baseRef.Name()
-		}
-		res = mutate.Annotations(res, anns).(Result)
-	}
-
 	return res, nil
 }
 
 // TODO(#192): Do these in parallel?
-func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (v1.ImageIndex, error) {
+func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (oci.SignedImageIndex, error) {
 	im, err := baseIndex.IndexManifest()
 	if err != nil {
 		return nil, err
 	}
 
 	// Build an image for each child from the base and append it to a new index to produce the result.
-	adds := []mutate.IndexAddendum{}
+	adds := []ocimutate.IndexAddendum{}
 	for _, desc := range im.Manifests {
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
@@ -798,7 +850,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 		if err != nil {
 			return nil, err
 		}
-		adds = append(adds, mutate.IndexAddendum{
+		adds = append(adds, ocimutate.IndexAddendum{
 			Add: img,
 			Descriptor: v1.Descriptor{
 				URLs:        desc.URLs,
@@ -813,8 +865,10 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 	if err != nil {
 		return nil, err
 	}
-	idx := mutate.IndexMediaType(mutate.AppendManifests(empty.Index, adds...), baseType)
+	idx := ocimutate.AppendManifests(mutate.IndexMediaType(empty.Index, baseType), adds...)
 
+	// TODO(mattmoor): If we want to attach anything (e.g. signatures, attestations, SBOM)
+	// at the index level, we would do it here!
 	return idx, nil
 }
 
