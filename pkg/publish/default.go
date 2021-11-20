@@ -118,14 +118,14 @@ func NewDefault(base string, options ...Option) (Interface, error) {
 	return do.Open()
 }
 
-func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
+func pushResult(ctx context.Context, tag name.Tag, br build.Result, opt []remote.Option) error {
 	mt, err := br.MediaType()
 	if err != nil {
 		return err
 	}
 
 	// writePeripherals implements walk.Fn
-	writePeripherals := func(_ context.Context, se oci.SignedEntity) error {
+	writePeripherals := func(ctx context.Context, se oci.SignedEntity) error {
 		ociOpts := []ociremote.Option{ociremote.WithRemoteOptions(opt...)}
 
 		// Respect COSIGN_REPOSITORY
@@ -176,7 +176,7 @@ func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
 			return fmt.Errorf("failed to interpret result as index: %v", br)
 		}
 		if sii, ok := idx.(oci.SignedImageIndex); ok {
-			if err := walk.SignedEntity(context.Background(), sii, writePeripherals); err != nil {
+			if err := walk.SignedEntity(ctx, sii, writePeripherals); err != nil {
 				return err
 			}
 		}
@@ -187,7 +187,7 @@ func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
 			return fmt.Errorf("failed to interpret result as image: %v", br)
 		}
 		if si, ok := img.(oci.SignedImage); ok {
-			if err := writePeripherals(context.Background(), si); err != nil {
+			if err := writePeripherals(ctx, si); err != nil {
 				return err
 			}
 		}
@@ -217,7 +217,7 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 
 		if i == 0 {
 			log.Printf("Publishing %v", tag)
-			if err := pushResult(tag, br, ro); err != nil {
+			if err := pushResult(ctx, tag, br, ro); err != nil {
 				return nil, err
 			}
 		} else {
