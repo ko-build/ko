@@ -724,26 +724,19 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 	}
 
-	si := signed.Image(image)
-
-	if !g.disableSBOM {
-		sbom, mt, err := g.sbom(ctx, file, appPath)
-		if err != nil {
-			return nil, err
-		}
-
-		f, err := static.NewFile(sbom,
-			static.WithLayerMediaType(mt))
-		if err != nil {
-			return nil, err
-		}
-		si, err = ocimutate.AttachFileToImage(si, "sbom", f)
-		if err != nil {
-			return nil, err
-		}
+	if g.disableSBOM {
+		return signed.Image(image), nil
 	}
 
-	return si, nil
+	sbom, mt, err := g.sbom(ctx, file, appPath)
+	if err != nil {
+		return nil, err
+	}
+	f, err := static.NewFile(sbom, static.WithLayerMediaType(mt))
+	if err != nil {
+		return nil, err
+	}
+	return ocimutate.AttachFileToImage(signed.Image(image), "sbom", f)
 }
 
 // Append appPath to the PATH environment variable, if it exists. Otherwise,
