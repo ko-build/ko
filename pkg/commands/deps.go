@@ -16,23 +16,27 @@ package commands
 
 import (
 	"archive/tar"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/ko/internal/sbom"
 	"github.com/spf13/cobra"
 )
 
 // addDeps augments our CLI surface with deps.
 func addDeps(topLevel *cobra.Command) {
+	var sbomType string
 	deps := &cobra.Command{
 		Use:   "deps IMAGE",
 		Short: "Print Go module dependency information about the ko-built binary in the image",
@@ -45,6 +49,12 @@ If the image was not built using ko, or if it was built without embedding depend
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			switch sbomType {
+			case "spdx", "go.version-m":
+			default:
+				return fmt.Errorf("invalid sbom type %q: must be spdx or go.version-m", sbomType)
+			}
 
 			ref, err := name.ParseReference(args[0])
 			if err != nil {
@@ -110,12 +120,34 @@ If the image was not built using ko, or if it was built without embedding depend
 					return err
 				}
 				cmd := exec.CommandContext(ctx, "go", "version", "-m", n)
-				cmd.Stdout = os.Stdout
+				var buf bytes.Buffer
+				cmd.Stdout = &buf
 				cmd.Stderr = os.Stderr
-				return cmd.Run()
+				if err := cmd.Run(); err != nil {
+					return err
+				}
+				// In order to get deterministics SBOMs replace
+				// our randomized file name with the path the
+				// app will get inside of the container.
+				mod := bytes.Replace(buf.Bytes(),
+					[]byte(n),
+					[]byte(path.Join("/ko-app", filepath.Base(filepath.Clean(h.Name)))),
+					1)
+				switch sbomType {
+				case "spdx":
+					b, err := sbom.GenerateSPDX(Version, cfg.Created.Time, mod)
+					if err != nil {
+						return err
+					}
+					io.Copy(os.Stdout, bytes.NewReader(b))
+				case "go.version-m":
+					io.Copy(os.Stdout, bytes.NewReader(mod))
+				}
+				return nil
 			}
 			// unreachable
 		},
 	}
+	deps.Flags().StringVar(&sbomType, "sbom", "go.version-m", "Format for SBOM output")
 	topLevel.AddCommand(deps)
 }

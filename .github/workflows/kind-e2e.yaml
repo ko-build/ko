@@ -85,9 +85,8 @@ jobs:
         set -o pipefail
 
         IMAGE=$(ko publish ./test)
-        # Strip the first line of each which contains garbage filenames.
-        SBOM=$(cosign download sbom ${IMAGE} | sed 1d)
-        KO_DEPS=$(ko deps ${IMAGE} | sed 1d)
+        SBOM=$(cosign download sbom ${IMAGE})
+        KO_DEPS=$(ko deps ${IMAGE})
 
         echo '::group:: SBOM'
         echo "${SBOM}"

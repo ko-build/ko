@@ -23,7 +23,8 @@ ko deps IMAGE [flags]
 ### Options
 
 ```
-  -h, --help   help for deps
+  -h, --help          help for deps
+      --sbom string   Format for SBOM output (default "go.version-m")
 ```
 
 ### SEE ALSO
