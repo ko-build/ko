@@ -57,7 +57,7 @@ func WithDisabledOptimizations() Option {
 // WithDisabledSBOM is a functional option for disabling SBOM generation.
 func WithDisabledSBOM() Option {
 	return func(gbo *gobuildOpener) error {
-		gbo.disableSBOM = true
+		gbo.sbom = nil
 		return nil
 	}
 }
@@ -112,6 +112,24 @@ func WithLabel(k, v string) Option {
 func withBuilder(b builder) Option {
 	return func(gbo *gobuildOpener) error {
 		gbo.build = b
+		return nil
+	}
+}
+
+// WithGoVersionSBOM is a functional option to direct ko to use
+// go version -m for SBOM format.
+func WithGoVersionSBOM() Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.sbom = goversionm
+		return nil
+	}
+}
+
+// WithSPDX is a functional option to direct ko to use
+// SPDX for SBOM format.
+func WithSPDX(version string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.sbom = spdx(version)
 		return nil
 	}
 }
