@@ -43,7 +43,10 @@ type Interface interface {
 	Build(context.Context, string) (Result, error)
 }
 
-// Result represents the product of a Build. This is usually a v1.Image or v1.ImageIndex.
+// Result represents the product of a Build.
+// This is generally one of:
+// - v1.Image      (or oci.SignedImage), or
+// - v1.ImageIndex (or oci.SignedImageIndex)
 type Result interface {
 	MediaType() (types.MediaType, error)
 	Size() (int64, error)

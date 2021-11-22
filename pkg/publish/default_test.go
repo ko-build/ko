@@ -32,6 +32,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish"
+	ocimutate "github.com/sigstore/cosign/pkg/oci/mutate"
+	"github.com/sigstore/cosign/pkg/oci/signed"
+	"github.com/sigstore/cosign/pkg/oci/static"
 )
 
 var (
@@ -40,7 +43,20 @@ var (
 )
 
 func TestDefault(t *testing.T) {
-	for _, br := range []build.Result{img, idx} {
+	f, err := static.NewFile([]byte("da bom"))
+	if err != nil {
+		t.Fatalf("static.NewFile() = %v", err)
+	}
+	si, err := ocimutate.AttachFileToImage(signed.Image(img), "sbom", f)
+	if err != nil {
+		t.Fatalf("ocimutate.AttachFileToImage() = %v", err)
+	}
+	sii, err := ocimutate.AttachFileToImageIndex(signed.ImageIndex(idx), "sbom", f)
+	if err != nil {
+		t.Fatalf("ocimutate.AttachFileToImageIndex() = %v", err)
+	}
+
+	for _, br := range []build.Result{img, idx, si, sii} {
 		base := "blah"
 		importpath := "github.com/Google/go-containerregistry/cmd/crane"
 		expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
@@ -108,6 +124,7 @@ func TestDefaultWithCustomNamer(t *testing.T) {
 		}
 	}
 }
+
 func TestDefaultWithTags(t *testing.T) {
 	for _, br := range []build.Result{img, idx} {
 		base := "blah"

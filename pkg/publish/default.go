@@ -28,6 +28,10 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/sigstore/cosign/pkg/oci"
+	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
+	"github.com/sigstore/cosign/pkg/oci/walk"
+
 	"github.com/google/ko/pkg/build"
 )
 
@@ -114,10 +118,55 @@ func NewDefault(base string, options ...Option) (Interface, error) {
 	return do.Open()
 }
 
-func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
+func pushResult(ctx context.Context, tag name.Tag, br build.Result, opt []remote.Option) error {
 	mt, err := br.MediaType()
 	if err != nil {
 		return err
+	}
+
+	// writePeripherals implements walk.Fn
+	writePeripherals := func(ctx context.Context, se oci.SignedEntity) error {
+		ociOpts := []ociremote.Option{ociremote.WithRemoteOptions(opt...)}
+
+		// Respect COSIGN_REPOSITORY
+		targetRepoOverride, err := ociremote.GetEnvTargetRepository()
+		if err != nil {
+			return err
+		}
+		if (targetRepoOverride != name.Repository{}) {
+			ociOpts = append(ociOpts, ociremote.WithTargetRepository(targetRepoOverride))
+		}
+		h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
+		if err != nil {
+			return err
+		}
+
+		// TODO(mattmoor): We should have a WriteSBOM helper upstream.
+		digest := tag.Context().Digest(h.String()) // Don't *get* the tag, we know the digest
+		ref, err := ociremote.SBOMTag(digest, ociOpts...)
+		if err != nil {
+			return err
+		}
+		if f, err := se.Attachment("sbom"); err != nil {
+			// Some levels (e.g. the index) may not have an SBOM,
+			// just like some levels may not have signatures/attestations.
+		} else if err := remote.Write(ref, f, opt...); err != nil {
+			return fmt.Errorf("writing sbom: %w", err)
+		} else {
+			log.Printf("Published SBOM %v", ref)
+		}
+
+		// TODO(mattmoor): Don't enable this until we start signing or it
+		// will publish empty signatures!
+		// if err := ociremote.WriteSignatures(tag.Context(), se, ociOpts...); err != nil {
+		// 	return err
+		// }
+
+		// TODO(mattmoor): Are there any attestations we want to write?
+		// if err := ociremote.WriteAttestations(tag.Context(), se, ociOpts...); err != nil {
+		// 	return err
+		// }
+		return nil
 	}
 
 	switch mt {
@@ -126,11 +175,21 @@ func pushResult(tag name.Tag, br build.Result, opt []remote.Option) error {
 		if !ok {
 			return fmt.Errorf("failed to interpret result as index: %v", br)
 		}
+		if sii, ok := idx.(oci.SignedImageIndex); ok {
+			if err := walk.SignedEntity(ctx, sii, writePeripherals); err != nil {
+				return err
+			}
+		}
 		return remote.WriteIndex(tag, idx, opt...)
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		img, ok := br.(v1.Image)
 		if !ok {
 			return fmt.Errorf("failed to interpret result as image: %v", br)
+		}
+		if si, ok := img.(oci.SignedImage); ok {
+			if err := writePeripherals(ctx, si); err != nil {
+				return err
+			}
 		}
 		return remote.Write(tag, img, opt...)
 	default:
@@ -158,7 +217,7 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 
 		if i == 0 {
 			log.Printf("Publishing %v", tag)
-			if err := pushResult(tag, br, ro); err != nil {
+			if err := pushResult(ctx, tag, br, ro); err != nil {
 				return nil, err
 			}
 		} else {

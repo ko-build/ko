@@ -37,7 +37,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/sigstore/cosign/pkg/oci"
 )
 
 func repoRootDir() (string, error) {
@@ -387,6 +389,13 @@ func nilGetBase(_ context.Context, _ string) (name.Reference, Result, error) {
 	return nil, nil, nil
 }
 
+const wantSBOM = "This is our fake SBOM"
+
+// A helper method we use to substitute for the default "build" method.
+func fauxSBOM(_ context.Context, _ string, _ string) ([]byte, types.MediaType, error) {
+	return []byte(wantSBOM), "application/vnd.garbage", nil
+}
+
 // A helper method we use to substitute for the default "build" method.
 func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ Config) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
@@ -420,6 +429,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
 		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
 	)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
@@ -498,7 +508,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 	})
 }
 
-func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1.Time, checkAnnotations bool) {
+func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
 	t.Helper()
 
 	ls, err := img.Layers()
@@ -654,6 +664,34 @@ func validateImage(t *testing.T, img v1.Image, baseLayers int64, creationTime v1
 			t.Errorf("base image ref; got %q, want %q", got, want)
 		}
 	})
+
+	if expectSBOM {
+		t.Run("checking for SBOM", func(t *testing.T) {
+			f, err := img.Attachment("sbom")
+			if err != nil {
+				t.Fatalf("Attachment() = %v", err)
+			}
+			b, err := f.Payload()
+			if err != nil {
+				t.Fatalf("Payload() = %v", err)
+			}
+			t.Logf("Got SBOM: %v", string(b))
+			if string(b) != wantSBOM {
+				t.Errorf("got SBOM %s, wanted %s", string(b), wantSBOM)
+			}
+		})
+	} else {
+		t.Run("checking for no SBOM", func(t *testing.T) {
+			f, err := img.Attachment("sbom")
+			if err == nil {
+				b, err := f.Payload()
+				if err != nil {
+					t.Fatalf("Payload() = %v", err)
+				}
+				t.Fatalf("Attachment() = %v, wanted error", string(b))
+			}
+		})
+	}
 }
 
 func TestGoBuild(t *testing.T) {
@@ -671,6 +709,7 @@ func TestGoBuild(t *testing.T) {
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
 		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
 		WithLabel("foo", "bar"),
 		WithLabel("hello", "world"),
 	)
@@ -683,12 +722,12 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("Build() = %v", err)
 	}
 
-	img, ok := result.(v1.Image)
+	img, ok := result.(oci.SignedImage)
 	if !ok {
 		t.Fatalf("Build() not an image: %v", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true)
+	validateImage(t, img, baseLayers, creationTime, true, true)
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
@@ -728,6 +767,43 @@ func TestGoBuild(t *testing.T) {
 	})
 }
 
+func TestGoBuildWithoutSBOM(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
+		WithLabel("foo", "bar"),
+		WithLabel("hello", "world"),
+		WithDisabledSBOM(),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(oci.SignedImage)
+	if !ok {
+		t.Fatalf("Build() not an image: %v", result)
+	}
+
+	validateImage(t, img, baseLayers, creationTime, true, false)
+}
+
 func TestGoBuildIndex(t *testing.T) {
 	baseLayers := int64(3)
 	images := int64(2)
@@ -745,6 +821,7 @@ func TestGoBuildIndex(t *testing.T) {
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
 		WithPlatforms("all"),
 		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
 	)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
@@ -755,7 +832,7 @@ func TestGoBuildIndex(t *testing.T) {
 		t.Fatalf("Build() = %v", err)
 	}
 
-	idx, ok := result.(v1.ImageIndex)
+	idx, ok := result.(oci.SignedImageIndex)
 	if !ok {
 		t.Fatalf("Build() not an image: %v", result)
 	}
@@ -766,11 +843,11 @@ func TestGoBuildIndex(t *testing.T) {
 	}
 
 	for _, desc := range im.Manifests {
-		img, err := idx.Image(desc.Digest)
+		img, err := idx.SignedImage(desc.Digest)
 		if err != nil {
 			t.Fatalf("idx.Image(%s) = %v", desc.Digest, err)
 		}
-		validateImage(t, img, baseLayers, creationTime, false)
+		validateImage(t, img, baseLayers, creationTime, false, true)
 	}
 
 	if want, got := images, int64(len(im.Manifests)); want != got {
@@ -817,6 +894,7 @@ func TestNestedIndex(t *testing.T) {
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, nestedBase, nil }),
 		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
 	)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)

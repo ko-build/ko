@@ -54,6 +54,14 @@ func WithDisabledOptimizations() Option {
 	}
 }
 
+// WithDisabledSBOM is a functional option for disabling SBOM generation.
+func WithDisabledSBOM() Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.disableSBOM = true
+		return nil
+	}
+}
+
 // WithTrimpath is a functional option that controls whether the `-trimpath`
 // flag is added to `go build`.
 func WithTrimpath(v bool) Option {
@@ -104,6 +112,15 @@ func WithLabel(k, v string) Option {
 func withBuilder(b builder) Option {
 	return func(gbo *gobuildOpener) error {
 		gbo.build = b
+		return nil
+	}
+}
+
+// withSBOMber is a functional option for overriding the way SBOMs
+// are generated.
+func withSBOMber(sbom sbomber) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.sbom = sbom
 		return nil
 	}
 }

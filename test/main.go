@@ -22,6 +22,9 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+
+	// Give this an interesting import
+	_ "github.com/google/go-containerregistry/pkg/registry"
 )
 
 var (
