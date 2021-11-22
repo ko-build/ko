@@ -36,7 +36,7 @@ import (
 
 // addDeps augments our CLI surface with deps.
 func addDeps(topLevel *cobra.Command) {
-	var spdx bool
+	var sbomType string
 	deps := &cobra.Command{
 		Use:   "deps IMAGE",
 		Short: "Print Go module dependency information about the ko-built binary in the image",
@@ -49,6 +49,12 @@ If the image was not built using ko, or if it was built without embedding depend
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
+
+			switch sbomType {
+			case "spdx", "go.version-m":
+			default:
+				return fmt.Errorf("invalid sbom type %q: must be spdx or go.version-m", sbomType)
+			}
 
 			ref, err := name.ParseReference(args[0])
 			if err != nil {
@@ -127,13 +133,14 @@ If the image was not built using ko, or if it was built without embedding depend
 					[]byte(n),
 					[]byte(path.Join("/ko-app", filepath.Base(filepath.Clean(h.Name)))),
 					1)
-				if spdx {
+				switch sbomType {
+				case "spdx":
 					b, err := sbom.GenerateSPDX(Version, cfg.Created.Time, mod)
 					if err != nil {
 						return err
 					}
 					io.Copy(os.Stdout, bytes.NewReader(b))
-				} else {
+				case "go.version-m":
 					io.Copy(os.Stdout, bytes.NewReader(mod))
 				}
 				return nil
@@ -141,6 +148,6 @@ If the image was not built using ko, or if it was built without embedding depend
 			// unreachable
 		},
 	}
-	deps.Flags().BoolVar(&spdx, "spdx", false, "Generate output in SPDX format")
+	deps.Flags().StringVar(&sbomType, "sbom", "go.version-m", "Format for SBOM output")
 	topLevel.AddCommand(deps)
 }

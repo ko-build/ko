@@ -23,8 +23,8 @@ ko deps IMAGE [flags]
 ### Options
 
 ```
-  -h, --help   help for deps
-      --spdx   Generate output in SPDX format
+  -h, --help          help for deps
+      --sbom string   Format for SBOM output (default "go.version-m")
 ```
 
 ### SEE ALSO
