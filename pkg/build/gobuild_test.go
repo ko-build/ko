@@ -392,7 +392,7 @@ func nilGetBase(_ context.Context, _ string) (name.Reference, Result, error) {
 const wantSBOM = "This is our fake SBOM"
 
 // A helper method we use to substitute for the default "build" method.
-func fauxSBOM(_ context.Context, _ string, _ string) ([]byte, types.MediaType, error) {
+func fauxSBOM(_ context.Context, _ string, _ string, _ v1.Image) ([]byte, types.MediaType, error) {
 	return []byte(wantSBOM), "application/vnd.garbage", nil
 }
 

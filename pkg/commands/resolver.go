@@ -102,6 +102,10 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	switch bo.SBOM {
 	case "none":
 		opts = append(opts, build.WithDisabledSBOM())
+	case "spdx":
+		opts = append(opts, build.WithSPDX(version()))
+	case "go.version-m":
+		opts = append(opts, build.WithGoVersionSBOM())
 	}
 	opts = append(opts, build.WithTrimpath(bo.Trimpath))
 	for _, lf := range bo.Labels {

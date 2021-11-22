@@ -148,6 +148,6 @@ If the image was not built using ko, or if it was built without embedding depend
 			// unreachable
 		},
 	}
-	deps.Flags().StringVar(&sbomType, "sbom", "go.version-m", "Format for SBOM output")
+	deps.Flags().StringVar(&sbomType, "sbom", "spdx", "Format for SBOM output (supports: spdx, go.version-m).")
 	topLevel.AddCommand(deps)
 }

@@ -84,7 +84,7 @@ jobs:
       run: |
         set -o pipefail
 
-        IMAGE=$(ko publish ./test)
+        IMAGE=$(ko build ./test)
         SBOM=$(cosign download sbom ${IMAGE})
         KO_DEPS=$(ko deps ${IMAGE})
 

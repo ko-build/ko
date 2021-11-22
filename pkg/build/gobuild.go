@@ -41,11 +41,13 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/google/ko/internal/sbom"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
 	ocimutate "github.com/sigstore/cosign/pkg/oci/mutate"
 	"github.com/sigstore/cosign/pkg/oci/signed"
 	"github.com/sigstore/cosign/pkg/oci/static"
+	ctypes "github.com/sigstore/cosign/pkg/types"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -57,7 +59,7 @@ const (
 type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
-type sbomber func(context.Context, string, string) ([]byte, types.MediaType, error)
+type sbomber func(context.Context, string, string, v1.Image) ([]byte, types.MediaType, error)
 
 type platformMatcher struct {
 	spec      string
@@ -71,7 +73,6 @@ type gobuild struct {
 	build                builder
 	sbom                 sbomber
 	disableOptimizations bool
-	disableSBOM          bool
 	trimpath             bool
 	buildConfigs         map[string]Config
 	platformMatcher      *platformMatcher
@@ -89,7 +90,6 @@ type gobuildOpener struct {
 	build                builder
 	sbom                 sbomber
 	disableOptimizations bool
-	disableSBOM          bool
 	trimpath             bool
 	buildConfigs         map[string]Config
 	platform             string
@@ -112,7 +112,6 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		build:                gbo.build,
 		sbom:                 gbo.sbom,
 		disableOptimizations: gbo.disableOptimizations,
-		disableSBOM:          gbo.disableSBOM,
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
 		labels:               gbo.labels,
@@ -130,8 +129,8 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error) {
 	gbo := &gobuildOpener{
 		build: build,
-		sbom:  sbom,
 		dir:   dir,
+		sbom:  spdx("(none)"),
 	}
 
 	for _, option := range options {
@@ -261,7 +260,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	return file, nil
 }
 
-func sbom(ctx context.Context, file string, appPath string) ([]byte, types.MediaType, error) {
+func goversionm(ctx context.Context, file string, appPath string, _ v1.Image) ([]byte, types.MediaType, error) {
 	sbom := bytes.NewBuffer(nil)
 	cmd := exec.CommandContext(ctx, "go", "version", "-m", file)
 	cmd.Stdout = sbom
@@ -270,12 +269,29 @@ func sbom(ctx context.Context, file string, appPath string) ([]byte, types.Media
 		return nil, "", err
 	}
 
-	// TODO(imjasonh): Turn the output of `go version -m` on
-	// file into a standard format and attach here.
-
 	// In order to get deterministics SBOMs replace our randomized
 	// file name with the path the app will get inside of the container.
 	return []byte(strings.Replace(sbom.String(), file, appPath, 1)), "application/vnd.go.version-m", nil
+}
+
+func spdx(version string) sbomber {
+	return func(ctx context.Context, file string, appPath string, img v1.Image) ([]byte, types.MediaType, error) {
+		b, _, err := goversionm(ctx, file, appPath, img)
+		if err != nil {
+			return nil, "", err
+		}
+
+		cfg, err := img.ConfigFile()
+		if err != nil {
+			return nil, "", err
+		}
+
+		b, err = sbom.GenerateSPDX(version, cfg.Created.Time, b)
+		if err != nil {
+			return nil, "", err
+		}
+		return b, ctypes.SPDXMediaType, nil
+	}
 }
 
 // buildEnv creates the environment variables used by the `go build` command.
@@ -724,19 +740,23 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 	}
 
-	if g.disableSBOM {
-		return signed.Image(image), nil
-	}
+	si := signed.Image(image)
 
-	sbom, mt, err := g.sbom(ctx, file, appPath)
-	if err != nil {
-		return nil, err
+	if g.sbom != nil {
+		sbom, mt, err := g.sbom(ctx, file, appPath, image)
+		if err != nil {
+			return nil, err
+		}
+		f, err := static.NewFile(sbom, static.WithLayerMediaType(mt))
+		if err != nil {
+			return nil, err
+		}
+		si, err = ocimutate.AttachFileToImage(si, "sbom", f)
+		if err != nil {
+			return nil, err
+		}
 	}
-	f, err := static.NewFile(sbom, static.WithLayerMediaType(mt))
-	if err != nil {
-		return nil, err
-	}
-	return ocimutate.AttachFileToImage(signed.Image(image), "sbom", f)
+	return si, nil
 }
 
 // Append appPath to the PATH environment variable, if it exists. Otherwise,
