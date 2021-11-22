@@ -86,7 +86,7 @@ jobs:
 
         IMAGE=$(ko build ./test)
         SBOM=$(cosign download sbom ${IMAGE})
-        KO_DEPS=$(ko deps --sbom=spdx ${IMAGE})
+        KO_DEPS=$(ko deps ${IMAGE})
 
         echo '::group:: SBOM'
         echo "${SBOM}"
