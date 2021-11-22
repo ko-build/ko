@@ -49,17 +49,6 @@ type BuildSetting struct {
 	Key, Value string
 }
 
-// Read returns build information embedded in a Go binary file
-// accessed through the given ReaderAt. Most information is only available for
-// binaries built with module support.
-func Read(mod string) (*BuildInfo, error) {
-	bi := &BuildInfo{}
-	if err := bi.UnmarshalText([]byte(mod)); err != nil {
-		return nil, err
-	}
-	return bi, nil
-}
-
 func (bi *BuildInfo) UnmarshalText(data []byte) (err error) {
 	*bi = BuildInfo{}
 	lineNum := 1

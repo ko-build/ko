@@ -23,6 +23,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/authn"
@@ -113,22 +114,29 @@ If the image was not built using ko, or if it was built without embedding depend
 					return err
 				}
 				cmd := exec.CommandContext(ctx, "go", "version", "-m", n)
-				cmd.Stdout = os.Stdout
+				var buf bytes.Buffer
+				cmd.Stdout = &buf
 				cmd.Stderr = os.Stderr
+				if err := cmd.Run(); err != nil {
+					return err
+				}
+				// In order to get deterministics SBOMs replace
+				// our randomized file name with the path the
+				// app will get inside of the container.
+				mod := bytes.Replace(buf.Bytes(),
+					[]byte(n),
+					[]byte(path.Join("/ko-app", filepath.Base(filepath.Clean(h.Name)))),
+					1)
 				if spdx {
-					var buf bytes.Buffer
-					cmd.Stdout = &buf
-					if err := cmd.Run(); err != nil {
-						return err
-					}
-					b, err := sbom.GenerateSPDX(Version, h.ModTime, buf.Bytes())
+					b, err := sbom.GenerateSPDX(Version, cfg.Created.Time, mod)
 					if err != nil {
 						return err
 					}
-					fmt.Fprintln(os.Stdout, string(b))
-					return nil
+					io.Copy(os.Stdout, bytes.NewReader(b))
+				} else {
+					io.Copy(os.Stdout, bytes.NewReader(mod))
 				}
-				return cmd.Run()
+				return nil
 			}
 			// unreachable
 		},
