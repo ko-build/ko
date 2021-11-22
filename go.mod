@@ -3,7 +3,7 @@ module github.com/google/ko
 go 1.16
 
 require (
-	github.com/containerd/stargz-snapshotter/estargz v0.10.0
+	github.com/containerd/stargz-snapshotter/estargz v0.10.1
 	github.com/docker/docker v20.10.10+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/evanphx/json-patch/v5 v5.5.0 // indirect
