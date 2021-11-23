@@ -188,6 +188,9 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		if repoName == publish.KindDomain {
 			return publish.NewKindPublisher(namer, po.Tags), nil
 		}
+		if repoName == publish.OpenshiftDomain {
+			return publish.NewOpenshiftPublisher(namer, po.Tags)
+		}
 
 		if repoName == "" {
 			return nil, errors.New("KO_DOCKER_REPO environment variable is unset")

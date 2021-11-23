@@ -513,25 +513,10 @@ Oh, you betcha. Here's a partial list:
 
 ## Does `ko` work with [OpenShift Internal Registry](https://docs.openshift.com/container-platform/latest/registry/registry-options.html#registry-integrated-openshift-registry_registry-options)?
 
-Yes! Follow these steps:
-
-- Connect to your OpenShift installation:
-  https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html#cli-logging-in_cli-developer-commands
-- Expose the OpenShift Internal Registry so you can push to it:
-  https://docs.openshift.com/container-platform/latest/registry/securing-exposing-registry.html
-- Export your token to `$HOME/.docker/config.json`:
-
-```sh
-oc registry login --to=$HOME/.docker/config.json
-```
-
-- Create a namespace where you will push your images, i.e: `ko-images`
-- Execute this command to set `KO_DOCKER_REPO` to publish images to the internal
-  registry.
-
-```sh
-   export KO_DOCKER_REPO=$(oc registry info --public)/ko-images
-```
+We've got you covered! Make sure you're
+[logged into `oc`](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html#cli-logging-in_cli-developer-commands)
+with a user that's allowed to push to the internal registry and use `ocp.local` as your
+`KO_DOCKER_REPO`. The images will be published into the currently active project.
 
 # Acknowledgements
 
