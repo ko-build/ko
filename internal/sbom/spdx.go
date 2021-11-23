@@ -16,6 +16,9 @@ package sbom
 
 import (
 	"bytes"
+	"encoding/base64"
+	"encoding/hex"
+	"fmt"
 	"strings"
 	"text/template"
 	"time"
@@ -48,6 +51,16 @@ type tmplInfo struct {
 // TODO: use k8s.io/release/pkg/bom
 var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	"dots": func(s string) string { return strings.ReplaceAll(s, "/", ".") },
+	"h1toSHA256": func(s string) (string, error) {
+		if !strings.HasPrefix(s, "h1:") {
+			return "", fmt.Errorf("malformed sum prefix: %q", s)
+		}
+		b, err := base64.StdEncoding.DecodeString(s[3:])
+		if err != nil {
+			return "", fmt.Errorf("malformed sum: %q: %w", s, err)
+		}
+		return hex.EncodeToString(b), nil
+	},
 }).Parse(`SPDXVersion: SPDX-2.2
 DataLicense: CC0-1.0
 SPDXID: SPDXRef-DOCUMENT
@@ -71,10 +84,10 @@ PackageLicenseComments: NOASSERTION
 PackageComment: NOASSERTION
 
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-{{ .BuildInfo.Main.Path | dots }}
-{{ range .Deps }}
-Relationship: SPDXRef-Package-{{ $.Main.Path | dots }} DEPENDS_ON SPDXRef-Package-{{ .Path | dots }}-{{ .Version }}{{ end }}
 
 {{ range .Deps }}
+Relationship: SPDXRef-Package-{{ $.Main.Path | dots }} DEPENDS_ON SPDXRef-Package-{{ .Path | dots }}-{{ .Version }}
+
 ##### Package representing {{ .Path }}
 
 PackageName: {{ .Path }}
@@ -83,8 +96,8 @@ PackageVersion: {{ .Version }}
 PackageSupplier: Organization: {{ .Path }}
 PackageDownloadLocation: https://proxy.golang.org/{{ .Path }}/@v/{{ .Version }}.zip
 FilesAnalyzed: false
-PackageChecksum: SHA256: {{ .Sum }}
-PackageLicenseConcluded: NOASSERTION
+{{ if .Sum }}PackageChecksum: SHA256: {{ .Sum | h1toSHA256 }}
+{{ end }}PackageLicenseConcluded: NOASSERTION
 PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NOASSERTION
 PackageLicenseComments: NOASSERTION
