@@ -133,6 +133,7 @@ func WithExplicitRepoHost(host string) Option {
 		}
 		t = t.Clone()
 
+		log.Printf("Explicitly connecting to registry: %s", host)
 		dialer := t.DialContext
 		t.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
 			return dialer(ctx, network, host)
