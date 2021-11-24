@@ -188,8 +188,8 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		if repoName == publish.KindDomain {
 			return publish.NewKindPublisher(namer, po.Tags), nil
 		}
-		if repoName == publish.OpenshiftDomain {
-			return publish.NewOpenshiftPublisher(namer, po.Tags)
+		if repoName == publish.OpenShiftDomain {
+			return publish.NewOpenShiftPublisher(namer, po.Tags)
 		}
 
 		if repoName == "" {

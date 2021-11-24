@@ -32,9 +32,9 @@ import (
 )
 
 const (
-	// OpenshiftDomain is a sentinel "registry" that represents loading images into
-	// Openshift's internal registry.
-	OpenshiftDomain = "ocp.local"
+	// OpenShiftDomain is a sentinel "registry" that represents loading images into
+	// OpenShift's internal registry.
+	OpenShiftDomain = "ocp.local"
 
 	// This line is printed by the tunnel command when it tells us which port it uses.
 	portPrefix = "Forwarding from 127.0.0.1:"
@@ -45,9 +45,9 @@ type ocpPublisher struct {
 	tunnel *os.Process
 }
 
-// NewOpenshiftPublisher returns a new publish.Interface that loads images into
-// Openshift's internal registry.
-func NewOpenshiftPublisher(namer Namer, tags []string) (Interface, error) {
+// NewOpenShiftPublisher returns a new publish.Interface that loads images into
+// OpenShift's internal registry.
+func NewOpenShiftPublisher(namer Namer, tags []string) (Interface, error) {
 	// Login to the registry.
 	if _, err := runOc("registry", "login"); err != nil {
 		return nil, fmt.Errorf("failed to login to the registry: %w", err)
