@@ -513,8 +513,8 @@ Oh, you betcha. Here's a partial list:
 
 ## Does `ko` work with [OpenShift Internal Registry](https://docs.openshift.com/container-platform/latest/registry/registry-options.html#registry-integrated-openshift-registry_registry-options)?
 
-We've got you covered! Make sure you're
-[logged into `oc`](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html#cli-logging-in_cli-developer-commands)
+We've got you covered! Make sure 
+[you've installed `oc` and you're logged into your cluster](https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html#cli-logging-in_cli-developer-commands)
 with a user that's allowed to push to the internal registry and use `ocp.local` as your
 `KO_DOCKER_REPO`. The images will be published into the currently active project.
 
