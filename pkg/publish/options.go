@@ -15,8 +15,10 @@
 package publish
 
 import (
+	"context"
 	"crypto/tls"
 	"log"
+	"net"
 	"net/http"
 	"path"
 
@@ -117,6 +119,26 @@ func Insecure(b bool) Option {
 		t.TLSClientConfig.InsecureSkipVerify = b //nolint: gosec
 		i.t = t
 
+		return nil
+	}
+}
+
+// WithExplicitRepoHost is a functional option for pinning the repository to a specific
+// host, for example if the repository is talked to through a local tunnel.
+func WithExplicitRepoHost(host string) Option {
+	return func(i *defaultOpener) error {
+		t, ok := i.t.(*http.Transport)
+		if !ok {
+			return nil
+		}
+		t = t.Clone()
+
+		dialer := t.DialContext
+		t.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
+			return dialer(ctx, network, host)
+		}
+
+		i.t = t
 		return nil
 	}
 }

@@ -215,13 +215,18 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			userAgent = po.UserAgent
 		}
 		if po.Push {
-			dp, err := publish.NewDefault(repoName,
+			opts := []publish.Option{
 				publish.WithUserAgent(userAgent),
 				publish.WithAuthFromKeychain(authn.DefaultKeychain),
 				publish.WithNamer(namer),
 				publish.WithTags(po.Tags),
 				publish.WithTagOnly(po.TagOnly),
-				publish.Insecure(po.InsecureRegistry))
+				publish.Insecure(po.InsecureRegistry),
+			}
+			if po.DockerRepoHost != "" {
+				opts = append(opts, publish.WithExplicitRepoHost(po.DockerRepoHost))
+			}
+			dp, err := publish.NewDefault(repoName, opts...)
 			if err != nil {
 				return nil, err
 			}
