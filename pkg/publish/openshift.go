@@ -48,6 +48,11 @@ type ocpPublisher struct {
 // NewOpenShiftPublisher returns a new publish.Interface that loads images into
 // OpenShift's internal registry.
 func NewOpenShiftPublisher(namer Namer, tags []string) (Interface, error) {
+	// Check if oc is installed.
+	if _, err := exec.LookPath("oc"); err != nil {
+		return nil, fmt.Errorf("failed to find oc, is it installed? : %w", err)
+	}
+
 	// Login to the registry.
 	if _, err := runOc("registry", "login"); err != nil {
 		return nil, fmt.Errorf("failed to login to the registry: %w", err)
