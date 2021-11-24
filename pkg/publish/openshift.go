@@ -49,8 +49,7 @@ type ocpPublisher struct {
 // Openshift's internal registry.
 func NewOpenshiftPublisher(namer Namer, tags []string) (Interface, error) {
 	// Login to the registry.
-	login := exec.Command("oc", "registry", "login")
-	if err := login.Run(); err != nil {
+	if _, err := runOc("registry", "login"); err != nil {
 		return nil, fmt.Errorf("failed to login to the registry: %w", err)
 	}
 	log.Print("Logged into Openshift registry")
