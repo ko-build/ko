@@ -29,6 +29,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/ko/pkg/build"
+	"k8s.io/apimachinery/pkg/util/rand"
 )
 
 const (
@@ -66,7 +67,7 @@ func NewOpenShiftPublisher(namer Namer, tags []string) (Interface, error) {
 	// Note: port-forward is a privileged operation on Openshift, so we build an pipe
 	//       tunnel using a socat pod and attaching to its pipes.
 	//nolint:gosec // Launching this command with the output of the registry call above.
-	tunnel := exec.Command("oc", "run", "registry-tunnel", "--rm", "-i", "--image", "alpine/socat", "--", "-", "TCP4:"+registryHostPort)
+	tunnel := exec.Command("oc", "run", "registry-tunnel-"+rand.String(10), "--rm", "-i", "--image", "alpine/socat", "--", "-", "TCP4:"+registryHostPort)
 	in, err := tunnel.StdinPipe()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tunnel stdin: %w", err)
