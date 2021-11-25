@@ -15,7 +15,6 @@
 package publish
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"io"
@@ -25,6 +24,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -35,13 +35,11 @@ const (
 	// OpenShiftDomain is a sentinel "registry" that represents loading images into
 	// OpenShift's internal registry.
 	OpenShiftDomain = "ocp.local"
-
-	// This line is printed by the tunnel command when it tells us which port it uses.
-	portPrefix = "Forwarding from 127.0.0.1:"
 )
 
 type ocpPublisher struct {
 	inner  Interface
+	stdin  io.Closer
 	tunnel *os.Process
 }
 
@@ -63,47 +61,30 @@ func NewOpenShiftPublisher(namer Namer, tags []string) (Interface, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch internal registry host: %w", err)
 	}
-	registryHost, registryPort, err := net.SplitHostPort(registryHostPort)
-	if err != nil {
-		return nil, fmt.Errorf("failed to split host and port of registry: %w", err)
-	}
-	registryHostParts := strings.SplitN(registryHost, ".", 3)
-	registrySvc := registryHostParts[0]
-	registryNs := registryHostParts[1]
 
 	// Setup a tunnel to the registry.
+	// Note: port-forward is a privileged operation on Openshift, so we build an pipe
+	//       tunnel using a socat pod and attaching to its pipes.
 	// TODO: Should we generalize this into a ko feature for a tunneled registry?
-	tunnel := exec.Command("oc", "port-forward", "-n", registryNs, "svc/"+registrySvc, ":"+registryPort)
-	tunnel.Stderr = os.Stderr
-	tunnelLogs, err := tunnel.StdoutPipe()
+	tunnel := exec.Command("oc", "run", "registry-tunnel", "--rm", "-i", "--image", "alpine/socat", "--", "-", "TCP4:"+registryHostPort)
+	in, err := tunnel.StdinPipe()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get tunnel output: %w", err)
+		return nil, fmt.Errorf("failed to get tunnel stdin: %w", err)
+	}
+	out, err := tunnel.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get tunnel stdin: %w", err)
 	}
 	if err := tunnel.Start(); err != nil {
 		return nil, fmt.Errorf("failed to launch tunnel: %w", err)
 	}
 
-	// Wait for the "Forwarding from" logline to appear.
-	var tunnelPort string
-	scanner := bufio.NewScanner(tunnelLogs)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, portPrefix) {
-			tunnelPort = strings.TrimPrefix(strings.TrimSuffix(line, " -> 5000"), portPrefix)
-			break
-		}
-	}
-	// Drop all remaining stdout logs into a black hole so that the process can continue.
-	go io.Copy(io.Discard, tunnelLogs)
-	log.Printf("Using local tunnel with port %q", tunnelPort)
-
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	dial := transport.DialContext
 	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
 		// Force connect to the local tunnel.
 		// TODO: Should we generalize this into the default handler so people can use
 		//       existing tunnels in the default publisher?
-		return dial(ctx, "tcp", "127.0.0.1:"+tunnelPort)
+		return pipeConn{in: in, out: out}, nil
 	}
 
 	// Determine the namespace to push the image to by assuming the user wants to push to
@@ -116,7 +97,7 @@ func NewOpenShiftPublisher(namer Namer, tags []string) (Interface, error) {
 	}
 	log.Printf("Pushing images to namespace %q", targetNamespace)
 
-	inner, err := NewDefault(fmt.Sprintf("%s.%s.svc:%s/%s", registrySvc, registryNs, registryPort, targetNamespace),
+	inner, err := NewDefault(fmt.Sprintf("%s/%s", registryHostPort, targetNamespace),
 		WithTransport(transport),
 		WithAuthFromKeychain(authn.DefaultKeychain),
 		WithNamer(namer),
@@ -128,6 +109,7 @@ func NewOpenShiftPublisher(namer Namer, tags []string) (Interface, error) {
 
 	return &ocpPublisher{
 		inner:  inner,
+		stdin:  in,
 		tunnel: tunnel.Process,
 	}, nil
 }
@@ -138,8 +120,8 @@ func (t *ocpPublisher) Publish(ctx context.Context, br build.Result, s string) (
 }
 
 func (t *ocpPublisher) Close() error {
-	if err := t.tunnel.Kill(); err != nil {
-		return fmt.Errorf("failed to kill tunnel process: %w", err)
+	if err := t.stdin.Close(); err != nil {
+		return fmt.Errorf("failed to close the tunnel: %w", err)
 	}
 	if _, err := t.tunnel.Wait(); err != nil {
 		return fmt.Errorf("tunnel process didn't exit cleanly: %w", err)
@@ -155,4 +137,37 @@ func runOc(args ...string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(string(raw)), nil
+}
+
+// pipeConn acts as a TCP connection over a given input and output stream, that's
+// supposed to be STDIN and STDOUT of the remote `socat` process.
+type pipeConn struct {
+	net.Conn
+	out io.Reader
+	in  io.Writer
+}
+
+func (c pipeConn) Read(b []byte) (n int, err error) {
+	return c.out.Read(b)
+}
+
+func (c pipeConn) Write(b []byte) (n int, err error) {
+	return c.in.Write(b)
+}
+
+func (c pipeConn) Close() error {
+	// We don't close STDIN here as we want to reuse the process among many connections.
+	return nil
+}
+
+func (c pipeConn) SetDeadline(t time.Time) error {
+	return nil
+}
+
+func (c pipeConn) SetReadDeadline(t time.Time) error {
+	return nil
+}
+
+func (c pipeConn) SetWriteDeadline(t time.Time) error {
+	return nil
 }
