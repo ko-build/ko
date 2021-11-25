@@ -66,6 +66,7 @@ func NewOpenShiftPublisher(namer Namer, tags []string) (Interface, error) {
 	// Note: port-forward is a privileged operation on Openshift, so we build an pipe
 	//       tunnel using a socat pod and attaching to its pipes.
 	// TODO: Should we generalize this into a ko feature for a tunneled registry?
+	//nolint:gosec // Launching this command with the output of the registry call above.
 	tunnel := exec.Command("oc", "run", "registry-tunnel", "--rm", "-i", "--image", "alpine/socat", "--", "-", "TCP4:"+registryHostPort)
 	in, err := tunnel.StdinPipe()
 	if err != nil {
