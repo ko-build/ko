@@ -36,6 +36,7 @@ func passthru(command string) runCmd {
 
 		// Start building a command line invocation by passing
 		// through our arguments to command's CLI.
+		//nolint:gosec // We actively want to pass arguments through, so this is fine.
 		ecmd := exec.CommandContext(ctx, command, os.Args[1:]...)
 
 		// Pass through our environment
