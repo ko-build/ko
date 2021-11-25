@@ -65,7 +65,6 @@ func NewOpenShiftPublisher(namer Namer, tags []string) (Interface, error) {
 	// Setup a tunnel to the registry.
 	// Note: port-forward is a privileged operation on Openshift, so we build an pipe
 	//       tunnel using a socat pod and attaching to its pipes.
-	// TODO: Should we generalize this into a ko feature for a tunneled registry?
 	//nolint:gosec // Launching this command with the output of the registry call above.
 	tunnel := exec.Command("oc", "run", "registry-tunnel", "--rm", "-i", "--image", "alpine/socat", "--", "-", "TCP4:"+registryHostPort)
 	in, err := tunnel.StdinPipe()
@@ -83,8 +82,10 @@ func NewOpenShiftPublisher(namer Namer, tags []string) (Interface, error) {
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.DialContext = func(ctx context.Context, network, address string) (net.Conn, error) {
 		// Force connect to the local tunnel.
-		// TODO: Should we generalize this into the default handler so people can use
-		//       existing tunnels in the default publisher?
+		// Note: This is only safe as long as the "connection" is always used sequentially.
+		//       `ko` seems to behave this way currently. If this changes, we either have
+		//       to launch a pod per connection or `oc exec` into a singular pod that just
+		//       sleeps to create truly multiple connections.
 		return pipeConn{in: in, out: out}, nil
 	}
 
