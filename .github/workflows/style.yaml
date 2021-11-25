@@ -94,7 +94,7 @@ jobs:
 
       - uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.38
+          version: v1.43
 
       - name: misspell
         if: ${{ always() }}
