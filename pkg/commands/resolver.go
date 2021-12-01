@@ -217,15 +217,10 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			userAgent = po.UserAgent
 		}
 		if po.Push {
-			opts := []publish.Option{
-				publish.WithUserAgent(userAgent),
-				publish.WithAuthFromKeychain(authn.DefaultKeychain),
-				publish.WithNamer(namer),
-				publish.WithTags(po.Tags),
-				publish.WithTagOnly(po.TagOnly),
-				publish.Insecure(po.InsecureRegistry),
-			}
+			var opts []publish.Option
 			if po.DockerRepoAddress != "" {
+				// Note: This option has to be first since other options might mutate
+				// the transport (Insecure for example).
 				log.Printf("Explicitly connecting to registry: %s", po.DockerRepoAddress)
 				t := http.DefaultTransport.(*http.Transport).Clone()
 				dial := t.DialContext
@@ -234,6 +229,14 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 				}
 				opts = append(opts, publish.WithTransport(t))
 			}
+			opts = append(opts,
+				publish.WithUserAgent(userAgent),
+				publish.WithAuthFromKeychain(authn.DefaultKeychain),
+				publish.WithNamer(namer),
+				publish.WithTags(po.Tags),
+				publish.WithTagOnly(po.TagOnly),
+				publish.Insecure(po.InsecureRegistry),
+			)
 			dp, err := publish.NewDefault(repoName, opts...)
 			if err != nil {
 				return nil, err
