@@ -16,7 +16,7 @@ jobs:
       REGISTRY_NAME: registry.local
       REGISTRY_PORT: 5000
       KO_DOCKER_REPO: registry.local:5000/ko
-      KO_DOCKER_REPO_HOST: 127.0.0.1:5000
+      KO_DOCKER_REPO_ADDRESS: 127.0.0.1:5000
 
     steps:
     - uses: actions/setup-go@v2
@@ -67,7 +67,7 @@ jobs:
     - name: Run Smoke Test
       run: |
         # Test with kind load
-        KO_DOCKER_REPO=kind.local KO_DOCKER_REPO_HOST= ko apply --platform=all -f ./test
+        KO_DOCKER_REPO=kind.local KO_DOCKER_REPO_ADDRESS= ko apply --platform=all -f ./test
         kubectl wait --timeout=10s --for=condition=Ready pod/kodata
         kubectl delete pod kodata
 

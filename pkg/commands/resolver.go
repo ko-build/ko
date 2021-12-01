@@ -24,6 +24,8 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"path"
 	"runtime"
@@ -223,8 +225,14 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 				publish.WithTagOnly(po.TagOnly),
 				publish.Insecure(po.InsecureRegistry),
 			}
-			if po.DockerRepoHost != "" {
-				opts = append(opts, publish.WithExplicitRepoHost(po.DockerRepoHost))
+			if po.DockerRepoAddress != "" {
+				log.Printf("Explicitly connecting to registry: %s", po.DockerRepoAddress)
+				t := http.DefaultTransport.(*http.Transport).Clone()
+				dial := t.DialContext
+				t.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
+					return dial(ctx, network, po.DockerRepoAddress)
+				}
+				opts = append(opts, publish.WithTransport(t))
 			}
 			dp, err := publish.NewDefault(repoName, opts...)
 			if err != nil {

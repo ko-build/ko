@@ -33,10 +33,10 @@ type PublishOptions struct {
 	// In normal ko usage, this is populated with the value of $KO_DOCKER_REPO.
 	DockerRepo string
 
-	// DockerRepoHost configures the host at which the registry can be reached. This can
+	// DockerRepoAddress configures the host at which the registry can be reached. This can
 	// differ from DockerRepo if the registry is talked to through a tunnel for example.
 	// If empty, this will be inferred from DockerRepo.
-	DockerRepoHost string
+	DockerRepoAddress string
 
 	// LocalDomain overrides the default domain for images loaded into the local Docker daemon. Use with Local=true.
 	LocalDomain string
@@ -78,8 +78,8 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 	if dockerRepo, exists := os.LookupEnv("KO_DOCKER_REPO"); exists {
 		po.DockerRepo = dockerRepo
 	}
-	if dockerRepoHost, exists := os.LookupEnv("KO_DOCKER_REPO_HOST"); exists {
-		po.DockerRepoHost = dockerRepoHost
+	if dockerRepoHost, exists := os.LookupEnv("KO_DOCKER_REPO_ADDRESS"); exists {
+		po.DockerRepoAddress = dockerRepoHost
 	}
 
 	cmd.Flags().StringSliceVarP(&po.Tags, "tags", "t", []string{"latest"},
