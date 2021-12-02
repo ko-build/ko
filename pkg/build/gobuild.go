@@ -754,14 +754,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
-	if platform.OS == "windows" {
-		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFilename(ref.Path())}
-		updatePath(cfg, `C:\ko-app`)
-		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
-	} else {
-		updatePath(cfg, appDir)
-		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
-	}
+	updatePath(cfg, appDir)
+	cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
+
 	cfg.Author = "github.com/google/ko"
 
 	if cfg.Config.Labels == nil {
