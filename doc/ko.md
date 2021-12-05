@@ -16,7 +16,6 @@ ko [flags]
 
 * [ko apply](ko_apply.md)	 - Apply the input files with image references resolved to built/pushed image digests.
 * [ko build](ko_build.md)	 - Build and publish container images from the given importpaths.
-* [ko completion](ko_completion.md)	 - Output shell completion code (default Bash)
 * [ko create](ko_create.md)	 - Create the input files with image references resolved to built/pushed image digests.
 * [ko delete](ko_delete.md)	 - See "kubectl help delete" for detailed usage.
 * [ko deps](ko_deps.md)	 - Print Go module dependency information about the ko-built binary in the image
