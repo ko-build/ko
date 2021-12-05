@@ -480,11 +480,11 @@ eStargz-optimized images.
 
 ## Does `ko` support autocompletion?
 
-Yes! `ko completion` generates a Bash completion script, which you can add to
-your `bash_completion` directory:
+Yes! `ko completion` generates a Bash/Zsh/Fish/PowerShell completion script.
+You can get how to load it from help document.
 
 ```
-ko completion > /usr/local/etc/bash_completion.d/ko
+ko completion [bash|zsh|fish|powershell] --help
 ```
 
 Or, you can source it directly:

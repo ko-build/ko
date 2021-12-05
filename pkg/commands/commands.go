@@ -32,7 +32,6 @@ func AddKubeCommands(topLevel *cobra.Command) {
 	addBuild(topLevel)
 	addRun(topLevel)
 	addDeps(topLevel)
-	addCompletion(topLevel)
 }
 
 // check if kubectl is installed
