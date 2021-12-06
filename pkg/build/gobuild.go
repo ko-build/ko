@@ -714,6 +714,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		History: v1.History{
 			Author:    "ko",
 			CreatedBy: "ko build " + ref.String(),
+			Created:   g.kodataCreationTime,
 			Comment:   "kodata contents, at $KO_DATA_PATH",
 		},
 	})
@@ -722,7 +723,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	appPath := path.Join(appDir, appFilename(ref.Path()))
 
 	miss := func() (v1.Layer, error) {
-		return buildLayer(appPath, file, platform)
+		return buildLayer(appPath, file, g.creationTime, platform)
 	}
 
 	binaryLayer, err := g.cache.get(ctx, file, miss)
@@ -734,6 +735,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		Layer: binaryLayer,
 		History: v1.History{
 			Author:    "ko",
+			Created:   g.creationTime,
 			CreatedBy: "ko build " + ref.String(),
 			Comment:   "go build output, at " + appPath,
 		},
@@ -771,17 +773,11 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		cfg.Config.Labels[k] = v
 	}
 
+	cfg.Created = g.creationTime
+
 	image, err := mutate.ConfigFile(withApp, cfg)
 	if err != nil {
 		return nil, err
-	}
-
-	empty := v1.Time{}
-	if g.creationTime != empty {
-		image, err = mutate.CreatedAt(image, g.creationTime)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	si := signed.Image(image)
@@ -803,9 +799,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	return si, nil
 }
 
-func buildLayer(appPath, file string, platform *v1.Platform) (v1.Layer, error) {
+func buildLayer(appPath, file string, creationTime v1.Time, platform *v1.Platform) (v1.Layer, error) {
 	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(appPath, file, v1.Time{}, platform)
+	binaryLayerBuf, err := tarBinary(appPath, file, creationTime, platform)
 	if err != nil {
 		return nil, err
 	}
