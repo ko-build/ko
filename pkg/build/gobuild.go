@@ -249,7 +249,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	if dir := os.Getenv("KOCACHE"); dir != "" {
 		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
-		tmpDir = filepath.Join(dir, ip, platformToString(platform))
+		tmpDir = filepath.Join(dir, "bin", ip, platformToString(platform))
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 			return "", err
 		}
