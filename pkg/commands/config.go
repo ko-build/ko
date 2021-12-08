@@ -39,31 +39,11 @@ import (
 
 // getBaseImage returns a function that determines the base image for a given import path.
 func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
-	return func(ctx context.Context, s string) (name.Reference, build.Result, error) {
-		s = strings.TrimPrefix(s, build.StrictScheme)
-		// Viper configuration file keys are case insensitive, and are
-		// returned as all lowercase.  This means that import paths with
-		// uppercase must be normalized for matching here, e.g.
-		//    github.com/GoogleCloudPlatform/foo/cmd/bar
-		// comes through as:
-		//    github.com/googlecloudplatform/foo/cmd/bar
-		baseImage, ok := bo.BaseImageOverrides[strings.ToLower(s)]
-		if !ok || baseImage == "" {
-			baseImage = bo.BaseImage
-		}
-		var nameOpts []name.Option
-		if bo.InsecureRegistry {
-			nameOpts = append(nameOpts, name.Insecure)
-		}
-		ref, err := name.ParseReference(baseImage, nameOpts...)
-		if err != nil {
-			return nil, nil, fmt.Errorf("parsing base image (%q): %w", baseImage, err)
-		}
-
+	cache := map[string]build.Result{}
+	fetch := func(ctx context.Context, ref name.Reference) (build.Result, error) {
 		// For ko.local, look in the daemon.
 		if ref.Context().RegistryStr() == publish.LocalDomain {
-			img, err := daemon.Image(ref)
-			return ref, img, err
+			return daemon.Image(ref)
 		}
 
 		userAgent := ua()
@@ -95,28 +75,58 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 				p.Variant = parts[2]
 			}
 			if len(parts) > 3 {
-				return nil, nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
+				return nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
 			}
 			ropt = append(ropt, remote.WithPlatform(p))
 		}
 
-		log.Printf("Using base %s for %s", ref, s)
 		desc, err := remote.Get(ref, ropt...)
 		if err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 		switch desc.MediaType {
 		case types.OCIImageIndex, types.DockerManifestList:
 			if multiplatform {
-				idx, err := desc.ImageIndex()
-				return ref, idx, err
+				return desc.ImageIndex()
 			}
-			img, err := desc.Image()
-			return ref, img, err
+			return desc.Image()
 		default:
-			img, err := desc.Image()
-			return ref, img, err
+			return desc.Image()
 		}
+	}
+	return func(ctx context.Context, s string) (name.Reference, build.Result, error) {
+		s = strings.TrimPrefix(s, build.StrictScheme)
+		// Viper configuration file keys are case insensitive, and are
+		// returned as all lowercase.  This means that import paths with
+		// uppercase must be normalized for matching here, e.g.
+		//    github.com/GoogleCloudPlatform/foo/cmd/bar
+		// comes through as:
+		//    github.com/googlecloudplatform/foo/cmd/bar
+		baseImage, ok := bo.BaseImageOverrides[strings.ToLower(s)]
+		if !ok || baseImage == "" {
+			baseImage = bo.BaseImage
+		}
+		var nameOpts []name.Option
+		if bo.InsecureRegistry {
+			nameOpts = append(nameOpts, name.Insecure)
+		}
+		ref, err := name.ParseReference(baseImage, nameOpts...)
+		if err != nil {
+			return nil, nil, fmt.Errorf("parsing base image (%q): %w", baseImage, err)
+		}
+
+		if cached, ok := cache[ref.String()]; ok {
+			return ref, cached, nil
+		}
+
+		log.Printf("Using base %s for %s", ref, s)
+		result, err := fetch(ctx, ref)
+		if err != nil {
+			return ref, result, err
+		}
+
+		cache[ref.String()] = result
+		return ref, result, nil
 	}
 }
 
