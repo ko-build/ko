@@ -48,6 +48,7 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/signed"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	ctypes "github.com/sigstore/cosign/pkg/types"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -872,9 +873,12 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 		return nil, err
 	}
 
+	errg, ctx := errgroup.WithContext(ctx)
+
 	// Build an image for each child from the base and append it to a new index to produce the result.
-	adds := []ocimutate.IndexAddendum{}
-	for _, desc := range im.Manifests {
+	adds := make([]ocimutate.IndexAddendum, len(im.Manifests))
+	for i, desc := range im.Manifests {
+		i, desc := i, desc
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, ref)
@@ -884,23 +888,30 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			continue
 		}
 
-		baseImage, err := baseIndex.Image(desc.Digest)
-		if err != nil {
-			return nil, err
-		}
-		img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
-		if err != nil {
-			return nil, err
-		}
-		adds = append(adds, ocimutate.IndexAddendum{
-			Add: img,
-			Descriptor: v1.Descriptor{
-				URLs:        desc.URLs,
-				MediaType:   desc.MediaType,
-				Annotations: desc.Annotations,
-				Platform:    desc.Platform,
-			},
+		errg.Go(func() error {
+			baseImage, err := baseIndex.Image(desc.Digest)
+			if err != nil {
+				return err
+			}
+			img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
+			if err != nil {
+				return err
+			}
+			adds[i] = ocimutate.IndexAddendum{
+				Add: img,
+				Descriptor: v1.Descriptor{
+					URLs:        desc.URLs,
+					MediaType:   desc.MediaType,
+					Annotations: desc.Annotations,
+					Platform:    desc.Platform,
+				},
+			}
+			return nil
 		})
+	}
+
+	if err := errg.Wait(); err != nil {
+		return nil, err
 	}
 
 	baseType, err := baseIndex.MediaType()
