@@ -17,7 +17,7 @@ limitations under the License.
 package options
 
 import (
-	"crypto/md5" //nolint: gosec // No strong cryptography needed.
+	"crypto/md5" // nolint: gosec // No strong cryptography needed.
 	"encoding/hex"
 	"os"
 	"path"
@@ -67,9 +67,8 @@ type PublishOptions struct {
 	// Bare uses a tag on the KO_DOCKER_REPO without anything additional.
 	Bare bool
 	// ImageNameSeparator is used to create the image name from base repo and
-	// specific import path.
+	// specific import path. If not set a default of "/" will be used.
 	ImageNameSeparator string
-
 	// ImageNamer can be used to pass a custom image name function. When given
 	// PreserveImportPaths, BaseImportPaths, Bare, and ImageNameSeparator has
 	// no effect.
@@ -105,8 +104,6 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).")
 	cmd.Flags().BoolVar(&po.Bare, "bare", po.Bare,
 		"Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).")
-	cmd.Flags().StringVar(&po.ImageNameSeparator, "image-name-separator", defaultImageNameSeparator,
-		"A separator to be used to concatenate KO_DOCKER_REPO with specific image name.")
 }
 
 const defaultImageNameSeparator = "/"
@@ -124,7 +121,7 @@ func pathJoin(sep string, paths ...string) string {
 }
 
 func (po *PublishOptions) packageWithMD5(base, importpath string) string {
-	hasher := md5.New() //nolint: gosec // No strong cryptography needed.
+	hasher := md5.New() // nolint: gosec // No strong cryptography needed.
 	hasher.Write([]byte(importpath))
 	return pathJoin(po.ImageNameSeparator,
 		base, path.Base(importpath)+"-"+hex.EncodeToString(hasher.Sum(nil)))
