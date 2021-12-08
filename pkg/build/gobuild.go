@@ -78,6 +78,8 @@ type gobuild struct {
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
+
+	cache *layerCache
 }
 
 // Option is a functional option for NewGo.
@@ -117,6 +119,10 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
 		platformMatcher:      matcher,
+		cache: &layerCache{
+			buildToDiff: map[string]buildIDToDiffID{},
+			diffToDesc:  map[string]diffIDToDescriptor{},
+		},
 	}, nil
 }
 
@@ -222,12 +228,6 @@ func platformToString(p v1.Platform) string {
 }
 
 func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
-	tmpDir, err := ioutil.TempDir("", "ko")
-	if err != nil {
-		return "", err
-	}
-	file := filepath.Join(tmpDir, "out")
-
 	buildArgs, err := createBuildArgs(config)
 	if err != nil {
 		return "", err
@@ -236,15 +236,31 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	args := make([]string, 0, 4+len(buildArgs))
 	args = append(args, "build")
 	args = append(args, buildArgs...)
-	args = append(args, "-o", file)
-	args = append(args, ip)
-	cmd := exec.CommandContext(ctx, "go", args...)
-	cmd.Dir = dir
 
 	env, err := buildEnv(platform, os.Environ(), config.Env)
 	if err != nil {
 		return "", fmt.Errorf("could not create env for %s: %w", ip, err)
 	}
+
+	tmpDir, err := ioutil.TempDir("", "ko")
+	if err != nil {
+		return "", err
+	}
+
+	if dir := os.Getenv("KOCACHE"); dir != "" {
+		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
+		tmpDir = filepath.Join(dir, "bin", ip, platformToString(platform))
+		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
+			return "", err
+		}
+	}
+
+	file := filepath.Join(tmpDir, "out")
+
+	args = append(args, "-o", file)
+	args = append(args, ip)
+	cmd := exec.CommandContext(ctx, "go", args...)
+	cmd.Dir = dir
 	cmd.Env = env
 
 	var output bytes.Buffer
@@ -253,7 +269,9 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	log.Printf("Building %s for %s", ip, platformToString(platform))
 	if err := cmd.Run(); err != nil {
-		os.RemoveAll(tmpDir)
+		if os.Getenv("KOCACHE") == "" {
+			os.RemoveAll(tmpDir)
+		}
 		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
 		return "", err
 	}
@@ -643,7 +661,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	if err != nil {
 		return nil, err
 	}
-	defer os.RemoveAll(filepath.Dir(file))
+	if os.Getenv("KOCACHE") == "" {
+		defer os.RemoveAll(filepath.Dir(file))
+	}
 
 	var layers []mutate.Addendum
 
@@ -671,21 +691,15 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	appDir := "/ko-app"
 	appPath := path.Join(appDir, appFilename(ref.Path()))
 
-	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(appPath, file, v1.Time{}, platform)
+	miss := func() (v1.Layer, error) {
+		return buildLayer(appPath, file, platform)
+	}
+
+	binaryLayer, err := g.cache.get(ctx, file, miss)
 	if err != nil {
 		return nil, err
 	}
-	binaryLayerBytes := binaryLayerBuf.Bytes()
-	binaryLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
-	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
-		// When using estargz, prioritize downloading the binary entrypoint.
-		appPath,
-	})))
-	if err != nil {
-		return nil, err
-	}
+
 	layers = append(layers, mutate.Addendum{
 		Layer: binaryLayer,
 		History: v1.History{
@@ -757,6 +771,21 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 	}
 	return si, nil
+}
+
+func buildLayer(appPath, file string, platform *v1.Platform) (v1.Layer, error) {
+	// Construct a tarball with the binary and produce a layer.
+	binaryLayerBuf, err := tarBinary(appPath, file, v1.Time{}, platform)
+	if err != nil {
+		return nil, err
+	}
+	binaryLayerBytes := binaryLayerBuf.Bytes()
+	return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+		return ioutil.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
+	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
+		// When using estargz, prioritize downloading the binary entrypoint.
+		appPath,
+	})))
 }
 
 // Append appPath to the PATH environment variable, if it exists. Otherwise,
