@@ -142,3 +142,11 @@ func withSBOMber(sbom sbomber) Option {
 		return nil
 	}
 }
+
+// WithJobs limits the number of concurrent builds.
+func WithJobs(jobs int) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.jobs = jobs
+		return nil
+	}
+}

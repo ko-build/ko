@@ -30,6 +30,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"text/template"
@@ -49,6 +50,7 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/static"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -79,6 +81,7 @@ type gobuild struct {
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
+	semaphore            *semaphore.Weighted
 
 	cache *layerCache
 }
@@ -98,6 +101,7 @@ type gobuildOpener struct {
 	platform             string
 	labels               map[string]string
 	dir                  string
+	jobs                 int
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -107,6 +111,9 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	matcher, err := parseSpec(gbo.platform)
 	if err != nil {
 		return nil, err
+	}
+	if gbo.jobs == 0 {
+		gbo.jobs = runtime.GOMAXPROCS(0)
 	}
 	return &gobuild{
 		getBase:              gbo.getBase,
@@ -124,6 +131,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 			buildToDiff: map[string]buildIDToDiffID{},
 			diffToDesc:  map[string]diffIDToDescriptor{},
 		},
+		semaphore: semaphore.NewWeighted(int64(gbo.jobs)),
 	}, nil
 }
 
@@ -643,6 +651,11 @@ func (g *gobuild) configForImportPath(ip string) Config {
 }
 
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
+	if err := g.semaphore.Acquire(ctx, 1); err != nil {
+		return nil, err
+	}
+	defer g.semaphore.Release(1)
+
 	ref := newRef(refStr)
 
 	cf, err := base.ConfigFile()

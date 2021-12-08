@@ -26,7 +26,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"runtime"
 	"strings"
 	"sync"
 
@@ -89,6 +88,7 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	opts := []build.Option{
 		build.WithBaseImages(getBaseImage(platform, bo)),
 		build.WithPlatforms(platform),
+		build.WithJobs(bo.ConcurrentBuilds),
 	}
 	if creationTime != nil {
 		opts = append(opts, build.WithCreationTime(*creationTime))
@@ -140,11 +140,6 @@ func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching,
 	if err != nil {
 		return nil, err
 	}
-
-	if bo.ConcurrentBuilds == 0 {
-		bo.ConcurrentBuilds = runtime.GOMAXPROCS(0)
-	}
-	innerBuilder = build.NewLimiter(innerBuilder, bo.ConcurrentBuilds)
 
 	// tl;dr Wrap builder in a caching builder.
 	//
