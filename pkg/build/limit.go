@@ -52,6 +52,8 @@ func (l *Limiter) Build(ctx context.Context, ip string) (Result, error) {
 }
 
 // NewLimiter returns a new builder that only allows n concurrent builds of b.
+//
+// Deprecated: Obsoleted by WithJobs option.
 func NewLimiter(b Interface, n int) *Limiter {
 	return &Limiter{
 		Builder:   b,
