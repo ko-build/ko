@@ -21,5 +21,5 @@ jobs:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository }}
         run: |
           go build ./
-          echo "${{ github.token }}" | ./ko login ghcr.io --username "dummy" --password-stdin
+          echo "${{ github.token }}" | ./ko login ghcr.io --username "${{ github.actor }}" --password-stdin
           ./ko build --bare --platform=all -t latest -t ${{ github.sha }} ./
