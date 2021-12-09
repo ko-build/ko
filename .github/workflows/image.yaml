@@ -22,4 +22,4 @@ jobs:
         run: |
           go build ./
           echo "${{ github.token }}" | ./ko login ghcr.io --username "${{ github.actor }}" --password-stdin
-          ./ko build --bare --platform=all -t latest -t ${{ github.sha }} ./
+          ./ko build --bare --platform=all -t latest -t ${{ github.sha }} .
