@@ -30,6 +30,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"text/template"
@@ -48,6 +49,8 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/signed"
 	"github.com/sigstore/cosign/pkg/oci/static"
 	ctypes "github.com/sigstore/cosign/pkg/types"
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 	"golang.org/x/tools/go/packages"
 )
 
@@ -78,6 +81,7 @@ type gobuild struct {
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
+	semaphore            *semaphore.Weighted
 
 	cache *layerCache
 }
@@ -97,6 +101,7 @@ type gobuildOpener struct {
 	platform             string
 	labels               map[string]string
 	dir                  string
+	jobs                 int
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -106,6 +111,9 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	matcher, err := parseSpec(gbo.platform)
 	if err != nil {
 		return nil, err
+	}
+	if gbo.jobs == 0 {
+		gbo.jobs = runtime.GOMAXPROCS(0)
 	}
 	return &gobuild{
 		getBase:              gbo.getBase,
@@ -123,6 +131,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 			buildToDiff: map[string]buildIDToDiffID{},
 			diffToDesc:  map[string]diffIDToDescriptor{},
 		},
+		semaphore: semaphore.NewWeighted(int64(gbo.jobs)),
 	}, nil
 }
 
@@ -642,6 +651,11 @@ func (g *gobuild) configForImportPath(ip string) Config {
 }
 
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
+	if err := g.semaphore.Acquire(ctx, 1); err != nil {
+		return nil, err
+	}
+	defer g.semaphore.Release(1)
+
 	ref := newRef(refStr)
 
 	cf, err := base.ConfigFile()
@@ -872,9 +886,12 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 		return nil, err
 	}
 
+	errg, ctx := errgroup.WithContext(ctx)
+
 	// Build an image for each child from the base and append it to a new index to produce the result.
-	adds := []ocimutate.IndexAddendum{}
-	for _, desc := range im.Manifests {
+	adds := make([]ocimutate.IndexAddendum, len(im.Manifests))
+	for i, desc := range im.Manifests {
+		i, desc := i, desc
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, ref)
@@ -884,23 +901,30 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			continue
 		}
 
-		baseImage, err := baseIndex.Image(desc.Digest)
-		if err != nil {
-			return nil, err
-		}
-		img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
-		if err != nil {
-			return nil, err
-		}
-		adds = append(adds, ocimutate.IndexAddendum{
-			Add: img,
-			Descriptor: v1.Descriptor{
-				URLs:        desc.URLs,
-				MediaType:   desc.MediaType,
-				Annotations: desc.Annotations,
-				Platform:    desc.Platform,
-			},
+		errg.Go(func() error {
+			baseImage, err := baseIndex.Image(desc.Digest)
+			if err != nil {
+				return err
+			}
+			img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
+			if err != nil {
+				return err
+			}
+			adds[i] = ocimutate.IndexAddendum{
+				Add: img,
+				Descriptor: v1.Descriptor{
+					URLs:        desc.URLs,
+					MediaType:   desc.MediaType,
+					Annotations: desc.Annotations,
+					Platform:    desc.Platform,
+				},
+			}
+			return nil
 		})
+	}
+
+	if err := errg.Wait(); err != nil {
+		return nil, err
 	}
 
 	baseType, err := baseIndex.MediaType()
