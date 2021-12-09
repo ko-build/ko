@@ -1,0 +1,25 @@
+name: image
+
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.17.x
+
+      # Build ko from HEAD, setup auth to ghcr.io, build and push an image
+      # tagged with the SHA.
+      - name: Build and publish image
+        env:
+          KO_DOCKER_REPO: ghcr.io/${{ github.repository }}
+        run: |
+          go build ./
+          echo "${{ github.token }}" | ./ko login ghcr.io --username "dummy" --password-stdin
+          ./ko build --bare --platform=all -t latest -t ${{ github.sha }} ./
