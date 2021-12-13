@@ -33,6 +33,9 @@ jobs:
         eval $(go env | sed -r 's/^(set )?(\w+)=("?)(.*)\3$/\2="\4"/gm')
 
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+          # Always use the nanoserver base image, which matches the Windows
+          # version used by the GitHub Actions Windows runner.
+          rm .ko.yaml
           export KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:1809
         fi
 
