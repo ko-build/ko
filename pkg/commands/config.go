@@ -38,7 +38,7 @@ import (
 )
 
 // getBaseImage returns a function that determines the base image for a given import path.
-func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
+func getBaseImage(bo *options.BuildOptions) build.GetBase {
 	cache := map[string]build.Result{}
 	fetch := func(ctx context.Context, ref name.Reference) (build.Result, error) {
 		// For ko.local, look in the daemon.
@@ -61,10 +61,16 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 		//
 		// Platforms can be comma-separated if we only want a subset of the base
 		// image.
-		multiplatform := platform == "all" || strings.Contains(platform, ",")
-		var p v1.Platform
-		if platform != "" && !multiplatform {
-			parts := strings.Split(platform, "/")
+		multiplatform := bo.Platform == "all" || strings.Contains(bo.Platform, ",")
+		if bo.Platform != "" && !multiplatform {
+			var p v1.Platform
+
+			parts := strings.Split(bo.Platform, ":")
+			if len(parts) == 2 {
+				p.OSVersion = parts[1]
+			}
+
+			parts = strings.Split(parts[0], "/")
 			if len(parts) > 0 {
 				p.OS = parts[0]
 			}
@@ -75,7 +81,7 @@ func getBaseImage(platform string, bo *options.BuildOptions) build.GetBase {
 				p.Variant = parts[2]
 			}
 			if len(parts) > 3 {
-				return nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
+				return nil, fmt.Errorf("too many slashes in platform spec: %s", bo.Platform)
 			}
 			ropt = append(ropt, remote.WithPlatform(p))
 		}
