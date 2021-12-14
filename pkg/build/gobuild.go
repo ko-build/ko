@@ -70,6 +70,7 @@ type platformMatcher struct {
 }
 
 type gobuild struct {
+	ctx                  context.Context
 	getBase              GetBase
 	creationTime         v1.Time
 	kodataCreationTime   v1.Time
@@ -90,6 +91,7 @@ type gobuild struct {
 type Option func(*gobuildOpener) error
 
 type gobuildOpener struct {
+	ctx                  context.Context
 	getBase              GetBase
 	creationTime         v1.Time
 	kodataCreationTime   v1.Time
@@ -116,6 +118,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		gbo.jobs = runtime.GOMAXPROCS(0)
 	}
 	return &gobuild{
+		ctx:                  gbo.ctx,
 		getBase:              gbo.getBase,
 		creationTime:         gbo.creationTime,
 		kodataCreationTime:   gbo.kodataCreationTime,
@@ -143,6 +146,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 // If `dir` is empty, the function uses the current process working directory.
 func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error) {
 	gbo := &gobuildOpener{
+		ctx:   ctx,
 		build: build,
 		dir:   dir,
 		sbom:  spdx("(none)"),
@@ -826,7 +830,9 @@ func updatePath(cf *v1.ConfigFile, appPath string) {
 // Build implements build.Interface
 func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	// Determine the appropriate base image for this import path.
-	baseRef, base, err := g.getBase(ctx, s)
+	// We use the overall gobuild.ctx because the Build ctx gets cancelled
+	// early, and we lazily use the ctx within ggcr's remote package.
+	baseRef, base, err := g.getBase(g.ctx, s)
 	if err != nil {
 		return nil, err
 	}
