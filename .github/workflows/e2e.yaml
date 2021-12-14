@@ -32,19 +32,24 @@ jobs:
         # cribbed from https://gist.github.com/Syeberman/39d81b1e17d091be5657ecd6fbff0753
         eval $(go env | sed -r 's/^(set )?(\w+)=("?)(.*)\3$/\2="\4"/gm')
 
+        export PLATFORM=${GOOS}/${GOARCH}
+
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
           # Always use the nanoserver base image, which matches the Windows
           # version used by the GitHub Actions Windows runner.
           rm .ko.yaml
           export KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:1809
+        else
+          # Explicitly test multiple platform builds (a subset of what's in the base!)
+          export PLATFORM=${PLATFORM},linux/arm64
         fi
 
-        echo platform is ${GOOS}/${GOARCH}
+        echo platform is ${PLATFORM}
         # Build and run the ko binary, which should be runnable.
-        docker run $(go run ./ publish ./ --platform=${GOOS}/${GOARCH} --preserve-import-paths) version
+        docker run $(go run ./ build ./ --platform=${PLATFORM} --preserve-import-paths) version
 
         # Build and run the test/ binary, which should log "Hello there" served from KO_DATA_PATH
-        testimg=$(go run ./ publish ./test --platform=${GOOS}/${GOARCH} --preserve-import-paths)
+        testimg=$(go run ./ build ./test --platform=${PLATFORM} --preserve-import-paths)
         docker run ${testimg} --wait=false 2>&1 | grep "Hello there"
 
         # Check that symlinks in kodata are chased.
@@ -61,5 +66,5 @@ jobs:
           ldflags:
           - "-X main.version=${{ github.sha }}"
         EOF
-        docker run $(go run ./ publish ./test/ --platform=${GOOS}/${GOARCH}) --wait=false 2>&1 | grep "${{ github.sha }}"
+        docker run $(go run ./ build ./test/ --platform=${PLATFORM}) --wait=false 2>&1 | grep "${{ github.sha }}"
 
