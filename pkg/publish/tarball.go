@@ -80,8 +80,6 @@ func (t *tar) Publish(_ context.Context, br build.Result, s string) (name.Refere
 
 	log.Printf("Saving %v", t.file)
 	if err := tarball.MultiRefWriteToFile(t.file, t.refs); err != nil {
-		// Bad practice, but we log  this here because right now we just defer the Close.
-		log.Printf("failed to save %q: %v", t.file, err)
 		return nil, err
 	}
 	log.Printf("Saved %v", t.file)
