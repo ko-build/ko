@@ -288,6 +288,12 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 }
 
 func goversionm(ctx context.Context, file string, appPath string, _ v1.Image) ([]byte, types.MediaType, error) {
+	// Make sure the file is executable, or else `go version -m` won't
+	// work.
+	if err := os.Chmod(file, 0700); err != nil {
+		return nil, "", err
+	}
+
 	sbom := bytes.NewBuffer(nil)
 	cmd := exec.CommandContext(ctx, "go", "version", "-m", file)
 	cmd.Stdout = sbom
