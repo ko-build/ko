@@ -38,6 +38,9 @@ func MatchesSelector(doc *yaml.Node, selector labels.Selector) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+	if kind == "" {
+		return false, nil
+	}
 
 	if kind == "List" {
 		return listMatchesSelector(doc, selector)
@@ -96,11 +99,12 @@ func objMatchesSelector(doc *yaml.Node, selector labels.Selector) bool {
 
 	node, ok := it()
 
-	if ok && selector.Matches(labelsNode{node}) {
-		return true
+	// Object has no metadata.labels, verify matching against an empty set.
+	if !ok {
+		node = emptyMapNode
 	}
 
-	return false
+	return selector.Matches(labelsNode{node})
 }
 
 func listMatchesSelector(doc *yaml.Node, selector labels.Selector) (bool, error) {
@@ -131,6 +135,11 @@ func listMatchesSelector(doc *yaml.Node, selector labels.Selector) (bool, error)
 
 	node.Content = matches
 	return len(matches) != 0, nil
+}
+
+var emptyMapNode = &yaml.Node{
+	Kind: yaml.MappingNode,
+	Tag:  "!!map",
 }
 
 type labelsNode struct {

@@ -26,6 +26,9 @@ var (
 	webSelector    = selector(`app=web`)
 	notWebSelector = selector(`app!=web`)
 	nopSelector    = selector(`foo!=bark`)
+
+	hasSelector    = selector(`app`)
+	notHasSelector = selector(`!app`)
 )
 
 const (
@@ -44,6 +47,11 @@ metadata:
     # comments should be preserved
     app: db
   name: rss-db
+`
+	podNoLabel = `apiVersion: v1
+kind: Pod
+metadata:
+  name: rss-site
 `
 	podList = `apiVersion: v1
 kind: List
@@ -90,6 +98,21 @@ items:
       app: db
     name: rss-db
 `
+	podListNoLabel = `apiVersion: v1
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""
+items:
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    name: rss-site
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    name: rss-db
+`
 )
 
 func TestMatchesSelector(t *testing.T) {
@@ -117,6 +140,28 @@ func TestMatchesSelector(t *testing.T) {
 		output:   dbPod,
 		matches:  true,
 	}, {
+		desc:     "single object with has selector",
+		input:    webPod,
+		selector: hasSelector,
+		output:   webPod,
+		matches:  true,
+	}, {
+		desc:     "single object with not-has selector",
+		input:    webPod,
+		selector: notHasSelector,
+		matches:  false,
+	}, {
+		desc:     "single non-labeled object with has selector",
+		input:    podNoLabel,
+		selector: hasSelector,
+		matches:  false,
+	}, {
+		desc:     "single non-labeled object with not-has selector",
+		input:    podNoLabel,
+		selector: notHasSelector,
+		output:   podNoLabel,
+		matches:  true,
+	}, {
 		desc:     "selector matching elements of list object",
 		input:    podList,
 		selector: webSelector,
@@ -129,20 +174,26 @@ func TestMatchesSelector(t *testing.T) {
 		output:   dbPodList,
 		matches:  true,
 	}, {
+		desc:     "has selector matching no non-labeled element of list object",
+		input:    podListNoLabel,
+		selector: hasSelector,
+		matches:  false,
+	}, {
+		desc:     "not-has selector matching all non-labeled elements of list object",
+		input:    podListNoLabel,
+		selector: notHasSelector,
+		output:   podListNoLabel,
+		matches:  true,
+	}, {
 		desc:     "selector matching all elements of list object",
 		input:    podList,
 		selector: labels.Everything(),
 		output:   podList,
 		matches:  true,
 	}, {
-		desc:     "selector matching no elements of list object",
+		desc:     "selector matching no element of list object",
 		input:    podList,
 		selector: labels.Nothing(),
-		matches:  false,
-	}, {
-		desc:     "null node",
-		input:    "!!null",
-		selector: labels.Everything(),
 		matches:  false,
 	}}
 
