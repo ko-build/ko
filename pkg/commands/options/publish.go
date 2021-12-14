@@ -17,7 +17,7 @@ limitations under the License.
 package options
 
 import (
-	"crypto/md5" //nolint: gosec // No strong cryptography needed.
+	"crypto/md5" // nolint: gosec // No strong cryptography needed.
 	"encoding/hex"
 	"os"
 	"path"
@@ -65,6 +65,9 @@ type PublishOptions struct {
 	BaseImportPaths bool
 	// Bare uses a tag on the KO_DOCKER_REPO without anything additional.
 	Bare bool
+	// ImageNamer can be used to pass a custom image name function. When given
+	// PreserveImportPaths, BaseImportPaths, Bare has no effect.
+	ImageNamer publish.Namer
 }
 
 func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
@@ -99,7 +102,7 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 }
 
 func packageWithMD5(base, importpath string) string {
-	hasher := md5.New() //nolint: gosec // No strong cryptography needed.
+	hasher := md5.New() // nolint: gosec // No strong cryptography needed.
 	hasher.Write([]byte(importpath))
 	return path.Join(base, path.Base(importpath)+"-"+hex.EncodeToString(hasher.Sum(nil)))
 }
@@ -117,7 +120,9 @@ func bareDockerRepo(base, _ string) string {
 }
 
 func MakeNamer(po *PublishOptions) publish.Namer {
-	if po.PreserveImportPaths {
+	if po.ImageNamer != nil {
+		return po.ImageNamer
+	} else if po.PreserveImportPaths {
 		return preserveImportPath
 	} else if po.BaseImportPaths {
 		return baseImportPaths
