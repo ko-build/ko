@@ -879,7 +879,6 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	return res, nil
 }
 
-// TODO(#192): Do these in parallel?
 func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (oci.SignedImageIndex, error) {
 	im, err := baseIndex.IndexManifest()
 	if err != nil {
@@ -889,7 +888,9 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 	errg, ctx := errgroup.WithContext(ctx)
 
 	// Build an image for each child from the base and append it to a new index to produce the result.
-	adds := make([]ocimutate.IndexAddendum, len(im.Manifests))
+	// Some of these may end up filtered and nil, but we use the indices to preserve the base image
+	// ordering here, and then filter out nils below.
+	possibleAdds := make([]ocimutate.IndexAddendum, len(im.Manifests))
 	for i, desc := range im.Manifests {
 		i, desc := i, desc
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
@@ -910,7 +911,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			if err != nil {
 				return err
 			}
-			adds[i] = ocimutate.IndexAddendum{
+			possibleAdds[i] = ocimutate.IndexAddendum{
 				Add: img,
 				Descriptor: v1.Descriptor{
 					URLs:        desc.URLs,
@@ -925,6 +926,16 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 
 	if err := errg.Wait(); err != nil {
 		return nil, err
+	}
+
+	// If flags were passed to filter the base image we will end up with
+	// empty addendum, so filter those out before constructing the index.
+	adds := make([]ocimutate.IndexAddendum, 0, len(im.Manifests))
+	for _, add := range possibleAdds {
+		if add.Add == nil {
+			continue
+		}
+		adds = append(adds, add)
 	}
 
 	baseType, err := baseIndex.MediaType()
