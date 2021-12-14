@@ -78,6 +78,14 @@ func (t *tar) Publish(_ context.Context, br build.Result, s string) (name.Refere
 		t.refs[ref] = img
 	}
 
+	log.Printf("Saving %v", t.file)
+	if err := tarball.MultiRefWriteToFile(t.file, t.refs); err != nil {
+		// Bad practice, but we log  this here because right now we just defer the Close.
+		log.Printf("failed to save %q: %v", t.file, err)
+		return nil, err
+	}
+	log.Printf("Saved %v", t.file)
+
 	ref := fmt.Sprintf("%s@%s", t.namer(t.base, s), h)
 	if len(t.tags) == 1 && t.tags[0] != defaultTags[0] {
 		// If a single tag is explicitly set (not latest), then this
@@ -90,15 +98,4 @@ func (t *tar) Publish(_ context.Context, br build.Result, s string) (name.Refere
 	}
 
 	return &dig, nil
-}
-
-func (t *tar) Close() error {
-	log.Printf("Saving %v", t.file)
-	if err := tarball.MultiRefWriteToFile(t.file, t.refs); err != nil {
-		// Bad practice, but we log  this here because right now we just defer the Close.
-		log.Printf("failed to save %q: %v", t.file, err)
-		return err
-	}
-	log.Printf("Saved %v", t.file)
-	return nil
 }

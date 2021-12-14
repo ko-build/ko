@@ -36,10 +36,6 @@ func (sp *slowpublish) Publish(_ context.Context, br build.Result, ref string) (
 	return makeRef()
 }
 
-func (sp *slowpublish) Close() error {
-	return nil
-}
-
 func TestCaching(t *testing.T) {
 	duration := 100 * time.Millisecond
 	ref := "foo"

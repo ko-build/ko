@@ -254,7 +254,3 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 	log.Printf("Published %v", dig)
 	return &dig, nil
 }
-
-func (d *defalt) Close() error {
-	return nil
-}

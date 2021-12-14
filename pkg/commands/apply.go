@@ -96,7 +96,6 @@ func addApply(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
-			defer publisher.Close()
 
 			// Issue a "kubectl apply" command reading from stdin,
 			// to which we will pipe the resolved files, and any

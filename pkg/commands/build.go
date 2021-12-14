@@ -69,7 +69,6 @@ func addBuild(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
-			defer publisher.Close()
 			images, err := publishImages(ctx, args, publisher, builder)
 			if err != nil {
 				return fmt.Errorf("failed to publish images: %w", err)

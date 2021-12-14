@@ -66,7 +66,6 @@ func addResolve(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
-			defer publisher.Close()
 			return resolveFilesToWriter(ctx, builder, publisher, fo, so, os.Stdout)
 		},
 	}

@@ -27,8 +27,4 @@ type Interface interface {
 	// provided string into the image's repository name.  Returns the digest
 	// of the published image.
 	Publish(context.Context, build.Result, string) (name.Reference, error)
-
-	// Close exists for the tarball implementation so we can
-	// do the whole thing in one write.
-	Close() error
 }

@@ -75,7 +75,3 @@ func (c *caching) Publish(ctx context.Context, br build.Result, ref string) (nam
 
 	return f.Get()
 }
-
-func (c *caching) Close() error {
-	return c.inner.Close()
-}

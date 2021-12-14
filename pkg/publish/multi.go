@@ -49,12 +49,3 @@ func (p *multiPublisher) Publish(ctx context.Context, br build.Result, s string)
 	}
 	return
 }
-
-func (p *multiPublisher) Close() (err error) {
-	for _, pub := range p.publishers {
-		if perr := pub.Close(); perr != nil {
-			err = perr
-		}
-	}
-	return
-}

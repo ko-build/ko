@@ -122,7 +122,3 @@ func (t *kindPublisher) Publish(ctx context.Context, br build.Result, s string) 
 
 	return &digestTag, nil
 }
-
-func (t *kindPublisher) Close() error {
-	return nil
-}

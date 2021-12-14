@@ -285,7 +285,6 @@ func TestNewPublisherCanPublish(t *testing.T) {
 			if err != nil {
 				t.Fatalf("NewPublisher(): %v", err)
 			}
-			defer publisher.Close()
 			ref, err := publisher.Publish(context.Background(), empty.Image, build.StrictScheme+importpath)
 			if test.shouldError {
 				if err == nil || !strings.HasSuffix(err.Error(), test.wantError.Error()) {

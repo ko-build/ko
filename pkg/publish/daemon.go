@@ -166,7 +166,3 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 
 	return &digestTag, nil
 }
-
-func (d *demon) Close() error {
-	return nil
-}

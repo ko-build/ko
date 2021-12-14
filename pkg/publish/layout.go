@@ -87,7 +87,3 @@ func (l *LayoutPublisher) Publish(_ context.Context, br build.Result, s string) 
 
 	return dig, nil
 }
-
-func (l *LayoutPublisher) Close() error {
-	return nil
-}
