@@ -1,0 +1,2 @@
+baseImageOverrides:
+  github.com/google/ko: golang:1.17

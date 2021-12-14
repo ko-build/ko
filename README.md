@@ -466,8 +466,10 @@ You can try out building a Windows container image by [setting the base image](#
 For example, to build a Windows container image for `ko`, from within this repo:
 
 ```
-KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:1809 ko publish ./ --platform=windows/amd64
+ko publish ./ --platform=windows/amd64
 ```
+
+This works because the `ko` image is configured in [`.ko.yaml`](./.ko.yaml) to be based on a `golang` base image, which provides platform-specific images for both Linux and Windows.
 
 ### Known issues 🐛
 
