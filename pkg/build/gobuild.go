@@ -161,9 +161,13 @@ func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error
 }
 
 func (g *gobuild) qualifyLocalImport(importpath string) (string, error) {
+	dir := g.dir
+	if filepath.Clean(g.dir) == "." {
+		dir = ""
+	}
 	cfg := &packages.Config{
 		Mode: packages.NeedName,
-		Dir:  g.dir,
+		Dir:  dir,
 	}
 	pkgs, err := packages.Load(cfg, importpath)
 	if err != nil {
@@ -199,7 +203,11 @@ func (g *gobuild) IsSupportedReference(s string) error {
 	if !ref.IsStrict() {
 		return errors.New("importpath does not start with ko://")
 	}
-	pkgs, err := packages.Load(&packages.Config{Dir: g.dir, Mode: packages.NeedName}, ref.Path())
+	dir := g.dir
+	if filepath.Clean(g.dir) == "." {
+		dir = ""
+	}
+	pkgs, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName}, ref.Path())
 	if err != nil {
 		return fmt.Errorf("error loading package from %s: %w", ref.Path(), err)
 	}
@@ -440,7 +448,11 @@ func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform)
 }
 
 func (g *gobuild) kodataPath(ref reference) (string, error) {
-	pkgs, err := packages.Load(&packages.Config{Dir: g.dir, Mode: packages.NeedFiles}, ref.Path())
+	dir := g.dir
+	if filepath.Clean(g.dir) == "." {
+		dir = ""
+	}
+	pkgs, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedFiles}, ref.Path())
 	if err != nil {
 		return "", fmt.Errorf("error loading package from %s: %w", ref.Path(), err)
 	}

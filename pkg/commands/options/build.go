@@ -180,8 +180,11 @@ func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[
 		// local import paths, therefore add a "./" equivalent as a prefix to
 		// the constructured import path
 		localImportPath := fmt.Sprint(".", string(filepath.Separator), path)
-
-		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: baseDir}, localImportPath)
+		dir := baseDir
+		if filepath.Clean(dir) == "." {
+			dir = ""
+		}
+		pkgs, err := packages.Load(&packages.Config{Mode: packages.NeedName, Dir: dir}, localImportPath)
 		if err != nil {
 			return nil, fmt.Errorf("'builds': entry #%d does not contain a valid local import path (%s) for directory (%s): %w", i, localImportPath, baseDir, err)
 		}
