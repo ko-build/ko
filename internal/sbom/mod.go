@@ -1,3 +1,4 @@
+//go:build !go1.18
 // +build !go1.18
 
 // Copyright 2021 Google LLC All Rights Reserved.
