@@ -52,6 +52,9 @@ jobs:
         testimg=$(go run ./ build ./test --platform=${PLATFORM} --preserve-import-paths)
         docker run ${testimg} --wait=false 2>&1 | grep "Hello there"
 
+        # Run the image with entrypoint to ensure the binary is on PATH.
+        docker run --entrypoint=test ${testimg} --wait=false
+
         # Check that symlinks in kodata are chased.
         # Skip this test on Windows.
         if [[ "$RUNNER_OS" == "Linux" ]]; then
