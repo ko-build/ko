@@ -41,9 +41,10 @@ func TestOverrideDefaultBaseImageUsingBuildOption(t *testing.T) {
 	wantImage := fmt.Sprintf("%s@%s", baseImage, wantDigest)
 	bo := &options.BuildOptions{
 		BaseImage: wantImage,
+		Platform:  "all",
 	}
 
-	baseFn := getBaseImage("all", bo)
+	baseFn := getBaseImage(bo)
 	_, res, err := baseFn(context.Background(), "ko://example.com/helloworld")
 	if err != nil {
 		t.Fatalf("getBaseImage(): %v", err)
