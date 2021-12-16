@@ -377,7 +377,7 @@ func appFilename(importpath string) string {
 // owner: BUILTIN/Users group: BUILTIN/Users ($sddlValue="O:BUG:BU")
 const userOwnerAndGroupSID = "AQAAgBQAAAAkAAAAAAAAAAAAAAABAgAAAAAABSAAAAAhAgAAAQIAAAAAAAUgAAAAIQIAAA=="
 
-func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform) (*bytes.Buffer, error) {
+func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
@@ -402,8 +402,7 @@ func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform)
 			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 			// under which it was created. Additionally, windows can only set 0222,
 			// 0444, or 0666, none of which are executable.
-			Mode:    0555,
-			ModTime: creationTime.Time,
+			Mode: 0555,
 		}); err != nil {
 			return nil, fmt.Errorf("writing dir %q: %w", dir, err)
 		}
@@ -425,8 +424,7 @@ func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform)
 		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 		// under which it was created. Additionally, windows can only set 0222,
 		// 0444, or 0666, none of which are executable.
-		Mode:    0555,
-		ModTime: creationTime.Time,
+		Mode: 0555,
 	}
 	if platform.OS == "windows" {
 		// This magic value is for some reason needed for Windows to be
@@ -723,7 +721,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	appPath := path.Join(appDir, appFilename(ref.Path()))
 
 	miss := func() (v1.Layer, error) {
-		return buildLayer(appPath, file, g.creationTime, platform)
+		return buildLayer(appPath, file, platform)
 	}
 
 	binaryLayer, err := g.cache.get(ctx, file, miss)
@@ -802,9 +800,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	return si, nil
 }
 
-func buildLayer(appPath, file string, creationTime v1.Time, platform *v1.Platform) (v1.Layer, error) {
+func buildLayer(appPath, file string, platform *v1.Platform) (v1.Layer, error) {
 	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(appPath, file, creationTime, platform)
+	binaryLayerBuf, err := tarBinary(appPath, file, platform)
 	if err != nil {
 		return nil, err
 	}
