@@ -377,7 +377,7 @@ func appFilename(importpath string) string {
 // owner: BUILTIN/Users group: BUILTIN/Users ($sddlValue="O:BUG:BU")
 const userOwnerAndGroupSID = "AQAAgBQAAAAkAAAAAAAAAAAAAAABAgAAAAAABSAAAAAhAgAAAQIAAAAAAAUgAAAAIQIAAA=="
 
-func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform) (*bytes.Buffer, error) {
+func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
@@ -402,8 +402,7 @@ func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform)
 			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 			// under which it was created. Additionally, windows can only set 0222,
 			// 0444, or 0666, none of which are executable.
-			Mode:    0555,
-			ModTime: creationTime.Time,
+			Mode: 0555,
 		}); err != nil {
 			return nil, fmt.Errorf("writing dir %q: %w", dir, err)
 		}
@@ -425,8 +424,7 @@ func tarBinary(name, binary string, creationTime v1.Time, platform *v1.Platform)
 		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 		// under which it was created. Additionally, windows can only set 0222,
 		// 0444, or 0666, none of which are executable.
-		Mode:    0555,
-		ModTime: creationTime.Time,
+		Mode: 0555,
 	}
 	if platform.OS == "windows" {
 		// This magic value is for some reason needed for Windows to be
@@ -714,6 +712,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		History: v1.History{
 			Author:    "ko",
 			CreatedBy: "ko build " + ref.String(),
+			Created:   g.kodataCreationTime,
 			Comment:   "kodata contents, at $KO_DATA_PATH",
 		},
 	})
@@ -734,6 +733,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		Layer: binaryLayer,
 		History: v1.History{
 			Author:    "ko",
+			Created:   g.creationTime,
 			CreatedBy: "ko build " + ref.String(),
 			Comment:   "go build output, at " + appPath,
 		},
@@ -771,17 +771,14 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		cfg.Config.Labels[k] = v
 	}
 
+	empty := v1.Time{}
+	if g.creationTime != empty {
+		cfg.Created = g.creationTime
+	}
+
 	image, err := mutate.ConfigFile(withApp, cfg)
 	if err != nil {
 		return nil, err
-	}
-
-	empty := v1.Time{}
-	if g.creationTime != empty {
-		image, err = mutate.CreatedAt(image, g.creationTime)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	si := signed.Image(image)
@@ -805,7 +802,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 func buildLayer(appPath, file string, platform *v1.Platform) (v1.Layer, error) {
 	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(appPath, file, v1.Time{}, platform)
+	binaryLayerBuf, err := tarBinary(appPath, file, platform)
 	if err != nil {
 		return nil, err
 	}
