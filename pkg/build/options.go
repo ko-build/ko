@@ -89,9 +89,9 @@ func WithConfig(buildConfigs map[string]Config) Option {
 //
 // platform = <os>[/<arch>[/<variant>]]
 // allowed = all | platform[,platform]*
-func WithPlatforms(platforms string) Option {
+func WithPlatforms(platforms []string) Option {
 	return func(gbo *gobuildOpener) error {
-		gbo.platform = platforms
+		gbo.platforms = platforms
 		return nil
 	}
 }

@@ -819,7 +819,7 @@ func TestGoBuildIndex(t *testing.T) {
 		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-		WithPlatforms("all"),
+		WithPlatforms([]string{"all"}),
 		withBuilder(writeTempFile),
 		withSBOMber(fauxSBOM),
 	)
@@ -980,30 +980,30 @@ func TestGoarm(t *testing.T) {
 func TestMatchesPlatformSpec(t *testing.T) {
 	for _, tc := range []struct {
 		platform *v1.Platform
-		spec     string
+		spec     []string
 		result   bool
 		err      bool
 	}{{
 		platform: nil,
-		spec:     "all",
+		spec:     []string{"all"},
 		result:   true,
 	}, {
 		platform: nil,
-		spec:     "linux/amd64",
+		spec:     []string{"linux/amd64"},
 		result:   false,
 	}, {
 		platform: &v1.Platform{
 			Architecture: "amd64",
 			OS:           "linux",
 		},
-		spec:   "all",
+		spec:   []string{"all"},
 		result: true,
 	}, {
 		platform: &v1.Platform{
 			Architecture: "amd64",
 			OS:           "windows",
 		},
-		spec:   "linux",
+		spec:   []string{"linux"},
 		result: false,
 	}, {
 		platform: &v1.Platform{
@@ -1011,7 +1011,7 @@ func TestMatchesPlatformSpec(t *testing.T) {
 			OS:           "linux",
 			Variant:      "v3",
 		},
-		spec:   "linux/amd64,linux/arm64",
+		spec:   []string{"linux/amd64", "linux/arm64"},
 		result: true,
 	}, {
 		platform: &v1.Platform{
@@ -1019,7 +1019,7 @@ func TestMatchesPlatformSpec(t *testing.T) {
 			OS:           "linux",
 			Variant:      "v3",
 		},
-		spec:   "linux/amd64,linux/arm64/v4",
+		spec:   []string{"linux/amd64", "linux/arm64/v4"},
 		result: false,
 	}, {
 		platform: &v1.Platform{
@@ -1027,10 +1027,10 @@ func TestMatchesPlatformSpec(t *testing.T) {
 			OS:           "linux",
 			Variant:      "v3",
 		},
-		spec: "linux/amd64,linux/arm64/v3/z5",
+		spec: []string{"linux/amd64", "linux/arm64/v3/z5"},
 		err:  true,
 	}, {
-		spec: "",
+		spec: []string{},
 		platform: &v1.Platform{
 			Architecture: "amd64",
 			OS:           "linux",
