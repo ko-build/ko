@@ -773,7 +773,10 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		cfg.Config.Labels[k] = v
 	}
 
-	cfg.Created = g.creationTime
+	empty := v1.Time{}
+	if g.creationTime != empty {
+		cfg.Created = g.creationTime
+	}
 
 	image, err := mutate.ConfigFile(withApp, cfg)
 	if err != nil {
