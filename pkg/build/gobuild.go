@@ -161,8 +161,8 @@ func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error
 }
 
 func (g *gobuild) qualifyLocalImport(importpath string) (string, error) {
-	dir := g.dir
-	if filepath.Clean(g.dir) == "." {
+	dir := filepath.Clean(g.dir)
+	if dir == "." {
 		dir = ""
 	}
 	cfg := &packages.Config{
@@ -203,8 +203,8 @@ func (g *gobuild) IsSupportedReference(s string) error {
 	if !ref.IsStrict() {
 		return errors.New("importpath does not start with ko://")
 	}
-	dir := g.dir
-	if filepath.Clean(g.dir) == "." {
+	dir := filepath.Clean(g.dir)
+	if dir == "." {
 		dir = ""
 	}
 	pkgs, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName}, ref.Path())
@@ -446,8 +446,8 @@ func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error
 }
 
 func (g *gobuild) kodataPath(ref reference) (string, error) {
-	dir := g.dir
-	if filepath.Clean(g.dir) == "." {
+	dir := filepath.Clean(g.dir)
+	if dir == "." {
 		dir = ""
 	}
 	pkgs, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedFiles}, ref.Path())
