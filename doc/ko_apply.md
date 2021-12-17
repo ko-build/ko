@@ -67,7 +67,7 @@ ko apply -f FILENAME [flags]
   -n, --namespace string               If present, the namespace scope for this CLI request (DEPRECATED)
       --oci-layout-path string         Path to save the OCI image layout of the built images
       --password string                Password for basic authentication to the API server (DEPRECATED)
-      --platform string                Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
+      --platform strings               Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths          Whether to preserve the full import path after KO_DOCKER_REPO.
       --push                           Push images to KO_DOCKER_REPO (default true)
   -R, --recursive                      Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.

@@ -52,7 +52,7 @@ ko build IMPORTPATH... [flags]
   -j, --jobs int                 The maximum number of concurrent builds (default GOMAXPROCS)
   -L, --local                    Load into images to local docker daemon.
       --oci-layout-path string   Path to save the OCI image layout of the built images
-      --platform string          Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
+      --platform strings         Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths    Whether to preserve the full import path after KO_DOCKER_REPO.
       --push                     Push images to KO_DOCKER_REPO (default true)
       --sbom string              The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, go.version-m). (default "spdx")
