@@ -76,7 +76,7 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 			envPlatform = path.Join(envPlatform, "v"+goarm)
 		}
 
-		bo.Platforms = append(bo.Platforms, envPlatform)
+		bo.Platforms = []string{envPlatform}
 	} else {
 		// Make sure these are all unset
 		for _, env := range []string{"GOOS", "GOARCH", "GOARM"} {
