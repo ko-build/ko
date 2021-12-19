@@ -59,6 +59,7 @@ ko apply -f FILENAME [flags]
   -f, --filename strings               Filename, directory, or URL to files to use to create the resource
   -h, --help                           help for apply
       --image-label strings            Which labels (key=value) to add to the image.
+      --image-refs string              Path to file where a list of the published image references will be written.
       --insecure-registry              Whether to skip TLS verification on the registry
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure (DEPRECATED)
   -j, --jobs int                       The maximum number of concurrent builds (default GOMAXPROCS)

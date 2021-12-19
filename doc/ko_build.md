@@ -48,6 +48,7 @@ ko build IMPORTPATH... [flags]
       --disable-optimizations    Disable optimizations when building Go code. Useful when you want to interactively debug the created container.
   -h, --help                     help for build
       --image-label strings      Which labels (key=value) to add to the image.
+      --image-refs string        Path to file where a list of the published image references will be written.
       --insecure-registry        Whether to skip TLS verification on the registry
   -j, --jobs int                 The maximum number of concurrent builds (default GOMAXPROCS)
   -L, --local                    Load into images to local docker daemon.

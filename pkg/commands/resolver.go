@@ -215,7 +215,8 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 				publish.WithNamer(namer),
 				publish.WithTags(po.Tags),
 				publish.WithTagOnly(po.TagOnly),
-				publish.Insecure(po.InsecureRegistry))
+				publish.Insecure(po.InsecureRegistry),
+			)
 			if err != nil {
 				return nil, err
 			}
@@ -235,6 +236,17 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	}()
 	if err != nil {
 		return nil, err
+	}
+
+	if po.ImageRefsFile != "" {
+		f, err := os.OpenFile(po.ImageRefsFile, os.O_RDWR|os.O_CREATE, 0600)
+		if err != nil {
+			return nil, err
+		}
+		innerPublisher, err = publish.NewRecorder(innerPublisher, f)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Wrap publisher in a memoizing publisher implementation.
