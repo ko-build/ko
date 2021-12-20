@@ -1,4 +1,4 @@
-// Copyright 2018 Google LLC All Rights Reserved.
+// Copyright 2021 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ type cbPublish struct {
 	cb func(context.Context, build.Result, string) (name.Reference, error)
 }
 
-var _ Interface = (*slowpublish)(nil)
+var _ Interface = (*cbPublish)(nil)
 
 func (sp *cbPublish) Publish(ctx context.Context, br build.Result, ref string) (name.Reference, error) {
 	return sp.cb(ctx, br, ref)
