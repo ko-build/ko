@@ -188,7 +188,7 @@ github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.5
 ## explicit
 github.com/spf13/pflag
-# github.com/spf13/viper v1.10.0
+# github.com/spf13/viper v1.10.1
 ## explicit
 github.com/spf13/viper
 github.com/spf13/viper/internal/encoding
@@ -218,7 +218,7 @@ golang.org/x/net/proxy
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20211205182925-97ca703d548d
+# golang.org/x/sys v0.0.0-20211210111614-af8b64212486
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
@@ -249,7 +249,7 @@ golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # google.golang.org/genproto v0.0.0-20211208223120-3a66f561d7aa
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.42.0
+# google.golang.org/grpc v1.43.0
 google.golang.org/grpc/codes
 google.golang.org/grpc/internal/status
 google.golang.org/grpc/status
