@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	github.com/containerd/stargz-snapshotter/estargz v0.10.1
-	github.com/docker/docker v20.10.11+incompatible
+	github.com/docker/docker v20.10.12+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
