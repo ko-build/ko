@@ -59,6 +59,8 @@ type PublishOptions struct {
 	OCILayoutPath string
 	TarballFile   string
 
+	ImageRefsFile string
+
 	// PreserveImportPaths preserves the full import path after KO_DOCKER_REPO.
 	PreserveImportPaths bool
 	// BaseImportPaths uses the base path without MD5 hash after KO_DOCKER_REPO.
@@ -92,6 +94,9 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 
 	cmd.Flags().StringVar(&po.OCILayoutPath, "oci-layout-path", "", "Path to save the OCI image layout of the built images")
 	cmd.Flags().StringVar(&po.TarballFile, "tarball", "", "File to save images tarballs")
+
+	cmd.Flags().StringVar(&po.ImageRefsFile, "image-refs", "",
+		"Path to file where a list of the published image references will be written.")
 
 	cmd.Flags().BoolVarP(&po.PreserveImportPaths, "preserve-import-paths", "P", po.PreserveImportPaths,
 		"Whether to preserve the full import path after KO_DOCKER_REPO.")
