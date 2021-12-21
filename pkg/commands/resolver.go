@@ -88,7 +88,7 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 
 	opts := []build.Option{
 		build.WithBaseImages(getBaseImage(bo)),
-		build.WithPlatforms(bo.Platforms),
+		build.WithPlatforms(bo.Platforms...),
 		build.WithJobs(bo.ConcurrentBuilds),
 	}
 	if creationTime != nil {
