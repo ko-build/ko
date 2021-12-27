@@ -130,6 +130,18 @@ aws lambda update-function-code \
 * Note: The image must be pushed to [ECR](https://aws.amazon.com/ecr/), based on the AWS provided base image, and use the [`aws-lambda-go`](https://github.com/aws/aws-lambda-go) framework.
 See [official docs](https://docs.aws.amazon.com/lambda/latest/dg/go-image.html) for more information.
 
+Or [Azure Container Apps](https://azure.microsoft.com/services/container-apps/):
+
+```
+az containerapp update \
+  --name my-container-app
+  --resource-group my-resource-group
+  --image $(ko publish ./cmd/app)
+```
+
+* Note: The image must be pushed to [ACR](https://azure.microsoft.com/services/container-registry/) or other registry service.
+See [official docs](https://docs.microsoft.com/azure/container-apps/) for more information.
+
 ## Configuration
 
 Aside from `KO_DOCKER_REPO`, you can configure `ko`'s behavior using a
