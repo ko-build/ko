@@ -819,7 +819,7 @@ func TestGoBuildIndex(t *testing.T) {
 		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-		WithPlatforms([]string{"all"}),
+		WithPlatforms("all"),
 		withBuilder(writeTempFile),
 		withSBOMber(fauxSBOM),
 	)
