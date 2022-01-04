@@ -65,7 +65,7 @@ type builder func(context.Context, string, string, v1.Platform, Config) (string,
 type sbomber func(context.Context, string, string, v1.Image) ([]byte, types.MediaType, error)
 
 type platformMatcher struct {
-	spec      string
+	spec      []string
 	platforms []v1.Platform
 }
 
@@ -100,7 +100,7 @@ type gobuildOpener struct {
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
-	platform             string
+	platforms            []string
 	labels               map[string]string
 	dir                  string
 	jobs                 int
@@ -110,7 +110,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	if gbo.getBase == nil {
 		return nil, errors.New("a way of providing base images must be specified, see build.WithBaseImages")
 	}
-	matcher, err := parseSpec(gbo.platform)
+	matcher, err := parseSpec(gbo.platforms)
 	if err != nil {
 		return nil, err
 	}
@@ -964,15 +964,15 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 	return idx, nil
 }
 
-func parseSpec(spec string) (*platformMatcher, error) {
+func parseSpec(spec []string) (*platformMatcher, error) {
 	// Don't bother parsing "all".
-	// "" should never happen because we default to linux/amd64.
-	platforms := []v1.Platform{}
-	if spec == "all" || spec == "" {
+	// Empty slice should never happen because we default to linux/amd64 (or GOOS/GOARCH).
+	if len(spec) == 0 || spec[0] == "all" {
 		return &platformMatcher{spec: spec}, nil
 	}
 
-	for _, platform := range strings.Split(spec, ",") {
+	platforms := []v1.Platform{}
+	for _, platform := range spec {
 		var p v1.Platform
 		parts := strings.Split(strings.TrimSpace(platform), "/")
 		if len(parts) > 0 {
@@ -993,7 +993,7 @@ func parseSpec(spec string) (*platformMatcher, error) {
 }
 
 func (pm *platformMatcher) matches(base *v1.Platform) bool {
-	if pm.spec == "all" {
+	if len(pm.spec) > 0 && pm.spec[0] == "all" {
 		return true
 	}
 

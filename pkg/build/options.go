@@ -15,6 +15,8 @@
 package build
 
 import (
+	"strings"
+
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
@@ -85,13 +87,21 @@ func WithConfig(buildConfigs map[string]Config) Option {
 
 // WithPlatforms is a functional option for building certain platforms for
 // multi-platform base images. To build everything from the base, use "all",
-// otherwise use a comma-separated list of platform specs, i.e.:
+// otherwise use a list of platform specs, i.e.:
 //
 // platform = <os>[/<arch>[/<variant>]]
-// allowed = all | platform[,platform]*
-func WithPlatforms(platforms string) Option {
+// allowed = "all" | []string{platform[,platform]*}
+//
+// Note: a string of comma-separated platforms (i.e. "platform[,platform]*")
+// has been deprecated and only exist for backwards compatibility reasons,
+// which will be removed in the future.
+func WithPlatforms(platforms ...string) Option {
 	return func(gbo *gobuildOpener) error {
-		gbo.platform = platforms
+		if len(platforms) == 1 {
+			// TODO: inform users that they are using deprecated flow?
+			platforms = strings.Split(platforms[0], ",")
+		}
+		gbo.platforms = platforms
 		return nil
 	}
 }

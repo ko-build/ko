@@ -61,20 +61,22 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		return nil, err
 	}
 
-	if bo.Platform == "" {
-		bo.Platform = "linux/amd64"
+	if len(bo.Platforms) == 0 {
+		envPlatform := "linux/amd64"
 
 		goos, goarch, goarm := os.Getenv("GOOS"), os.Getenv("GOARCH"), os.Getenv("GOARM")
 
 		// Default to linux/amd64 unless GOOS and GOARCH are set.
 		if goos != "" && goarch != "" {
-			bo.Platform = path.Join(goos, goarch)
+			envPlatform = path.Join(goos, goarch)
 		}
 
 		// Use GOARM for variant if it's set and GOARCH is arm.
 		if strings.Contains(goarch, "arm") && goarm != "" {
-			bo.Platform = path.Join(bo.Platform, "v"+goarm)
+			envPlatform = path.Join(envPlatform, "v"+goarm)
 		}
+
+		bo.Platforms = []string{envPlatform}
 	} else {
 		// Make sure these are all unset
 		for _, env := range []string{"GOOS", "GOARCH", "GOARM"} {
@@ -86,7 +88,7 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 
 	opts := []build.Option{
 		build.WithBaseImages(getBaseImage(bo)),
-		build.WithPlatforms(bo.Platform),
+		build.WithPlatforms(bo.Platforms...),
 		build.WithJobs(bo.ConcurrentBuilds),
 	}
 	if creationTime != nil {

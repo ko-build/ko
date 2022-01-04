@@ -58,14 +58,18 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 
 		// Using --platform=all will use an image index for the base,
 		// otherwise we'll resolve it to the appropriate platform.
-		//
-		// Platforms can be comma-separated if we only want a subset of the base
-		// image.
-		multiplatform := bo.Platform == "all" || strings.Contains(bo.Platform, ",")
-		if bo.Platform != "" && !multiplatform {
+		allPlatforms := len(bo.Platforms) == 1 && bo.Platforms[0] == "all"
+
+		// Platforms can be listed in a slice if we only want a subset of the base image.
+		selectiveMultiplatform := len(bo.Platforms) > 1
+
+		multiplatform := allPlatforms || selectiveMultiplatform
+		if !multiplatform {
 			var p v1.Platform
 
-			parts := strings.Split(bo.Platform, ":")
+			// There is _at least_ one platform specified at this point,
+			// because receiving "" means we would infer from GOOS/GOARCH.
+			parts := strings.Split(bo.Platforms[0], ":")
 			if len(parts) == 2 {
 				p.OSVersion = parts[1]
 			}
@@ -81,7 +85,7 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 				p.Variant = parts[2]
 			}
 			if len(parts) > 3 {
-				return nil, fmt.Errorf("too many slashes in platform spec: %s", bo.Platform)
+				return nil, fmt.Errorf("too many slashes in platform spec: %s", bo.Platforms[0])
 			}
 			ropt = append(ropt, remote.WithPlatform(p))
 		}

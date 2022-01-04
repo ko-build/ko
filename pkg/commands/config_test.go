@@ -41,7 +41,7 @@ func TestOverrideDefaultBaseImageUsingBuildOption(t *testing.T) {
 	wantImage := fmt.Sprintf("%s@%s", baseImage, wantDigest)
 	bo := &options.BuildOptions{
 		BaseImage: wantImage,
-		Platform:  "all",
+		Platforms: []string{"all"},
 	}
 
 	baseFn := getBaseImage(bo)
