@@ -144,6 +144,15 @@ func WithSPDX(version string) Option {
 	}
 }
 
+// WithCycloneDX is a functional option to direct ko to use
+// CycloneDX for SBOM format.
+func WithCycloneDX(version string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.sbom = cyclonedx(version)
+		return nil
+	}
+}
+
 // withSBOMber is a functional option for overriding the way SBOMs
 // are generated.
 func withSBOMber(sbom sbomber) Option {
