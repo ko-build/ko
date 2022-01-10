@@ -18,8 +18,11 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
+	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/spf13/cobra"
 )
 
@@ -29,20 +32,42 @@ func NewCmdPull(options *[]crane.Option) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "pull IMAGE TARBALL",
-		Short: "Pull remote images by reference and store their contents in a tarball",
+		Short: "Pull remote images by reference and store their contents locally",
 		Args:  cobra.MinimumNArgs(2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			imageMap := map[string]v1.Image{}
+			indexMap := map[string]v1.ImageIndex{}
 			srcList, path := args[:len(args)-1], args[len(args)-1]
 			for _, src := range srcList {
-				img, err := crane.Pull(src, *options...)
+				o := crane.GetOptions(*options...)
+				ref, err := name.ParseReference(src, o.Name...)
 				if err != nil {
-					return fmt.Errorf("pulling %s: %w", src, err)
+					return fmt.Errorf("parsing reference %q: %w", src, err)
+				}
+
+				rmt, err := remote.Get(ref, o.Remote...)
+				if err != nil {
+					return err
+				}
+
+				// If we're writing an index to a layout and --platform hasn't been set,
+				// pull the entire index, not just a child image.
+				if format == "oci" && rmt.MediaType.IsIndex() && o.Platform == nil {
+					idx, err := rmt.ImageIndex()
+					if err != nil {
+						return err
+					}
+					indexMap[src] = idx
+					continue
+				}
+
+				img, err := rmt.Image()
+				if err != nil {
+					return err
 				}
 				if cachePath != "" {
 					img = cache.Image(img, cache.NewFilesystemCache(cachePath))
 				}
-
 				imageMap[src] = img
 			}
 
@@ -58,6 +83,20 @@ func NewCmdPull(options *[]crane.Option) *cobra.Command {
 			case "oci":
 				if err := crane.MultiSaveOCI(imageMap, path); err != nil {
 					return fmt.Errorf("saving oci image layout %s: %w", path, err)
+				}
+
+				// crane.MultiSaveOCI doesn't support index, so just append these at the end.
+				p, err := layout.FromPath(path)
+				if err != nil {
+					return err
+				}
+				for ref, idx := range indexMap {
+					anns := map[string]string{
+						"dev.ggcr.image.name": ref,
+					}
+					if err := p.AppendIndex(idx, layout.WithAnnotations(anns)); err != nil {
+						return err
+					}
 				}
 			default:
 				return fmt.Errorf("unexpected --format: %q (valid values are: tarball, legacy, and oci)", format)

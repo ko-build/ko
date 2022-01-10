@@ -32,9 +32,12 @@ func NewCmdExport(options *[]crane.Option) *cobra.Command {
 
   # Write tarball to file
   crane export ubuntu ubuntu.tar`,
-		Args: cobra.ExactArgs(2),
+		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
-			src, dst := args[0], args[1]
+			src, dst := args[0], "-"
+			if len(args) > 1 {
+				dst = args[1]
+			}
 
 			f, err := openFile(dst)
 			if err != nil {

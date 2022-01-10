@@ -36,7 +36,14 @@ func NewCmdAppend(options *[]crane.Option) *cobra.Command {
 	appendCmd := &cobra.Command{
 		Use:   "append",
 		Short: "Append contents of a tarball to a remote image",
-		Args:  cobra.NoArgs,
+		Long: `This sub-command pushes an image based on an (optional)
+base image, with appended layers containing the contents of the
+provided tarballs.
+
+If the base image is a Windows base image (i.e., its config.OS is "windows"),
+the contents of the tarballs will be modified to be suitable for a Windows
+container image.`,
+		Args: cobra.NoArgs,
 		RunE: func(_ *cobra.Command, args []string) error {
 			var base v1.Image
 			var err error

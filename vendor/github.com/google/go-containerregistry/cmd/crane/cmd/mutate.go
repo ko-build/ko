@@ -15,8 +15,8 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -28,36 +28,45 @@ import (
 
 // NewCmdMutate creates a new cobra.Command for the mutate subcommand.
 func NewCmdMutate(options *[]crane.Option) *cobra.Command {
-	var lbls []string
-	var entrypoint string
+	var labels map[string]string
+	var annotations map[string]string
+	var entrypoint, cmd []string
+	var envVars map[string]string
+	var newLayers []string
+
 	var newRef string
-	var anntns []string
 
 	mutateCmd := &cobra.Command{
 		Use:   "mutate",
-		Short: "Modify image labels and annotations",
+		Short: "Modify image labels and annotations. The container must be pushed to a registry, and the manifest is updated there.",
 		Args:  cobra.ExactArgs(1),
-		Run: func(_ *cobra.Command, args []string) {
+		RunE: func(_ *cobra.Command, args []string) error {
 			// Pull image and get config.
 			ref := args[0]
 
-			if len(anntns) != 0 {
+			if len(annotations) != 0 {
 				desc, err := crane.Head(ref, *options...)
 				if err != nil {
-					log.Fatalf("checking %s: %v", ref, err)
+					return err
 				}
 				if desc.MediaType.IsIndex() {
-					log.Fatalf("mutating annotations on an index is not yet supported")
+					return errors.New("mutating annotations on an index is not yet supported")
 				}
 			}
 
 			img, err := crane.Pull(ref, *options...)
 			if err != nil {
-				log.Fatalf("pulling %s: %v", ref, err)
+				return fmt.Errorf("pulling %s: %w", ref, err)
+			}
+			if len(newLayers) != 0 {
+				img, err = crane.Append(img, newLayers...)
+				if err != nil {
+					return fmt.Errorf("appending %v: %w", newLayers, err)
+				}
 			}
 			cfg, err := img.ConfigFile()
 			if err != nil {
-				log.Fatalf("getting config: %v", err)
+				return err
 			}
 			cfg = cfg.DeepCopy()
 
@@ -66,30 +75,38 @@ func NewCmdMutate(options *[]crane.Option) *cobra.Command {
 				cfg.Config.Labels = map[string]string{}
 			}
 
-			labels, err := splitKeyVals(lbls)
-			if err != nil {
-				log.Fatal(err)
+			if err := validateKeyVals(labels); err != nil {
+				return err
 			}
 
 			for k, v := range labels {
 				cfg.Config.Labels[k] = v
 			}
 
-			annotations, err := splitKeyVals(anntns)
-			if err != nil {
-				log.Fatal(err)
+			if err := validateKeyVals(annotations); err != nil {
+				return err
+			}
+
+			// set envvars if specified
+			if err := setEnvVars(cfg, envVars); err != nil {
+				return err
 			}
 
 			// Set entrypoint.
-			if entrypoint != "" {
-				// NB: This doesn't attempt to do anything smart about splitting the string into multiple entrypoint elements.
-				cfg.Config.Entrypoint = []string{entrypoint}
+			if len(entrypoint) > 0 {
+				cfg.Config.Entrypoint = entrypoint
+				cfg.Config.Cmd = nil // This matches Docker's behavior.
+			}
+
+			// Set cmd.
+			if len(cmd) > 0 {
+				cfg.Config.Cmd = cmd
 			}
 
 			// Mutate and write image.
 			img, err = mutate.Config(img, cfg.Config)
 			if err != nil {
-				log.Fatalf("mutating config: %v", err)
+				return fmt.Errorf("mutating config: %w", err)
 			}
 
 			img = mutate.Annotations(img, annotations).(v1.Image)
@@ -103,37 +120,66 @@ func NewCmdMutate(options *[]crane.Option) *cobra.Command {
 			}
 			digest, err := img.Digest()
 			if err != nil {
-				log.Fatalf("digesting new image: %v", err)
+				return fmt.Errorf("digesting new image: %w", err)
 			}
 			r, err := name.ParseReference(newRef)
 			if err != nil {
-				log.Fatalf("parsing %s: %v", newRef, err)
+				return fmt.Errorf("parsing %s: %w", newRef, err)
 			}
 			if _, ok := r.(name.Digest); ok {
 				newRef = r.Context().Digest(digest.String()).String()
 			}
 			if err := crane.Push(img, newRef, *options...); err != nil {
-				log.Fatalf("pushing %s: %v", newRef, err)
+				return fmt.Errorf("pushing %s: %w", newRef, err)
 			}
 			fmt.Println(r.Context().Digest(digest.String()))
+			return nil
 		},
 	}
-	mutateCmd.Flags().StringSliceVarP(&anntns, "annotation", "a", nil, "New annotations to add")
-	mutateCmd.Flags().StringSliceVarP(&lbls, "label", "l", nil, "New labels to add")
-	mutateCmd.Flags().StringVar(&entrypoint, "entrypoint", "", "New entrypoing to set")
+	mutateCmd.Flags().StringToStringVarP(&annotations, "annotation", "a", nil, "New annotations to add")
+	mutateCmd.Flags().StringToStringVarP(&labels, "label", "l", nil, "New labels to add")
+	mutateCmd.Flags().StringToStringVarP(&envVars, "env", "e", nil, "New envvar to add")
+	mutateCmd.Flags().StringSliceVar(&entrypoint, "entrypoint", nil, "New entrypoint to set")
+	mutateCmd.Flags().StringSliceVar(&cmd, "cmd", nil, "New cmd to set")
 	mutateCmd.Flags().StringVarP(&newRef, "tag", "t", "", "New tag to apply to mutated image. If not provided, push by digest to the original image repository.")
+	mutateCmd.Flags().StringSliceVar(&newLayers, "append", []string{}, "Path to tarball to append to image")
 	return mutateCmd
 }
 
-// splitKeyVals splits key value pairs which is in form hello=world
-func splitKeyVals(kvPairs []string) (map[string]string, error) {
-	m := map[string]string{}
-	for _, l := range kvPairs {
-		parts := strings.SplitN(l, "=", 2)
-		if len(parts) == 1 {
-			return nil, fmt.Errorf("parsing label %q, not enough parts", l)
+// validateKeyVals ensures no values are empty, returns error if they are
+func validateKeyVals(kvPairs map[string]string) error {
+	for label, value := range kvPairs {
+		if value == "" {
+			return fmt.Errorf("parsing label %q, value is empty", label)
 		}
-		m[parts[0]] = parts[1]
 	}
-	return m, nil
+	return nil
+}
+
+// setEnvVars override envvars in a config
+func setEnvVars(cfg *v1.ConfigFile, envVars map[string]string) error {
+	newEnv := make([]string, 0, len(cfg.Config.Env))
+	for _, old := range cfg.Config.Env {
+		split := strings.SplitN(old, "=", 2)
+		if len(split) != 2 {
+			return fmt.Errorf("invalid key value pair in config: %s", old)
+		}
+		// keep order so override if specified again
+		oldKey := split[0]
+		if v, ok := envVars[oldKey]; ok {
+			newEnv = append(newEnv, fmt.Sprintf("%s=%s", oldKey, v))
+			delete(envVars, oldKey)
+		} else {
+			newEnv = append(newEnv, old)
+		}
+	}
+	isWindows := cfg.OS == "windows"
+	for k, v := range envVars {
+		if isWindows {
+			k = strings.ToUpper(k)
+		}
+		newEnv = append(newEnv, fmt.Sprintf("%s=%s", k, v))
+	}
+	cfg.Config.Env = newEnv
+	return nil
 }
