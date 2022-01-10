@@ -75,6 +75,7 @@ func ForFuncType(*ast.FuncType) *ast.FieldList {
 // this Go version. Its methods panic on use.
 type TypeParam struct{ types.Type }
 
+func (*TypeParam) Index() int             { unsupported(); return 0 }
 func (*TypeParam) Constraint() types.Type { unsupported(); return nil }
 func (*TypeParam) Obj() *types.TypeName   { unsupported(); return nil }
 
@@ -137,6 +138,10 @@ func IsImplicit(*types.Interface) bool {
 	return false
 }
 
+// MarkImplicit does nothing, because this Go version does not have implicit
+// interfaces.
+func MarkImplicit(*types.Interface) {}
+
 // ForNamed returns an empty type parameter list, as type parameters are not
 // supported at this Go version.
 func ForNamed(*types.Named) *TypeParamList {
@@ -160,19 +165,25 @@ func NamedTypeOrigin(named *types.Named) types.Type {
 	return named
 }
 
-// Term is a placeholder type, as type parameters are not supported at this Go
-// version. Its methods panic on use.
-type Term struct{}
+// Term holds information about a structural type restriction.
+type Term struct {
+	tilde bool
+	typ   types.Type
+}
 
-func (*Term) Tilde() bool            { unsupported(); return false }
-func (*Term) Type() types.Type       { unsupported(); return nil }
-func (*Term) String() string         { unsupported(); return "" }
-func (*Term) Underlying() types.Type { unsupported(); return nil }
+func (m *Term) Tilde() bool      { return m.tilde }
+func (m *Term) Type() types.Type { return m.typ }
+func (m *Term) String() string {
+	pre := ""
+	if m.tilde {
+		pre = "~"
+	}
+	return pre + m.typ.String()
+}
 
 // NewTerm is unsupported at this Go version, and panics.
 func NewTerm(tilde bool, typ types.Type) *Term {
-	unsupported()
-	return nil
+	return &Term{tilde, typ}
 }
 
 // Union is a placeholder type, as type parameters are not supported at this Go

@@ -48,7 +48,13 @@ func parsePlatform(platform string) (*v1.Platform, error) {
 	}
 
 	p := &v1.Platform{}
-	parts := strings.Split(platform, "/")
+
+	parts := strings.SplitN(platform, ":", 2)
+	if len(parts) == 2 {
+		p.OSVersion = parts[1]
+	}
+
+	parts = strings.Split(parts[0], "/")
 
 	if len(parts) < 2 {
 		return nil, fmt.Errorf("failed to parse platform '%s': expected format os/arch[/variant]", platform)

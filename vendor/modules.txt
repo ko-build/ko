@@ -5,7 +5,7 @@ github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
 # github.com/alessio/shellescape v1.4.1
 github.com/alessio/shellescape
-# github.com/containerd/containerd v1.5.7
+# github.com/containerd/containerd v1.5.8
 github.com/containerd/containerd/errdefs
 github.com/containerd/containerd/log
 github.com/containerd/containerd/platforms
@@ -15,7 +15,7 @@ github.com/containerd/stargz-snapshotter/estargz
 github.com/containerd/stargz-snapshotter/estargz/errorutil
 # github.com/cpuguy83/go-md2man/v2 v2.0.1
 github.com/cpuguy83/go-md2man/v2/md2man
-# github.com/docker/cli v20.10.10+incompatible
+# github.com/docker/cli v20.10.12+incompatible
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
 github.com/docker/cli/cli/config/credentials
@@ -84,7 +84,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.7.0
+# github.com/google/go-containerregistry v0.8.0
 ## explicit
 github.com/google/go-containerregistry/cmd/crane/cmd
 github.com/google/go-containerregistry/internal/and
@@ -96,6 +96,7 @@ github.com/google/go-containerregistry/internal/redact
 github.com/google/go-containerregistry/internal/retry
 github.com/google/go-containerregistry/internal/retry/wait
 github.com/google/go-containerregistry/internal/verify
+github.com/google/go-containerregistry/internal/windows
 github.com/google/go-containerregistry/pkg/authn
 github.com/google/go-containerregistry/pkg/crane
 github.com/google/go-containerregistry/pkg/legacy
@@ -145,11 +146,13 @@ github.com/magiconair/properties
 github.com/mattmoor/dep-notify/pkg/graph
 # github.com/mattn/go-isatty v0.0.14
 github.com/mattn/go-isatty
+# github.com/mitchellh/go-homedir v1.1.0
+github.com/mitchellh/go-homedir
 # github.com/mitchellh/mapstructure v1.4.3
 github.com/mitchellh/mapstructure
 # github.com/opencontainers/go-digest v1.0.0
 github.com/opencontainers/go-digest
-# github.com/opencontainers/image-spec v1.0.2-0.20210730191737-8e42a01fb1b7
+# github.com/opencontainers/image-spec v1.0.2-0.20211117181255-693428a734f5
 ## explicit
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
@@ -211,14 +214,14 @@ golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
 # golang.org/x/mod v0.5.1
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20211209124913-491a49abca63
+# golang.org/x/net v0.0.0-20211216030914-fe4d6282115f
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20211210111614-af8b64212486
+# golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
@@ -230,7 +233,7 @@ golang.org/x/term
 # golang.org/x/text v0.3.7
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
-# golang.org/x/tools v0.1.8-0.20211015140901-98f6e0395b11
+# golang.org/x/tools v0.1.8
 ## explicit
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/internal/gcimporter
