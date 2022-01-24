@@ -60,6 +60,24 @@ func Platforms(platforms ...v1.Platform) Matcher {
 	}
 }
 
+// FuzzyPlatforms returns a match.Matcher that matches on any of the provided
+// platforms, taking into account partial platform values.
+//
+// Ignores any descriptors that do not have a platform.
+func FuzzyPlatforms(platforms ...v1.Platform) Matcher {
+	return func(desc v1.Descriptor) bool {
+		if desc.Platform == nil {
+			return false
+		}
+		for _, platform := range platforms {
+			if platform.FuzzyEquals(*desc.Platform) {
+				return true
+			}
+		}
+		return false
+	}
+}
+
 // MediaTypes returns a match.Matcher that matches at least one of the provided media types.
 func MediaTypes(mediaTypes ...string) Matcher {
 	mts := map[string]bool{}

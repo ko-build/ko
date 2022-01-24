@@ -29,6 +29,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/match"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 
@@ -56,24 +58,29 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			remote.WithContext(ctx),
 		}
 
-		// Using --platform=all will use an image index for the base,
-		// otherwise we'll resolve it to the appropriate platform.
-		allPlatforms := len(bo.Platforms) == 1 && bo.Platforms[0] == "all"
+		desc, err := remote.Get(ref, ropt...)
+		if err != nil {
+			return nil, err
+		}
+		switch desc.MediaType {
+		case types.OCIImageIndex, types.DockerManifestList:
+			// Using --platform=all will use an image index for the base,
+			// otherwise we'll resolve it to the appropriate platform.
+			allPlatforms := len(bo.Platforms) == 1 && bo.Platforms[0] == "all"
 
-		// Platforms can be listed in a slice if we only want a subset of the base image.
-		selectiveMultiplatform := len(bo.Platforms) > 1
+			// Platforms can be listed in a slice if we only want a subset of the base image.
+			selectiveMultiplatform := len(bo.Platforms) > 1
 
-		multiplatform := allPlatforms || selectiveMultiplatform
-		if !multiplatform {
+			multiplatform := allPlatforms || selectiveMultiplatform
+			if multiplatform {
+				return desc.ImageIndex()
+			}
+
 			var p v1.Platform
-
-			// There is _at least_ one platform specified at this point,
-			// because receiving "" means we would infer from GOOS/GOARCH.
 			parts := strings.Split(bo.Platforms[0], ":")
 			if len(parts) == 2 {
 				p.OSVersion = parts[1]
 			}
-
 			parts = strings.Split(parts[0], "/")
 			if len(parts) > 0 {
 				p.OS = parts[0]
@@ -87,19 +94,27 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			if len(parts) > 3 {
 				return nil, fmt.Errorf("too many slashes in platform spec: %s", bo.Platforms[0])
 			}
-			ropt = append(ropt, remote.WithPlatform(p))
-		}
 
-		desc, err := remote.Get(ref, ropt...)
-		if err != nil {
-			return nil, err
-		}
-		switch desc.MediaType {
-		case types.OCIImageIndex, types.DockerManifestList:
-			if multiplatform {
+			idx, err := desc.ImageIndex()
+			if err != nil {
+				return nil, err
+			}
+			imgs, err := partial.FindImages(idx, match.FuzzyPlatforms(p))
+			if err != nil {
+				return nil, err
+			}
+			if len(imgs) == 0 {
+				return nil, fmt.Errorf("no matching image for platform %q", p)
+			}
+			if len(imgs) > 1 {
+				// If multiple images match the specified
+				// --platform (e.g., "linux"), then pass
+				// through the whole index, which will be
+				// filtered later at build-time.
 				return desc.ImageIndex()
 			}
-			return desc.Image()
+			// If only one image matched, pass it as a single image.
+			return imgs[0], nil
 		default:
 			return desc.Image()
 		}

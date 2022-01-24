@@ -101,10 +101,8 @@ func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 		}
 	} else {
 		f, err := os.Open(filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "containers/auth.json"))
-		if os.IsNotExist(err) {
+		if err != nil {
 			return Anonymous, nil
-		} else if err != nil {
-			return nil, err
 		}
 		defer f.Close()
 		cf, err = config.LoadFromReader(f)

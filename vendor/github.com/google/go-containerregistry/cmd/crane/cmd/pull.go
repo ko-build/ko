@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -22,9 +23,16 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/cache"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
+	"github.com/google/go-containerregistry/pkg/v1/match"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/spf13/cobra"
 )
+
+var defaultPlatform = &v1.Platform{
+	OS:           "linux",
+	Architecture: "amd64",
+}
 
 // NewCmdPull creates a new cobra.Command for the pull subcommand.
 func NewCmdPull(options *[]crane.Option) *cobra.Command {
@@ -61,10 +69,38 @@ func NewCmdPull(options *[]crane.Option) *cobra.Command {
 					continue
 				}
 
-				img, err := rmt.Image()
-				if err != nil {
-					return err
+				var img v1.Image
+				if rmt.MediaType.IsImage() {
+					if o.Platform != nil && !match.FuzzyPlatforms(*o.Platform)(rmt.Descriptor) {
+						return errors.New("image does not match requested platform")
+					}
+					img, err = rmt.Image()
+					if err != nil {
+						return err
+					}
+				} else if rmt.MediaType.IsIndex() {
+					idx, err := rmt.ImageIndex()
+					if err != nil {
+						return err
+					}
+					if o.Platform == nil {
+						o.Platform = defaultPlatform
+					}
+					imgs, err := partial.FindImages(idx, match.FuzzyPlatforms(*o.Platform))
+					if err != nil {
+						return err
+					}
+					if len(imgs) == 0 {
+						return fmt.Errorf("no matching images for platform %q", o.Platform)
+					} else if len(imgs) > 1 {
+						// TODO: print the matching platform strings.
+						return fmt.Errorf("multiple matching images for platform %q", o.Platform)
+					}
+					img = imgs[0]
+				} else {
+					return fmt.Errorf("unknown media type: %s", rmt.MediaType)
 				}
+
 				if cachePath != "" {
 					img = cache.Image(img, cache.NewFilesystemCache(cachePath))
 				}

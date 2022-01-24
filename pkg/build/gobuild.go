@@ -39,6 +39,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/match"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -64,11 +65,6 @@ type GetBase func(context.Context, string) (name.Reference, Result, error)
 type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
 type sbomber func(context.Context, string, string, v1.Image) ([]byte, types.MediaType, error)
 
-type platformMatcher struct {
-	spec      []string
-	platforms []v1.Platform
-}
-
 type gobuild struct {
 	ctx                  context.Context
 	getBase              GetBase
@@ -79,7 +75,7 @@ type gobuild struct {
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
-	platformMatcher      *platformMatcher
+	platformMatcher      match.Matcher
 	dir                  string
 	labels               map[string]string
 	semaphore            *semaphore.Weighted
@@ -240,14 +236,6 @@ func getGoarm(platform v1.Platform) (string, error) {
 	return "", nil
 }
 
-// TODO(jonjohnsonjr): Upstream something like this.
-func platformToString(p v1.Platform) string {
-	if p.Variant != "" {
-		return fmt.Sprintf("%s/%s/%s", p.OS, p.Architecture, p.Variant)
-	}
-	return fmt.Sprintf("%s/%s", p.OS, p.Architecture)
-}
-
 func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
 	buildArgs, err := createBuildArgs(config)
 	if err != nil {
@@ -270,7 +258,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	if dir := os.Getenv("KOCACHE"); dir != "" {
 		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
-		tmpDir = filepath.Join(dir, "bin", ip, platformToString(platform))
+		tmpDir = filepath.Join(dir, "bin", ip, platform.String())
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 			return "", err
 		}
@@ -288,7 +276,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s for %s", ip, platformToString(platform))
+	log.Printf("Building %s for %s", ip, platform.String())
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)
@@ -913,7 +901,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, ref)
 		}
 
-		if !g.platformMatcher.matches(desc.Platform) {
+		if !g.platformMatcher(desc) {
 			continue
 		}
 
@@ -937,6 +925,9 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			}
 			return nil
 		})
+	}
+	if len(possibleAdds) == 0 {
+		return nil, errors.New("no matching images") // TODO: better error message
 	}
 
 	if err := errg.Wait(); err != nil {
@@ -964,57 +955,43 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 	return idx, nil
 }
 
-func parseSpec(spec []string) (*platformMatcher, error) {
+func parseSpec(spec []string) (match.Matcher, error) {
 	// Don't bother parsing "all".
 	// Empty slice should never happen because we default to linux/amd64 (or GOOS/GOARCH).
 	if len(spec) == 0 || spec[0] == "all" {
-		return &platformMatcher{spec: spec}, nil
+		return func(v1.Descriptor) bool { return true }, nil
 	}
 
-	platforms := []v1.Platform{}
-	for _, platform := range spec {
-		var p v1.Platform
-		parts := strings.Split(strings.TrimSpace(platform), "/")
-		if len(parts) > 0 {
-			p.OS = parts[0]
+	plats := []v1.Platform{}
+	for _, s := range spec {
+		p, err := platformFromString(s)
+		if err != nil {
+			return nil, err
 		}
-		if len(parts) > 1 {
-			p.Architecture = parts[1]
-		}
-		if len(parts) > 2 {
-			p.Variant = parts[2]
-		}
-		if len(parts) > 3 {
-			return nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
-		}
-		platforms = append(platforms, p)
+		plats = append(plats, p)
 	}
-	return &platformMatcher{spec: spec, platforms: platforms}, nil
+	return match.FuzzyPlatforms(plats...), nil
 }
 
-func (pm *platformMatcher) matches(base *v1.Platform) bool {
-	if len(pm.spec) > 0 && pm.spec[0] == "all" {
-		return true
+// TODO: upstream this.
+func platformFromString(s string) (v1.Platform, error) {
+	var p v1.Platform
+	parts := strings.Split(s, ":")
+	if len(parts) == 2 {
+		p.OSVersion = parts[1]
 	}
-
-	// Don't build anything without a platform field unless "all". Unclear what we should do here.
-	if base == nil {
-		return false
+	parts = strings.Split(parts[0], "/")
+	if len(parts) > 0 {
+		p.OS = parts[0]
 	}
-
-	for _, p := range pm.platforms {
-		if p.OS != "" && base.OS != p.OS {
-			continue
-		}
-		if p.Architecture != "" && base.Architecture != p.Architecture {
-			continue
-		}
-		if p.Variant != "" && base.Variant != p.Variant {
-			continue
-		}
-
-		return true
+	if len(parts) > 1 {
+		p.Architecture = parts[1]
 	}
-
-	return false
+	if len(parts) > 2 {
+		p.Variant = parts[2]
+	}
+	if len(parts) > 3 {
+		return v1.Platform{}, fmt.Errorf("too many slashes in platform spec: %s", s)
+	}
+	return p, nil
 }

@@ -2,6 +2,8 @@ module github.com/google/ko
 
 go 1.16
 
+replace github.com/google/go-containerregistry => ../go-containerregistry
+
 require (
 	github.com/containerd/stargz-snapshotter/estargz v0.10.1
 	github.com/docker/docker v20.10.12+incompatible

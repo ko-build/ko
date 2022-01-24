@@ -35,7 +35,7 @@ jobs:
         export PLATFORM=${GOOS}/${GOARCH}
 
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
-          OSVERSION="10.0.17763.2452"
+          OSVERSION="10.0.17763"
           PLATFORM=${PLATFORM}:${OSVERSION}
           export KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:1809
         else
