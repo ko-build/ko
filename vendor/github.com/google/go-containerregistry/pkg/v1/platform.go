@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 )
@@ -58,6 +59,49 @@ func (p Platform) String() string {
 		b.WriteString(")")
 	}
 	return b.String()
+}
+
+// PlatformFromString parses a string representing a Platform, if possible.
+func PlatformFromString(s string) (*Platform, error) {
+	var p Platform
+	parts := strings.Split(s, ":")
+	if len(parts) == 2 {
+		p.OSVersion = parts[1]
+	}
+	parts = strings.Split(parts[0], " ")
+	if len(parts) > 3 {
+		return nil, fmt.Errorf("too many spaces in platform spec: %s", s)
+	}
+	if len(parts) > 1 {
+		for _, part := range parts[1:] {
+			if strings.HasPrefix(part, "(osfeatures=") && strings.HasSuffix(part, ")") {
+				pt := strings.TrimPrefix(part, "(osfeatures=")
+				pt = strings.TrimSuffix(pt, ")")
+				p.OSFeatures = strings.Split(pt, ",")
+			} else if strings.HasPrefix(part, "(features=") && strings.HasSuffix(part, ")") {
+				pt := strings.TrimPrefix(part, "(features=")
+				pt = strings.TrimSuffix(pt, ")")
+				p.Features = strings.Split(pt, ",")
+			} else {
+				return nil, fmt.Errorf("unknown parenthetical: %s", part)
+			}
+		}
+	}
+
+	parts = strings.Split(parts[0], "/")
+	if len(parts) > 0 {
+		p.OS = parts[0]
+	}
+	if len(parts) > 1 {
+		p.Architecture = parts[1]
+	}
+	if len(parts) > 2 {
+		p.Variant = parts[2]
+	}
+	if len(parts) > 3 {
+		return nil, fmt.Errorf("too many slashes in platform spec: %s", s)
+	}
+	return &p, nil
 }
 
 // Equals returns true if the given platform is semantically equivalent to this one.

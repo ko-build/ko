@@ -964,34 +964,11 @@ func parseSpec(spec []string) (match.Matcher, error) {
 
 	plats := []v1.Platform{}
 	for _, s := range spec {
-		p, err := platformFromString(s)
+		p, err := v1.PlatformFromString(s)
 		if err != nil {
 			return nil, err
 		}
-		plats = append(plats, p)
+		plats = append(plats, *p)
 	}
 	return match.FuzzyPlatforms(plats...), nil
-}
-
-// TODO: upstream this.
-func platformFromString(s string) (v1.Platform, error) {
-	var p v1.Platform
-	parts := strings.Split(s, ":")
-	if len(parts) == 2 {
-		p.OSVersion = parts[1]
-	}
-	parts = strings.Split(parts[0], "/")
-	if len(parts) > 0 {
-		p.OS = parts[0]
-	}
-	if len(parts) > 1 {
-		p.Architecture = parts[1]
-	}
-	if len(parts) > 2 {
-		p.Variant = parts[2]
-	}
-	if len(parts) > 3 {
-		return v1.Platform{}, fmt.Errorf("too many slashes in platform spec: %s", s)
-	}
-	return p, nil
 }

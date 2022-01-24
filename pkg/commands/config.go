@@ -76,30 +76,16 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 				return desc.ImageIndex()
 			}
 
-			var p v1.Platform
-			parts := strings.Split(bo.Platforms[0], ":")
-			if len(parts) == 2 {
-				p.OSVersion = parts[1]
-			}
-			parts = strings.Split(parts[0], "/")
-			if len(parts) > 0 {
-				p.OS = parts[0]
-			}
-			if len(parts) > 1 {
-				p.Architecture = parts[1]
-			}
-			if len(parts) > 2 {
-				p.Variant = parts[2]
-			}
-			if len(parts) > 3 {
-				return nil, fmt.Errorf("too many slashes in platform spec: %s", bo.Platforms[0])
+			p, err := v1.PlatformFromString(bo.Platforms[0])
+			if err != nil {
+				return nil, err
 			}
 
 			idx, err := desc.ImageIndex()
 			if err != nil {
 				return nil, err
 			}
-			imgs, err := partial.FindImages(idx, match.FuzzyPlatforms(p))
+			imgs, err := partial.FindImages(idx, match.FuzzyPlatforms(*p))
 			if err != nil {
 				return nil, err
 			}
