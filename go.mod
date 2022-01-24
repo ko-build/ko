@@ -8,7 +8,7 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/fsnotify/fsnotify v1.5.1
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
-	github.com/google/go-cmp v0.5.6
+	github.com/google/go-cmp v0.5.7
 	github.com/google/go-containerregistry v0.8.0
 	github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
 	github.com/opencontainers/image-spec v1.0.2-0.20211117181255-693428a734f5
