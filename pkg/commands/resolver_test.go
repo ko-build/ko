@@ -281,12 +281,13 @@ func TestNewPublisherCanPublish(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			publisher, err := NewPublisher(test.po)
+			ctx := context.Background()
+			publisher, err := NewPublisher(ctx, test.po)
 			if err != nil {
 				t.Fatalf("NewPublisher(): %v", err)
 			}
 			defer publisher.Close()
-			ref, err := publisher.Publish(context.Background(), empty.Image, build.StrictScheme+importpath)
+			ref, err := publisher.Publish(ctx, empty.Image, build.StrictScheme+importpath)
 			if test.shouldError {
 				if err == nil || !strings.HasSuffix(err.Error(), test.wantError.Error()) {
 					t.Errorf("%s: got error %v, wanted %v", test.description, err, test.wantError)

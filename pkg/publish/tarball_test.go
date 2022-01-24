@@ -61,8 +61,9 @@ func TestTarball(t *testing.T) {
 		"debug",
 	}}
 	for _, tags := range tagss {
-		tp := publish.NewTarball(fp.Name(), repoName, md5Hash, tags)
-		if d, err := tp.Publish(context.Background(), img, importpath); err != nil {
+		ctx := context.Background()
+		tp := publish.NewTarball(ctx, fp.Name(), repoName, md5Hash, tags)
+		if d, err := tp.Publish(ctx, img, importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), tag.Repository.String()) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)

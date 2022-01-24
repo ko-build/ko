@@ -17,15 +17,16 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
 
-	"github.com/google/ko/internal"
-	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/google/ko/internal"
+	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/log"
 )
 
 // addCreate augments our CLI surface with apply.
@@ -77,7 +78,7 @@ func addCreate(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating builder: %w", err)
 			}
-			publisher, err := makePublisher(po)
+			publisher, err := makePublisher(ctx, po)
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
@@ -89,7 +90,7 @@ func addCreate(topLevel *cobra.Command) {
 			argv := []string{"create", "-f", "-"}
 			if kflags := kf.Values(); len(kflags) != 0 {
 				skflags := strings.Join(stripPassword(kflags), " ")
-				log.Printf(kubectlFlagsWarningTemplate,
+				log.Printf(ctx, kubectlFlagsWarningTemplate,
 					"create", skflags,
 					"create", skflags)
 				argv = append(argv, kflags...)

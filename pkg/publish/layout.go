@@ -17,14 +17,15 @@ package publish
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+
 	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/log"
 )
 
 type LayoutPublisher struct {
@@ -68,12 +69,12 @@ func (l *LayoutPublisher) writeResult(br build.Result) error {
 }
 
 // Publish implements publish.Interface.
-func (l *LayoutPublisher) Publish(_ context.Context, br build.Result, s string) (name.Reference, error) {
-	log.Printf("Saving %v", s)
+func (l *LayoutPublisher) Publish(ctx context.Context, br build.Result, s string) (name.Reference, error) {
+	log.Printf(ctx, "Saving %v", s)
 	if err := l.writeResult(br); err != nil {
 		return nil, err
 	}
-	log.Printf("Saved %v", s)
+	log.Printf(ctx, "Saved %v", s)
 
 	h, err := br.Digest()
 	if err != nil {

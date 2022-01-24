@@ -17,16 +17,18 @@ package publish
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
+
 	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/log"
 )
 
 type tar struct {
+	ctx   context.Context
 	file  string
 	base  string
 	namer Namer
@@ -35,8 +37,9 @@ type tar struct {
 }
 
 // NewTarball returns a new publish.Interface that saves images to a tarball.
-func NewTarball(file, base string, namer Namer, tags []string) Interface {
+func NewTarball(ctx context.Context, file, base string, namer Namer, tags []string) Interface {
 	return &tar{
+		ctx:   ctx,
 		file:  file,
 		base:  base,
 		namer: namer,
@@ -93,12 +96,12 @@ func (t *tar) Publish(_ context.Context, br build.Result, s string) (name.Refere
 }
 
 func (t *tar) Close() error {
-	log.Printf("Saving %v", t.file)
+	log.Printf(t.ctx, "Saving %v", t.file)
 	if err := tarball.MultiRefWriteToFile(t.file, t.refs); err != nil {
 		// Bad practice, but we log  this here because right now we just defer the Close.
-		log.Printf("failed to save %q: %v", t.file, err)
+		log.Printf(t.ctx, "failed to save %q: %v", t.file, err)
 		return err
 	}
-	log.Printf("Saved %v", t.file)
+	log.Printf(t.ctx, "Saved %v", t.file)
 	return nil
 }

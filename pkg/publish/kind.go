@@ -17,13 +17,14 @@ package publish
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+
 	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/log"
 	"github.com/google/ko/pkg/publish/kind"
 )
 
@@ -101,14 +102,14 @@ func (t *kindPublisher) Publish(ctx context.Context, br build.Result, s string) 
 		return nil, err
 	}
 
-	log.Printf("Loading %v", digestTag)
+	log.Printf(ctx, "Loading %v", digestTag)
 	if err := kind.Write(ctx, digestTag, img); err != nil {
 		return nil, err
 	}
-	log.Printf("Loaded %v", digestTag)
+	log.Printf(ctx, "Loaded %v", digestTag)
 
 	for _, tagName := range t.tags {
-		log.Printf("Adding tag %v", tagName)
+		log.Printf(ctx, "Adding tag %v", tagName)
 		tag, err := name.NewTag(fmt.Sprintf("%s:%s", t.namer(KindDomain, s), tagName))
 		if err != nil {
 			return nil, err
@@ -117,7 +118,7 @@ func (t *kindPublisher) Publish(ctx context.Context, br build.Result, s string) 
 		if err := kind.Tag(ctx, digestTag, tag); err != nil {
 			return nil, err
 		}
-		log.Printf("Added tag %v", tagName)
+		log.Printf(ctx, "Added tag %v", tagName)
 	}
 
 	return &digestTag, nil

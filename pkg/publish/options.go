@@ -16,12 +16,13 @@ package publish
 
 import (
 	"crypto/tls"
-	"log"
 	"net/http"
 	"path"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+
+	"github.com/google/ko/pkg/log"
 )
 
 // WithTransport is a functional option for overriding the default transport
@@ -71,7 +72,7 @@ func WithAuthFromKeychain(keys authn.Keychain) Option {
 			return err
 		}
 		if auth == authn.Anonymous {
-			log.Println("No matching credentials were found, falling back on anonymous")
+			log.Println(i.ctx, "No matching credentials were found, falling back on anonymous")
 		}
 		i.auth = auth
 		return nil

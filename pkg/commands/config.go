@@ -19,7 +19,6 @@ package commands
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -34,6 +33,7 @@ import (
 
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/log"
 	"github.com/google/ko/pkg/publish"
 )
 
@@ -129,7 +129,7 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			return ref, cached, nil
 		}
 
-		log.Printf("Using base %s for %s", ref, s)
+		log.Printf(ctx, "Using base %s for %s", ref, s)
 		result, err := fetch(ctx, ref)
 		if err != nil {
 			return ref, result, err

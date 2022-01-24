@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"path"
 	"strings"
@@ -33,10 +32,12 @@ import (
 	"github.com/sigstore/cosign/pkg/oci/walk"
 
 	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/log"
 )
 
 // defalt is intentionally misspelled to avoid keyword collision (and drive Jon nuts).
 type defalt struct {
+	ctx       context.Context
 	base      string
 	t         http.RoundTripper
 	userAgent string
@@ -51,6 +52,7 @@ type defalt struct {
 type Option func(*defaultOpener) error
 
 type defaultOpener struct {
+	ctx       context.Context
 	base      string
 	t         http.RoundTripper
 	userAgent string
@@ -86,6 +88,7 @@ func (do *defaultOpener) Open() (Interface, error) {
 	}
 
 	return &defalt{
+		ctx:       do.ctx,
 		base:      do.base,
 		t:         do.t,
 		userAgent: do.userAgent,
@@ -99,8 +102,9 @@ func (do *defaultOpener) Open() (Interface, error) {
 
 // NewDefault returns a new publish.Interface that publishes references under the provided base
 // repository using the default keychain to authenticate and the default naming scheme.
-func NewDefault(base string, options ...Option) (Interface, error) {
+func NewDefault(ctx context.Context, base string, options ...Option) (Interface, error) {
 	do := &defaultOpener{
+		ctx:       ctx,
 		base:      base,
 		t:         http.DefaultTransport,
 		userAgent: "ko",
@@ -153,7 +157,7 @@ func pushResult(ctx context.Context, tag name.Tag, br build.Result, opt []remote
 		} else if err := remote.Write(ref, f, opt...); err != nil {
 			return fmt.Errorf("writing sbom: %w", err)
 		} else {
-			log.Printf("Published SBOM %v", ref)
+			log.Printf(ctx, "Published SBOM %v", ref)
 		}
 
 		// TODO(mattmoor): Don't enable this until we start signing or it
@@ -216,12 +220,12 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 		}
 
 		if i == 0 {
-			log.Printf("Publishing %v", tag)
+			log.Printf(ctx, "Publishing %v", tag)
 			if err := pushResult(ctx, tag, br, ro); err != nil {
 				return nil, err
 			}
 		} else {
-			log.Printf("Tagging %v", tag)
+			log.Printf(ctx, "Tagging %v", tag)
 			if err := remote.Tag(tag, br, ro...); err != nil {
 				return nil, err
 			}
@@ -251,7 +255,7 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Published %v", dig)
+	log.Printf(ctx, "Published %v", dig)
 	return &dig, nil
 }
 

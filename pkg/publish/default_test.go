@@ -73,11 +73,13 @@ func TestDefault(t *testing.T) {
 		}
 
 		repoName := fmt.Sprintf("%s/%s", u.Host, base)
-		def, err := publish.NewDefault(repoName)
+		ctx := context.Background()
+
+		def, err := publish.NewDefault(ctx, repoName)
 		if err != nil {
 			t.Errorf("NewDefault() = %v", err)
 		}
-		if d, err := def.Publish(context.Background(), br, build.StrictScheme+importpath); err != nil {
+		if d, err := def.Publish(ctx, br, build.StrictScheme+importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), tag.Repository.String()) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -110,12 +112,13 @@ func TestDefaultWithCustomNamer(t *testing.T) {
 		}
 
 		repoName := fmt.Sprintf("%s/%s", u.Host, base)
+		ctx := context.Background()
 
-		def, err := publish.NewDefault(repoName, publish.WithNamer(md5Hash))
+		def, err := publish.NewDefault(ctx, repoName, publish.WithNamer(md5Hash))
 		if err != nil {
 			t.Errorf("NewDefault() = %v", err)
 		}
-		if d, err := def.Publish(context.Background(), br, build.StrictScheme+importpath); err != nil {
+		if d, err := def.Publish(ctx, br, build.StrictScheme+importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), repoName) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -143,12 +146,12 @@ func TestDefaultWithTags(t *testing.T) {
 		}
 
 		repoName := fmt.Sprintf("%s/%s", u.Host, base)
-
-		def, err := publish.NewDefault(repoName, publish.WithTags([]string{"notLatest", "v1.2.3"}))
+		ctx := context.Background()
+		def, err := publish.NewDefault(ctx, repoName, publish.WithTags([]string{"notLatest", "v1.2.3"}))
 		if err != nil {
 			t.Errorf("NewDefault() = %v", err)
 		}
-		if d, err := def.Publish(context.Background(), br, build.StrictScheme+importpath); err != nil {
+		if d, err := def.Publish(ctx, br, build.StrictScheme+importpath); err != nil {
 			t.Errorf("Publish() = %v", err)
 		} else if !strings.HasPrefix(d.String(), repoName) {
 			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -224,12 +227,13 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 	}
 
 	repoName := fmt.Sprintf("%s/%s", u.Host, base)
+	ctx := context.Background()
 
-	def, err := publish.NewDefault(repoName, publish.WithTags([]string{releaseTag}))
+	def, err := publish.NewDefault(ctx, repoName, publish.WithTags([]string{releaseTag}))
 	if err != nil {
 		t.Errorf("NewDefault() = %v", err)
 	}
-	if d, err := def.Publish(context.Background(), img, build.StrictScheme+importpath); err != nil {
+	if d, err := def.Publish(ctx, img, build.StrictScheme+importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if !strings.HasPrefix(d.String(), repoName) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
@@ -243,11 +247,11 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 		t.Errorf("Tag v1.2.3 was not created.")
 	}
 
-	def, err = publish.NewDefault(repoName, publish.WithTags([]string{releaseTag}), publish.WithTagOnly(true))
+	def, err = publish.NewDefault(ctx, repoName, publish.WithTags([]string{releaseTag}), publish.WithTagOnly(true))
 	if err != nil {
 		t.Errorf("NewDefault() = %v", err)
 	}
-	if d, err := def.Publish(context.Background(), img, build.StrictScheme+importpath); err != nil {
+	if d, err := def.Publish(ctx, img, build.StrictScheme+importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if !strings.HasPrefix(d.String(), repoName) {
 		t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)

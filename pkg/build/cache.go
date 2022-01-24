@@ -19,7 +19,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,6 +27,8 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
+
+	"github.com/google/ko/pkg/log"
 )
 
 type diffIDToDescriptor map[v1.Hash]v1.Descriptor
@@ -61,7 +62,7 @@ func (c *layerCache) get(ctx context.Context, file string, miss layerFactory) (v
 		return nil, err
 	}
 	if err := c.put(ctx, file, layer); err != nil {
-		log.Printf("failed to cache metadata %s: %v", file, err)
+		log.Printf(ctx, "failed to cache metadata %s: %v", file, err)
 	}
 	return layer, nil
 }
@@ -203,7 +204,7 @@ func getBuildID(ctx context.Context, file string) (string, error) {
 	cmd.Stdout = &output
 
 	if err := cmd.Run(); err != nil {
-		log.Printf("Unexpected error running \"go tool buildid %s\": %v\n%v", err, file, output.String())
+		log.Printf(ctx, "Unexpected error running \"go tool buildid %s\": %v\n%v", err, file, output.String())
 		return "", err
 	}
 	return strings.TrimSpace(output.String()), nil

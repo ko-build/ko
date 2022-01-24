@@ -75,7 +75,7 @@ func TestPublishImages(t *testing.T) {
 			DockerRepo:          repo,
 			PreserveImportPaths: true,
 		}
-		publisher, err := NewPublisher(po)
+		publisher, err := NewPublisher(ctx, po)
 		if err != nil {
 			t.Fatalf("%s: MakePublisher(): %v", test.description, err)
 		}

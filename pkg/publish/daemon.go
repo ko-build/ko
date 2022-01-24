@@ -19,14 +19,15 @@ package publish
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+
 	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/log"
 )
 
 const (
@@ -144,15 +145,15 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 		return nil, err
 	}
 
-	log.Printf("Loading %v", digestTag)
+	log.Printf(ctx, "Loading %v", digestTag)
 	if resp, err := daemon.Write(digestTag, img, d.getOpts(ctx)...); err != nil {
-		log.Println("daemon.Write response: ", resp)
+		log.Println(ctx, "daemon.Write response: ", resp)
 		return nil, err
 	}
-	log.Printf("Loaded %v", digestTag)
+	log.Printf(ctx, "Loaded %v", digestTag)
 
 	for _, tagName := range d.tags {
-		log.Printf("Adding tag %v", tagName)
+		log.Printf(ctx, "Adding tag %v", tagName)
 		tag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(d.base, s), tagName))
 		if err != nil {
 			return nil, err
@@ -161,7 +162,7 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 		if err := daemon.Tag(digestTag, tag, d.getOpts(ctx)...); err != nil {
 			return nil, err
 		}
-		log.Printf("Added tag %v", tagName)
+		log.Printf(ctx, "Added tag %v", tagName)
 	}
 
 	return &digestTag, nil

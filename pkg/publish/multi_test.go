@@ -41,7 +41,8 @@ func TestMulti(t *testing.T) {
 	defer fp.Close()
 	defer os.Remove(fp.Name())
 
-	tp := publish.NewTarball(fp.Name(), repoName, md5Hash, []string{})
+	ctx := context.Background()
+	tp := publish.NewTarball(ctx, fp.Name(), repoName, md5Hash, []string{})
 
 	tmp, err := ioutil.TempDir("/tmp", "ko")
 	if err != nil {
@@ -55,7 +56,7 @@ func TestMulti(t *testing.T) {
 	}
 
 	p := publish.MultiPublisher(lp, tp)
-	if _, err := p.Publish(context.Background(), img, importpath); err != nil {
+	if _, err := p.Publish(ctx, img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	}
 

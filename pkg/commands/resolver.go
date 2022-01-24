@@ -23,7 +23,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
@@ -38,6 +37,7 @@ import (
 
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/log"
 	"github.com/google/ko/pkg/publish"
 	"github.com/google/ko/pkg/resolve"
 )
@@ -162,11 +162,11 @@ func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching,
 }
 
 // NewPublisher creates a ko publisher
-func NewPublisher(po *options.PublishOptions) (publish.Interface, error) {
-	return makePublisher(po)
+func NewPublisher(ctx context.Context, po *options.PublishOptions) (publish.Interface, error) {
+	return makePublisher(ctx, po)
 }
 
-func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
+func makePublisher(ctx context.Context, po *options.PublishOptions) (publish.Interface, error) {
 	// Create the publish.Interface that we will use to publish image references
 	// to either a docker daemon or a container image registry.
 	innerPublisher, err := func() (publish.Interface, error) {
@@ -203,7 +203,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			publishers = append(publishers, lp)
 		}
 		if po.TarballFile != "" {
-			tp := publish.NewTarball(po.TarballFile, repoName, namer, po.Tags)
+			tp := publish.NewTarball(ctx, po.TarballFile, repoName, namer, po.Tags)
 			publishers = append(publishers, tp)
 		}
 		userAgent := ua()
@@ -211,7 +211,9 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			userAgent = po.UserAgent
 		}
 		if po.Push {
-			dp, err := publish.NewDefault(repoName,
+			dp, err := publish.NewDefault(
+				ctx,
+				repoName,
 				publish.WithUserAgent(userAgent),
 				publish.WithAuthFromKeychain(authn.DefaultKeychain),
 				publish.WithNamer(namer),
@@ -377,7 +379,7 @@ func resolveFilesToWriter(
 					// isn't fatal. Just print it and keep the watch open.
 					err := fmt.Errorf("error processing import paths in %q: %w", f, err)
 					if fo.Watch {
-						log.Print(err)
+						log.Print(ctx, err)
 						return nil
 					}
 					return err

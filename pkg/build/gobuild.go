@@ -25,7 +25,6 @@ import (
 	gb "go/build"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -42,7 +41,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/ko/internal/sbom"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
 	ocimutate "github.com/sigstore/cosign/pkg/oci/mutate"
@@ -52,6 +50,9 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/google/ko/internal/sbom"
+	"github.com/google/ko/pkg/log"
 )
 
 const (
@@ -288,12 +289,12 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s for %s", ip, platformToString(platform))
+	log.Printf(ctx, "Building %s for %s", ip, platformToString(platform))
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)
 		}
-		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
+		log.Printf(ctx, "Unexpected error running \"go build\": %v\n%v", err, output.String())
 		return "", err
 	}
 	return file, nil
@@ -469,7 +470,7 @@ const kodataRoot = "/var/run/ko"
 // walkRecursive performs a filepath.Walk of the given root directory adding it
 // to the provided tar.Writer with root -> chroot.  All symlinks are dereferenced,
 // which is what leads to recursion when we encounter a directory symlink.
-func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, platform *v1.Platform) error {
+func walkRecursive(ctx context.Context, tw *tar.Writer, root, chroot string, creationTime v1.Time, platform *v1.Platform) error {
 	return filepath.Walk(root, func(hostPath string, info os.FileInfo, err error) error {
 		if hostPath == root {
 			return nil
@@ -486,7 +487,7 @@ func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, pl
 		// Don't chase symlinks on Windows, where cross-compiled symlink support is not possible.
 		if platform.OS == "windows" {
 			if info.Mode()&os.ModeSymlink != 0 {
-				log.Println("skipping symlink in kodata for windows:", info.Name())
+				log.Println(ctx, "skipping symlink in kodata for windows:", info.Name())
 				return nil
 			}
 		}
@@ -503,7 +504,7 @@ func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, pl
 		}
 		// Skip other directories.
 		if info.Mode().IsDir() {
-			return walkRecursive(tw, evalPath, newPath, creationTime, platform)
+			return walkRecursive(ctx, tw, evalPath, newPath, creationTime, platform)
 		}
 
 		// Open the file to copy it into the tarball.
@@ -587,7 +588,7 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 		}
 	}
 
-	return buf, walkRecursive(tw, root, chroot, creationTime, platform)
+	return buf, walkRecursive(g.ctx, tw, root, chroot, creationTime, platform)
 }
 
 func createTemplateData() map[string]interface{} {
@@ -658,7 +659,7 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	}
 
 	if config.ID != "" {
-		log.Printf("Using build config %s for %s", config.ID, ip)
+		log.Printf(g.ctx, "Using build config %s for %s", config.ID, ip)
 	}
 
 	return config

@@ -17,14 +17,15 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
-	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
+
+	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/log"
 )
 
 // addRun augments our CLI surface with run.
@@ -72,7 +73,7 @@ func addRun(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating builder: %w", err)
 			}
-			publisher, err := makePublisher(po)
+			publisher, err := makePublisher(ctx, po)
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
@@ -93,7 +94,7 @@ func addRun(topLevel *cobra.Command) {
 			// Usually only one, but this is the simple way to access the
 			// reference since the import path may have been qualified.
 			for k, ref := range imgs {
-				log.Printf("Running %q", k)
+				log.Printf(ctx, "Running %q", k)
 				pod := filepath.Base(ref.Context().String())
 
 				// These are better defaults:
@@ -118,7 +119,7 @@ func addRun(topLevel *cobra.Command) {
 				// "run <package> <defaults> --image <ref> <kubectlArgs>"
 				argv = append([]string{"run", pod}, argv...)
 
-				log.Printf("$ kubectl %s", strings.Join(argv, " "))
+				log.Printf(ctx, "$ kubectl %s", strings.Join(argv, " "))
 				kubectlCmd := exec.CommandContext(ctx, "kubectl", argv...)
 
 				// Pass through our environment

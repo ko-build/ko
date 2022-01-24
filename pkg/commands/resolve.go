@@ -62,7 +62,7 @@ func addResolve(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating builder: %w", err)
 			}
-			publisher, err := makePublisher(po)
+			publisher, err := makePublisher(ctx, po)
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
