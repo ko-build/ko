@@ -1023,6 +1023,22 @@ func TestMatchesPlatformSpec(t *testing.T) {
 		result: false,
 	}, {
 		platform: &v1.Platform{
+			Architecture: "amd64",
+			OS:           "linux",
+			OSVersion:    "1.2.3.4",
+		},
+		spec:   []string{"linux/amd64:1.2.3"},
+		result: true,
+	}, {
+		platform: &v1.Platform{
+			Architecture: "amd64",
+			OS:           "linux",
+			OSVersion:    "1.2.3.4",
+		},
+		spec:   []string{"linux/amd64:1.2.3.6"},
+		result: false,
+	}, {
+		platform: &v1.Platform{
 			Architecture: "arm64",
 			OS:           "linux",
 			Variant:      "v3",
@@ -1030,12 +1046,12 @@ func TestMatchesPlatformSpec(t *testing.T) {
 		spec: []string{"linux/amd64", "linux/arm64/v3/z5"},
 		err:  true,
 	}, {
-		spec: []string{},
 		platform: &v1.Platform{
 			Architecture: "amd64",
 			OS:           "linux",
 		},
-		result: false,
+		spec:   []string{},
+		result: true,
 	}} {
 		pm, err := parseSpec(tc.spec)
 		if tc.err {
@@ -1047,7 +1063,7 @@ func TestMatchesPlatformSpec(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parseSpec failed for %v %q: %v", tc.platform, tc.spec, err)
 		}
-		matches := pm.matches(tc.platform)
+		matches := pm(v1.Descriptor{Platform: tc.platform})
 		if got, want := matches, tc.result; got != want {
 			t.Errorf("wrong result for %v %q: want %t got %t", tc.platform, tc.spec, want, got)
 		}
