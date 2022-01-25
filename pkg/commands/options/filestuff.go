@@ -59,12 +59,21 @@ func EnumerateFiles(fo *FilenameOptions) chan string {
 				// processing (unless we are in recursive mode).  If we decide to process
 				// the directory, and we're in watch mode, then we set up a watch on the
 				// directory.
+				symlink, err := ResolveSymlink(path, fi)
+				if err != nil {
+					return err
+				}
+
 				if fi.IsDir() {
 					if path != paths && !fo.Recursive {
 						return filepath.SkipDir
 					}
 					// We don't stream back directories, we just decide to skip them, or not.
 					return nil
+				}
+
+				if symlink != "" {
+					files <- symlink
 				}
 
 				// Don't check extension if the filepath was passed explicitly
@@ -86,4 +95,14 @@ func EnumerateFiles(fo *FilenameOptions) chan string {
 		}
 	}()
 	return files
+}
+
+func ResolveSymlink(path string, fi os.FileInfo) (symlink string, err error) {
+	if fi.Mode()&os.ModeSymlink == os.ModeSymlink {
+		symlink, err = os.Readlink(path) // TODO: Handle error here
+		if !filepath.IsAbs(symlink) {    // Output of os.Readlink is OS-dependent...
+			symlink = filepath.Join(filepath.Dir(path), symlink)
+		}
+	}
+	return
 }

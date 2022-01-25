@@ -25,9 +25,14 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http/httptest"
+	"os"
 	"path"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/docker/docker/api/types"
 	"github.com/google/go-cmp/cmp"
@@ -42,7 +47,6 @@ import (
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 	kotesting "github.com/google/ko/pkg/internal/testing"
-	"gopkg.in/yaml.v3"
 )
 
 var (
@@ -64,6 +68,12 @@ var (
 	errImageLoad = fmt.Errorf("ImageLoad() error")
 	errImageTag  = fmt.Errorf("ImageTag() error")
 )
+
+func RootDir() string {
+	_, b, _, _ := runtime.Caller(0)
+	d := path.Join(path.Dir(b), "..")
+	return filepath.Dir(d)
+}
 
 type erroringClient struct {
 	daemon.Client
@@ -120,6 +130,62 @@ func TestResolveMultiDocumentYAMLs(t *testing.T) {
 	expectedStructured := []string{
 		kotesting.ComputeDigest(base, refs[0], hashes[0]),
 		kotesting.ComputeDigest(base, refs[1], hashes[1]),
+	}
+
+	if want, got := len(expectedStructured), len(outStructured); want != got {
+		t.Errorf("resolveFile(%v) = %v, want %v", string(inputYAML), got, want)
+	}
+
+	if diff := cmp.Diff(expectedStructured, outStructured, cmpopts.EquateEmpty()); diff != "" {
+		t.Errorf("resolveFile(%v); (-want +got) = %v", string(inputYAML), diff)
+	}
+}
+
+func TestResolveSymlink(t *testing.T) {
+	testRef := "github.com/google/ko/test"
+	refs := []string{testRef}
+	hashes := []v1.Hash{fooHash}
+
+	f := filepath.Join(RootDir(), "test", "test.yaml")
+	inputYAML, err := os.ReadFile(f)
+	if err != nil {
+		t.Fatalf("Readfile(%s) = %v", f, err)
+	}
+
+	m := map[string]v1.Hash{
+		testRef: fooHash,
+	}
+
+	base := mustRepository("gcr.io/multi-pass")
+	outYAML, err := resolveFile(
+		context.Background(),
+		filepath.Join(RootDir(), "test", "symlink.yaml"),
+		kotesting.NewFixedBuild(map[string]build.Result{
+			testRef: foo,
+		}),
+		kotesting.NewFixedPublish(base, m),
+		&options.SelectorOptions{})
+
+	if err != nil {
+		t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
+	}
+
+	rd := bytes.NewReader(outYAML)
+	decoder := yaml.NewDecoder(rd)
+	var outStructured []string
+	for {
+		var output map[string]interface{}
+		if err := decoder.Decode(&output); err == nil {
+			outStructured = append(outStructured, output["spec"].(map[string]interface{})["containers"].([]interface{})[0].(map[string]interface{})["image"].(string))
+		} else if errors.Is(err, io.EOF) {
+			break
+		} else {
+			t.Errorf("yaml.Unmarshal(%v) = %v", string(outYAML), err)
+		}
+	}
+
+	expectedStructured := []string{
+		kotesting.ComputeDigest(base, refs[0], hashes[0]),
 	}
 
 	if want, got := len(expectedStructured), len(outStructured); want != got {

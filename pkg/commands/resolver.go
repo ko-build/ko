@@ -405,7 +405,25 @@ func resolveFile(
 	if f == "-" {
 		b, err = ioutil.ReadAll(os.Stdin)
 	} else {
-		b, err = ioutil.ReadFile(f)
+		fi, err := os.Lstat(f)
+		if err != nil {
+			return nil, fmt.Errorf("unable to find file %s selector: %wß", f, err)
+		}
+
+		symlink, err := options.ResolveSymlink(f, fi)
+		if err != nil {
+			return nil, fmt.Errorf("unable to resolve symlink of file %s selector: %w", f, err)
+		}
+
+		if symlink != "" {
+			b, err = ioutil.ReadFile(symlink)
+		} else {
+			b, err = ioutil.ReadFile(f)
+		}
+
+		if err != nil {
+			return nil, fmt.Errorf("unable to read file %s: %w", f, err)
+		}
 	}
 	if err != nil {
 		return nil, err
