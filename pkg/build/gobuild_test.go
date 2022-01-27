@@ -1036,6 +1036,60 @@ func TestMatchesPlatformSpec(t *testing.T) {
 			OS:           "linux",
 		},
 		result: false,
+	}, {
+		// Exact match w/ osversion
+		spec: []string{"windows/amd64:10.0.17763.1234"},
+		platform: &v1.Platform{
+			OS:           "windows",
+			Architecture: "amd64",
+			OSVersion:    "10.0.17763.1234",
+		},
+		result: true,
+	}, {
+		// OSVersion partial match using relaxed semantics.
+		spec: []string{"windows/amd64:10.0.17763"},
+		platform: &v1.Platform{
+			OS:           "windows",
+			Architecture: "amd64",
+			OSVersion:    "10.0.17763.1234",
+		},
+		result: true,
+	}, {
+		// Not windows and osversion isn't exact match.
+		spec: []string{"linux/amd64:10.0.17763"},
+		platform: &v1.Platform{
+			OS:           "linux",
+			Architecture: "amd64",
+			OSVersion:    "10.0.17763.1234",
+		},
+		result: false,
+	}, {
+		// Not matching X.Y.Z
+		spec: []string{"windows/amd64:10"},
+		platform: &v1.Platform{
+			OS:           "windows",
+			Architecture: "amd64",
+			OSVersion:    "10.0.17763.1234",
+		},
+		result: false,
+	}, {
+		// Requirement is more specific.
+		spec: []string{"windows/amd64:10.0.17763.1234"},
+		platform: &v1.Platform{
+			OS:           "windows",
+			Architecture: "amd64",
+			OSVersion:    "10.0.17763", // this won't happen in the wild, but it shouldn't match.
+		},
+		result: false,
+	}, {
+		// Requirement is not specific enough.
+		spec: []string{"windows/amd64:10.0.17763.1234"},
+		platform: &v1.Platform{
+			OS:           "windows",
+			Architecture: "amd64",
+			OSVersion:    "10.0.17763.1234.5678", // this won't happen in the wild, but it shouldn't match.
+		},
+		result: false,
 	}} {
 		pm, err := parseSpec(tc.spec)
 		if tc.err {

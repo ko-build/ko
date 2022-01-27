@@ -30,7 +30,6 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/go-containerregistry/pkg/v1/types"
 
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
@@ -56,53 +55,14 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			remote.WithContext(ctx),
 		}
 
-		// Using --platform=all will use an image index for the base,
-		// otherwise we'll resolve it to the appropriate platform.
-		allPlatforms := len(bo.Platforms) == 1 && bo.Platforms[0] == "all"
-
-		// Platforms can be listed in a slice if we only want a subset of the base image.
-		selectiveMultiplatform := len(bo.Platforms) > 1
-
-		multiplatform := allPlatforms || selectiveMultiplatform
-		if !multiplatform {
-			var p v1.Platform
-
-			// There is _at least_ one platform specified at this point,
-			// because receiving "" means we would infer from GOOS/GOARCH.
-			parts := strings.Split(bo.Platforms[0], ":")
-			if len(parts) == 2 {
-				p.OSVersion = parts[1]
-			}
-
-			parts = strings.Split(parts[0], "/")
-			if len(parts) > 0 {
-				p.OS = parts[0]
-			}
-			if len(parts) > 1 {
-				p.Architecture = parts[1]
-			}
-			if len(parts) > 2 {
-				p.Variant = parts[2]
-			}
-			if len(parts) > 3 {
-				return nil, fmt.Errorf("too many slashes in platform spec: %s", bo.Platforms[0])
-			}
-			ropt = append(ropt, remote.WithPlatform(p))
-		}
-
 		desc, err := remote.Get(ref, ropt...)
 		if err != nil {
 			return nil, err
 		}
-		switch desc.MediaType {
-		case types.OCIImageIndex, types.DockerManifestList:
-			if multiplatform {
-				return desc.ImageIndex()
-			}
-			return desc.Image()
-		default:
-			return desc.Image()
+		if desc.MediaType.IsIndex() {
+			return desc.ImageIndex()
 		}
+		return desc.Image()
 	}
 	return func(ctx context.Context, s string) (name.Reference, build.Result, error) {
 		s = strings.TrimPrefix(s, build.StrictScheme)

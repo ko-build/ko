@@ -240,14 +240,6 @@ func getGoarm(platform v1.Platform) (string, error) {
 	return "", nil
 }
 
-// TODO(jonjohnsonjr): Upstream something like this.
-func platformToString(p v1.Platform) string {
-	if p.Variant != "" {
-		return fmt.Sprintf("%s/%s/%s", p.OS, p.Architecture, p.Variant)
-	}
-	return fmt.Sprintf("%s/%s", p.OS, p.Architecture)
-}
-
 func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
 	buildArgs, err := createBuildArgs(config)
 	if err != nil {
@@ -270,7 +262,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	if dir := os.Getenv("KOCACHE"); dir != "" {
 		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
-		tmpDir = filepath.Join(dir, "bin", ip, platformToString(platform))
+		tmpDir = filepath.Join(dir, "bin", ip, platform.String())
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 			return "", err
 		}
@@ -288,7 +280,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s for %s", ip, platformToString(platform))
+	log.Printf("Building %s for %s", ip, platform)
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)
@@ -894,29 +886,43 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	return res, nil
 }
 
-func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (oci.SignedImageIndex, error) {
+func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (Result, error) {
 	im, err := baseIndex.IndexManifest()
 	if err != nil {
 		return nil, err
 	}
 
-	errg, ctx := errgroup.WithContext(ctx)
-
-	// Build an image for each child from the base and append it to a new index to produce the result.
-	// Some of these may end up filtered and nil, but we use the indices to preserve the base image
-	// ordering here, and then filter out nils below.
-	possibleAdds := make([]ocimutate.IndexAddendum, len(im.Manifests))
-	for i, desc := range im.Manifests {
-		i, desc := i, desc
+	matches := []v1.Descriptor{}
+	for _, desc := range im.Manifests {
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, ref)
 		}
 
-		if !g.platformMatcher.matches(desc.Platform) {
-			continue
+		if g.platformMatcher.matches(desc.Platform) {
+			matches = append(matches, desc)
 		}
+	}
+	if len(matches) == 0 {
+		return nil, errors.New("no matching platforms in base image index")
+	}
+	if len(matches) == 1 {
+		// Filters resulted in a single matching platform; just produce
+		// a single-platform image.
+		img, err := baseIndex.Image(matches[0].Digest)
+		if err != nil {
+			return nil, fmt.Errorf("error getting matching image from index: %w", err)
+		}
+		return g.buildOne(ctx, ref, img, matches[0].Platform)
+	}
 
+	// Build an image for each matching platform from the base and append
+	// it to a new index to produce the result. We use the indices to
+	// preserve the base image ordering here.
+	errg, ctx := errgroup.WithContext(ctx)
+	adds := make([]ocimutate.IndexAddendum, len(matches))
+	for i, desc := range matches {
+		i, desc := i, desc
 		errg.Go(func() error {
 			baseImage, err := baseIndex.Image(desc.Digest)
 			if err != nil {
@@ -926,7 +932,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			if err != nil {
 				return err
 			}
-			possibleAdds[i] = ocimutate.IndexAddendum{
+			adds[i] = ocimutate.IndexAddendum{
 				Add: img,
 				Descriptor: v1.Descriptor{
 					URLs:        desc.URLs,
@@ -938,19 +944,8 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			return nil
 		})
 	}
-
 	if err := errg.Wait(); err != nil {
 		return nil, err
-	}
-
-	// If flags were passed to filter the base image we will end up with
-	// empty addendum, so filter those out before constructing the index.
-	adds := make([]ocimutate.IndexAddendum, 0, len(im.Manifests))
-	for _, add := range possibleAdds {
-		if add.Add == nil {
-			continue
-		}
-		adds = append(adds, add)
 	}
 
 	baseType, err := baseIndex.MediaType()
@@ -972,22 +967,12 @@ func parseSpec(spec []string) (*platformMatcher, error) {
 	}
 
 	platforms := []v1.Platform{}
-	for _, platform := range spec {
-		var p v1.Platform
-		parts := strings.Split(strings.TrimSpace(platform), "/")
-		if len(parts) > 0 {
-			p.OS = parts[0]
+	for _, s := range spec {
+		p, err := v1.ParsePlatform(s)
+		if err != nil {
+			return nil, err
 		}
-		if len(parts) > 1 {
-			p.Architecture = parts[1]
-		}
-		if len(parts) > 2 {
-			p.Variant = parts[2]
-		}
-		if len(parts) > 3 {
-			return nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
-		}
-		platforms = append(platforms, p)
+		platforms = append(platforms, *p)
 	}
 	return &platformMatcher{spec: spec, platforms: platforms}, nil
 }
@@ -1013,6 +998,42 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 			continue
 		}
 
+		// Windows is... weird. Windows base images use osversion to
+		// communicate what Windows version is used, which matters for image
+		// selection at runtime.
+		//
+		// Windows osversions include the usual major/minor/patch version
+		// components, as well as an incrementing "build number" which can
+		// change when new Windows base images are released.
+		//
+		// In order to avoid having to match the entire osversion including the
+		// incrementing build number component, we allow matching a platform
+		// that only matches the first three osversion components, only for
+		// Windows images.
+		//
+		// If the X.Y.Z components don't match (or aren't formed as we expect),
+		// the platform doesn't match. Only if X.Y.Z matches and the extra
+		// build number component doesn't, do we consider the platform to
+		// match.
+		//
+		// Ref: https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility?tabs=windows-server-2022%2Cwindows-10-21H1#build-number-new-release-of-windows
+		if p.OSVersion != "" && p.OSVersion != base.OSVersion {
+			if p.OS != "windows" {
+				// osversion mismatch is only possibly allowed when os == windows.
+				continue
+			} else {
+				if pcount, bcount := strings.Count(p.OSVersion, "."), strings.Count(base.OSVersion, "."); pcount == 2 && bcount == 3 {
+					if p.OSVersion != base.OSVersion[:strings.LastIndex(base.OSVersion, ".")] {
+						// If requested osversion is X.Y.Z and potential match is X.Y.Z.A, all of X.Y.Z must match.
+						// Any other form of these osversions are not a match.
+						continue
+					}
+				} else {
+					// Partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
+					continue
+				}
+			}
+		}
 		return true
 	}
 
