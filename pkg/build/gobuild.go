@@ -978,10 +978,7 @@ func parseSpec(spec []string) (*platformMatcher, error) {
 	for _, platform := range spec {
 		var p v1.Platform
 		parts := strings.Split(strings.TrimSpace(platform), ":")
-		if len(parts) > 2 {
-			// bad
-		}
-		if len(parts) == 2 {
+		if len(parts) > 1 {
 			p.OSVersion = parts[1]
 		}
 

@@ -61,9 +61,8 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 		}
 		if desc.MediaType.IsIndex() {
 			return desc.ImageIndex()
-		} else {
-			return desc.Image()
 		}
+		return desc.Image()
 	}
 	return func(ctx context.Context, s string) (name.Reference, build.Result, error) {
 		s = strings.TrimPrefix(s, build.StrictScheme)
