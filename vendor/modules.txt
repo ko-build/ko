@@ -1,9 +1,44 @@
 # github.com/BurntSushi/toml v0.4.1
 github.com/BurntSushi/toml
 github.com/BurntSushi/toml/internal
+# github.com/CycloneDX/cyclonedx-go v0.4.0
+## explicit
+github.com/CycloneDX/cyclonedx-go
+# github.com/CycloneDX/cyclonedx-gomod v1.1.1-0.20220126143547-bbe6d72fdb76
+## explicit
+github.com/CycloneDX/cyclonedx-gomod/internal/gocmd
+github.com/CycloneDX/cyclonedx-gomod/internal/gomod
+github.com/CycloneDX/cyclonedx-gomod/internal/license
+github.com/CycloneDX/cyclonedx-gomod/internal/sbom
+github.com/CycloneDX/cyclonedx-gomod/internal/sbom/convert/file
+github.com/CycloneDX/cyclonedx-gomod/internal/sbom/convert/module
+github.com/CycloneDX/cyclonedx-gomod/internal/sbom/convert/pkg
+github.com/CycloneDX/cyclonedx-gomod/internal/util
+github.com/CycloneDX/cyclonedx-gomod/internal/version
+github.com/CycloneDX/cyclonedx-gomod/pkg/generate
+github.com/CycloneDX/cyclonedx-gomod/pkg/generate/bin
 # github.com/Microsoft/go-winio v0.5.1
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
+# github.com/ProtonMail/go-crypto v0.0.0-20210428141323-04723f9f07d7
+github.com/ProtonMail/go-crypto/bitcurves
+github.com/ProtonMail/go-crypto/brainpool
+github.com/ProtonMail/go-crypto/eax
+github.com/ProtonMail/go-crypto/internal/byteutil
+github.com/ProtonMail/go-crypto/ocb
+github.com/ProtonMail/go-crypto/openpgp
+github.com/ProtonMail/go-crypto/openpgp/aes/keywrap
+github.com/ProtonMail/go-crypto/openpgp/armor
+github.com/ProtonMail/go-crypto/openpgp/ecdh
+github.com/ProtonMail/go-crypto/openpgp/elgamal
+github.com/ProtonMail/go-crypto/openpgp/errors
+github.com/ProtonMail/go-crypto/openpgp/internal/algorithm
+github.com/ProtonMail/go-crypto/openpgp/internal/ecc
+github.com/ProtonMail/go-crypto/openpgp/internal/encoding
+github.com/ProtonMail/go-crypto/openpgp/packet
+github.com/ProtonMail/go-crypto/openpgp/s2k
+# github.com/acomagu/bufpipe v1.0.3
+github.com/acomagu/bufpipe
 # github.com/alessio/shellescape v1.4.1
 github.com/alessio/shellescape
 # github.com/containerd/containerd v1.5.9
@@ -16,6 +51,8 @@ github.com/containerd/stargz-snapshotter/estargz
 github.com/containerd/stargz-snapshotter/estargz/errorutil
 # github.com/cpuguy83/go-md2man/v2 v2.0.1
 github.com/cpuguy83/go-md2man/v2/md2man
+# github.com/dgryski/go-minhash v0.0.0-20170608043002-7fe510aff544
+github.com/dgryski/go-minhash
 # github.com/docker/cli v20.10.12+incompatible
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
@@ -59,11 +96,85 @@ github.com/docker/go-units
 # github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 ## explicit
 github.com/dprotaso/go-yit
+# github.com/ekzhu/minhash-lsh v0.0.0-20171225071031-5c06ee8586a1
+github.com/ekzhu/minhash-lsh
+# github.com/emirpasic/gods v1.12.0
+github.com/emirpasic/gods/containers
+github.com/emirpasic/gods/lists
+github.com/emirpasic/gods/lists/arraylist
+github.com/emirpasic/gods/trees
+github.com/emirpasic/gods/trees/binaryheap
+github.com/emirpasic/gods/utils
 # github.com/evanphx/json-patch/v5 v5.5.0
 github.com/evanphx/json-patch/v5
 # github.com/fsnotify/fsnotify v1.5.1
 ## explicit
 github.com/fsnotify/fsnotify
+# github.com/go-enry/go-license-detector/v4 v4.3.0
+github.com/go-enry/go-license-detector/v4/licensedb
+github.com/go-enry/go-license-detector/v4/licensedb/api
+github.com/go-enry/go-license-detector/v4/licensedb/filer
+github.com/go-enry/go-license-detector/v4/licensedb/internal
+github.com/go-enry/go-license-detector/v4/licensedb/internal/assets
+github.com/go-enry/go-license-detector/v4/licensedb/internal/fastlog
+github.com/go-enry/go-license-detector/v4/licensedb/internal/normalize
+github.com/go-enry/go-license-detector/v4/licensedb/internal/processors
+github.com/go-enry/go-license-detector/v4/licensedb/internal/wmh
+# github.com/go-git/gcfg v1.5.0
+github.com/go-git/gcfg
+github.com/go-git/gcfg/scanner
+github.com/go-git/gcfg/token
+github.com/go-git/gcfg/types
+# github.com/go-git/go-billy/v5 v5.3.1
+github.com/go-git/go-billy/v5
+github.com/go-git/go-billy/v5/helper/chroot
+github.com/go-git/go-billy/v5/helper/polyfill
+github.com/go-git/go-billy/v5/memfs
+github.com/go-git/go-billy/v5/osfs
+github.com/go-git/go-billy/v5/util
+# github.com/go-git/go-git/v5 v5.4.2
+github.com/go-git/go-git/v5
+github.com/go-git/go-git/v5/config
+github.com/go-git/go-git/v5/internal/revision
+github.com/go-git/go-git/v5/internal/url
+github.com/go-git/go-git/v5/plumbing
+github.com/go-git/go-git/v5/plumbing/cache
+github.com/go-git/go-git/v5/plumbing/color
+github.com/go-git/go-git/v5/plumbing/filemode
+github.com/go-git/go-git/v5/plumbing/format/config
+github.com/go-git/go-git/v5/plumbing/format/diff
+github.com/go-git/go-git/v5/plumbing/format/gitignore
+github.com/go-git/go-git/v5/plumbing/format/idxfile
+github.com/go-git/go-git/v5/plumbing/format/index
+github.com/go-git/go-git/v5/plumbing/format/objfile
+github.com/go-git/go-git/v5/plumbing/format/packfile
+github.com/go-git/go-git/v5/plumbing/format/pktline
+github.com/go-git/go-git/v5/plumbing/object
+github.com/go-git/go-git/v5/plumbing/protocol/packp
+github.com/go-git/go-git/v5/plumbing/protocol/packp/capability
+github.com/go-git/go-git/v5/plumbing/protocol/packp/sideband
+github.com/go-git/go-git/v5/plumbing/revlist
+github.com/go-git/go-git/v5/plumbing/storer
+github.com/go-git/go-git/v5/plumbing/transport
+github.com/go-git/go-git/v5/plumbing/transport/client
+github.com/go-git/go-git/v5/plumbing/transport/file
+github.com/go-git/go-git/v5/plumbing/transport/git
+github.com/go-git/go-git/v5/plumbing/transport/http
+github.com/go-git/go-git/v5/plumbing/transport/internal/common
+github.com/go-git/go-git/v5/plumbing/transport/server
+github.com/go-git/go-git/v5/plumbing/transport/ssh
+github.com/go-git/go-git/v5/storage
+github.com/go-git/go-git/v5/storage/filesystem
+github.com/go-git/go-git/v5/storage/filesystem/dotgit
+github.com/go-git/go-git/v5/storage/memory
+github.com/go-git/go-git/v5/utils/binary
+github.com/go-git/go-git/v5/utils/diff
+github.com/go-git/go-git/v5/utils/ioutil
+github.com/go-git/go-git/v5/utils/merkletrie
+github.com/go-git/go-git/v5/utils/merkletrie/filesystem
+github.com/go-git/go-git/v5/utils/merkletrie/index
+github.com/go-git/go-git/v5/utils/merkletrie/internal/frame
+github.com/go-git/go-git/v5/utils/merkletrie/noder
 # github.com/go-logr/logr v1.2.0
 github.com/go-logr/logr
 # github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
@@ -131,8 +242,22 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
+# github.com/hhatto/gorst v0.0.0-20181029133204-ca9f730cac5b
+github.com/hhatto/gorst
+# github.com/imdario/mergo v0.3.12
+github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
+# github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99
+github.com/jbenet/go-context/io
+# github.com/jdkato/prose v1.1.0
+github.com/jdkato/prose/chunk
+github.com/jdkato/prose/internal/model
+github.com/jdkato/prose/internal/util
+github.com/jdkato/prose/tag
+github.com/jdkato/prose/tokenize
+# github.com/kevinburke/ssh_config v0.0.0-20201106050909-4977a11b4351
+github.com/kevinburke/ssh_config
 # github.com/klauspost/compress v1.14.2
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
@@ -151,6 +276,8 @@ github.com/mattn/go-isatty
 github.com/mitchellh/go-homedir
 # github.com/mitchellh/mapstructure v1.4.3
 github.com/mitchellh/mapstructure
+# github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe
+github.com/montanaflynn/stats
 # github.com/opencontainers/go-digest v1.0.0
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.3-0.20220114050600-8b9d41f48198
@@ -161,8 +288,18 @@ github.com/opencontainers/image-spec/specs-go/v1
 github.com/pelletier/go-toml
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
+# github.com/rs/zerolog v1.26.1
+## explicit
+github.com/rs/zerolog
+github.com/rs/zerolog/internal/cbor
+github.com/rs/zerolog/internal/json
+github.com/rs/zerolog/log
 # github.com/russross/blackfriday/v2 v2.1.0
 github.com/russross/blackfriday/v2
+# github.com/sergi/go-diff v1.2.0
+github.com/sergi/go-diff/diffmatchpatch
+# github.com/shogo82148/go-shuffle v0.0.0-20170808115208-59829097ff3b
+github.com/shogo82148/go-shuffle
 # github.com/sigstore/cosign v1.3.2-0.20211120003522-90e2dcfe7b92
 ## explicit
 github.com/sigstore/cosign/pkg/oci
@@ -206,16 +343,38 @@ github.com/subosito/gotenv
 github.com/theupdateframework/go-tuf/encrypted
 # github.com/vbatts/tar-split v0.11.2
 github.com/vbatts/tar-split/archive/tar
-# golang.org/x/crypto v0.0.0-20210921155107-089bfa567519
+# github.com/xanzy/ssh-agent v0.3.0
+github.com/xanzy/ssh-agent
+# golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce
+golang.org/x/crypto/blowfish
+golang.org/x/crypto/cast5
+golang.org/x/crypto/chacha20
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/curve25519/internal/field
+golang.org/x/crypto/ed25519
+golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/poly1305
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/nacl/secretbox
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
+golang.org/x/crypto/sha3
+golang.org/x/crypto/ssh
+golang.org/x/crypto/ssh/agent
+golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
+golang.org/x/crypto/ssh/knownhosts
+# golang.org/x/exp v0.0.0-20210126221216-84987778548c
+golang.org/x/exp/rand
 # golang.org/x/mod v0.5.1
+golang.org/x/mod/internal/lazyregexp
+golang.org/x/mod/module
 golang.org/x/mod/semver
+golang.org/x/mod/sumdb/dirhash
 # golang.org/x/net v0.0.0-20220127074510-2fabfed7e28f
+golang.org/x/net/context
+golang.org/x/net/html
+golang.org/x/net/html/atom
 golang.org/x/net/internal/socks
 golang.org/x/net/proxy
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
@@ -232,6 +391,7 @@ golang.org/x/sys/windows
 # golang.org/x/term v0.0.0-20210927222741-03fcf44c2211
 golang.org/x/term
 # golang.org/x/text v0.3.7
+golang.org/x/text/runes
 golang.org/x/text/transform
 golang.org/x/text/unicode/norm
 # golang.org/x/tools v0.1.8
@@ -251,6 +411,29 @@ golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
+# gonum.org/v1/gonum v0.7.0
+gonum.org/v1/gonum/blas
+gonum.org/v1/gonum/blas/blas64
+gonum.org/v1/gonum/blas/cblas128
+gonum.org/v1/gonum/blas/gonum
+gonum.org/v1/gonum/floats
+gonum.org/v1/gonum/internal/asm/c128
+gonum.org/v1/gonum/internal/asm/c64
+gonum.org/v1/gonum/internal/asm/f32
+gonum.org/v1/gonum/internal/asm/f64
+gonum.org/v1/gonum/internal/cmplx64
+gonum.org/v1/gonum/internal/math32
+gonum.org/v1/gonum/lapack
+gonum.org/v1/gonum/lapack/gonum
+gonum.org/v1/gonum/lapack/lapack64
+gonum.org/v1/gonum/mat
+gonum.org/v1/gonum/mathext
+gonum.org/v1/gonum/mathext/internal/amos
+gonum.org/v1/gonum/mathext/internal/cephes
+gonum.org/v1/gonum/mathext/internal/gonum
+gonum.org/v1/gonum/stat
+gonum.org/v1/gonum/stat/combin
+gonum.org/v1/gonum/stat/distuv
 # google.golang.org/genproto v0.0.0-20220126215142-9970aeb2e350
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.44.0
@@ -290,6 +473,11 @@ google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/ini.v1 v1.66.2
 gopkg.in/ini.v1
+# gopkg.in/neurosnap/sentences.v1 v1.0.6
+gopkg.in/neurosnap/sentences.v1
+gopkg.in/neurosnap/sentences.v1/data
+# gopkg.in/warnings.v0 v0.1.2
+gopkg.in/warnings.v0
 # gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b

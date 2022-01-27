@@ -1,0 +1,7 @@
+sentences
+*.swp
+cmd/sentences/sentences
+binary
+c.out
+__pycache__
+sentences.exe
