@@ -1024,6 +1024,25 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 			continue
 		}
 
+		// Windows is... weird. Windows base images use osversion to
+		// communicate what Windows version is used, which matters for image
+		// selection at runtime.
+		//
+		// Windows osversions include the usual major/minor/patch version
+		// components, as well as an incrementing "build number" which can
+		// change when new Windows base images are released.
+		//
+		// In order to avoid having to match the entire osversion including the
+		// incrementing build number component, we allow matching a platform
+		// that only matches the first three osversion components, only for
+		// Windows images.
+		//
+		// If the X.Y.Z components don't match (or aren't formed as we expect),
+		// the platform doesn't match. Only if X.Y.Z matches and the extra
+		// build number component doesn't, do we consider the platform to
+		// match.
+		//
+		// Ref: https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility?tabs=windows-server-2022%2Cwindows-10-21H1#build-number-new-release-of-windows
 		if p.OSVersion != "" && p.OSVersion != base.OSVersion {
 			if p.OS != "windows" {
 				// osversion mismatch is only possibly allowed when os == windows.
