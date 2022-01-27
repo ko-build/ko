@@ -894,29 +894,43 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	return res, nil
 }
 
-func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (oci.SignedImageIndex, error) {
+func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (Result, error) {
 	im, err := baseIndex.IndexManifest()
 	if err != nil {
 		return nil, err
 	}
 
-	errg, ctx := errgroup.WithContext(ctx)
-
-	// Build an image for each child from the base and append it to a new index to produce the result.
-	// Some of these may end up filtered and nil, but we use the indices to preserve the base image
-	// ordering here, and then filter out nils below.
-	possibleAdds := make([]ocimutate.IndexAddendum, len(im.Manifests))
-	for i, desc := range im.Manifests {
-		i, desc := i, desc
+	matches := []v1.Descriptor{}
+	for _, desc := range im.Manifests {
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, ref)
 		}
 
-		if !g.platformMatcher.matches(desc.Platform) {
-			continue
+		if g.platformMatcher.matches(desc.Platform) {
+			matches = append(matches, desc)
 		}
+	}
+	if len(matches) == 0 {
+		return nil, errors.New("no matching platforms in base image index")
+	}
+	if len(matches) == 1 {
+		// Filters resulted in a single matching platform; just produce
+		// a single-platform image.
+		img, err := baseIndex.Image(matches[0].Digest)
+		if err != nil {
+			return nil, fmt.Errorf("error getting matching image from index: %w", err)
+		}
+		return g.buildOne(ctx, ref, img, matches[0].Platform)
+	}
 
+	// Build an image for each matching platform from the base and append
+	// it to a new index to produce the result. We use the indices to
+	// preserve the base image ordering here.
+	errg, ctx := errgroup.WithContext(ctx)
+	adds := make([]ocimutate.IndexAddendum, len(matches))
+	for i, desc := range matches {
+		i, desc := i, desc
 		errg.Go(func() error {
 			baseImage, err := baseIndex.Image(desc.Digest)
 			if err != nil {
@@ -926,7 +940,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			if err != nil {
 				return err
 			}
-			possibleAdds[i] = ocimutate.IndexAddendum{
+			adds[i] = ocimutate.IndexAddendum{
 				Add: img,
 				Descriptor: v1.Descriptor{
 					URLs:        desc.URLs,
@@ -938,19 +952,8 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			return nil
 		})
 	}
-
 	if err := errg.Wait(); err != nil {
 		return nil, err
-	}
-
-	// If flags were passed to filter the base image we will end up with
-	// empty addendum, so filter those out before constructing the index.
-	adds := make([]ocimutate.IndexAddendum, 0, len(im.Manifests))
-	for _, add := range possibleAdds {
-		if add.Add == nil {
-			continue
-		}
-		adds = append(adds, add)
 	}
 
 	baseType, err := baseIndex.MediaType()
@@ -974,7 +977,15 @@ func parseSpec(spec []string) (*platformMatcher, error) {
 	platforms := []v1.Platform{}
 	for _, platform := range spec {
 		var p v1.Platform
-		parts := strings.Split(strings.TrimSpace(platform), "/")
+		parts := strings.Split(strings.TrimSpace(platform), ":")
+		if len(parts) > 2 {
+			// bad
+		}
+		if len(parts) == 2 {
+			p.OSVersion = parts[1]
+		}
+
+		parts = strings.Split(parts[0], "/")
 		if len(parts) > 0 {
 			p.OS = parts[0]
 		}
@@ -1013,6 +1024,23 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 			continue
 		}
 
+		if p.OSVersion != "" && p.OSVersion != base.OSVersion {
+			if p.OS != "windows" {
+				// osversion mismatch is only possibly allowed when os == windows.
+				continue
+			} else {
+				if pcount, bcount := strings.Count(p.OSVersion, "."), strings.Count(base.OSVersion, "."); pcount == 2 && bcount == 3 {
+					if p.OSVersion != base.OSVersion[:strings.LastIndex(base.OSVersion, ".")] {
+						// If requested osversion is X.Y.Z and potential match is X.Y.Z.A, all of X.Y.Z must match.
+						// Any other form of these osversions are not a match.
+						continue
+					}
+				} else {
+					// Partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
+					continue
+				}
+			}
+		}
 		return true
 	}
 
