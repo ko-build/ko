@@ -240,14 +240,6 @@ func getGoarm(platform v1.Platform) (string, error) {
 	return "", nil
 }
 
-// TODO(jonjohnsonjr): Upstream something like this.
-func platformToString(p v1.Platform) string {
-	if p.Variant != "" {
-		return fmt.Sprintf("%s/%s/%s", p.OS, p.Architecture, p.Variant)
-	}
-	return fmt.Sprintf("%s/%s", p.OS, p.Architecture)
-}
-
 func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
 	buildArgs, err := createBuildArgs(config)
 	if err != nil {
@@ -270,7 +262,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	if dir := os.Getenv("KOCACHE"); dir != "" {
 		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
-		tmpDir = filepath.Join(dir, "bin", ip, platformToString(platform))
+		tmpDir = filepath.Join(dir, "bin", ip, platform.String())
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 			return "", err
 		}
@@ -288,7 +280,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s for %s", ip, platformToString(platform))
+	log.Printf("Building %s for %s", ip, platform)
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)
@@ -975,27 +967,12 @@ func parseSpec(spec []string) (*platformMatcher, error) {
 	}
 
 	platforms := []v1.Platform{}
-	for _, platform := range spec {
-		var p v1.Platform
-		parts := strings.Split(strings.TrimSpace(platform), ":")
-		if len(parts) > 1 {
-			p.OSVersion = parts[1]
+	for _, s := range spec {
+		p, err := v1.ParsePlatform(s)
+		if err != nil {
+			return nil, err
 		}
-
-		parts = strings.Split(parts[0], "/")
-		if len(parts) > 0 {
-			p.OS = parts[0]
-		}
-		if len(parts) > 1 {
-			p.Architecture = parts[1]
-		}
-		if len(parts) > 2 {
-			p.Variant = parts[2]
-		}
-		if len(parts) > 3 {
-			return nil, fmt.Errorf("too many slashes in platform spec: %s", platform)
-		}
-		platforms = append(platforms, p)
+		platforms = append(platforms, *p)
 	}
 	return &platformMatcher{spec: spec, platforms: platforms}, nil
 }
