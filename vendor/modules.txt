@@ -295,7 +295,7 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 ## explicit
 gopkg.in/yaml.v3
-# k8s.io/apimachinery v0.23.1
+# k8s.io/apimachinery v0.23.3
 ## explicit
 k8s.io/apimachinery/pkg/labels
 k8s.io/apimachinery/pkg/selection
@@ -306,7 +306,7 @@ k8s.io/apimachinery/pkg/util/validation/field
 k8s.io/apimachinery/pkg/util/version
 # k8s.io/klog/v2 v2.30.0
 k8s.io/klog/v2
-# k8s.io/utils v0.0.0-20210930125809-cb0fa318a74b
+# k8s.io/utils v0.0.0-20211116205334-6203023598ed
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
 # sigs.k8s.io/kind v0.11.1
