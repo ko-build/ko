@@ -221,58 +221,63 @@ func TestBuildEnv(t *testing.T) {
 		userEnv      []string
 		configEnv    []string
 		expectedEnvs map[string]string
-	}{
-		{
-			description: "defaults",
-			platform: v1.Platform{
-				OS:           "linux",
-				Architecture: "amd64",
-			},
-			expectedEnvs: map[string]string{
-				"GOOS":        "linux",
-				"GOARCH":      "amd64",
-				"CGO_ENABLED": "0",
-			},
+	}{{
+		description: "defaults",
+		platform: v1.Platform{
+			OS:           "linux",
+			Architecture: "amd64",
 		},
-		{
-			description: "override a default value",
-			configEnv:   []string{"CGO_ENABLED=1"},
-			expectedEnvs: map[string]string{
-				"CGO_ENABLED": "1",
-			},
+		expectedEnvs: map[string]string{
+			"GOOS":        "linux",
+			"GOARCH":      "amd64",
+			"CGO_ENABLED": "0",
 		},
-		{
-			description: "override an envvar and add an envvar",
-			userEnv:     []string{"CGO_ENABLED=0"},
-			configEnv:   []string{"CGO_ENABLED=1", "GOPRIVATE=git.internal.example.com,source.developers.google.com"},
-			expectedEnvs: map[string]string{
-				"CGO_ENABLED": "1",
-				"GOPRIVATE":   "git.internal.example.com,source.developers.google.com",
-			},
+	}, {
+		description: "override a default value",
+		configEnv:   []string{"CGO_ENABLED=1"},
+		expectedEnvs: map[string]string{
+			"CGO_ENABLED": "1",
 		},
-		{
-			description: "arm variant",
-			platform: v1.Platform{
-				Architecture: "arm",
-				Variant:      "v7",
-			},
-			expectedEnvs: map[string]string{
-				"GOARCH": "arm",
-				"GOARM":  "7",
-			},
+	}, {
+		description: "override an envvar and add an envvar",
+		userEnv:     []string{"CGO_ENABLED=0"},
+		configEnv:   []string{"CGO_ENABLED=1", "GOPRIVATE=git.internal.example.com,source.developers.google.com"},
+		expectedEnvs: map[string]string{
+			"CGO_ENABLED": "1",
+			"GOPRIVATE":   "git.internal.example.com,source.developers.google.com",
 		},
-		{
-			description: "arm64 variant",
-			platform: v1.Platform{
-				Architecture: "arm64",
-				Variant:      "v8",
-			},
-			expectedEnvs: map[string]string{
-				"GOARCH": "arm64",
-				"GOARM":  "7",
-			},
+	}, {
+		description: "arm variant",
+		platform: v1.Platform{
+			Architecture: "arm",
+			Variant:      "v7",
 		},
-	}
+		expectedEnvs: map[string]string{
+			"GOARCH": "arm",
+			"GOARM":  "7",
+		},
+	}, {
+		// GOARM is ignored for arm64.
+		description: "arm64 variant",
+		platform: v1.Platform{
+			Architecture: "arm64",
+			Variant:      "v8",
+		},
+		expectedEnvs: map[string]string{
+			"GOARCH": "arm64",
+			"GOARM":  "",
+		},
+	}, {
+		description: "amd64 variant",
+		platform: v1.Platform{
+			Architecture: "amd64",
+			Variant:      "v3",
+		},
+		expectedEnvs: map[string]string{
+			"GOARCH":  "amd64",
+			"GOAMD64": "v3",
+		},
+	}}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
 			env, err := buildEnv(test.platform, test.userEnv, test.configEnv)

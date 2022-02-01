@@ -335,14 +335,20 @@ func buildEnv(platform v1.Platform, userEnv, configEnv []string) ([]string, erro
 		"GOOS=" + platform.OS,
 		"GOARCH=" + platform.Architecture,
 	}
-
-	if strings.HasPrefix(platform.Architecture, "arm") && platform.Variant != "" {
-		goarm, err := getGoarm(platform)
-		if err != nil {
-			return nil, fmt.Errorf("goarm failure: %w", err)
-		}
-		if goarm != "" {
-			env = append(env, "GOARM="+goarm)
+	if platform.Variant != "" {
+		switch platform.Architecture {
+		case "arm":
+			// See: https://pkg.go.dev/cmd/go#hdr-Environment_variables
+			goarm, err := getGoarm(platform)
+			if err != nil {
+				return nil, fmt.Errorf("goarm failure: %w", err)
+			}
+			if goarm != "" {
+				env = append(env, "GOARM="+goarm)
+			}
+		case "amd64":
+			// See: https://tip.golang.org/doc/go1.18#amd64
+			env = append(env, "GOAMD64="+platform.Variant)
 		}
 	}
 
