@@ -76,6 +76,10 @@ func (c *layerCache) getMeta(ctx context.Context, file string) (*v1.Hash, *v1.De
 		return nil, nil, fmt.Errorf("no buildid for %s", file)
 	}
 
+	// TODO: Implement better per-file locking.
+	c.Lock()
+	defer c.Unlock()
+
 	btod, err := c.readBuildToDiff(file)
 	if err != nil {
 		return nil, nil, err
