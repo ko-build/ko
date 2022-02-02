@@ -29,7 +29,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/mattmoor/dep-notify/pkg/graph"
 	"golang.org/x/sync/errgroup"
@@ -213,7 +212,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		if po.Push {
 			dp, err := publish.NewDefault(repoName,
 				publish.WithUserAgent(userAgent),
-				publish.WithAuthFromKeychain(authn.DefaultKeychain),
+				publish.WithAuthFromKeychain(keychain),
 				publish.WithNamer(namer),
 				publish.WithTags(po.Tags),
 				publish.WithTagOnly(po.TagOnly),
