@@ -292,6 +292,111 @@ func TestIsSupportedReferenceError(t *testing.T) {
 	}
 }
 
+func TestOverrides(t *testing.T) {
+	base := mustRepository("gcr.io/koverrides")
+	tests := []struct {
+		desc      string
+		input     *object
+		overrides map[string]interface{}
+		expected  *object
+	}{
+		{
+			desc:  "simple override",
+			input: &object{S: build.StrictOverrideScheme + "foo"},
+			overrides: map[string]interface{}{
+				"foo": "bar",
+			},
+			expected: &object{S: "bar"},
+		},
+		{
+			desc:  "simple override, with default",
+			input: &object{S: build.StrictOverrideScheme + "foo/mydefault"},
+			overrides: map[string]interface{}{
+				"foo": "bar",
+			},
+			expected: &object{S: "bar"},
+		},
+		{
+			desc:      "simple override, with default, no value",
+			input:     &object{S: build.StrictOverrideScheme + "foo/baz"},
+			overrides: map[string]interface{}{},
+			expected:  &object{S: "baz"},
+		},
+		{
+			desc:  "nested override",
+			input: &object{S: build.StrictOverrideScheme + "foo.bar"},
+			overrides: map[string]interface{}{
+				"foo": map[string]interface{}{
+					"bar": "buzz",
+				},
+			},
+			expected: &object{S: "buzz"},
+		},
+		{
+			desc:  "nested override, with default",
+			input: &object{S: build.StrictOverrideScheme + "foo.bar/baz"},
+			overrides: map[string]interface{}{
+				"foo": map[string]interface{}{
+					"bar": "buzz",
+				},
+			},
+			expected: &object{S: "buzz"},
+		},
+		{
+			desc:      "nested override, with default, no value",
+			input:     &object{S: build.StrictOverrideScheme + "foo.bar/baz"},
+			overrides: map[string]interface{}{},
+			expected:  &object{S: "baz"},
+		},
+		{
+			desc:  "super nested override (trigger invalid child)",
+			input: &object{S: build.StrictOverrideScheme + "a.b.c.d.e.f.g/wow"},
+			overrides: map[string]interface{}{
+				"a": "this-aint-a-map-bob",
+			},
+			expected: &object{S: "wow"},
+		},
+		{
+			desc:  "integer converts to string",
+			input: &object{S: build.StrictOverrideScheme + "db.port"},
+			overrides: map[string]interface{}{
+				"db": map[string]interface{}{
+					"port": 3306,
+				},
+			},
+			expected: &object{S: "3306"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			inputStructured := test.input
+			inputYAML, err := yaml.Marshal(inputStructured)
+			if err != nil {
+				t.Fatalf("yaml.Marshal(%v) = %v", inputStructured, err)
+			}
+			doc := strToYAML(t, string(inputYAML))
+
+			//lint:ignore SA1029 TODO(jdolitsky): use custom type for context
+			ctx := context.WithValue(context.Background(), build.StrictOverrideScheme, test.overrides)
+
+			err = ImageReferences(ctx, []*yaml.Node{doc}, testBuilder, kotesting.NewFixedPublish(base, testHashes))
+			if err != nil {
+				t.Fatalf("ImageReferences(%v) = %v", string(inputYAML), err)
+			}
+
+			var outStructured *object
+			if err := doc.Decode(&outStructured); err != nil {
+				t.Errorf("doc.Decode(%v) = %v", yamlToStr(t, doc), err)
+			}
+
+			if diff := cmp.Diff(test.expected, outStructured, cmpopts.EquateEmpty()); diff != "" {
+				t.Errorf("ImageReferences(%v); (-want +got) = %v", string(inputYAML), diff)
+			}
+		})
+	}
+}
+
 func mustRandom() build.Result {
 	img, err := random.Index(1024, 5, 1)
 	if err != nil {

@@ -38,6 +38,11 @@ type Interface interface {
 	// TODO(mattmoor): Verify that some base repo: foo.io/bar can be suffixed with this reference and parsed.
 	IsSupportedReference(string) error
 
+	// IsSupportedOverrideReference determines whether the given value is a
+	// valid override reference that Ko supports resolving, returning an error
+	// if it is not.
+	IsSupportedOverrideReference(string) error
+
 	// Build turns the given importpath reference into a v1.Image containing the Go binary
 	// (or a set of images as a v1.ImageIndex).
 	Build(context.Context, string) (Result, error)

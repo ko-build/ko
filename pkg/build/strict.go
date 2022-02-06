@@ -46,3 +46,34 @@ func (r reference) String() string {
 	}
 	return r.Path()
 }
+
+// StrictOverrideScheme is a prefix that can be placed on YAML values
+// that will be converted to static values.
+const StrictOverrideScheme = "koverride://"
+
+type overrideReference struct {
+	strict bool
+	path   string
+}
+
+func newOverrideRef(s string) overrideReference {
+	return overrideReference{
+		strict: strings.HasPrefix(s, StrictOverrideScheme),
+		path:   strings.TrimPrefix(s, StrictOverrideScheme),
+	}
+}
+
+func (r overrideReference) IsStrict() bool {
+	return r.strict
+}
+
+func (r overrideReference) Path() string {
+	return r.path
+}
+
+func (r overrideReference) String() string {
+	if r.IsStrict() {
+		return StrictOverrideScheme + r.Path()
+	}
+	return r.Path()
+}

@@ -35,15 +35,18 @@ For more information see:
 
 // FilenameOptions is from pkg/kubectl.
 type FilenameOptions struct {
-	Filenames []string
-	Recursive bool
-	Watch     bool
+	Filenames  []string
+	Koverrides string
+	Recursive  bool
+	Watch      bool
 }
 
 func AddFileArg(cmd *cobra.Command, fo *FilenameOptions) {
 	// From pkg/kubectl
 	cmd.Flags().StringSliceVarP(&fo.Filenames, "filename", "f", fo.Filenames,
 		"Filename, directory, or URL to files to use to create the resource")
+	cmd.Flags().StringVar(&fo.Koverrides, "koverrides", fo.Koverrides,
+		"Filename to use for koverrides")
 	cmd.Flags().BoolVarP(&fo.Recursive, "recursive", "R", fo.Recursive,
 		"Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.")
 	cmd.Flags().BoolVarP(&fo.Watch, "watch", "W", fo.Watch,

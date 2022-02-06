@@ -41,6 +41,11 @@ func (r *Recorder) IsSupportedReference(ip string) error {
 	return r.Builder.IsSupportedReference(ip)
 }
 
+// IsSupportedOverrideReference implements build.Interface
+func (r *Recorder) IsSupportedOverrideReference(ip string) error {
+	return r.Builder.IsSupportedOverrideReference(ip)
+}
+
 // Build implements Interface
 func (r *Recorder) Build(ctx context.Context, ip string) (Result, error) {
 	func() {

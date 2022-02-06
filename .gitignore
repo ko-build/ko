@@ -1,4 +1,5 @@
 # Ignore GoLand (IntelliJ) files.
 .idea/
 
+coverage.txt
 ko

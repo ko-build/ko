@@ -49,3 +49,37 @@ func TestStrictReference(t *testing.T) {
 		})
 	}
 }
+
+func TestStrictOverrideReference(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  string
+		strict bool
+		path   string
+	}{{
+		name:   "loose",
+		input:  "bloop",
+		strict: false,
+		path:   "bloop",
+	}, {
+		name:   "strict",
+		input:  "koverride://blip",
+		strict: true,
+		path:   "blip",
+	}}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ref := newOverrideRef(test.input)
+			if got, want := ref.IsStrict(), test.strict; got != want {
+				t.Errorf("got: %v, want: %v", got, want)
+			}
+			if got, want := ref.Path(), test.path; got != want {
+				t.Errorf("got: %v, want: %v", got, want)
+			}
+			if got, want := ref.String(), test.input; got != want {
+				t.Errorf("got: %v, want: %v", got, want)
+			}
+		})
+	}
+}

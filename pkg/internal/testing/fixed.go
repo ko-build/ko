@@ -52,6 +52,14 @@ func (f *fixedBuild) IsSupportedReference(s string) error {
 	return nil
 }
 
+// IsSupportedOverrideReference implements build.Interface
+func (f *fixedBuild) IsSupportedOverrideReference(s string) error {
+	if !strings.HasPrefix(s, build.StrictOverrideScheme) {
+		return errors.New("value does not start with koverride://")
+	}
+	return nil
+}
+
 // Build implements build.Interface
 func (f *fixedBuild) Build(_ context.Context, s string) (build.Result, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)

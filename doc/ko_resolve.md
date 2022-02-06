@@ -47,6 +47,7 @@ ko resolve -f FILENAME [flags]
       --image-refs string        Path to file where a list of the published image references will be written.
       --insecure-registry        Whether to skip TLS verification on the registry
   -j, --jobs int                 The maximum number of concurrent builds (default GOMAXPROCS)
+      --koverrides string        Filename to use for koverrides
   -L, --local                    Load into images to local docker daemon.
       --oci-layout-path string   Path to save the OCI image layout of the built images
       --platform strings         Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*

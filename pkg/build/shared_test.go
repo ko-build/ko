@@ -35,6 +35,8 @@ func (sb *slowbuild) QualifyImport(ip string) (string, error) { return ip, nil }
 
 func (sb *slowbuild) IsSupportedReference(string) error { return nil }
 
+func (sb *slowbuild) IsSupportedOverrideReference(string) error { return nil }
+
 func (sb *slowbuild) Build(context.Context, string) (Result, error) {
 	time.Sleep(sb.sleep)
 	return random.Index(256, 8, 3)
@@ -49,6 +51,10 @@ func TestCaching(t *testing.T) {
 
 	if err := cb.IsSupportedReference(ip); err != nil {
 		t.Errorf("ISR(%q) = (%v), wanted nil", err, ip)
+	}
+
+	if err := cb.IsSupportedOverrideReference(ip); err != nil {
+		t.Errorf("ISOR(%q) = (%v), wanted nil", err, ip)
 	}
 
 	previousDigest := "not-a-digest"

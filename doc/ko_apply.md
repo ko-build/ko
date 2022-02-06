@@ -63,6 +63,7 @@ ko apply -f FILENAME [flags]
       --insecure-registry              Whether to skip TLS verification on the registry
       --insecure-skip-tls-verify       If true, the server's certificate will not be checked for validity. This will make your HTTPS connections insecure (DEPRECATED)
   -j, --jobs int                       The maximum number of concurrent builds (default GOMAXPROCS)
+      --koverrides string              Filename to use for koverrides
       --kubeconfig string              Path to the kubeconfig file to use for CLI requests. (DEPRECATED)
   -L, --local                          Load into images to local docker daemon.
   -n, --namespace string               If present, the namespace scope for this CLI request (DEPRECATED)

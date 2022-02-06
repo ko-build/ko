@@ -38,6 +38,11 @@ func (r *sleeper) IsSupportedReference(ip string) error {
 	return nil
 }
 
+// IsSupportedOverrideReference implements Interface
+func (r *sleeper) IsSupportedOverrideReference(ip string) error {
+	return nil
+}
+
 // Build implements Interface
 func (r *sleeper) Build(_ context.Context, ip string) (Result, error) {
 	time.Sleep(50 * time.Millisecond)

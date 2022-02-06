@@ -285,6 +285,20 @@ func resolveFilesToWriter(
 	out io.WriteCloser) error {
 	defer out.Close()
 
+	// Attempt to parse koverrides YAML file into context (if provided)
+	if fo.Koverrides != "" {
+		b, err := ioutil.ReadFile(fo.Koverrides)
+		if err != nil {
+			return fmt.Errorf("opening koverrides file: %w", err)
+		}
+		var overrides map[string]interface{}
+		if err := yaml.Unmarshal(b, &overrides); err != nil {
+			return fmt.Errorf("parsing koverrides file: %w", err)
+		}
+		//lint:ignore SA1029 TODO(jdolitsky): use custom type for context
+		ctx = context.WithValue(ctx, build.StrictOverrideScheme, overrides)
+	}
+
 	// By having this as a channel, we can hook this up to a filesystem
 	// watcher and leave `fs` open to stream the names of yaml files
 	// affected by code changes (including the modification of existing or
