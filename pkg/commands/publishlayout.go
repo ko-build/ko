@@ -35,17 +35,17 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// addPush augments our CLI surface with push.
-func addPush(topLevel *cobra.Command) {
+// addPublishLayout augments our CLI surface with publish-layout.
+func addPublishLayout(topLevel *cobra.Command) {
 	publishLocal := false
-	push := &cobra.Command{
-		Use:   "push APP OCI-LAYOUT",
-		Short: "Push manifest list from the given OCI image layout.",
+	cmd := &cobra.Command{
+		Use:   "publish-layout APP OCI-LAYOUT",
+		Short: "Publish manifest list from the given OCI image layout.",
 		Long:  `This sub-command loads a manifest list from the given OCI image layout, and pushes it to the configured repository.`,
 		Example: `
   # Push manifest list from OCI image layout to a Docker Registry as:
   #   ${KO_DOCKER_REPO}/<app>
-  ko push example docker-images`,
+  ko publish-layout example docker-images`,
 		Args: cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
@@ -67,9 +67,9 @@ func addPush(topLevel *cobra.Command) {
 			return nil
 		},
 	}
-	push.Flags().BoolVarP(&publishLocal, "local", "L", publishLocal,
+	cmd.Flags().BoolVarP(&publishLocal, "local", "L", publishLocal,
 		"Load images into local Docker daemon.")
-	topLevel.AddCommand(push)
+	topLevel.AddCommand(cmd)
 }
 
 func pushManifestList(ctx context.Context, ml v1.ImageIndex, name string) error {
