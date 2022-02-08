@@ -31,9 +31,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/commands/options"
-	"github.com/google/ko/pkg/publish"
+	"github.com/grafana/ko/pkg/build"
+	"github.com/grafana/ko/pkg/commands/options"
+	"github.com/grafana/ko/pkg/publish"
 )
 
 // getBaseImage returns a function that determines the base image for a given import path.

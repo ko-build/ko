@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/google/ko/pkg/commands/options"
+	"github.com/grafana/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 )
 

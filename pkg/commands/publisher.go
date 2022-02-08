@@ -21,8 +21,8 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/publish"
+	"github.com/grafana/ko/pkg/build"
+	"github.com/grafana/ko/pkg/publish"
 )
 
 // PublishImages publishes images

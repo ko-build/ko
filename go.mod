@@ -1,4 +1,4 @@
-module github.com/google/ko
+module github.com/grafana/ko
 
 go 1.16
 

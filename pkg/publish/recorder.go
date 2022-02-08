@@ -19,7 +19,7 @@ import (
 	"io"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/ko/pkg/build"
+	"github.com/grafana/ko/pkg/build"
 )
 
 // recorder wraps a publisher implementation in a layer that recordes the published

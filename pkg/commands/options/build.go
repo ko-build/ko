@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/tools/go/packages"
 
-	"github.com/google/ko/pkg/build"
+	"github.com/grafana/ko/pkg/build"
 )
 
 const (

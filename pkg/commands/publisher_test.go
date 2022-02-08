@@ -24,8 +24,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/commands/options"
+	"github.com/grafana/ko/pkg/build"
+	"github.com/grafana/ko/pkg/commands/options"
 )
 
 func TestPublishImages(t *testing.T) {
@@ -47,18 +47,18 @@ func TestPublishImages(t *testing.T) {
 	}{
 		{
 			description: "import path with ko scheme",
-			publishArg:  "ko://github.com/google/ko/test",
-			importpath:  "github.com/google/ko/test",
+			publishArg:  "ko://github.com/grafana/ko/test",
+			importpath:  "github.com/grafana/ko/test",
 		},
 		{
 			description: "import path without ko scheme",
-			publishArg:  "github.com/google/ko/test",
-			importpath:  "github.com/google/ko/test",
+			publishArg:  "github.com/grafana/ko/test",
+			importpath:  "github.com/grafana/ko/test",
 		},
 		{
 			description: "file path",
 			publishArg:  sampleAppDir,
-			importpath:  "github.com/google/ko/test",
+			importpath:  "github.com/grafana/ko/test",
 		},
 	}
 	for _, test := range tests {

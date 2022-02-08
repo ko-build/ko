@@ -23,8 +23,8 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/publish/kind"
+	"github.com/grafana/ko/pkg/build"
+	"github.com/grafana/ko/pkg/publish/kind"
 )
 
 const (

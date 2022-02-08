@@ -22,8 +22,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/google/ko/internal"
-	"github.com/google/ko/pkg/commands/options"
+	"github.com/grafana/ko/internal"
+	"github.com/grafana/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )

@@ -17,7 +17,7 @@ package options
 import (
 	"testing"
 
-	"github.com/google/ko/pkg/build"
+	"github.com/grafana/ko/pkg/build"
 	"github.com/spf13/cobra"
 )
 
@@ -77,10 +77,10 @@ func TestCreateBuildConfigs(t *testing.T) {
 		for importPath, buildCfg := range buildConfigMap {
 			switch buildCfg.ID {
 			case "defaults":
-				compare("github.com/google/ko", importPath)
+				compare("github.com/grafana/ko", importPath)
 
 			case "OnlyMain", "OnlyMainWithFile", "OnlyDir", "DirAndMain":
-				compare("github.com/google/ko/test", importPath)
+				compare("github.com/grafana/ko/test", importPath)
 
 			default:
 				t.Fatalf("unknown test case: %s", buildCfg.ID)

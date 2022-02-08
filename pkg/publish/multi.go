@@ -19,7 +19,7 @@ import (
 	"errors"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/ko/pkg/build"
+	"github.com/grafana/ko/pkg/build"
 )
 
 // MultiPublisher creates a publisher that publishes to all

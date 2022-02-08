@@ -42,7 +42,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/ko/internal/sbom"
+	"github.com/grafana/ko/internal/sbom"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
 	ocimutate "github.com/sigstore/cosign/pkg/oci/mutate"
@@ -760,7 +760,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		updatePath(cfg, appDir)
 		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	}
-	cfg.Author = "github.com/google/ko"
+	cfg.Author = "github.com/grafana/ko"
 
 	if cfg.Config.Labels == nil {
 		cfg.Config.Labels = map[string]string{}

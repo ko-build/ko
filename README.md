@@ -1,8 +1,8 @@
 # `ko`: Easy Go Containers
 
-[![GitHub Actions Build Status](https://github.com/google/ko/workflows/Build/badge.svg)](https://github.com/google/ko/actions?query=workflow%3ABuild)
-[![GoDoc](https://godoc.org/github.com/google/ko?status.svg)](https://godoc.org/github.com/google/ko)
-[![Go Report Card](https://goreportcard.com/badge/google/ko)](https://goreportcard.com/report/google/ko)
+[![GitHub Actions Build Status](https://github.com/grafana/ko/workflows/Build/badge.svg)](https://github.com/grafana/ko/actions?query=workflow%3ABuild)
+[![GoDoc](https://godoc.org/github.com/grafana/ko?status.svg)](https://godoc.org/github.com/grafana/ko)
+[![Go Report Card](https://goreportcard.com/badge/grafana/ko)](https://goreportcard.com/report/grafana/ko)
 
 <img src="./logo/ko.png" width="300">
 
@@ -23,13 +23,13 @@ tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
 
 ## Install
 
-### Install from [Releases](https://github.com/google/ko/releases)
+### Install from [Releases](https://github.com/grafana/ko/releases)
 
 ```
 VERSION=TODO # choose the latest version
 OS=Linux     # or Darwin
 ARCH=x86_64  # or arm64, i386, s390x
-curl -L https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz | tar xzf - ko
+curl -L https://github.com/grafana/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz | tar xzf - ko
 chmod +x ./ko
 ```
 
@@ -44,7 +44,7 @@ brew install ko
 With Go 1.16+, build and install the latest released version:
 
 ```
-go install github.com/google/ko@latest
+go install github.com/grafana/ko@latest
 ```
 
 ### Setup on GitHub Actions

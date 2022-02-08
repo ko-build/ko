@@ -23,7 +23,7 @@ import (
 	"os/signal"
 
 	"github.com/google/go-containerregistry/pkg/logs"
-	"github.com/google/ko/pkg/commands"
+	"github.com/grafana/ko/pkg/commands"
 )
 
 func main() {
