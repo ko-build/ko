@@ -58,7 +58,6 @@ ko resolve -f FILENAME [flags]
       --tag-only                 Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.
   -t, --tags strings             Which tags to use for the produced image instead of the default 'latest' tag (may not work properly with --base-import-paths or --bare). (default [latest])
       --tarball string           File to save images tarballs
-  -W, --watch                    Continuously monitor the transitive dependencies of the passed yaml files, and redeploy whenever anything changes. (DEPRECATED)
 ```
 
 ### Options inherited from parent commands

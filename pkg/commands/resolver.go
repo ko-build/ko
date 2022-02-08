@@ -23,14 +23,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path"
 	"strings"
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/mattmoor/dep-notify/pkg/graph"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/labels"
@@ -150,9 +148,6 @@ func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching,
 	//    - if a valid Build future exists at the time of the request,
 	//      then block on it.
 	//    - if it does not, then initiate and record a Build future.
-	//  - When import paths are "affected" by filesystem changes during a
-	//    Watch, then invalidate their build futures *before* we put the
-	//    affected yaml files onto the channel
 	//
 	// This will benefit the following key cases:
 	// 1. When the same import path is referenced across multiple yaml files
@@ -295,38 +290,6 @@ func resolveFilesToWriter(
 	// This tracks filename -> []importpath
 	var sm sync.Map
 
-	var g graph.Interface
-	var errCh chan error
-	var err error
-	if fo.Watch {
-		// Start a dep-notify process that on notifications scans the
-		// file-to-recorded-build map and for each affected file resends
-		// the filename along the channel.
-		g, errCh, err = graph.New(func(ss graph.StringSet) {
-			sm.Range(func(k, v interface{}) bool {
-				key := k.(string)
-				value := v.([]string)
-
-				for _, ip := range value {
-					// dep-notify doesn't understand the ko:// prefix
-					ip := strings.TrimPrefix(ip, build.StrictScheme)
-					if ss.Has(ip) {
-						// See the comment above about how "builder" works.
-						// Always use ko:// for the builder.
-						builder.Invalidate(build.StrictScheme + ip)
-						fs <- key
-					}
-				}
-				return true
-			})
-		})
-		if err != nil {
-			return fmt.Errorf("creating dep-notify graph: %w", err)
-		}
-		// Cleanup the fsnotify hooks when we're done.
-		defer g.Shutdown()
-	}
-
 	// This tracks resolution errors and ensures we cancel other builds if an
 	// individual build fails.
 	errs, ctx := errgroup.WithContext(ctx)
@@ -376,33 +339,11 @@ func resolveFilesToWriter(
 				if err != nil {
 					// This error is sometimes expected during watch mode, so this
 					// isn't fatal. Just print it and keep the watch open.
-					err := fmt.Errorf("error processing import paths in %q: %w", f, err)
-					if fo.Watch {
-						log.Print(err)
-						return nil
-					}
-					return err
+					return fmt.Errorf("error processing import paths in %q: %w", f, err)
 				}
 				// Associate with this file the collection of binary import paths.
 				sm.Store(f, recordingBuilder.ImportPaths)
 				ch <- b
-				if fo.Watch {
-					for _, ip := range recordingBuilder.ImportPaths {
-						// dep-notify doesn't understand the ko:// prefix
-						ip := strings.TrimPrefix(ip, build.StrictScheme)
-
-						// Technically we never remove binary targets from the graph,
-						// which will increase our graph's watch load, but the
-						// notifications that they change will result in no affected
-						// yamls, and no new builds or deploys.
-						if err := g.Add(ip); err != nil {
-							// If we're in watch mode, just fail.
-							err := fmt.Errorf("adding importpath %q to dep graph: %w", ip, err)
-							errCh <- err
-							return err
-						}
-					}
-				}
 				return nil
 			})
 
@@ -418,9 +359,6 @@ func resolveFilesToWriter(
 				// be applied.
 				out.Write(append(b, []byte("\n---\n")...))
 			}
-
-		case err := <-errCh:
-			return fmt.Errorf("watching dependencies: %w", err)
 		}
 	}
 
