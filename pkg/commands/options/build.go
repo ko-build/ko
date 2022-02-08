@@ -91,14 +91,23 @@ func (bo *BuildOptions) LoadConfig() error {
 	}
 	// If omitted, use this base image.
 	v.SetDefault("defaultBaseImage", configDefaultBaseImage)
-	v.SetConfigName(".ko") // .yaml is implicit
+	const configName = ".ko"
+
+	v.SetConfigName(configName) // .yaml is implicit
 	v.SetEnvPrefix("KO")
 	v.AutomaticEnv()
 
 	if override := os.Getenv("KO_CONFIG_PATH"); override != "" {
+		path := filepath.Join(override, configName+".yaml")
+		file, err := os.Stat(path)
+		if err != nil {
+			return fmt.Errorf("error looking for config file: %w", err)
+		}
+		if !file.Mode().IsRegular() {
+			return fmt.Errorf("config file %s is not a regular file", path)
+		}
 		v.AddConfigPath(override)
 	}
-
 	v.AddConfigPath(bo.WorkingDirectory)
 
 	if err := v.ReadInConfig(); err != nil {
