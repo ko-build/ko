@@ -37,6 +37,7 @@ import (
 
 // addPush augments our CLI surface with push.
 func addPush(topLevel *cobra.Command) {
+	publishLocal := false
 	push := &cobra.Command{
 		Use:   "push APP OCI-LAYOUT",
 		Short: "Push manifest list from the given OCI image layout.",
@@ -49,74 +50,29 @@ func addPush(topLevel *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			err := pushManifestList(ctx, args)
+			ml, err := manifestList(ctx, args[1])
 			if err != nil {
-				return fmt.Errorf("failed to push manifest list: %w", err)
+				return err
+			}
+			name := args[0]
+			if !publishLocal {
+				if err := pushManifestList(ctx, ml, name); err != nil {
+					return err
+				}
+			} else {
+				if err := publishToDaemon(ctx, ml, name); err != nil {
+					return err
+				}
 			}
 			return nil
 		},
 	}
+	push.Flags().BoolVarP(&publishLocal, "local", "L", publishLocal,
+		"Load images into local Docker daemon.")
 	topLevel.AddCommand(push)
 }
 
-func pushManifestList(ctx context.Context, args []string) error {
-	idx, err := layout.ImageIndexFromPath(args[1])
-	if err != nil {
-		return err
-	}
-	mt, err := idx.MediaType()
-	if err != nil {
-		return err
-	}
-	im, err := idx.IndexManifest()
-	if err != nil {
-		return err
-	}
-
-	var adds []ocimutate.IndexAddendum
-
-	fmt.Printf("The image index has media type %s and %d image manifests\n", mt, len(im.Manifests))
-	var nestedMt types.MediaType
-	for _, d := range im.Manifests {
-		fmt.Printf("Manifest %s with type %s\n", d.Digest.Hex, d.MediaType)
-		nestedIdx, err := idx.ImageIndex(d.Digest)
-		if err != nil {
-			return err
-		}
-
-		nestedMt, err = nestedIdx.MediaType()
-		if err != nil {
-			return err
-		}
-		mm, err := nestedIdx.IndexManifest()
-		if err != nil {
-			return err
-		}
-
-		fmt.Printf("Nested index with type %s and %d manifests\n", nestedMt, len(mm.Manifests))
-		for _, m := range mm.Manifests {
-			img, err := nestedIdx.Image(m.Digest)
-			if err != nil {
-				return err
-			}
-
-			fmt.Printf("Manifest with type %s, digest %s and platform %#v\n", m.MediaType, m.Digest.Hex, m.Platform)
-			fmt.Printf("Adding addendum - URLs: %#v, media type: %s, annotations: %#v, platform: %#v\n", m.URLs, m.MediaType, m.Annotations, m.Platform)
-			adds = append(adds, ocimutate.IndexAddendum{
-				Add: signed.Image(img),
-				Descriptor: v1.Descriptor{
-					URLs:        m.URLs,
-					MediaType:   m.MediaType,
-					Annotations: m.Annotations,
-					Platform:    m.Platform,
-				},
-			})
-		}
-	}
-
-	newIdx := ocimutate.AppendManifests(mutate.IndexMediaType(empty.Index, nestedMt), adds...)
-	fmt.Printf("Created index %#v\n", newIdx)
-
+func pushManifestList(ctx context.Context, ml v1.ImageIndex, name string) error {
 	dockerRepo := os.Getenv("KO_DOCKER_REPO")
 	if dockerRepo == "" {
 		return fmt.Errorf("KO_DOCKER_REPO environment variable is unset")
@@ -132,9 +88,8 @@ func pushManifestList(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
-	publisher.Publish(ctx, newIdx, args[0])
-
-	return nil
+	_, err = publisher.Publish(ctx, ml, name)
+	return err
 }
 
 func loadTags(fpath string) ([]*name.Tag, error) {
@@ -187,4 +142,75 @@ func loadImages(fpath string) ([]v1.Image, error) {
 	}
 
 	return imgs, nil
+}
+
+func publishToDaemon(ctx context.Context, ml v1.ImageIndex, name string) error {
+	// TODO
+	namer := options.MakeNamer(&options.PublishOptions{})
+	// TODO
+	tags := []string{}
+	publisher, err := publish.NewDaemon(namer, tags)
+	if err != nil {
+		return err
+	}
+	_, err = publisher.Publish(ctx, ml, name)
+	return err
+}
+
+func manifestList(ctx context.Context, layoutPath string) (v1.ImageIndex, error) {
+	idx, err := layout.ImageIndexFromPath(layoutPath)
+	if err != nil {
+		return nil, err
+	}
+	mt, err := idx.MediaType()
+	if err != nil {
+		return nil, err
+	}
+	im, err := idx.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	var adds []ocimutate.IndexAddendum
+
+	fmt.Printf("The image index has media type %s and %d image manifests\n", mt, len(im.Manifests))
+	var nestedMt types.MediaType
+	for _, d := range im.Manifests {
+		fmt.Printf("Manifest %s with type %s\n", d.Digest.Hex, d.MediaType)
+		nestedIdx, err := idx.ImageIndex(d.Digest)
+		if err != nil {
+			return nil, err
+		}
+
+		nestedMt, err = nestedIdx.MediaType()
+		if err != nil {
+			return nil, err
+		}
+		mm, err := nestedIdx.IndexManifest()
+		if err != nil {
+			return nil, err
+		}
+
+		fmt.Printf("Nested index with type %s and %d manifests\n", nestedMt, len(mm.Manifests))
+		for _, m := range mm.Manifests {
+			img, err := nestedIdx.Image(m.Digest)
+			if err != nil {
+				return nil, err
+			}
+
+			fmt.Printf("Manifest with type %s, digest %s and platform %#v\n", m.MediaType, m.Digest.Hex, m.Platform)
+			fmt.Printf("Adding addendum - URLs: %#v, media type: %s, annotations: %#v, platform: %#v\n", m.URLs, m.MediaType, m.Annotations, m.Platform)
+			adds = append(adds, ocimutate.IndexAddendum{
+				Add: signed.Image(img),
+				Descriptor: v1.Descriptor{
+					URLs:        m.URLs,
+					MediaType:   m.MediaType,
+					Annotations: m.Annotations,
+					Platform:    m.Platform,
+				},
+			})
+		}
+	}
+
+	return ocimutate.AppendManifests(mutate.IndexMediaType(empty.Index, nestedMt), adds...), nil
 }
