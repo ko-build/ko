@@ -108,10 +108,6 @@ func (bo *BuildOptions) LoadConfig() error {
 		}
 		v.AddConfigPath(override)
 	}
-
-	if bo.WorkingDirectory == "" {
-		bo.WorkingDirectory = "."
-	}
 	v.AddConfigPath(bo.WorkingDirectory)
 
 	if err := v.ReadInConfig(); err != nil {
