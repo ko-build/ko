@@ -26,7 +26,6 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -63,7 +62,7 @@ If the image was not built using ko, or if it was built without embedding depend
 
 			img, err := remote.Image(ref,
 				remote.WithContext(ctx),
-				remote.WithAuthFromKeychain(authn.DefaultKeychain),
+				remote.WithAuthFromKeychain(keychain),
 				remote.WithUserAgent(ua()))
 			if err != nil {
 				return err

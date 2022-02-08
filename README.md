@@ -69,6 +69,19 @@ logging in to a container image registry with a username and password, similar
 to
 [`docker login`](https://docs.docker.com/engine/reference/commandline/login/).
 
+Additionally, if auth is not configured in the Docker config, `ko` includes
+built-in support for authenticating to the following container registries using
+credentials configured in the environment:
+
+- Google Container Registry and Artifact Registry
+  - using [Application Default Credentials](https://cloud.google.com/docs/authentication/production) or auth configured in `gcloud`.
+- Amazon Elastic Container Registry
+  - using [AWS credentials](https://github.com/awslabs/amazon-ecr-credential-helper/#aws-credentials)
+- Azure Container Registry
+  - using [environment variables](https://github.com/chrismellard/docker-credential-acr-env/)
+- GitHub Container Registry
+  - using the `GITHUB_TOKEN` environment variable
+
 ## Choose Destination
 
 `ko` depends on an environment variable, `KO_DOCKER_REPO`, to identify where it
