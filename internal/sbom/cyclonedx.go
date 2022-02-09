@@ -56,21 +56,16 @@ func GenerateCycloneDX(mod []byte) ([]byte, error) {
 				Version: bi.Main.Version,
 				Purl:    bomRef(bi.Main.Path, bi.Main.Version),
 				ExternalReferences: []externalReference{{
-					URL:  bi.Main.Path,
+					URL:  "https://" + bi.Main.Path,
 					Type: "vcs",
 				}},
 			},
 			Properties: []property{{
-				Name:  "cdx:gomod:binary:hash:SHA-256",
-				Value: h1ToSHA256(bi.Main.Sum),
-			}, {
 				Name:  "cdx:gomod:binary:name",
 				Value: "out",
-			}, {
-				Name:  "cdx:gomod:build:env:GOVERSION",
-				Value: bi.GoVersion,
 			}},
-			// TODO: all the other hashes
+			// TODO: include all hashes
+			// TODO: include go version
 			// TODO: include bi.Settings?
 		},
 		Dependencies: []dependency{{
@@ -92,17 +87,18 @@ func GenerateCycloneDX(mod []byte) ([]byte, error) {
 			continue
 		}
 		doc.Components = append(doc.Components, component{
-			BOMRef: bomRef(dep.Path, dep.Version),
-			Type:   "library",
-			Name:   dep.Path,
-			Scope:  "required",
+			BOMRef:  bomRef(dep.Path, dep.Version),
+			Type:    "library",
+			Name:    dep.Path,
+			Version: dep.Version,
+			Scope:   "required",
 			Hashes: []hash{{
 				Alg:     "SHA-256",
 				Content: h1ToSHA256(dep.Sum),
 			}},
 			Purl: bomRef(dep.Path, dep.Version),
 			ExternalReferences: []externalReference{{
-				URL:  dep.Path,
+				URL:  "https://" + dep.Path,
 				Type: "vcs",
 			}},
 		})
@@ -128,8 +124,8 @@ type document struct {
 	SpecVersion  string        `json:"specVersion"`
 	Version      int           `json:"version"`
 	Metadata     metadata      `json:"metadata"`
-	Components   []component   `json:"component,omitempty"`
-	Dependencies []dependency  `json:"dependency,omitempty"`
+	Components   []component   `json:"components,omitempty"`
+	Dependencies []dependency  `json:"dependencies,omitempty"`
 	Compositions []composition `json:"compositions,omitempty"`
 }
 type metadata struct {
@@ -141,8 +137,8 @@ type component struct {
 	Type               string              `json:"type"`
 	Name               string              `json:"name"`
 	Version            string              `json:"version"`
-	Scope              string              `json:"scope"`
-	Hashes             []hash              `json:"hashes"`
+	Scope              string              `json:"scope,omitempty"`
+	Hashes             []hash              `json:"hashes,omitempty"`
 	Purl               string              `json:"purl"`
 	ExternalReferences []externalReference `json:"externalReferences"`
 }
