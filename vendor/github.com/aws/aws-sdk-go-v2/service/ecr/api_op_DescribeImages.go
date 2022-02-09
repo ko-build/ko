@@ -62,10 +62,12 @@ type DescribeImagesInput struct {
 	// This option cannot be used when you specify images with imageIds.
 	NextToken *string
 
-	// The AWS account ID associated with the registry that contains the repository in
-	// which to describe images. If you do not specify a registry, the default registry
-	// is assumed.
+	// The Amazon Web Services account ID associated with the registry that contains
+	// the repository in which to describe images. If you do not specify a registry,
+	// the default registry is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type DescribeImagesOutput struct {
@@ -81,6 +83,8 @@ type DescribeImagesOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDescribeImagesMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -200,12 +204,13 @@ func NewDescribeImagesPaginator(client DescribeImagesAPIClient, params *Describe
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeImagesPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeImages page.
@@ -232,7 +237,10 @@ func (p *DescribeImagesPaginator) NextPage(ctx context.Context, optFns ...func(*
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

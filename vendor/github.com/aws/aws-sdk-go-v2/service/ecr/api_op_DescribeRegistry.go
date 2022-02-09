@@ -30,6 +30,7 @@ func (c *Client) DescribeRegistry(ctx context.Context, params *DescribeRegistryI
 }
 
 type DescribeRegistryInput struct {
+	noSmithyDocumentSerde
 }
 
 type DescribeRegistryOutput struct {
@@ -42,6 +43,8 @@ type DescribeRegistryOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDescribeRegistryMiddlewares(stack *middleware.Stack, options Options) (err error) {

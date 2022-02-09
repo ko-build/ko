@@ -2,6 +2,7 @@ package config
 
 import (
 	"context"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 )
 
@@ -34,8 +35,10 @@ var defaultAWSConfigResolvers = []awsConfigResolver{
 
 	// Sets the endpoint resolving behavior the API Clients will use for making
 	// requests to. Clients default to their own clients this allows overrides
-	// to be specified.
+	// to be specified. The resolveEndpointResolver option is deprecated, but we still need to set it for
+	// backwards compatability on config construction.
 	resolveEndpointResolver,
+	resolveEndpointResolverWithOptions,
 
 	// Sets the retry behavior API clients will use within their retry attempt
 	// middleware. Defaults to unset, allowing API clients to define their own
@@ -50,6 +53,14 @@ var defaultAWSConfigResolvers = []awsConfigResolver{
 	// Sets the additional set of middleware stack mutators that will custom
 	// API client request pipeline middleware.
 	resolveAPIOptions,
+
+	// Resolves the DefaultsMode that should be used by SDK clients.
+	// If this mode is set to AutoDefaultsMode.
+	//
+	// Comes after HTTPClient and CustomCABundle to ensure the HTTP client is configured if provided before invoking
+	// IMDS if mode is auto. Comes before resolving credentials so that those subsequent clients use the configured
+	// auto mode.
+	resolveDefaultsModeOptions,
 
 	// Sets the resolved credentials the API clients will use for
 	// authentication. Provides the SDK's default credential chain.
@@ -170,7 +181,9 @@ func (cs configs) ResolveConfig(f func(configs []interface{}) error) error {
 func LoadDefaultConfig(ctx context.Context, optFns ...func(*LoadOptions) error) (cfg aws.Config, err error) {
 	var options LoadOptions
 	for _, optFn := range optFns {
-		optFn(&options)
+		if err := optFn(&options); err != nil {
+			return aws.Config{}, err
+		}
 	}
 
 	// assign Load Options to configs

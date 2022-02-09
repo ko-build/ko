@@ -39,14 +39,27 @@ type Config struct {
 	HTTPClient HTTPClient
 
 	// An endpoint resolver that can be used to provide or override an endpoint for the given
-	// service and region Please see the `aws.EndpointResolver` documentation on usage.
+	// service and region.
+	//
+	// See the `aws.EndpointResolver` documentation for additional usage information.
+	//
+	// Deprecated: See Config.EndpointResolverWithOptions
 	EndpointResolver EndpointResolver
+
+	// An endpoint resolver that can be used to provide or override an endpoint for the given
+	// service and region.
+	//
+	// When EndpointResolverWithOptions is specified, it will be used by a service client rather than using
+	// EndpointResolver if also specified.
+	//
+	// See the `aws.EndpointResolverWithOptions` documentation for additional usage information.
+	EndpointResolverWithOptions EndpointResolverWithOptions
 
 	// Retryer is a function that provides a Retryer implementation. A Retryer guides how HTTP requests should be
 	// retried in case of recoverable failures. When nil the API client will use a default
 	// retryer.
 	//
-	// In general, the provider function should return a new instance of a Retyer if you are attempting
+	// In general, the provider function should return a new instance of a Retryer if you are attempting
 	// to provide a consistent Retryer configuration across all clients. This will ensure that each client will be
 	// provided a new instance of the Retryer implementation, and will avoid issues such as sharing the same retry token
 	// bucket across services.
@@ -72,6 +85,16 @@ type Config struct {
 	// See the ClientLogMode type documentation for the complete set of logging modes and available
 	// configuration.
 	ClientLogMode ClientLogMode
+
+	// The configured DefaultsMode. If not specified, service clients will default to legacy.
+	//
+	// Supported modes are: auto, cross-region, in-region, legacy, mobile, standard
+	DefaultsMode DefaultsMode
+
+	// The RuntimeEnvironment configuration, only populated if the DefaultsMode is set to
+	// AutoDefaultsMode and is initialized by `config.LoadDefaultConfig`. You should not
+	// populate this structure programmatically, or rely on the values here within your applications.
+	RuntimeEnvironment RuntimeEnvironment
 }
 
 // NewConfig returns a new Config pointer that can be chained with builder

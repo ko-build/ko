@@ -61,6 +61,8 @@ type PutImageInput struct {
 	// repository in which to put the image. If you do not specify a registry, the
 	// default public registry is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type PutImageOutput struct {
@@ -70,6 +72,8 @@ type PutImageOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationPutImageMiddlewares(stack *middleware.Stack, options Options) (err error) {

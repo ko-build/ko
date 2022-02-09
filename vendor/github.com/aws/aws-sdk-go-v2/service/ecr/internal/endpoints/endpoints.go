@@ -4,13 +4,62 @@ package endpoints
 
 import (
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/internal/endpoints"
+	endpoints "github.com/aws/aws-sdk-go-v2/internal/endpoints/v2"
+	"github.com/aws/smithy-go/logging"
 	"regexp"
 )
 
 // Options is the endpoint resolver configuration options
 type Options struct {
+	// Logger is a logging implementation that log events should be sent to.
+	Logger logging.Logger
+
+	// LogDeprecated indicates that deprecated endpoints should be logged to the
+	// provided logger.
+	LogDeprecated bool
+
+	// ResolvedRegion is used to override the region to be resolved, rather then the
+	// using the value passed to the ResolveEndpoint method. This value is used by the
+	// SDK to translate regions like fips-us-east-1 or us-east-1-fips to an alternative
+	// name. You must not set this value directly in your application.
+	ResolvedRegion string
+
+	// DisableHTTPS informs the resolver to return an endpoint that does not use the
+	// HTTPS scheme.
 	DisableHTTPS bool
+
+	// UseDualStackEndpoint specifies the resolver must resolve a dual-stack endpoint.
+	UseDualStackEndpoint aws.DualStackEndpointState
+
+	// UseFIPSEndpoint specifies the resolver must resolve a FIPS endpoint.
+	UseFIPSEndpoint aws.FIPSEndpointState
+}
+
+func (o Options) GetResolvedRegion() string {
+	return o.ResolvedRegion
+}
+
+func (o Options) GetDisableHTTPS() bool {
+	return o.DisableHTTPS
+}
+
+func (o Options) GetUseDualStackEndpoint() aws.DualStackEndpointState {
+	return o.UseDualStackEndpoint
+}
+
+func (o Options) GetUseFIPSEndpoint() aws.FIPSEndpointState {
+	return o.UseFIPSEndpoint
+}
+
+func transformToSharedOptions(options Options) endpoints.Options {
+	return endpoints.Options{
+		Logger:               options.Logger,
+		LogDeprecated:        options.LogDeprecated,
+		ResolvedRegion:       options.ResolvedRegion,
+		DisableHTTPS:         options.DisableHTTPS,
+		UseDualStackEndpoint: options.UseDualStackEndpoint,
+		UseFIPSEndpoint:      options.UseFIPSEndpoint,
+	}
 }
 
 // Resolver ECR endpoint resolver
@@ -24,9 +73,7 @@ func (r *Resolver) ResolveEndpoint(region string, options Options) (endpoint aws
 		return endpoint, &aws.MissingRegionError{}
 	}
 
-	opt := endpoints.Options{
-		DisableHTTPS: options.DisableHTTPS,
-	}
+	opt := transformToSharedOptions(options)
 	return r.partitions.ResolveEndpoint(region, opt)
 }
 
@@ -55,184 +102,391 @@ var partitionRegexp = struct {
 var defaultPartitions = endpoints.Partitions{
 	{
 		ID: "aws",
-		Defaults: endpoints.Endpoint{
-			Hostname:          "api.ecr.{region}.amazonaws.com",
-			Protocols:         []string{"https"},
-			SignatureVersions: []string{"v4"},
+		Defaults: map[endpoints.DefaultKey]endpoints.Endpoint{
+			{
+				Variant: endpoints.DualStackVariant,
+			}: {
+				Hostname:          "api.ecr.{region}.api.aws",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname:          "ecr-fips.{region}.amazonaws.com",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: endpoints.FIPSVariant | endpoints.DualStackVariant,
+			}: {
+				Hostname:          "api.ecr-fips.{region}.api.aws",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: 0,
+			}: {
+				Hostname:          "api.ecr.{region}.amazonaws.com",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
 		},
 		RegionRegex:    partitionRegexp.Aws,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
-			"af-south-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "af-south-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.af-south-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "af-south-1",
 				},
 			},
-			"ap-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "ap-east-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.ap-east-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-east-1",
 				},
 			},
-			"ap-northeast-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "ap-northeast-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.ap-northeast-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-northeast-1",
 				},
 			},
-			"ap-northeast-2": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "ap-northeast-2",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.ap-northeast-2.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-northeast-2",
 				},
 			},
-			"ap-northeast-3": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "ap-northeast-3",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.ap-northeast-3.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-northeast-3",
 				},
 			},
-			"ap-south-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "ap-south-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.ap-south-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-south-1",
 				},
 			},
-			"ap-southeast-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "ap-southeast-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.ap-southeast-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-southeast-1",
 				},
 			},
-			"ap-southeast-2": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "ap-southeast-2",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.ap-southeast-2.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ap-southeast-2",
 				},
 			},
-			"ca-central-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "ap-southeast-3",
+			}: endpoints.Endpoint{
+				Hostname: "api.ecr.ap-southeast-3.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "ap-southeast-3",
+				},
+			},
+			endpoints.EndpointKey{
+				Region: "ca-central-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.ca-central-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "ca-central-1",
 				},
 			},
-			"eu-central-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "dkr-us-east-1",
+			}: endpoints.Endpoint{
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-1",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region:  "dkr-us-east-1",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-east-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-1",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region: "dkr-us-east-2",
+			}: endpoints.Endpoint{
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-2",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region:  "dkr-us-east-2",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-east-2.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-2",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region: "dkr-us-west-1",
+			}: endpoints.Endpoint{
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-west-1",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region:  "dkr-us-west-1",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-west-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-west-1",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region: "dkr-us-west-2",
+			}: endpoints.Endpoint{
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-west-2",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region:  "dkr-us-west-2",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-west-2.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-west-2",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region: "eu-central-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.eu-central-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "eu-central-1",
 				},
 			},
-			"eu-north-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "eu-north-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.eu-north-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "eu-north-1",
 				},
 			},
-			"eu-south-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "eu-south-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.eu-south-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "eu-south-1",
 				},
 			},
-			"eu-west-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "eu-west-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.eu-west-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "eu-west-1",
 				},
 			},
-			"eu-west-2": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "eu-west-2",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.eu-west-2.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "eu-west-2",
 				},
 			},
-			"eu-west-3": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "eu-west-3",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.eu-west-3.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "eu-west-3",
 				},
 			},
-			"fips-dkr-us-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-dkr-us-east-1",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-east-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-east-1",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-dkr-us-east-2": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-dkr-us-east-2",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-east-2.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-east-2",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-dkr-us-west-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-dkr-us-west-1",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-west-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-west-1",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-dkr-us-west-2": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-dkr-us-west-2",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-west-2.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-west-2",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-us-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-us-east-1",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-east-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-east-1",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-us-east-2": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-us-east-2",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-east-2.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-east-2",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-us-west-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-us-west-1",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-west-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-west-1",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-us-west-2": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-us-west-2",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-west-2.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-west-2",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"me-south-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "me-south-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.me-south-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "me-south-1",
 				},
 			},
-			"sa-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "sa-east-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.sa-east-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "sa-east-1",
 				},
 			},
-			"us-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "us-east-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.us-east-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-east-1",
 				},
 			},
-			"us-east-2": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region:  "us-east-1",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-east-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-1",
+				},
+			},
+			endpoints.EndpointKey{
+				Region: "us-east-2",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.us-east-2.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-east-2",
 				},
 			},
-			"us-west-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region:  "us-east-2",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-east-2.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-east-2",
+				},
+			},
+			endpoints.EndpointKey{
+				Region: "us-west-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.us-west-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-west-1",
 				},
 			},
-			"us-west-2": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region:  "us-west-1",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-west-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-west-1",
+				},
+			},
+			endpoints.EndpointKey{
+				Region: "us-west-2",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.us-west-2.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-west-2",
+				},
+			},
+			endpoints.EndpointKey{
+				Region:  "us-west-2",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-west-2.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-west-2",
 				},
@@ -241,21 +495,50 @@ var defaultPartitions = endpoints.Partitions{
 	},
 	{
 		ID: "aws-cn",
-		Defaults: endpoints.Endpoint{
-			Hostname:          "api.ecr.{region}.amazonaws.com.cn",
-			Protocols:         []string{"https"},
-			SignatureVersions: []string{"v4"},
+		Defaults: map[endpoints.DefaultKey]endpoints.Endpoint{
+			{
+				Variant: endpoints.DualStackVariant,
+			}: {
+				Hostname:          "api.ecr.{region}.api.amazonwebservices.com.cn",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname:          "api.ecr-fips.{region}.amazonaws.com.cn",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: endpoints.FIPSVariant | endpoints.DualStackVariant,
+			}: {
+				Hostname:          "api.ecr-fips.{region}.api.amazonwebservices.com.cn",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: 0,
+			}: {
+				Hostname:          "api.ecr.{region}.amazonaws.com.cn",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
 		},
 		RegionRegex:    partitionRegexp.AwsCn,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
-			"cn-north-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "cn-north-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.cn-north-1.amazonaws.com.cn",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "cn-north-1",
 				},
 			},
-			"cn-northwest-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "cn-northwest-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.cn-northwest-1.amazonaws.com.cn",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "cn-northwest-1",
@@ -265,33 +548,67 @@ var defaultPartitions = endpoints.Partitions{
 	},
 	{
 		ID: "aws-iso",
-		Defaults: endpoints.Endpoint{
-			Hostname:          "api.ecr.{region}.c2s.ic.gov",
-			Protocols:         []string{"https"},
-			SignatureVersions: []string{"v4"},
+		Defaults: map[endpoints.DefaultKey]endpoints.Endpoint{
+			{
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname:          "api.ecr-fips.{region}.c2s.ic.gov",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: 0,
+			}: {
+				Hostname:          "api.ecr.{region}.c2s.ic.gov",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
 		},
 		RegionRegex:    partitionRegexp.AwsIso,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
-			"us-iso-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "us-iso-east-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.us-iso-east-1.c2s.ic.gov",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-iso-east-1",
+				},
+			},
+			endpoints.EndpointKey{
+				Region: "us-iso-west-1",
+			}: endpoints.Endpoint{
+				Hostname: "api.ecr.us-iso-west-1.c2s.ic.gov",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-iso-west-1",
 				},
 			},
 		},
 	},
 	{
 		ID: "aws-iso-b",
-		Defaults: endpoints.Endpoint{
-			Hostname:          "api.ecr.{region}.sc2s.sgov.gov",
-			Protocols:         []string{"https"},
-			SignatureVersions: []string{"v4"},
+		Defaults: map[endpoints.DefaultKey]endpoints.Endpoint{
+			{
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname:          "api.ecr-fips.{region}.sc2s.sgov.gov",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: 0,
+			}: {
+				Hostname:          "api.ecr.{region}.sc2s.sgov.gov",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
 		},
 		RegionRegex:    partitionRegexp.AwsIsoB,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
-			"us-isob-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "us-isob-east-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.us-isob-east-1.sc2s.sgov.gov",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-isob-east-1",
@@ -301,46 +618,141 @@ var defaultPartitions = endpoints.Partitions{
 	},
 	{
 		ID: "aws-us-gov",
-		Defaults: endpoints.Endpoint{
-			Hostname:          "api.ecr.{region}.amazonaws.com",
-			Protocols:         []string{"https"},
-			SignatureVersions: []string{"v4"},
+		Defaults: map[endpoints.DefaultKey]endpoints.Endpoint{
+			{
+				Variant: endpoints.DualStackVariant,
+			}: {
+				Hostname:          "api.ecr.{region}.api.aws",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname:          "ecr-fips.{region}.amazonaws.com",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: endpoints.FIPSVariant | endpoints.DualStackVariant,
+			}: {
+				Hostname:          "api.ecr-fips.{region}.api.aws",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
+			{
+				Variant: 0,
+			}: {
+				Hostname:          "api.ecr.{region}.amazonaws.com",
+				Protocols:         []string{"https"},
+				SignatureVersions: []string{"v4"},
+			},
 		},
 		RegionRegex:    partitionRegexp.AwsUsGov,
 		IsRegionalized: true,
 		Endpoints: endpoints.Endpoints{
-			"fips-dkr-us-gov-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "dkr-us-gov-east-1",
+			}: endpoints.Endpoint{
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-east-1",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region:  "dkr-us-gov-east-1",
+				Variant: endpoints.FIPSVariant,
+			}: {
 				Hostname: "ecr-fips.us-gov-east-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-gov-east-1",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-dkr-us-gov-west-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "dkr-us-gov-west-1",
+			}: endpoints.Endpoint{
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-west-1",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region:  "dkr-us-gov-west-1",
+				Variant: endpoints.FIPSVariant,
+			}: {
 				Hostname: "ecr-fips.us-gov-west-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-gov-west-1",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-us-gov-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-dkr-us-gov-east-1",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-gov-east-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-gov-east-1",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"fips-us-gov-west-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-dkr-us-gov-west-1",
+			}: endpoints.Endpoint{
 				Hostname: "ecr-fips.us-gov-west-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-gov-west-1",
 				},
+				Deprecated: aws.TrueTernary,
 			},
-			"us-gov-east-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region: "fips-us-gov-east-1",
+			}: endpoints.Endpoint{
+				Hostname: "ecr-fips.us-gov-east-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-east-1",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region: "fips-us-gov-west-1",
+			}: endpoints.Endpoint{
+				Hostname: "ecr-fips.us-gov-west-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-west-1",
+				},
+				Deprecated: aws.TrueTernary,
+			},
+			endpoints.EndpointKey{
+				Region: "us-gov-east-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.us-gov-east-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-gov-east-1",
 				},
 			},
-			"us-gov-west-1": endpoints.Endpoint{
+			endpoints.EndpointKey{
+				Region:  "us-gov-east-1",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-gov-east-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-east-1",
+				},
+			},
+			endpoints.EndpointKey{
+				Region: "us-gov-west-1",
+			}: endpoints.Endpoint{
 				Hostname: "api.ecr.us-gov-west-1.amazonaws.com",
+				CredentialScope: endpoints.CredentialScope{
+					Region: "us-gov-west-1",
+				},
+			},
+			endpoints.EndpointKey{
+				Region:  "us-gov-west-1",
+				Variant: endpoints.FIPSVariant,
+			}: {
+				Hostname: "ecr-fips.us-gov-west-1.amazonaws.com",
 				CredentialScope: endpoints.CredentialScope{
 					Region: "us-gov-west-1",
 				},

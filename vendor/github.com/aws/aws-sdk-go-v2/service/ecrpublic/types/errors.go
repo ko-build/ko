@@ -10,6 +10,8 @@ import (
 // The specified layer upload does not contain any layer parts.
 type EmptyUploadException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *EmptyUploadException) Error() string {
@@ -28,6 +30,8 @@ func (e *EmptyUploadException) ErrorFault() smithy.ErrorFault { return smithy.Fa
 // manifest or image tag after the last push.
 type ImageAlreadyExistsException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *ImageAlreadyExistsException) Error() string {
@@ -46,6 +50,8 @@ func (e *ImageAlreadyExistsException) ErrorFault() smithy.ErrorFault { return sm
 // for the image.
 type ImageDigestDoesNotMatchException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *ImageDigestDoesNotMatchException) Error() string {
@@ -65,6 +71,8 @@ func (e *ImageDigestDoesNotMatchException) ErrorFault() smithy.ErrorFault { retu
 // The image requested does not exist in the specified repository.
 type ImageNotFoundException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *ImageNotFoundException) Error() string {
@@ -83,6 +91,8 @@ func (e *ImageNotFoundException) ErrorFault() smithy.ErrorFault { return smithy.
 // configured for tag immutability.
 type ImageTagAlreadyExistsException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *ImageTagAlreadyExistsException) Error() string {
@@ -101,6 +111,8 @@ func (e *ImageTagAlreadyExistsException) ErrorFault() smithy.ErrorFault { return
 // layer does not match the digest specified.
 type InvalidLayerException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *InvalidLayerException) Error() string {
@@ -124,6 +136,8 @@ type InvalidLayerPartException struct {
 	RepositoryName        *string
 	UploadId              *string
 	LastValidByteReceived *int64
+
+	noSmithyDocumentSerde
 }
 
 func (e *InvalidLayerPartException) Error() string {
@@ -142,6 +156,8 @@ func (e *InvalidLayerPartException) ErrorFault() smithy.ErrorFault { return smit
 // request.
 type InvalidParameterException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *InvalidParameterException) Error() string {
@@ -161,6 +177,8 @@ func (e *InvalidParameterException) ErrorFault() smithy.ErrorFault { return smit
 // characters.
 type InvalidTagParameterException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *InvalidTagParameterException) Error() string {
@@ -178,6 +196,8 @@ func (e *InvalidTagParameterException) ErrorFault() smithy.ErrorFault { return s
 // The image layer already exists in the associated repository.
 type LayerAlreadyExistsException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *LayerAlreadyExistsException) Error() string {
@@ -195,6 +215,8 @@ func (e *LayerAlreadyExistsException) ErrorFault() smithy.ErrorFault { return sm
 // Layer parts must be at least 5 MiB in size.
 type LayerPartTooSmallException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *LayerPartTooSmallException) Error() string {
@@ -213,6 +235,8 @@ func (e *LayerPartTooSmallException) ErrorFault() smithy.ErrorFault { return smi
 // this repository.
 type LayersNotFoundException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *LayersNotFoundException) Error() string {
@@ -233,6 +257,8 @@ func (e *LayersNotFoundException) ErrorFault() smithy.ErrorFault { return smithy
 // the Amazon Elastic Container Registry User Guide.
 type LimitExceededException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *LimitExceededException) Error() string {
@@ -250,6 +276,8 @@ func (e *LimitExceededException) ErrorFault() smithy.ErrorFault { return smithy.
 // The manifest list is referencing an image that does not exist.
 type ReferencedImagesNotFoundException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *ReferencedImagesNotFoundException) Error() string {
@@ -269,6 +297,8 @@ func (e *ReferencedImagesNotFoundException) ErrorFault() smithy.ErrorFault { ret
 // The registry does not exist.
 type RegistryNotFoundException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *RegistryNotFoundException) Error() string {
@@ -286,6 +316,8 @@ func (e *RegistryNotFoundException) ErrorFault() smithy.ErrorFault { return smit
 // The specified repository already exists in the specified registry.
 type RepositoryAlreadyExistsException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *RepositoryAlreadyExistsException) Error() string {
@@ -306,6 +338,8 @@ func (e *RepositoryAlreadyExistsException) ErrorFault() smithy.ErrorFault { retu
 // images, you must force the deletion with the force parameter.
 type RepositoryNotEmptyException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *RepositoryNotEmptyException) Error() string {
@@ -325,6 +359,8 @@ func (e *RepositoryNotEmptyException) ErrorFault() smithy.ErrorFault { return sm
 // registry.
 type RepositoryNotFoundException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *RepositoryNotFoundException) Error() string {
@@ -343,6 +379,8 @@ func (e *RepositoryNotFoundException) ErrorFault() smithy.ErrorFault { return sm
 // repository policy.
 type RepositoryPolicyNotFoundException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *RepositoryPolicyNotFoundException) Error() string {
@@ -362,6 +400,8 @@ func (e *RepositoryPolicyNotFoundException) ErrorFault() smithy.ErrorFault { ret
 // These errors are usually caused by a server-side issue.
 type ServerException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *ServerException) Error() string {
@@ -380,6 +420,8 @@ func (e *ServerException) ErrorFault() smithy.ErrorFault { return smithy.FaultSe
 // that can be applied to a repository is 50.
 type TooManyTagsException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *TooManyTagsException) Error() string {
@@ -397,6 +439,8 @@ func (e *TooManyTagsException) ErrorFault() smithy.ErrorFault { return smithy.Fa
 // The action is not supported in this Region.
 type UnsupportedCommandException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *UnsupportedCommandException) Error() string {
@@ -415,6 +459,8 @@ func (e *UnsupportedCommandException) ErrorFault() smithy.ErrorFault { return sm
 // repository.
 type UploadNotFoundException struct {
 	Message *string
+
+	noSmithyDocumentSerde
 }
 
 func (e *UploadNotFoundException) Error() string {

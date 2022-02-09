@@ -31,8 +31,18 @@ type LoadOptions struct {
 	HTTPClient HTTPClient
 
 	// EndpointResolver that can be used to provide or override an endpoint for the given
-	// service and region Please see the `aws.EndpointResolver` documentation on usage.
+	// service and region.
+	//
+	// See the `aws.EndpointResolver` documentation on usage.
+	//
+	// Deprecated: See EndpointResolverWithOptions
 	EndpointResolver aws.EndpointResolver
+
+	// EndpointResolverWithOptions that can be used to provide or override an endpoint for the given
+	// service and region.
+	//
+	// See the `aws.EndpointResolverWithOptions` documentation on usage.
+	EndpointResolverWithOptions aws.EndpointResolverWithOptions
 
 	// Retryer is a function that provides a Retryer implementation. A Retryer guides how HTTP requests should be
 	// retried in case of recoverable failures.
@@ -91,6 +101,10 @@ type LoadOptions struct {
 	// from the EC2 Metadata service
 	UseEC2IMDSRegion *UseEC2IMDSRegion
 
+	// CredentialsCacheOptions is a function for setting the
+	// aws.CredentialsCacheOptions
+	CredentialsCacheOptions func(*aws.CredentialsCacheOptions)
+
 	// ProcessCredentialOptions is a function for setting
 	// the processcreds.Options
 	ProcessCredentialOptions func(*processcreds.Options)
@@ -137,6 +151,31 @@ type LoadOptions struct {
 
 	// Specifies the EC2 Instance Metadata Service endpoint to use. If specified it overrides EC2IMDSEndpointMode.
 	EC2IMDSEndpoint string
+
+	// Specifies that SDK clients must resolve a dual-stack endpoint for
+	// services.
+	UseDualStackEndpoint aws.DualStackEndpointState
+
+	// Specifies that SDK clients must resolve a FIPS endpoint for
+	// services.
+	UseFIPSEndpoint aws.FIPSEndpointState
+
+	// Specifies the SDK configuration mode for defaults.
+	DefaultsModeOptions DefaultsModeOptions
+}
+
+func (o LoadOptions) getDefaultsMode(ctx context.Context) (aws.DefaultsMode, bool, error) {
+	if len(o.DefaultsModeOptions.Mode) == 0 {
+		return "", false, nil
+	}
+	return o.DefaultsModeOptions.Mode, true, nil
+}
+
+func (o LoadOptions) getDefaultsModeIMDSClient(ctx context.Context) (*imds.Client, bool, error) {
+	if o.DefaultsModeOptions.IMDSClient == nil {
+		return nil, false, nil
+	}
+	return o.DefaultsModeOptions.IMDSClient, true, nil
 }
 
 // getRegion returns Region from config's LoadOptions
@@ -347,6 +386,29 @@ func WithCredentialsProvider(v aws.CredentialsProvider) LoadOptionsFunc {
 	}
 }
 
+// getCredentialsCacheOptionsProvider returns the wrapped function to set aws.CredentialsCacheOptions
+func (o LoadOptions) getCredentialsCacheOptions(ctx context.Context) (func(*aws.CredentialsCacheOptions), bool, error) {
+	if o.CredentialsCacheOptions == nil {
+		return nil, false, nil
+	}
+
+	return o.CredentialsCacheOptions, true, nil
+}
+
+// WithCredentialsCacheOptions is a helper function to construct functional
+// options that sets a function to modify the aws.CredentialsCacheOptions the
+// aws.CredentialsCache will be configured with, if the CredentialsCache is used
+// by the configuration loader.
+//
+// If multiple WithCredentialsCacheOptions calls are made, the last call
+// overrides the previous call values.
+func WithCredentialsCacheOptions(v func(*aws.CredentialsCacheOptions)) LoadOptionsFunc {
+	return func(o *LoadOptions) error {
+		o.CredentialsCacheOptions = v
+		return nil
+	}
+}
+
 // getProcessCredentialOptions returns the wrapped function to set processcreds.Options
 func (o LoadOptions) getProcessCredentialOptions(ctx context.Context) (func(*processcreds.Options), bool, error) {
 	if o.ProcessCredentialOptions == nil {
@@ -525,12 +587,33 @@ func (o LoadOptions) getEndpointResolver(ctx context.Context) (aws.EndpointResol
 }
 
 // WithEndpointResolver is a helper function to construct functional options
-// that sets endpoint resolver on LoadOptions. The EndpointResolver is set to nil,
+// that sets the EndpointResolver on LoadOptions. If the EndpointResolver is set to nil,
 // the EndpointResolver value is ignored. If multiple WithEndpointResolver calls
 // are made, the last call overrides the previous call values.
+//
+// Deprecated: See WithEndpointResolverWithOptions
 func WithEndpointResolver(v aws.EndpointResolver) LoadOptionsFunc {
 	return func(o *LoadOptions) error {
 		o.EndpointResolver = v
+		return nil
+	}
+}
+
+func (o LoadOptions) getEndpointResolverWithOptions(ctx context.Context) (aws.EndpointResolverWithOptions, bool, error) {
+	if o.EndpointResolverWithOptions == nil {
+		return nil, false, nil
+	}
+
+	return o.EndpointResolverWithOptions, true, nil
+}
+
+// WithEndpointResolverWithOptions is a helper function to construct functional options
+// that sets the EndpointResolverWithOptions on LoadOptions. If the EndpointResolverWithOptions is set to nil,
+// the EndpointResolver value is ignored. If multiple WithEndpointResolver calls
+// are made, the last call overrides the previous call values.
+func WithEndpointResolverWithOptions(v aws.EndpointResolverWithOptions) LoadOptionsFunc {
+	return func(o *LoadOptions) error {
+		o.EndpointResolverWithOptions = v
 		return nil
 	}
 }
@@ -701,6 +784,59 @@ func WithEC2IMDSEndpointMode(v imds.EndpointModeState) LoadOptionsFunc {
 func WithEC2IMDSEndpoint(v string) LoadOptionsFunc {
 	return func(o *LoadOptions) error {
 		o.EC2IMDSEndpoint = v
+		return nil
+	}
+}
+
+// WithUseDualStackEndpoint is a helper function to construct
+// functional options that can be used to set UseDualStackEndpoint on LoadOptions.
+func WithUseDualStackEndpoint(v aws.DualStackEndpointState) LoadOptionsFunc {
+	return func(o *LoadOptions) error {
+		o.UseDualStackEndpoint = v
+		return nil
+	}
+}
+
+// GetUseDualStackEndpoint returns whether the service's dual-stack endpoint should be
+// used for requests.
+func (o LoadOptions) GetUseDualStackEndpoint(ctx context.Context) (value aws.DualStackEndpointState, found bool, err error) {
+	if o.UseDualStackEndpoint == aws.DualStackEndpointStateUnset {
+		return aws.DualStackEndpointStateUnset, false, nil
+	}
+	return o.UseDualStackEndpoint, true, nil
+}
+
+// WithUseFIPSEndpoint is a helper function to construct
+// functional options that can be used to set UseFIPSEndpoint on LoadOptions.
+func WithUseFIPSEndpoint(v aws.FIPSEndpointState) LoadOptionsFunc {
+	return func(o *LoadOptions) error {
+		o.UseFIPSEndpoint = v
+		return nil
+	}
+}
+
+// GetUseFIPSEndpoint returns whether the service's FIPS endpoint should be
+// used for requests.
+func (o LoadOptions) GetUseFIPSEndpoint(ctx context.Context) (value aws.FIPSEndpointState, found bool, err error) {
+	if o.UseFIPSEndpoint == aws.FIPSEndpointStateUnset {
+		return aws.FIPSEndpointStateUnset, false, nil
+	}
+	return o.UseFIPSEndpoint, true, nil
+}
+
+// WithDefaultsMode sets the SDK defaults configuration mode to the value provided.
+//
+// Zero or more functional options can be provided to provide configuration options for performing
+// environment discovery when using aws.AutoDefaultsMode.
+func WithDefaultsMode(mode aws.DefaultsMode, optFns ...func(options *DefaultsModeOptions)) LoadOptionsFunc {
+	do := DefaultsModeOptions{
+		Mode: mode,
+	}
+	for _, fn := range optFns {
+		fn(&do)
+	}
+	return func(options *LoadOptions) error {
+		options.DefaultsModeOptions = do
 		return nil
 	}
 }

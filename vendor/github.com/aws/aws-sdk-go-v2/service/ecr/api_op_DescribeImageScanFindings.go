@@ -34,7 +34,7 @@ func (c *Client) DescribeImageScanFindings(ctx context.Context, params *Describe
 
 type DescribeImageScanFindingsInput struct {
 
-	// An object with identifying information for an Amazon ECR image.
+	// An object with identifying information for an image in an Amazon ECR repository.
 	//
 	// This member is required.
 	ImageId *types.ImageIdentifier
@@ -61,15 +61,17 @@ type DescribeImageScanFindingsInput struct {
 	// to return.
 	NextToken *string
 
-	// The AWS account ID associated with the registry that contains the repository in
-	// which to describe the image scan findings for. If you do not specify a registry,
-	// the default registry is assumed.
+	// The Amazon Web Services account ID associated with the registry that contains
+	// the repository in which to describe the image scan findings for. If you do not
+	// specify a registry, the default registry is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type DescribeImageScanFindingsOutput struct {
 
-	// An object with identifying information for an Amazon ECR image.
+	// An object with identifying information for an image in an Amazon ECR repository.
 	ImageId *types.ImageIdentifier
 
 	// The information contained in the image scan findings.
@@ -92,6 +94,8 @@ type DescribeImageScanFindingsOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDescribeImageScanFindingsMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -213,12 +217,13 @@ func NewDescribeImageScanFindingsPaginator(client DescribeImageScanFindingsAPICl
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeImageScanFindingsPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeImageScanFindings page.
@@ -245,7 +250,10 @@ func (p *DescribeImageScanFindingsPaginator) NextPage(ctx context.Context, optFn
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 
@@ -311,8 +319,17 @@ func NewImageScanCompleteWaiter(client DescribeImageScanFindingsAPIClient, optFn
 // the maximum wait duration the waiter will wait. The maxWaitDur is required and
 // must be greater than zero.
 func (w *ImageScanCompleteWaiter) Wait(ctx context.Context, params *DescribeImageScanFindingsInput, maxWaitDur time.Duration, optFns ...func(*ImageScanCompleteWaiterOptions)) error {
+	_, err := w.WaitForOutput(ctx, params, maxWaitDur, optFns...)
+	return err
+}
+
+// WaitForOutput calls the waiter function for ImageScanComplete waiter and returns
+// the output of the successful operation. The maxWaitDur is the maximum wait
+// duration the waiter will wait. The maxWaitDur is required and must be greater
+// than zero.
+func (w *ImageScanCompleteWaiter) WaitForOutput(ctx context.Context, params *DescribeImageScanFindingsInput, maxWaitDur time.Duration, optFns ...func(*ImageScanCompleteWaiterOptions)) (*DescribeImageScanFindingsOutput, error) {
 	if maxWaitDur <= 0 {
-		return fmt.Errorf("maximum wait time for waiter must be greater than zero")
+		return nil, fmt.Errorf("maximum wait time for waiter must be greater than zero")
 	}
 
 	options := w.options
@@ -325,7 +342,7 @@ func (w *ImageScanCompleteWaiter) Wait(ctx context.Context, params *DescribeImag
 	}
 
 	if options.MinDelay > options.MaxDelay {
-		return fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
+		return nil, fmt.Errorf("minimum waiter delay %v must be lesser than or equal to maximum waiter delay of %v.", options.MinDelay, options.MaxDelay)
 	}
 
 	ctx, cancelFn := context.WithTimeout(ctx, maxWaitDur)
@@ -353,10 +370,10 @@ func (w *ImageScanCompleteWaiter) Wait(ctx context.Context, params *DescribeImag
 
 		retryable, err := options.Retryable(ctx, params, out, err)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if !retryable {
-			return nil
+			return out, nil
 		}
 
 		remainingTime -= time.Since(start)
@@ -369,16 +386,16 @@ func (w *ImageScanCompleteWaiter) Wait(ctx context.Context, params *DescribeImag
 			attempt, options.MinDelay, options.MaxDelay, remainingTime,
 		)
 		if err != nil {
-			return fmt.Errorf("error computing waiter delay, %w", err)
+			return nil, fmt.Errorf("error computing waiter delay, %w", err)
 		}
 
 		remainingTime -= delay
 		// sleep for the delay amount before invoking a request
 		if err := smithytime.SleepWithContext(ctx, delay); err != nil {
-			return fmt.Errorf("request cancelled while waiting, %w", err)
+			return nil, fmt.Errorf("request cancelled while waiting, %w", err)
 		}
 	}
-	return fmt.Errorf("exceeded max wait time for ImageScanComplete waiter")
+	return nil, fmt.Errorf("exceeded max wait time for ImageScanComplete waiter")
 }
 
 func imageScanCompleteStateRetryable(ctx context.Context, input *DescribeImageScanFindingsInput, output *DescribeImageScanFindingsOutput, err error) (bool, error) {

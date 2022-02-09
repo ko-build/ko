@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 var (
@@ -18,7 +19,7 @@ var literalValues = [][]rune{
 
 func isBoolValue(b []rune) bool {
 	for _, lv := range literalValues {
-		if isLitValue(lv, b) {
+		if isCaselessLitValue(lv, b) {
 			return true
 		}
 	}
@@ -32,6 +33,21 @@ func isLitValue(want, have []rune) bool {
 
 	for i := 0; i < len(want); i++ {
 		if want[i] != have[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// isCaselessLitValue is a caseless value comparison, assumes want is already lower-cased for efficiency.
+func isCaselessLitValue(want, have []rune) bool {
+	if len(have) < len(want) {
+		return false
+	}
+
+	for i := 0; i < len(want); i++ {
+		if want[i] != unicode.ToLower(have[i]) {
 			return false
 		}
 	}
@@ -177,7 +193,7 @@ func newValue(t ValueType, base int, raw []rune) (Value, error) {
 	case QuotedStringType:
 		v.str = string(raw[1 : len(raw)-1])
 	case BoolType:
-		v.boolean = runeCompare(v.raw, runesTrue)
+		v.boolean = isCaselessLitValue(runesTrue, v.raw)
 	}
 
 	// issue 2253
@@ -200,22 +216,8 @@ func NewStringValue(str string) (Value, error) {
 
 // NewIntValue returns a Value type generated using an int64 input.
 func NewIntValue(i int64) (Value, error) {
-	return newValue(IntegerType, 10, []rune{rune(i)})
-}
-
-// Append will append values and change the type to a string
-// type.
-func (v *Value) Append(tok Token) {
-	r := tok.Raw()
-	if v.Type != QuotedStringType {
-		v.Type = StringType
-		r = tok.raw[1 : len(tok.raw)-1]
-	}
-	if tok.Type() != TokenLit {
-		v.raw = append(v.raw, tok.Raw()...)
-	} else {
-		v.raw = append(v.raw, r...)
-	}
+	v := strconv.FormatInt(i, 10)
+	return newValue(IntegerType, 10, []rune(v))
 }
 
 func (v Value) String() string {

@@ -34,9 +34,12 @@ type GetLifecyclePolicyInput struct {
 	// This member is required.
 	RepositoryName *string
 
-	// The AWS account ID associated with the registry that contains the repository. If
-	// you do not specify a registry, the default registry is assumed.
+	// The Amazon Web Services account ID associated with the registry that contains
+	// the repository. If you do not specify a registry, the default registry is
+	// assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type GetLifecyclePolicyOutput struct {
@@ -55,6 +58,8 @@ type GetLifecyclePolicyOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetLifecyclePolicyMiddlewares(stack *middleware.Stack, options Options) (err error) {

@@ -62,6 +62,8 @@ type UploadLayerPartInput struct {
 	// The AWS account ID associated with the registry to which you are uploading layer
 	// parts. If you do not specify a registry, the default public registry is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type UploadLayerPartOutput struct {
@@ -80,6 +82,8 @@ type UploadLayerPartOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationUploadLayerPartMiddlewares(stack *middleware.Stack, options Options) (err error) {

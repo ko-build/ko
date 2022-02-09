@@ -37,6 +37,8 @@ type GetRepositoryPolicyInput struct {
 	// repository. If you do not specify a registry, the default public registry is
 	// assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type GetRepositoryPolicyOutput struct {
@@ -53,6 +55,8 @@ type GetRepositoryPolicyOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetRepositoryPolicyMiddlewares(stack *middleware.Stack, options Options) (err error) {

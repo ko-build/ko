@@ -43,6 +43,8 @@ type InitiateLayerUploadInput struct {
 	// layers. If you do not specify a registry, the default public registry is
 	// assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type InitiateLayerUploadOutput struct {
@@ -56,6 +58,8 @@ type InitiateLayerUploadOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationInitiateLayerUploadMiddlewares(stack *middleware.Stack, options Options) (err error) {

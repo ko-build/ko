@@ -11,9 +11,9 @@ import (
 )
 
 // Creates or updates the permissions policy for your registry. A registry policy
-// is used to specify permissions for another AWS account and is used when
-// configuring cross-account replication. For more information, see Registry
-// permissions
+// is used to specify permissions for another Amazon Web Services account and is
+// used when configuring cross-account replication. For more information, see
+// Registry permissions
 // (https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry-permissions.html)
 // in the Amazon Elastic Container Registry User Guide.
 func (c *Client) PutRegistryPolicy(ctx context.Context, params *PutRegistryPolicyInput, optFns ...func(*Options)) (*PutRegistryPolicyOutput, error) {
@@ -40,6 +40,8 @@ type PutRegistryPolicyInput struct {
 	//
 	// This member is required.
 	PolicyText *string
+
+	noSmithyDocumentSerde
 }
 
 type PutRegistryPolicyOutput struct {
@@ -52,6 +54,8 @@ type PutRegistryPolicyOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationPutRegistryPolicyMiddlewares(stack *middleware.Stack, options Options) (err error) {

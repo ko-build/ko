@@ -49,6 +49,8 @@ type BatchDeleteImageInput struct {
 	// delete. If you do not specify a registry, the default public registry is
 	// assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type BatchDeleteImageOutput struct {
@@ -61,6 +63,8 @@ type BatchDeleteImageOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationBatchDeleteImageMiddlewares(stack *middleware.Stack, options Options) (err error) {

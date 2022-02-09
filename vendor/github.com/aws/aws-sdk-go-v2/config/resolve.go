@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/smithy-go/logging"
 )
 
@@ -166,6 +167,22 @@ func resolveEndpointResolver(ctx context.Context, cfg *aws.Config, configs confi
 	return nil
 }
 
+// resolveEndpointResolver extracts the first instance of a EndpointResolverFunc from the config slice
+// and sets the functions result on the aws.Config.EndpointResolver
+func resolveEndpointResolverWithOptions(ctx context.Context, cfg *aws.Config, configs configs) error {
+	endpointResolver, found, err := getEndpointResolverWithOptions(ctx, configs)
+	if err != nil {
+		return err
+	}
+	if !found {
+		return nil
+	}
+
+	cfg.EndpointResolverWithOptions = endpointResolver
+
+	return nil
+}
+
 func resolveLogger(ctx context.Context, cfg *aws.Config, configs configs) error {
 	logger, found, err := getLogger(ctx, configs)
 	if err != nil {
@@ -222,6 +239,39 @@ func resolveEC2IMDSRegion(ctx context.Context, cfg *aws.Config, configs configs)
 	}
 
 	cfg.Region = region
+
+	return nil
+}
+
+func resolveDefaultsModeOptions(ctx context.Context, cfg *aws.Config, configs configs) error {
+	defaultsMode, found, err := getDefaultsMode(ctx, configs)
+	if err != nil {
+		return err
+	}
+	if !found {
+		defaultsMode = aws.DefaultsModeLegacy
+	}
+
+	var environment aws.RuntimeEnvironment
+	if defaultsMode == aws.DefaultsModeAuto {
+		envConfig, _, _ := getAWSConfigSources(configs)
+
+		client, found, err := getDefaultsModeIMDSClient(ctx, configs)
+		if err != nil {
+			return err
+		}
+		if !found {
+			client = imds.NewFromConfig(*cfg)
+		}
+
+		environment, err = resolveDefaultsModeRuntimeEnvironment(ctx, envConfig, client)
+		if err != nil {
+			return err
+		}
+	}
+
+	cfg.DefaultsMode = defaultsMode
+	cfg.RuntimeEnvironment = environment
 
 	return nil
 }

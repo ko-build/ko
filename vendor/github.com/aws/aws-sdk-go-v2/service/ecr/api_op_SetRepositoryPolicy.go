@@ -11,7 +11,7 @@ import (
 )
 
 // Applies a repository policy to the specified repository to control access
-// permissions. For more information, see Amazon ECR Repository Policies
+// permissions. For more information, see Amazon ECR Repository policies
 // (https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policies.html)
 // in the Amazon Elastic Container Registry User Guide.
 func (c *Client) SetRepositoryPolicy(ctx context.Context, params *SetRepositoryPolicyInput, optFns ...func(*Options)) (*SetRepositoryPolicyOutput, error) {
@@ -32,7 +32,7 @@ func (c *Client) SetRepositoryPolicy(ctx context.Context, params *SetRepositoryP
 type SetRepositoryPolicyInput struct {
 
 	// The JSON repository policy text to apply to the repository. For more
-	// information, see Amazon ECR Repository Policies
+	// information, see Amazon ECR repository policies
 	// (https://docs.aws.amazon.com/AmazonECR/latest/userguide/repository-policy-examples.html)
 	// in the Amazon Elastic Container Registry User Guide.
 	//
@@ -50,9 +50,12 @@ type SetRepositoryPolicyInput struct {
 	// lock outs.
 	Force bool
 
-	// The AWS account ID associated with the registry that contains the repository. If
-	// you do not specify a registry, the default registry is assumed.
+	// The Amazon Web Services account ID associated with the registry that contains
+	// the repository. If you do not specify a registry, the default registry is
+	// assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type SetRepositoryPolicyOutput struct {
@@ -68,6 +71,8 @@ type SetRepositoryPolicyOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationSetRepositoryPolicyMiddlewares(stack *middleware.Stack, options Options) (err error) {
