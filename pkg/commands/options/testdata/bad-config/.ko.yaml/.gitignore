@@ -1,0 +1,3 @@
+.# We just want to have a practically empty directory.
+*
+!.gitignore

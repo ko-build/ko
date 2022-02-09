@@ -25,15 +25,32 @@ import (
 	"strings"
 	"time"
 
+	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
+	"github.com/awslabs/amazon-ecr-credential-helper/ecr-login/api"
+	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/go-containerregistry/pkg/authn/github"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/grafana/ko/pkg/build"
 	"github.com/grafana/ko/pkg/commands/options"
 	"github.com/grafana/ko/pkg/publish"
+)
+
+var (
+	amazonKeychain authn.Keychain = authn.NewKeychainFromHelper(ecr.ECRHelper{ClientFactory: api.DefaultClientFactory{}})
+	azureKeychain  authn.Keychain = authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
+	keychain                      = authn.NewMultiKeychain(
+		authn.DefaultKeychain,
+		google.Keychain,
+		github.Keychain,
+		amazonKeychain,
+		azureKeychain,
+	)
 )
 
 // getBaseImage returns a function that determines the base image for a given import path.
@@ -50,7 +67,7 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			userAgent = bo.UserAgent
 		}
 		ropt := []remote.Option{
-			remote.WithAuthFromKeychain(authn.DefaultKeychain),
+			remote.WithAuthFromKeychain(keychain),
 			remote.WithUserAgent(userAgent),
 			remote.WithContext(ctx),
 		}

@@ -15,6 +15,8 @@
 package options
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"github.com/grafana/ko/pkg/build"
@@ -95,5 +97,43 @@ func TestAddBuildOptionsSetsDefaultsForNonFlagOptions(t *testing.T) {
 	AddBuildOptions(cmd, bo)
 	if !bo.Trimpath {
 		t.Error("expected Trimpath=true")
+	}
+}
+
+func TestOverrideConfigPath(t *testing.T) {
+	const envName = "KO_CONFIG_PATH"
+	bo := &BuildOptions{}
+	for _, tc := range []struct {
+		name         string
+		koConfigPath string
+		err          string
+	}{{
+		name:         ".ko.yaml does not exist",
+		koConfigPath: "testdata",
+		err:          "testdata/.ko.yaml: no such file or directory",
+	}, {
+		name:         ".ko.yaml is dir",
+		koConfigPath: "testdata/bad-config",
+		err:          "testdata/bad-config/.ko.yaml is not a regular file",
+	}, {
+		name:         "good",
+		koConfigPath: "testdata/config",
+	}} {
+		t.Run(tc.name, func(t *testing.T) {
+			oldEnv := os.Getenv(envName)
+			defer os.Setenv(envName, oldEnv)
+
+			os.Setenv(envName, tc.koConfigPath)
+			err := bo.LoadConfig()
+			if err == nil {
+				if tc.err == "" {
+					return
+				}
+				t.Fatalf("expected error %q, saw nil", tc.err)
+			}
+			if !strings.Contains(err.Error(), tc.err) {
+				t.Errorf("expected error to contain %q, saw: %v", tc.err, err)
+			}
+		})
 	}
 }
