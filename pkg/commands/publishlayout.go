@@ -17,15 +17,12 @@ package commands
 import (
 	"context"
 	"fmt"
-	"io"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/grafana/ko/pkg/commands/options"
 	"github.com/grafana/ko/pkg/publish"
@@ -89,58 +86,6 @@ func pushManifestList(ctx context.Context, ml v1.ImageIndex, name string) error 
 	}
 	_, err = publisher.Publish(ctx, ml, name)
 	return err
-}
-
-func loadTags(fpath string) ([]*name.Tag, error) {
-	m, err := tarball.LoadManifest(func() (io.ReadCloser, error) {
-		return os.Open(fpath)
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to load manifest from %q: %w", fpath, err)
-	}
-
-	var tags []*name.Tag
-	for _, d := range m {
-		tag, err := name.NewTag(d.RepoTags[0])
-		if err != nil {
-			return nil, err
-		}
-
-		tags = append(tags, &tag)
-	}
-
-	return tags, nil
-}
-
-// loadImages loads images from a tarball.
-func loadImages(fpath string) ([]v1.Image, error) {
-	tags, err := loadTags(fpath)
-	if err != nil {
-		return nil, err
-	}
-
-	var imgs []v1.Image
-	for _, t := range tags {
-		img, err := tarball.ImageFromPath(fpath, t)
-		if err != nil {
-			return nil, fmt.Errorf("failed to load image %q from %q: %w", t, fpath, err)
-		}
-
-		imgs = append(imgs, img)
-
-		m, err := tarball.LoadManifest(func() (io.ReadCloser, error) {
-			return os.Open(fpath)
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to load manifest for %q from %q: %w", t, fpath, err)
-		}
-
-		for _, d := range m {
-			fmt.Printf("Descriptor config: %s\n", d.Config)
-		}
-	}
-
-	return imgs, nil
 }
 
 func publishToDaemon(ctx context.Context, ml v1.ImageIndex, name string) error {
