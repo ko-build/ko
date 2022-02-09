@@ -50,7 +50,7 @@ If the image was not built using ko, or if it was built without embedding depend
 			ctx := cmd.Context()
 
 			switch sbomType {
-			case "spdx", "go.version-m":
+			case "cyclonedx", "spdx", "go.version-m":
 			default:
 				return fmt.Errorf("invalid sbom type %q: must be spdx or go.version-m", sbomType)
 			}
@@ -135,6 +135,12 @@ If the image was not built using ko, or if it was built without embedding depend
 				switch sbomType {
 				case "spdx":
 					b, err := sbom.GenerateSPDX(Version, cfg.Created.Time, mod)
+					if err != nil {
+						return err
+					}
+					io.Copy(os.Stdout, bytes.NewReader(b))
+				case "cyclonedx":
+					b, err := sbom.GenerateCycloneDX(mod)
 					if err != nil {
 						return err
 					}
