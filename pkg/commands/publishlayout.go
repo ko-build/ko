@@ -100,8 +100,12 @@ func pushImageIndex(ctx context.Context, idx v1.ImageIndex, name string, po opti
 
 // publishToDaemon publishes an image index with the local Docker daemon.
 func publishToDaemon(ctx context.Context, idx v1.ImageIndex, name string, po options.PublishOptions) error {
+	dockerRepo := os.Getenv("KO_DOCKER_REPO")
+	if dockerRepo == "" {
+		return fmt.Errorf("KO_DOCKER_REPO environment variable is unset")
+	}
 	namer := options.MakeNamer(&po)
-	publisher, err := publish.NewDaemon(namer, po.Tags)
+	publisher, err := publish.NewDaemon(namer, po.Tags, publish.WithLocalDomain(dockerRepo))
 	if err != nil {
 		return err
 	}
