@@ -20,7 +20,6 @@ import (
 	"io"
 	"os"
 
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -82,7 +81,7 @@ func pushManifestList(ctx context.Context, ml v1.ImageIndex, name string) error 
 	namer := options.MakeNamer(&options.PublishOptions{})
 	publisher, err := publish.NewDefault(dockerRepo,
 		publish.WithUserAgent(ua()),
-		publish.WithAuthFromKeychain(authn.DefaultKeychain),
+		publish.WithAuthFromKeychain(keychain),
 		publish.WithNamer(namer),
 	)
 	if err != nil {
