@@ -17,6 +17,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -34,6 +35,7 @@ import (
 // addPublishLayout augments our CLI surface with publish-layout.
 func addPublishLayout(topLevel *cobra.Command) {
 	publishLocal := false
+	var po options.PublishOptions
 	cmd := &cobra.Command{
 		Use:   "publish-layout APP OCI-LAYOUT",
 		Short: "Publish manifest list from the given OCI image layout.",
@@ -46,67 +48,70 @@ func addPublishLayout(topLevel *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
-			ml, err := manifestList(ctx, args[1])
+			idx, err := imageIndex(ctx, args[1])
 			if err != nil {
 				return err
 			}
 			name := args[0]
 			if !publishLocal {
-				if err := pushManifestList(ctx, ml, name); err != nil {
+				if err := pushImageIndex(ctx, idx, name, po); err != nil {
 					return err
 				}
 			} else {
-				if err := publishToDaemon(ctx, ml, name); err != nil {
+				if err := publishToDaemon(ctx, idx, name, po); err != nil {
 					return err
 				}
 			}
 			return nil
 		},
 	}
+	cmd.Flags().StringSliceVarP(&po.Tags, "tags", "t", []string{"latest"},
+		"Which tags to use for the produced image instead of the default 'latest' tag "+
+			"(may not work properly with --base-import-paths or --bare).")
+	cmd.Flags().BoolVarP(&po.BaseImportPaths, "base-import-paths", "B", po.BaseImportPaths,
+		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).")
+	cmd.Flags().BoolVar(&po.Bare, "bare", po.Bare,
+		"Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).")
 	cmd.Flags().BoolVarP(&publishLocal, "local", "L", publishLocal,
 		"Load images into local Docker daemon.")
 	topLevel.AddCommand(cmd)
 }
 
-func pushManifestList(ctx context.Context, ml v1.ImageIndex, name string) error {
+// pushImageIndex pushes an image index to an image repository.
+func pushImageIndex(ctx context.Context, idx v1.ImageIndex, name string, po options.PublishOptions) error {
 	dockerRepo := os.Getenv("KO_DOCKER_REPO")
 	if dockerRepo == "" {
 		return fmt.Errorf("KO_DOCKER_REPO environment variable is unset")
 	}
 
-	// TODO
-	namer := options.MakeNamer(&options.PublishOptions{})
+	namer := options.MakeNamer(&po)
 	publisher, err := publish.NewDefault(dockerRepo,
 		publish.WithUserAgent(ua()),
 		publish.WithAuthFromKeychain(keychain),
 		publish.WithNamer(namer),
+		publish.WithTags(po.Tags),
 	)
 	if err != nil {
 		return err
 	}
-	_, err = publisher.Publish(ctx, ml, name)
+	_, err = publisher.Publish(ctx, idx, name)
 	return err
 }
 
-func publishToDaemon(ctx context.Context, ml v1.ImageIndex, name string) error {
-	// TODO
-	namer := options.MakeNamer(&options.PublishOptions{})
-	// TODO
-	tags := []string{}
-	publisher, err := publish.NewDaemon(namer, tags)
+// publishToDaemon publishes an image index with the local Docker daemon.
+func publishToDaemon(ctx context.Context, idx v1.ImageIndex, name string, po options.PublishOptions) error {
+	namer := options.MakeNamer(&po)
+	publisher, err := publish.NewDaemon(namer, po.Tags)
 	if err != nil {
 		return err
 	}
-	_, err = publisher.Publish(ctx, ml, name)
+	_, err = publisher.Publish(ctx, idx, name)
 	return err
 }
 
-func manifestList(ctx context.Context, layoutPath string) (v1.ImageIndex, error) {
+// imageIndex loads an image index from an OCI image layout.
+func imageIndex(ctx context.Context, layoutPath string) (v1.ImageIndex, error) {
 	idx, err := layout.ImageIndexFromPath(layoutPath)
-	if err != nil {
-		return nil, err
-	}
-	mt, err := idx.MediaType()
 	if err != nil {
 		return nil, err
 	}
@@ -117,43 +122,42 @@ func manifestList(ctx context.Context, layoutPath string) (v1.ImageIndex, error)
 
 	var adds []ocimutate.IndexAddendum
 
-	fmt.Printf("The image index has media type %s and %d image manifests\n", mt, len(im.Manifests))
-	var nestedMt types.MediaType
-	for _, d := range im.Manifests {
-		fmt.Printf("Manifest %s with type %s\n", d.Digest.Hex, d.MediaType)
-		nestedIdx, err := idx.ImageIndex(d.Digest)
+	// The cointained image index should have one image index within it
+	d := im.Manifests[0]
+	nestedIdx, err := idx.ImageIndex(d.Digest)
+	if err != nil {
+		return nil, err
+	}
+
+	nestedMt, err := nestedIdx.MediaType()
+	if err != nil {
+		return nil, err
+	}
+	mm, err := nestedIdx.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("The image index nested within the OCI image layout has type %s and %d manifest(s)\n", nestedMt, len(mm.Manifests))
+	for i, m := range mm.Manifests {
+		img, err := nestedIdx.Image(m.Digest)
 		if err != nil {
 			return nil, err
 		}
 
-		nestedMt, err = nestedIdx.MediaType()
-		if err != nil {
-			return nil, err
+		if m.MediaType != types.OCIManifestSchema1 && m.MediaType != types.DockerManifestSchema1 && m.MediaType != types.DockerManifestSchema2 {
+			return nil, fmt.Errorf("Image #%d in OCI image layout has wrong media type: %q", i+1, m.MediaType)
 		}
-		mm, err := nestedIdx.IndexManifest()
-		if err != nil {
-			return nil, err
-		}
-
-		fmt.Printf("Nested index with type %s and %d manifests\n", nestedMt, len(mm.Manifests))
-		for _, m := range mm.Manifests {
-			img, err := nestedIdx.Image(m.Digest)
-			if err != nil {
-				return nil, err
-			}
-
-			fmt.Printf("Manifest with type %s, digest %s and platform %#v\n", m.MediaType, m.Digest.Hex, m.Platform)
-			fmt.Printf("Adding addendum - URLs: %#v, media type: %s, annotations: %#v, platform: %#v\n", m.URLs, m.MediaType, m.Annotations, m.Platform)
-			adds = append(adds, ocimutate.IndexAddendum{
-				Add: signed.Image(img),
-				Descriptor: v1.Descriptor{
-					URLs:        m.URLs,
-					MediaType:   m.MediaType,
-					Annotations: m.Annotations,
-					Platform:    m.Platform,
-				},
-			})
-		}
+		log.Printf("Image #%d has media type %q and platform %s/%s", i+1, m.MediaType, m.Platform.OS, m.Platform.Architecture)
+		adds = append(adds, ocimutate.IndexAddendum{
+			Add: signed.Image(img),
+			Descriptor: v1.Descriptor{
+				URLs:        m.URLs,
+				MediaType:   m.MediaType,
+				Annotations: m.Annotations,
+				Platform:    m.Platform,
+			},
+		})
 	}
 
 	return ocimutate.AppendManifests(mutate.IndexMediaType(empty.Index, nestedMt), adds...), nil
