@@ -1,0 +1,98 @@
+name: Validate SBOMs
+
+on:
+  pull_request: 
+    branches: ['main']
+
+jobs:
+  go-version-m:
+    name: Generate go version -m
+    runs-on: ubuntu-latest
+
+    env:
+      KO_DOCKER_REPO: localhost:1338
+
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.x'
+      - name: Install cmd/registry
+        run: |
+          go install github.com/google/go-containerregistry/cmd/registry@latest
+          registry &
+      - uses: actions/checkout@v2
+
+      - name: Generate
+        run: |
+          img=$(go run ./ build ./)
+          go run ./ deps $img --sbom=go.version-m > gomod.txt
+          cat gomod.txt
+
+  cyclonedx:
+    name: Validate CycloneDX SBOM
+    runs-on: ubuntu-latest
+
+    env:
+      KO_DOCKER_REPO: localhost:1338
+
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.x'
+      - name: Install cmd/registry
+        run: |
+          go install github.com/google/go-containerregistry/cmd/registry@latest
+          registry &
+      - uses: actions/checkout@v2
+
+      - name: Install CycloneDX 
+        run: |
+          wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.22.0/cyclonedx-linux-x64
+          chmod +x cyclonedx-linux-x64
+
+      - name: Generate and Validate
+        run: |
+          img=$(go run ./ build ./)
+          go run ./ deps $img --sbom=cyclonedx > sbom.json
+          ./cyclonedx-linux-x64 validate --input-file=sbom.json --fail-on-errors
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: sbom.json
+          path: sbom.json
+
+  spdx:
+    name: Validate SPDX SBOM
+    runs-on: ubuntu-latest
+
+    env:
+      KO_DOCKER_REPO: localhost:1338
+
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '1.17.x'
+      - name: Install cmd/registry
+        run: |
+          go install github.com/google/go-containerregistry/cmd/registry@latest
+          registry &
+      - uses: actions/checkout@v2
+
+      - name: Install SPDX Tools
+        run: |
+          wget https://github.com/spdx/tools/releases/download/v2.2.7/spdx-tools-2.2.7.zip
+          unzip spdx-tools-2.2.7.zip
+
+      - name: Generate and Validate
+        run: |
+          img=$(go run ./ build ./)
+          go run ./ deps $img --sbom=spdx > sbom.txt
+
+          java -jar ./spdx-tools-2.2.7-jar-with-dependencies.jar Verify sbom.txt
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ always() }}
+        with:
+          name: sbom.txt
+          path: sbom.txt
