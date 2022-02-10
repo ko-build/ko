@@ -86,22 +86,25 @@ func GenerateCycloneDX(mod []byte) ([]byte, error) {
 		if dep.Replace != nil {
 			continue
 		}
-		doc.Components = append(doc.Components, component{
+		comp := component{
 			BOMRef:  bomRef(dep.Path, dep.Version),
 			Type:    "library",
 			Name:    dep.Path,
 			Version: dep.Version,
 			Scope:   "required",
-			Hashes: []hash{{
-				Alg:     "SHA-256",
-				Content: h1ToSHA256(dep.Sum),
-			}},
-			Purl: bomRef(dep.Path, dep.Version),
+			Purl:    bomRef(dep.Path, dep.Version),
 			ExternalReferences: []externalReference{{
 				URL:  "https://" + dep.Path,
 				Type: "vcs",
 			}},
-		})
+		}
+		if dep.Sum != "" {
+			comp.Hashes = []hash{{
+				Alg:     "SHA-256",
+				Content: h1ToSHA256(dep.Sum),
+			}}
+		}
+		doc.Components = append(doc.Components, comp)
 		doc.Dependencies[0].DependsOn = append(doc.Dependencies[0].DependsOn, bomRef(dep.Path, dep.Version))
 		doc.Dependencies = append(doc.Dependencies, dependency{
 			Ref: bomRef(dep.Path, dep.Version),
