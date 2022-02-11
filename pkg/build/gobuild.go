@@ -325,6 +325,21 @@ func spdx(version string) sbomber {
 	}
 }
 
+func cycloneDX() sbomber {
+	return func(ctx context.Context, file string, appPath string, img v1.Image) ([]byte, types.MediaType, error) {
+		b, _, err := goversionm(ctx, file, appPath, img)
+		if err != nil {
+			return nil, "", err
+		}
+
+		b, err = sbom.GenerateCycloneDX(b)
+		if err != nil {
+			return nil, "", err
+		}
+		return b, ctypes.CycloneDXMediaType, nil
+	}
+}
+
 // buildEnv creates the environment variables used by the `go build` command.
 // From `os/exec.Cmd`: If Env contains duplicate environment keys, only the last
 // value in the slice for each duplicate key is used.

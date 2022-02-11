@@ -104,6 +104,8 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithDisabledSBOM())
 	case "go.version-m":
 		opts = append(opts, build.WithGoVersionSBOM())
+	case "cyclonedx":
+		opts = append(opts, build.WithCycloneDX())
 	default: // "spdx"
 		opts = append(opts, build.WithSPDX(version()))
 	}
