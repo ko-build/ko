@@ -106,10 +106,19 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			return ref, cached, nil
 		}
 
-		log.Printf("Using base %s for %s", ref, s)
 		result, err := fetch(ctx, ref)
 		if err != nil {
 			return ref, result, err
+		}
+
+		if _, ok := ref.(name.Digest); ok {
+			log.Printf("Using base %s for %s", ref, s)
+		} else {
+			dig, err := result.Digest()
+			if err != nil {
+				return ref, result, err
+			}
+			log.Printf("Using base %s@%s for %s", ref, dig, s)
 		}
 
 		cache[ref.String()] = result
