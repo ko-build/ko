@@ -118,8 +118,7 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			if err != nil {
 				return ref, result, err
 			}
-			resolved := ref.Context().Digest(dig.String())
-			log.Printf("Using base %s (%s) for %s", ref, resolved, s)
+			log.Printf("Using base %s@%s for %s", ref, dig, s)
 		}
 
 		cache[ref.String()] = result
