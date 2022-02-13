@@ -5,6 +5,11 @@ on:
     branches: ['main']
   workflow_dispatch:
 
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
 jobs:
   image:
     runs-on: ubuntu-latest
@@ -13,13 +18,20 @@ jobs:
       - uses: actions/setup-go@v1
         with:
           go-version: 1.17.x
+      - uses: sigstore/cosign-installer@v2.0.0
 
-      # Build ko from HEAD, set up auth to ghcr.io, build and push an image
-      # tagged with the SHA.
-      - name: Build and publish image
+      # Build ko from HEAD, build and push an image tagged with the commit SHA,
+      # then keylessly sign it with cosign.
+      - name: Publish and sign image
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository }}
+          COSIGN_EXPERIMENTAL: 'true'
         run: |
           go build ./
           echo "${{ github.token }}" | ./ko login ghcr.io --username "${{ github.actor }}" --password-stdin
-          ./ko build --bare --platform=all -t latest -t ${{ github.sha }} .
+          img=$(./ko build --bare --platform=all -t latest -t ${{ github.sha }} ./)
+          echo "built ${img}"
+          cosign sign ${img} \
+              -a sha=${{ github.sha }} \
+              -a run_id=${{ github.run_id }} \
+              -a run_attempt=${{ github.run_attempt }}
