@@ -58,6 +58,8 @@ type DescribeRepositoriesInput struct {
 	// A list of repositories to describe. If this parameter is omitted, then all
 	// repositories in a registry are described.
 	RepositoryNames []string
+
+	noSmithyDocumentSerde
 }
 
 type DescribeRepositoriesOutput struct {
@@ -73,6 +75,8 @@ type DescribeRepositoriesOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDescribeRepositoriesMiddlewares(stack *middleware.Stack, options Options) (err error) {
@@ -190,12 +194,13 @@ func NewDescribeRepositoriesPaginator(client DescribeRepositoriesAPIClient, para
 		client:    client,
 		params:    params,
 		firstPage: true,
+		nextToken: params.NextToken,
 	}
 }
 
 // HasMorePages returns a boolean indicating whether more pages are available
 func (p *DescribeRepositoriesPaginator) HasMorePages() bool {
-	return p.firstPage || p.nextToken != nil
+	return p.firstPage || (p.nextToken != nil && len(*p.nextToken) != 0)
 }
 
 // NextPage retrieves the next DescribeRepositories page.
@@ -222,7 +227,10 @@ func (p *DescribeRepositoriesPaginator) NextPage(ctx context.Context, optFns ...
 	prevToken := p.nextToken
 	p.nextToken = result.NextToken
 
-	if p.options.StopOnDuplicateToken && prevToken != nil && p.nextToken != nil && *prevToken == *p.nextToken {
+	if p.options.StopOnDuplicateToken &&
+		prevToken != nil &&
+		p.nextToken != nil &&
+		*prevToken == *p.nextToken {
 		p.nextToken = nil
 	}
 

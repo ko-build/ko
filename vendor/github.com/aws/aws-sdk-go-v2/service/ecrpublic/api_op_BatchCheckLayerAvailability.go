@@ -48,6 +48,8 @@ type BatchCheckLayerAvailabilityInput struct {
 	// layers to check. If you do not specify a registry, the default public registry
 	// is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type BatchCheckLayerAvailabilityOutput struct {
@@ -61,6 +63,8 @@ type BatchCheckLayerAvailabilityOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationBatchCheckLayerAvailabilityMiddlewares(stack *middleware.Stack, options Options) (err error) {

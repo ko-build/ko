@@ -28,6 +28,7 @@ func (c *Client) GetRegistryCatalogData(ctx context.Context, params *GetRegistry
 }
 
 type GetRegistryCatalogDataInput struct {
+	noSmithyDocumentSerde
 }
 
 type GetRegistryCatalogDataOutput struct {
@@ -39,6 +40,8 @@ type GetRegistryCatalogDataOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetRegistryCatalogDataMiddlewares(stack *middleware.Stack, options Options) (err error) {

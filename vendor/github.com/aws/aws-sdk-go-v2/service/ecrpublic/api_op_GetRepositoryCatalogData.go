@@ -39,6 +39,8 @@ type GetRepositoryCatalogDataInput struct {
 	// to be described. If you do not specify a registry, the default public registry
 	// is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type GetRepositoryCatalogDataOutput struct {
@@ -48,6 +50,8 @@ type GetRepositoryCatalogDataOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetRepositoryCatalogDataMiddlewares(stack *middleware.Stack, options Options) (err error) {

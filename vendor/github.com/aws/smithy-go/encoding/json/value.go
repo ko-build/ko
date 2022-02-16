@@ -47,6 +47,12 @@ func (jv Value) Long(v int64) {
 	jv.w.Write(*jv.scratch)
 }
 
+// ULong encodes v as a JSON number
+func (jv Value) ULong(v uint64) {
+	*jv.scratch = strconv.AppendUint((*jv.scratch)[:0], v, 10)
+	jv.w.Write(*jv.scratch)
+}
+
 // Float encodes v as a JSON number
 func (jv Value) Float(v float32) {
 	jv.float(float64(v), 32)

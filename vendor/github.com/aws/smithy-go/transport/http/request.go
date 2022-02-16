@@ -20,7 +20,7 @@ type Request struct {
 	streamStartPos   int64
 }
 
-// NewStackRequest returns an initialized request ready to populated with the
+// NewStackRequest returns an initialized request ready to be populated with the
 // HTTP request details. Returns empty interface so the function can be used as
 // a parameter to the Smithy middleware Stack constructor.
 func NewStackRequest() interface{} {
@@ -98,7 +98,7 @@ func (r *Request) GetStream() io.Reader {
 	return r.stream
 }
 
-// IsStreamSeekable returns if the stream is seekable.
+// IsStreamSeekable returns whether the stream is seekable.
 func (r *Request) IsStreamSeekable() bool {
 	return r.isStreamSeekable
 }
@@ -130,19 +130,25 @@ func (r *Request) SetStream(reader io.Reader) (rc *Request, err error) {
 func (r *Request) Build(ctx context.Context) *http.Request {
 	req := r.Request.Clone(ctx)
 
-	if r.stream != nil {
-		req.Body = iointernal.NewSafeReadCloser(ioutil.NopCloser(r.stream))
-	} else {
-		// we update the content-length to 0,
-		// if request stream was not set.
+	if r.stream == nil && req.ContentLength == -1 {
 		req.ContentLength = 0
+	}
+
+	switch stream := r.stream.(type) {
+	case *io.PipeReader:
+		req.Body = ioutil.NopCloser(stream)
+		req.ContentLength = -1
+	default:
+		if r.stream != nil {
+			req.Body = iointernal.NewSafeReadCloser(ioutil.NopCloser(stream))
+		}
 	}
 
 	return req
 }
 
 // RequestCloner is a function that can take an input request type and clone the request
-// for use in a subsequent retry attempt
+// for use in a subsequent retry attempt.
 func RequestCloner(v interface{}) interface{} {
 	return v.(*Request).Clone()
 }

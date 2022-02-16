@@ -43,6 +43,8 @@ type PutRepositoryCatalogDataInput struct {
 	// The AWS account ID associated with the public registry the repository is in. If
 	// you do not specify a registry, the default public registry is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type PutRepositoryCatalogDataOutput struct {
@@ -52,6 +54,8 @@ type PutRepositoryCatalogDataOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationPutRepositoryCatalogDataMiddlewares(stack *middleware.Stack, options Options) (err error) {

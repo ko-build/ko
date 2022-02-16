@@ -1,3 +1,71 @@
+# v1.8.0 (2022-01-14)
+
+* **Feature**: Updated `github.com/aws/smithy-go` to latest version
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.7.0 (2022-01-07)
+
+* **Feature**: Updated `github.com/aws/smithy-go` to latest version
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.6.5 (2021-12-21)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.6.4 (2021-12-02)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.6.3 (2021-11-30)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.6.2 (2021-11-19)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.6.1 (2021-11-12)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.6.0 (2021-11-06)
+
+* **Feature**: The SDK now supports configuration of FIPS and DualStack endpoints using environment variables, shared configuration, or programmatically.
+* **Feature**: Updated `github.com/aws/smithy-go` to latest version
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.5.0 (2021-10-21)
+
+* **Feature**: Updated  to latest version
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.4.3 (2021-10-11)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.4.2 (2021-09-17)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.4.1 (2021-09-10)
+
+* **Documentation**: Fixes the AssumeRoleProvider's documentation for using custom TokenProviders.
+
+# v1.4.0 (2021-08-27)
+
+* **Feature**: Adds support for Tags and TransitiveTagKeys to stscreds.AssumeRoleProvider. Closes https://github.com/aws/aws-sdk-go-v2/issues/723
+* **Feature**: Updated `github.com/aws/smithy-go` to latest version
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.3 (2021-08-19)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.3.2 (2021-08-04)
+
+* **Dependency Update**: Updated `github.com/aws/smithy-go` to latest version.
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.3.1 (2021-07-15)
 
 * **Dependency Update**: Updated `github.com/aws/smithy-go` to latest version

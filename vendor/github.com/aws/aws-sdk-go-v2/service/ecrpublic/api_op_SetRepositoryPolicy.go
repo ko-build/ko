@@ -53,6 +53,8 @@ type SetRepositoryPolicyInput struct {
 	// The AWS account ID associated with the registry that contains the repository. If
 	// you do not specify a registry, the default public registry is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type SetRepositoryPolicyOutput struct {
@@ -68,6 +70,8 @@ type SetRepositoryPolicyOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationSetRepositoryPolicyMiddlewares(stack *middleware.Stack, options Options) (err error) {

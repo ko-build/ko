@@ -166,13 +166,107 @@ func (LifecyclePolicyPreviewStatus) Values() []LifecyclePolicyPreviewStatus {
 	}
 }
 
+type ReplicationStatus string
+
+// Enum values for ReplicationStatus
+const (
+	ReplicationStatusInProgress ReplicationStatus = "IN_PROGRESS"
+	ReplicationStatusComplete   ReplicationStatus = "COMPLETE"
+	ReplicationStatusFailed     ReplicationStatus = "FAILED"
+)
+
+// Values returns all known values for ReplicationStatus. Note that this can be
+// expanded in the future, and so it is only as up to date as the client. The
+// ordering of this slice is not guaranteed to be stable across updates.
+func (ReplicationStatus) Values() []ReplicationStatus {
+	return []ReplicationStatus{
+		"IN_PROGRESS",
+		"COMPLETE",
+		"FAILED",
+	}
+}
+
+type RepositoryFilterType string
+
+// Enum values for RepositoryFilterType
+const (
+	RepositoryFilterTypePrefixMatch RepositoryFilterType = "PREFIX_MATCH"
+)
+
+// Values returns all known values for RepositoryFilterType. Note that this can be
+// expanded in the future, and so it is only as up to date as the client. The
+// ordering of this slice is not guaranteed to be stable across updates.
+func (RepositoryFilterType) Values() []RepositoryFilterType {
+	return []RepositoryFilterType{
+		"PREFIX_MATCH",
+	}
+}
+
+type ScanFrequency string
+
+// Enum values for ScanFrequency
+const (
+	ScanFrequencyScanOnPush     ScanFrequency = "SCAN_ON_PUSH"
+	ScanFrequencyContinuousScan ScanFrequency = "CONTINUOUS_SCAN"
+	ScanFrequencyManual         ScanFrequency = "MANUAL"
+)
+
+// Values returns all known values for ScanFrequency. Note that this can be
+// expanded in the future, and so it is only as up to date as the client. The
+// ordering of this slice is not guaranteed to be stable across updates.
+func (ScanFrequency) Values() []ScanFrequency {
+	return []ScanFrequency{
+		"SCAN_ON_PUSH",
+		"CONTINUOUS_SCAN",
+		"MANUAL",
+	}
+}
+
+type ScanningConfigurationFailureCode string
+
+// Enum values for ScanningConfigurationFailureCode
+const (
+	ScanningConfigurationFailureCodeRepositoryNotFound ScanningConfigurationFailureCode = "REPOSITORY_NOT_FOUND"
+)
+
+// Values returns all known values for ScanningConfigurationFailureCode. Note that
+// this can be expanded in the future, and so it is only as up to date as the
+// client. The ordering of this slice is not guaranteed to be stable across
+// updates.
+func (ScanningConfigurationFailureCode) Values() []ScanningConfigurationFailureCode {
+	return []ScanningConfigurationFailureCode{
+		"REPOSITORY_NOT_FOUND",
+	}
+}
+
+type ScanningRepositoryFilterType string
+
+// Enum values for ScanningRepositoryFilterType
+const (
+	ScanningRepositoryFilterTypeWildcard ScanningRepositoryFilterType = "WILDCARD"
+)
+
+// Values returns all known values for ScanningRepositoryFilterType. Note that this
+// can be expanded in the future, and so it is only as up to date as the client.
+// The ordering of this slice is not guaranteed to be stable across updates.
+func (ScanningRepositoryFilterType) Values() []ScanningRepositoryFilterType {
+	return []ScanningRepositoryFilterType{
+		"WILDCARD",
+	}
+}
+
 type ScanStatus string
 
 // Enum values for ScanStatus
 const (
-	ScanStatusInProgress ScanStatus = "IN_PROGRESS"
-	ScanStatusComplete   ScanStatus = "COMPLETE"
-	ScanStatusFailed     ScanStatus = "FAILED"
+	ScanStatusInProgress             ScanStatus = "IN_PROGRESS"
+	ScanStatusComplete               ScanStatus = "COMPLETE"
+	ScanStatusFailed                 ScanStatus = "FAILED"
+	ScanStatusUnsupportedImage       ScanStatus = "UNSUPPORTED_IMAGE"
+	ScanStatusActive                 ScanStatus = "ACTIVE"
+	ScanStatusPending                ScanStatus = "PENDING"
+	ScanStatusScanEligibilityExpired ScanStatus = "SCAN_ELIGIBILITY_EXPIRED"
+	ScanStatusFindingsUnavailable    ScanStatus = "FINDINGS_UNAVAILABLE"
 )
 
 // Values returns all known values for ScanStatus. Note that this can be expanded
@@ -183,6 +277,29 @@ func (ScanStatus) Values() []ScanStatus {
 		"IN_PROGRESS",
 		"COMPLETE",
 		"FAILED",
+		"UNSUPPORTED_IMAGE",
+		"ACTIVE",
+		"PENDING",
+		"SCAN_ELIGIBILITY_EXPIRED",
+		"FINDINGS_UNAVAILABLE",
+	}
+}
+
+type ScanType string
+
+// Enum values for ScanType
+const (
+	ScanTypeBasic    ScanType = "BASIC"
+	ScanTypeEnhanced ScanType = "ENHANCED"
+)
+
+// Values returns all known values for ScanType. Note that this can be expanded in
+// the future, and so it is only as up to date as the client. The ordering of this
+// slice is not guaranteed to be stable across updates.
+func (ScanType) Values() []ScanType {
+	return []ScanType{
+		"BASIC",
+		"ENHANCED",
 	}
 }
 

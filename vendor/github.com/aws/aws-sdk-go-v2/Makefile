@@ -19,7 +19,7 @@ EACHMODULE_SKIP_FLAG=-skip="${EACHMODULE_SKIP}"
 
 EACHMODULE_FLAGS=${EACHMODULE_CONCURRENCY_FLAG} ${EACHMODULE_FAILFAST_FLAG} ${EACHMODULE_SKIP_FLAG}
 
-# SDK's Core and client packages that are compatable with Go 1.9+.
+# SDK's Core and client packages that are compatible with Go 1.9+.
 SDK_CORE_PKGS=./aws/... ./internal/...
 SDK_CLIENT_PKGS=./service/...
 SDK_COMPA_PKGS=${SDK_CORE_PKGS} ${SDK_CLIENT_PKGS}
@@ -38,8 +38,31 @@ ENDPOINT_PREFIX_JSON=${CODEGEN_RESOURCES_PATH}/endpoint-prefix.json
 
 LICENSE_FILE=$(shell pwd)/LICENSE.txt
 
+SMITHY_GO_VERSION ?=
+PRE_RELEASE_VERSION ?=
 RELEASE_MANIFEST_FILE ?=
 RELEASE_CHGLOG_DESC_FILE ?=
+
+REPOTOOLS_VERSION ?= latest
+REPOTOOLS_MODULE = github.com/awslabs/aws-go-multi-module-repository-tools
+REPOTOOLS_CMD_ANNOTATE_STABLE_GEN = ${REPOTOOLS_MODULE}/cmd/annotatestablegen@${REPOTOOLS_VERSION}
+REPOTOOLS_CMD_MAKE_RELATIVE = ${REPOTOOLS_MODULE}/cmd/makerelative@${REPOTOOLS_VERSION}
+REPOTOOLS_CMD_CALCULATE_RELEASE = ${REPOTOOLS_MODULE}/cmd/calculaterelease@${REPOTOOLS_VERSION}
+REPOTOOLS_CMD_UPDATE_REQUIRES = ${REPOTOOLS_MODULE}/cmd/updaterequires@${REPOTOOLS_VERSION}
+REPOTOOLS_CMD_UPDATE_MODULE_METADATA = ${REPOTOOLS_MODULE}/cmd/updatemodulemeta@${REPOTOOLS_VERSION}
+REPOTOOLS_CMD_GENERATE_CHANGELOG = ${REPOTOOLS_MODULE}/cmd/generatechangelog@${REPOTOOLS_VERSION}
+REPOTOOLS_CMD_CHANGELOG = ${REPOTOOLS_MODULE}/cmd/changelog@${REPOTOOLS_VERSION}
+REPOTOOLS_CMD_TAG_RELEASE = ${REPOTOOLS_MODULE}/cmd/tagrelease@${REPOTOOLS_VERSION}
+REPOTOOLS_CMD_EDIT_MODULE_DEPENDENCY = ${REPOTOOLS_MODULE}/cmd/editmoduledependency@${REPOTOOLS_VERSION}
+
+REPOTOOLS_CALCULATE_RELEASE_VERBOSE ?= false
+REPOTOOLS_CALCULATE_RELEASE_VERBOSE_FLAG=-v=${REPOTOOLS_CALCULATE_RELEASE_VERBOSE}
+
+REPOTOOLS_CALCULATE_RELEASE_ADDITIONAL_ARGS ?=
+
+ifneq ($(PRE_RELEASE_VERSION),)
+	REPOTOOLS_CALCULATE_RELEASE_ADDITIONAL_ARGS += -preview=${PRE_RELEASE_VERSION}
+endif
 
 .PHONY: all
 all: generate unit
@@ -51,7 +74,7 @@ all: generate unit
 gen-config-asserts gen-repo-mod-replace gen-mod-replace-smithy gen-mod-dropreplace-smithy gen-aws-ptrs tidy-modules-% \
 add-module-license-files sync-models sync-endpoints-model sync-endpoints.json clone-v1-models gen-endpoint-prefix.json \
 sync-api-models copy-attributevalue-feature min-go-version-% update-requires smithy-annotate-stable \
-update-module-metadata
+update-module-metadata download-modules-%
 
 generate: smithy-generate update-requires gen-repo-mod-replace update-module-metadata smithy-annotate-stable \
 gen-config-asserts copy-attributevalue-feature  gen-mod-dropreplace-smithy min-go-version-. tidy-modules-. \
@@ -74,8 +97,7 @@ smithy-build-%: gen-repo-mod-replace
 	SMITHY_GO_BUILD_API="$(subst smithy-build-,,$@)" ./gradlew clean build -Plog-tests
 
 smithy-annotate-stable:
-	cd ./internal/repotools && \
-		go run ./cmd/annotatestablegen
+	go run ${REPOTOOLS_CMD_ANNOTATE_STABLE_GEN}
 
 smithy-clean:
 	cd codegen && ./gradlew clean
@@ -96,7 +118,7 @@ gen-config-asserts:
 
 gen-repo-mod-replace:
 	@echo "Generating go.mod replace for repo modules"
-	cd internal/repotools/cmd/makerelative && go run ./
+	go run ${REPOTOOLS_CMD_MAKE_RELATIVE}
 
 gen-mod-replace-smithy:
 	cd ./internal/repotools/cmd/eachmodule \
@@ -118,6 +140,16 @@ tidy-modules-%:
 	cd ./internal/repotools/cmd/eachmodule \
 		&& go run . -p $(subst _,/,$(subst tidy-modules-,,$@)) ${EACHMODULE_FLAGS} \
 		"go mod tidy"
+
+download-modules-%:
+	@# download command that uses the pattern to define the root path that the
+	@# module testing will start from. Strips off the "download-modules-" and
+	@# replaces all "_" with "/".
+	@#
+	@# e.g. download-modules-internal_protocoltest
+	cd ./internal/repotools/cmd/eachmodule \
+		&& go run . -p $(subst _,/,$(subst download-modules-,,$@)) ${EACHMODULE_FLAGS} \
+		"go mod download all"
 
 add-module-license-files:
 	cd internal/repotools/cmd/eachmodule && \
@@ -172,12 +204,10 @@ min-go-version-%:
 		"go mod edit -go=${SDK_MIN_GO_VERSION}"
 
 update-requires:
-	cd ./internal/repotools && \
-		go run ./cmd/updaterequires
+	go run ${REPOTOOLS_CMD_UPDATE_REQUIRES}
 
 update-module-metadata:
-	cd ./internal/repotools && \
-		go run ./cmd/updatemodulemeta
+	go run ${REPOTOOLS_CMD_UPDATE_MODULE_METADATA}
 
 ################
 # Unit Testing #
@@ -306,6 +336,27 @@ ci-test-generate-validate:
 	if [ "$$gitstatus" != "" ] && [ "$$gitstatus" != "skipping validation" ]; then echo "$$gitstatus"; exit 1; fi
 	git update-index --no-assume-unchanged go.mod go.sum
 
+ci-lint: ci-lint-.
+
+ci-lint-%:
+	@# Run golangci-lint command that uses the pattern to define the root path that the
+	@# module check will start from. Strips off the "ci-lint-" and
+	@# replaces all "_" with "/".
+	@#
+	@# e.g. ci-lint-internal_protocoltest
+	cd ./internal/repotools/cmd/eachmodule \
+		&& go run . -p $(subst _,/,$(subst ci-lint-,,$@)) \
+			-fail-fast=false \
+			-c 1 \
+			-skip="internal/repotools" \
+			"golangci-lint run"
+
+ci-lint-install:
+	@# Installs golangci-lint at GoPATH.
+	@# This should be used to run golangci-lint locally.
+	@#
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
 #######################
 # Integration Testing #
 #######################
@@ -350,26 +401,27 @@ bench-modules-%:
 #####################
 .PHONY: preview-release pre-release-validation release
 
+ls-changes:
+	go run ${REPOTOOLS_CMD_CHANGELOG} ls
+
 preview-release:
-	@cd ./internal/repotools && \
-		go run ./cmd/calculaterelease
+	go run ${REPOTOOLS_CMD_CALCULATE_RELEASE} ${REPOTOOLS_CALCULATE_RELEASE_VERBOSE_FLAG} ${REPOTOOLS_CALCULATE_RELEASE_ADDITIONAL_ARGS}
 
 pre-release-validation:
 	@if [[ -z "${RELEASE_MANIFEST_FILE}" ]]; then \
-      		echo "RELEASE_MANIFEST_FILE is required to specify the file to write the release manifest" && false; \
-      	fi
+		echo "RELEASE_MANIFEST_FILE is required to specify the file to write the release manifest" && false; \
+	fi
 	@if [[ -z "${RELEASE_CHGLOG_DESC_FILE}" ]]; then \
 		echo "RELEASE_CHGLOG_DESC_FILE is required to specify the file to write the release notes" && false; \
 	fi
 
 release: pre-release-validation
-	cd ./internal/repotools && \
-		go run ./cmd/calculaterelease -o ${RELEASE_MANIFEST_FILE} && \
-		go run ./cmd/updaterequires -release ${RELEASE_MANIFEST_FILE} && \
-		go run ./cmd/updatemodulemeta -release ${RELEASE_MANIFEST_FILE} && \
-		go run ./cmd/generatechangelog -release ${RELEASE_MANIFEST_FILE} -o ${RELEASE_CHGLOG_DESC_FILE} && \
-		go run ./cmd/changelog rm -all && \
-		go run ./cmd/tagrelease -release ${RELEASE_MANIFEST_FILE}
+	go run ${REPOTOOLS_CMD_CALCULATE_RELEASE} -o ${RELEASE_MANIFEST_FILE} ${REPOTOOLS_CALCULATE_RELEASE_VERBOSE_FLAG} ${REPOTOOLS_CALCULATE_RELEASE_ADDITIONAL_ARGS}
+	go run ${REPOTOOLS_CMD_UPDATE_REQUIRES} -release ${RELEASE_MANIFEST_FILE}
+	go run ${REPOTOOLS_CMD_UPDATE_MODULE_METADATA} -release ${RELEASE_MANIFEST_FILE}
+	go run ${REPOTOOLS_CMD_GENERATE_CHANGELOG} -release ${RELEASE_MANIFEST_FILE} -o ${RELEASE_CHGLOG_DESC_FILE}
+	go run ${REPOTOOLS_CMD_CHANGELOG} rm -all
+	go run ${REPOTOOLS_CMD_TAG_RELEASE} -release ${RELEASE_MANIFEST_FILE}
 
 ##############
 # Repo Tools #
@@ -377,8 +429,13 @@ release: pre-release-validation
 .PHONY: install-repotools
 
 install-repotools:
-	cd ./internal/repotools && \
-		go install ./cmd/changelog
+	go install ${REPOTOOLS_MODULE}/cmd/changelog@${REPOTOOLS_VERSION}
+
+set-smithy-go-version:
+	@if [[ -z "${SMITHY_GO_VERSION}" ]]; then \
+		echo "SMITHY_GO_VERSION is required to update SDK's smithy-go module dependency version" && false; \
+	fi
+	go run ${REPOTOOLS_CMD_EDIT_MODULE_DEPENDENCY} -s "github.com/aws/smithy-go" -v "${SMITHY_GO_VERSION}"
 
 ##################
 # Linting/Verify #
@@ -411,32 +468,24 @@ sdkv1check:
 ###################
 # Sandbox Testing #
 ###################
-.PHONY: sandbox-tests sandbox-build-go1.15 sandbox-go1.15 sandbox-test-go1.15 sandbox-build-go1.16 \
-sandbox-go1.16 sandbox-test-go1.16 sandbox-build-gotip sandbox-gotip sandbox-test-gotip update-aws-golang-tip
+.PHONY: sandbox-tests sandbox-build-% sandbox-run-% sandbox-test-% update-aws-golang-tip
 
-sandbox-tests: sandbox-test-go1.15 sandbox-test-go1.16 sandbox-test-gotip
+sandbox-tests: sandbox-test-go1.15 sandbox-test-go1.16 sandbox-test-go1.17 sandbox-test-gotip
 
-sandbox-build-go1.15:
-	docker build -f ./internal/awstesting/sandbox/Dockerfile.test.go1.15 -t "aws-sdk-go-v2-1.15" .
-sandbox-go1.15: sandbox-build-go1.15
-	docker run -i -t aws-sdk-go-v2-1.15 bash
-sandbox-test-go1.15: sandbox-build-go1.15
-	docker run -t aws-sdk-go-v2-1.15
-
-sandbox-build-go1.16:
-	docker build -f ./internal/awstesting/sandbox/Dockerfile.test.go1.16 -t "aws-sdk-go-v2-1.16" .
-sandbox-go1.16: sandbox-build-go1.16
-	docker run -i -t aws-sdk-go-v2-1.16 bash
-sandbox-test-go1.16: sandbox-build-go1.16
-	docker run -t aws-sdk-go-v2-1.16
-
-sandbox-build-gotip:
-	@echo "Run make update-aws-golang-tip, if this test fails because missing aws-golang:tip container"
-	docker build -f ./internal/awstesting/sandbox/Dockerfile.test.gotip -t "aws-sdk-go-v2-tip" .
-sandbox-gotip: sandbox-build-gotip
-	docker run -i -t aws-sdk-go-v2-tip bash
-sandbox-test-gotip: sandbox-build-gotip
-	docker run -t aws-sdk-go-v2-tip
+sandbox-build-%:
+	@# sandbox-build-go1.17
+	@# sandbox-build-gotip
+	docker build \
+		-f ./internal/awstesting/sandbox/Dockerfile.test.$(subst sandbox-build-,,$@) \
+		-t "aws-sdk-go-$(subst sandbox-build-,,$@)" .
+sandbox-run-%: sandbox-build-%
+	@# sandbox-run-go1.17
+	@# sandbox-run-gotip
+	docker run -i -t "aws-sdk-go-$(subst sandbox-run-,,$@)" bash
+sandbox-test-%: sandbox-build-%
+	@# sandbox-test-go1.17
+	@# sandbox-test-gotip
+	docker run -t "aws-sdk-go-$(subst sandbox-test-,,$@)"
 
 update-aws-golang-tip:
 	docker build --no-cache=true -f ./internal/awstesting/sandbox/Dockerfile.golang-tip -t "aws-golang:tip" .

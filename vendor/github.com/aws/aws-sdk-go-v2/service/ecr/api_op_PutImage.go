@@ -57,10 +57,12 @@ type PutImageInput struct {
 	// formats.
 	ImageTag *string
 
-	// The AWS account ID associated with the registry that contains the repository in
-	// which to put the image. If you do not specify a registry, the default registry
-	// is assumed.
+	// The Amazon Web Services account ID associated with the registry that contains
+	// the repository in which to put the image. If you do not specify a registry, the
+	// default registry is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type PutImageOutput struct {
@@ -70,6 +72,8 @@ type PutImageOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationPutImageMiddlewares(stack *middleware.Stack, options Options) (err error) {

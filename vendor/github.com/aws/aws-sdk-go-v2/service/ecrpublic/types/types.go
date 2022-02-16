@@ -3,6 +3,7 @@
 package types
 
 import (
+	smithydocument "github.com/aws/smithy-go/document"
 	"time"
 )
 
@@ -17,6 +18,8 @@ type AuthorizationData struct {
 	// The Unix time in seconds and milliseconds when the authorization token expires.
 	// Authorization tokens are valid for 12 hours.
 	ExpiresAt *time.Time
+
+	noSmithyDocumentSerde
 }
 
 // An object representing an Amazon ECR image.
@@ -36,6 +39,8 @@ type Image struct {
 
 	// The name of the repository associated with the image.
 	RepositoryName *string
+
+	noSmithyDocumentSerde
 }
 
 // An object that describes an image returned by a DescribeImages operation.
@@ -71,6 +76,8 @@ type ImageDetail struct {
 
 	// The name of the repository to which this image belongs.
 	RepositoryName *string
+
+	noSmithyDocumentSerde
 }
 
 // An object representing an Amazon ECR image failure.
@@ -84,6 +91,8 @@ type ImageFailure struct {
 
 	// The image ID associated with the failure.
 	ImageId *ImageIdentifier
+
+	noSmithyDocumentSerde
 }
 
 // An object with identifying information for an Amazon ECR image.
@@ -94,6 +103,8 @@ type ImageIdentifier struct {
 
 	// The tag used for the image.
 	ImageTag *string
+
+	noSmithyDocumentSerde
 }
 
 // An object representing the image tag details for an image.
@@ -107,6 +118,8 @@ type ImageTagDetail struct {
 
 	// The tag associated with the image.
 	ImageTag *string
+
+	noSmithyDocumentSerde
 }
 
 // An object representing an Amazon ECR image layer.
@@ -125,6 +138,8 @@ type Layer struct {
 	// application/vnd.docker.image.rootfs.diff.tar.gzip or
 	// application/vnd.oci.image.layer.v1.tar+gzip.
 	MediaType *string
+
+	noSmithyDocumentSerde
 }
 
 // An object representing an Amazon ECR image layer failure.
@@ -138,6 +153,8 @@ type LayerFailure struct {
 
 	// The layer digest associated with the failure.
 	LayerDigest *string
+
+	noSmithyDocumentSerde
 }
 
 // An object that describes the image tag details returned by a DescribeImageTags
@@ -164,6 +181,8 @@ type ReferencedImageDetail struct {
 	// uncompressed image size, so it may return a larger image size than the image
 	// sizes returned by DescribeImages.
 	ImageSizeInBytes *int64
+
+	noSmithyDocumentSerde
 }
 
 // The details of a public registry.
@@ -197,6 +216,8 @@ type Registry struct {
 	//
 	// This member is required.
 	Verified *bool
+
+	noSmithyDocumentSerde
 }
 
 // An object representing the aliases for a public registry. A public registry is
@@ -231,6 +252,8 @@ type RegistryAlias struct {
 	//
 	// This member is required.
 	Status RegistryAliasStatus
+
+	noSmithyDocumentSerde
 }
 
 // The metadata for a public registry.
@@ -240,6 +263,8 @@ type RegistryCatalogData struct {
 	// Gallery. Only accounts that have the verified account badge can have a registry
 	// display name.
 	DisplayName *string
+
+	noSmithyDocumentSerde
 }
 
 // An object representing a repository.
@@ -264,6 +289,8 @@ type Repository struct {
 	// The URI for the repository. You can use this URI for container image push and
 	// pull operations.
 	RepositoryUri *string
+
+	noSmithyDocumentSerde
 }
 
 // The catalog data for a repository. This data is publicly visible in the Amazon
@@ -296,6 +323,8 @@ type RepositoryCatalogData struct {
 	// The longform usage details of the contents of the repository. The usage text
 	// provides context for users of the repository.
 	UsageText *string
+
+	noSmithyDocumentSerde
 }
 
 // An object containing the catalog data for a repository. This data is publicly
@@ -352,6 +381,8 @@ type RepositoryCatalogDataInput struct {
 	// context, support information, and additional usage details for users of the
 	// repository. The text must be in markdown format.
 	UsageText *string
+
+	noSmithyDocumentSerde
 }
 
 // The metadata that you apply to a resource to help you categorize and organize
@@ -367,4 +398,8 @@ type Tag struct {
 	// The optional part of a key-value pair that make up a tag. A value acts as a
 	// descriptor within a tag category (key).
 	Value *string
+
+	noSmithyDocumentSerde
 }
+
+type noSmithyDocumentSerde = smithydocument.NoSerde

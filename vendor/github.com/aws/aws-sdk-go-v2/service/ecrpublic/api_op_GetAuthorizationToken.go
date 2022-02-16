@@ -32,6 +32,7 @@ func (c *Client) GetAuthorizationToken(ctx context.Context, params *GetAuthoriza
 }
 
 type GetAuthorizationTokenInput struct {
+	noSmithyDocumentSerde
 }
 
 type GetAuthorizationTokenOutput struct {
@@ -41,6 +42,8 @@ type GetAuthorizationTokenOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationGetAuthorizationTokenMiddlewares(stack *middleware.Stack, options Options) (err error) {

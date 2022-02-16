@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials/processcreds"
 	"github.com/aws/aws-sdk-go-v2/credentials/ssocreds"
 	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/smithy-go/logging"
 	"github.com/aws/smithy-go/middleware"
 )
@@ -154,6 +155,28 @@ func getCredentialsProvider(ctx context.Context, configs configs) (p aws.Credent
 	for _, cfg := range configs {
 		if provider, ok := cfg.(credentialsProviderProvider); ok {
 			p, found, err = provider.getCredentialsProvider(ctx)
+			if err != nil || found {
+				break
+			}
+		}
+	}
+	return
+}
+
+// credentialsCacheOptionsProvider is an interface for retrieving a function for setting
+// the aws.CredentialsCacheOptions.
+type credentialsCacheOptionsProvider interface {
+	getCredentialsCacheOptions(ctx context.Context) (func(*aws.CredentialsCacheOptions), bool, error)
+}
+
+// getCredentialsCacheOptionsProvider is an interface for retrieving a function for setting
+// the aws.CredentialsCacheOptions.
+func getCredentialsCacheOptionsProvider(ctx context.Context, configs configs) (
+	f func(*aws.CredentialsCacheOptions), found bool, err error,
+) {
+	for _, config := range configs {
+		if p, ok := config.(credentialsCacheOptionsProvider); ok {
+			f, found, err = p.getCredentialsCacheOptions(ctx)
 			if err != nil || found {
 				break
 			}
@@ -336,6 +359,25 @@ func getEndpointResolver(ctx context.Context, configs configs) (f aws.EndpointRe
 	return
 }
 
+// endpointResolverWithOptionsProvider is an interface for retrieving an aws.EndpointResolverWithOptions from a configuration source
+type endpointResolverWithOptionsProvider interface {
+	getEndpointResolverWithOptions(ctx context.Context) (aws.EndpointResolverWithOptions, bool, error)
+}
+
+// getEndpointResolver searches the provided config sources for a EndpointResolverFunc that can be used
+// to configure the aws.Config.EndpointResolver value.
+func getEndpointResolverWithOptions(ctx context.Context, configs configs) (f aws.EndpointResolverWithOptions, found bool, err error) {
+	for _, c := range configs {
+		if p, ok := c.(endpointResolverWithOptionsProvider); ok {
+			f, found, err = p.getEndpointResolverWithOptions(ctx)
+			if err != nil || found {
+				break
+			}
+		}
+	}
+	return
+}
+
 // loggerProvider is an interface for retrieving a logging.Logger from a configuration source.
 type loggerProvider interface {
 	getLogger(ctx context.Context) (logging.Logger, bool, error)
@@ -423,5 +465,37 @@ func getSSOProviderOptions(ctx context.Context, configs configs) (v func(options
 			}
 		}
 	}
-	return
+	return v, found, err
+}
+
+type defaultsModeIMDSClientProvider interface {
+	getDefaultsModeIMDSClient(context.Context) (*imds.Client, bool, error)
+}
+
+func getDefaultsModeIMDSClient(ctx context.Context, configs configs) (v *imds.Client, found bool, err error) {
+	for _, c := range configs {
+		if p, ok := c.(defaultsModeIMDSClientProvider); ok {
+			v, found, err = p.getDefaultsModeIMDSClient(ctx)
+			if err != nil || found {
+				break
+			}
+		}
+	}
+	return v, found, err
+}
+
+type defaultsModeProvider interface {
+	getDefaultsMode(context.Context) (aws.DefaultsMode, bool, error)
+}
+
+func getDefaultsMode(ctx context.Context, configs configs) (v aws.DefaultsMode, found bool, err error) {
+	for _, c := range configs {
+		if p, ok := c.(defaultsModeProvider); ok {
+			v, found, err = p.getDefaultsMode(ctx)
+			if err != nil || found {
+				break
+			}
+		}
+	}
+	return v, found, err
 }

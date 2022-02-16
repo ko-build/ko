@@ -10,8 +10,9 @@ import (
 
 const (
 	// dateTimeFormat is a IMF-fixdate formatted RFC3339 section 5.6
-	dateTimeFormatInput  = "2006-01-02T15:04:05.999999999Z"
-	dateTimeFormatOutput = "2006-01-02T15:04:05.999Z"
+	dateTimeFormatInput    = "2006-01-02T15:04:05.999999999Z"
+	dateTimeFormatInputNoZ = "2006-01-02T15:04:05.999999999"
+	dateTimeFormatOutput   = "2006-01-02T15:04:05.999Z"
 
 	// httpDateFormat is a date time defined by RFC 7231#section-7.1.1.1
 	// IMF-fixdate with no UTC offset.
@@ -23,32 +24,33 @@ const (
 
 var millisecondFloat = big.NewFloat(1e3)
 
-// FormatDateTime format value as a date-time, (RFC3339 section 5.6)
+// FormatDateTime formats value as a date-time, (RFC3339 section 5.6)
 //
 // Example: 1985-04-12T23:20:50.52Z
 func FormatDateTime(value time.Time) string {
 	return value.UTC().Format(dateTimeFormatOutput)
 }
 
-// ParseDateTime parse a string as a date-time, (RFC3339 section 5.6)
+// ParseDateTime parses a string as a date-time, (RFC3339 section 5.6)
 //
 // Example: 1985-04-12T23:20:50.52Z
 func ParseDateTime(value string) (time.Time, error) {
 	return tryParse(value,
 		dateTimeFormatInput,
+		dateTimeFormatInputNoZ,
 		time.RFC3339Nano,
 		time.RFC3339,
 	)
 }
 
-// FormatHTTPDate format value as a http-date, (RFC 7231#section-7.1.1.1 IMF-fixdate)
+// FormatHTTPDate formats value as a http-date, (RFC 7231#section-7.1.1.1 IMF-fixdate)
 //
 // Example: Tue, 29 Apr 2014 18:30:38 GMT
 func FormatHTTPDate(value time.Time) string {
 	return value.UTC().Format(httpDateFormat)
 }
 
-// ParseHTTPDate parse a string as a http-date, (RFC 7231#section-7.1.1.1 IMF-fixdate)
+// ParseHTTPDate parses a string as a http-date, (RFC 7231#section-7.1.1.1 IMF-fixdate)
 //
 // Example: Tue, 29 Apr 2014 18:30:38 GMT
 func ParseHTTPDate(value string) (time.Time, error) {
@@ -114,8 +116,8 @@ type parseError struct {
 	Err    error
 }
 
-// SleepWithContext will wait for the timer duration to expire, or the context
-// is canceled. Which ever happens first. If the context is canceled the
+// SleepWithContext will wait for the timer duration to expire, or until the context
+// is canceled. Whichever happens first. If the context is canceled the
 // Context's error will be returned.
 func SleepWithContext(ctx context.Context, dur time.Duration) error {
 	t := time.NewTimer(dur)

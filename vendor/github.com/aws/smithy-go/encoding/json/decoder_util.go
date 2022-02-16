@@ -7,8 +7,8 @@ import (
 	"io"
 )
 
-// DiscardUnknownField discards unknown fields from decoder body.
-// This function is useful while deserializing json body with additional
+// DiscardUnknownField discards unknown fields from a decoder body.
+// This function is useful while deserializing a JSON body with additional
 // unknown information that should be discarded.
 func DiscardUnknownField(decoder *json.Decoder) error {
 	// This deliberately does not share logic with CollectUnknownField, even

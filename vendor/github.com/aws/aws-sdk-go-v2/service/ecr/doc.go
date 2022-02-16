@@ -9,5 +9,8 @@
 // ECR provides a secure, scalable, and reliable registry for your Docker or Open
 // Container Initiative (OCI) images. Amazon ECR supports private repositories with
 // resource-based permissions using IAM so that specific users or Amazon EC2
-// instances can access repositories and images.
+// instances can access repositories and images. Amazon ECR has service endpoints
+// in each supported Region. For more information, see Amazon ECR endpoints
+// (https://docs.aws.amazon.com/general/latest/gr/ecr.html) in the Amazon Web
+// Services General Reference.
 package ecr

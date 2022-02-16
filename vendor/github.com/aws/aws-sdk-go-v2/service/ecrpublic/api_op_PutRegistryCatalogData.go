@@ -33,6 +33,8 @@ type PutRegistryCatalogDataInput struct {
 	// repository author in the Amazon ECR Public Gallery. The registry display name is
 	// only publicly visible in the Amazon ECR Public Gallery for verified accounts.
 	DisplayName *string
+
+	noSmithyDocumentSerde
 }
 
 type PutRegistryCatalogDataOutput struct {
@@ -44,6 +46,8 @@ type PutRegistryCatalogDataOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationPutRegistryCatalogDataMiddlewares(stack *middleware.Stack, options Options) (err error) {

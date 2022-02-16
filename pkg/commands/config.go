@@ -19,6 +19,7 @@ package commands
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
@@ -26,7 +27,6 @@ import (
 	"time"
 
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
-	"github.com/awslabs/amazon-ecr-credential-helper/ecr-login/api"
 	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/authn/github"
@@ -42,13 +42,13 @@ import (
 )
 
 var (
-	amazonKeychain authn.Keychain = authn.NewKeychainFromHelper(ecr.ECRHelper{ClientFactory: api.DefaultClientFactory{}})
+	amazonKeychain authn.Keychain = authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogOutput(ioutil.Discard)))
 	azureKeychain  authn.Keychain = authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
 	keychain                      = authn.NewMultiKeychain(
+		amazonKeychain,
 		authn.DefaultKeychain,
 		google.Keychain,
 		github.Keychain,
-		amazonKeychain,
 		azureKeychain,
 	)
 )

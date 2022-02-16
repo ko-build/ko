@@ -38,6 +38,8 @@ type DeleteRepositoryPolicyInput struct {
 	// repository policy to delete. If you do not specify a registry, the default
 	// public registry is assumed.
 	RegistryId *string
+
+	noSmithyDocumentSerde
 }
 
 type DeleteRepositoryPolicyOutput struct {
@@ -53,6 +55,8 @@ type DeleteRepositoryPolicyOutput struct {
 
 	// Metadata pertaining to the operation's result.
 	ResultMetadata middleware.Metadata
+
+	noSmithyDocumentSerde
 }
 
 func (c *Client) addOperationDeleteRepositoryPolicyMiddlewares(stack *middleware.Stack, options Options) (err error) {
