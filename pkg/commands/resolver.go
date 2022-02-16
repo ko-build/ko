@@ -177,7 +177,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			// not be true.
 			return publish.NewDaemon(namer, po.Tags,
 				publish.WithDockerClient(po.DockerClient),
-				publish.WithLocalDomain(po.LocalDomain),
+				publish.WithLocalDomain(repoName),
 			)
 		}
 		if repoName == publish.KindDomain {

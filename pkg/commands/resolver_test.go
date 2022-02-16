@@ -259,16 +259,6 @@ func TestNewPublisherCanPublish(t *testing.T) {
 			},
 		},
 		{
-			description:   "override LocalDomain",
-			wantImageName: fmt.Sprintf("%s/%s", localDomain, importpath),
-			po: &options.PublishOptions{
-				Local:               true,
-				LocalDomain:         localDomain,
-				PreserveImportPaths: true,
-				DockerClient:        &kotesting.MockDaemon{},
-			},
-		},
-		{
 			description:   "override DockerClient",
 			wantImageName: strings.ToLower(fmt.Sprintf("%s/%s", localDomain, importpath)),
 			po: &options.PublishOptions{

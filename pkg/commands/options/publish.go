@@ -33,9 +33,6 @@ type PublishOptions struct {
 	// In normal ko usage, this is populated with the value of $KO_DOCKER_REPO.
 	DockerRepo string
 
-	// LocalDomain overrides the default domain for images loaded into the local Docker daemon. Use with Local=true.
-	LocalDomain string
-
 	// UserAgent enables overriding the default value of the `User-Agent` HTTP
 	// request header used when pushing the built image to an image registry.
 	UserAgent string
