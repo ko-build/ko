@@ -22,14 +22,10 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/ko/pkg/commands"
 )
 
 func main() {
-	logs.Warn.SetOutput(os.Stderr)
-	logs.Progress.SetOutput(os.Stderr)
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
 	if err := commands.Root.ExecuteContext(ctx); err != nil {

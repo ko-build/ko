@@ -20,9 +20,7 @@ package main
 
 import (
 	"log"
-	"os"
 
-	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/ko/pkg/commands"
 )
 
@@ -36,9 +34,6 @@ For more information see:
 `
 
 func main() {
-	logs.Warn.SetOutput(os.Stderr)
-	logs.Progress.SetOutput(os.Stderr)
-
 	log.Print(Deprecation258)
 
 	if err := commands.Root.Execute(); err != nil {

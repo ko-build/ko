@@ -86,6 +86,12 @@ ko apply -f FILENAME [flags]
   -W, --watch                          Continuously monitor the transitive dependencies of the passed yaml files, and redeploy whenever anything changes. (DEPRECATED)
 ```
 
+### Options inherited from parent commands
+
+```
+  -v, --verbose   Enable debug logs
+```
+
 ### SEE ALSO
 
 * [ko](ko.md)	 - Rapidly iterate with Go, Containers, and Kubernetes.
