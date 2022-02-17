@@ -93,33 +93,36 @@ e.g.:
 
 # Build an Image
 
-`ko publish ./cmd/app` builds and pushes a container image, and prints the
+`ko build ./cmd/app` builds and pushes a container image, and prints the
 resulting image digest to stdout.
 
 In this example, `./cmd/app` must be a `package main` that defines `func main()`.
 
 ```
-ko publish ./cmd/app
+ko build ./cmd/app
 ...
 gcr.io/my-project/app-099ba5bcefdead87f92606265fb99ac0@sha256:6e398316742b7aa4a93161dce4a23bc5c545700b862b43347b941000b112ec3e
 ```
 
+> NB: Prior to v0.10, the command was called `ko publish` -- this is equivalent
+> to `ko build`, and both commands will work and do the same thing.
+
 The executable binary that was built from `./cmd/app` is available in the image at `/ko-app/app` -- the binary name matches the base import path name -- and that binary is the image's entrypoint.
 
-Because the output of `ko publish` is an image reference, you can easily pass it
+Because the output of `ko build` is an image reference, you can easily pass it
 to other tools that expect to take an image reference.
 
 To run the container locally:
 
 ```
-docker run -p 8080:8080 $(ko publish ./cmd/app)
+docker run -p 8080:8080 $(ko build ./cmd/app)
 ```
 
 Or to deploy it to other services like
 [Cloud Run](https://cloud.google.com/run):
 
 ```
-gcloud run deploy --image=$(ko publish ./cmd/app)
+gcloud run deploy --image=$(ko build ./cmd/app)
 ```
 
 * Note: The image must be pushed to [Google Container Registry](https://cloud.google.com/container-registry) or [Artifact Registry](https://cloud.google.com/artifact-registry).
@@ -127,7 +130,7 @@ gcloud run deploy --image=$(ko publish ./cmd/app)
 Or [fly.io](https://fly.io):
 
 ```
-flyctl launch --image=$(ko publish ./cmd/app)
+flyctl launch --image=$(ko build ./cmd/app)
 ```
 
 * Note: The image must be publicly available.
@@ -137,7 +140,7 @@ Or [AWS Lambda](https://aws.amazon.com/lambda/):
 ```
 aws lambda update-function-code \
   --function-name=my-function-name \
-  --image-uri=$(ko publish ./cmd/app)
+  --image-uri=$(ko build ./cmd/app)
 ```
 
 * Note: The image must be pushed to [ECR](https://aws.amazon.com/ecr/), based on the AWS provided base image, and use the [`aws-lambda-go`](https://github.com/aws/aws-lambda-go) framework.
@@ -149,7 +152,7 @@ Or [Azure Container Apps](https://azure.microsoft.com/services/container-apps/):
 az containerapp update \
   --name my-container-app
   --resource-group my-resource-group
-  --image $(ko publish ./cmd/app)
+  --image $(ko build ./cmd/app)
 ```
 
 * Note: The image must be pushed to [ACR](https://azure.microsoft.com/services/container-registry/) or other registry service.
@@ -238,7 +241,7 @@ templating support is currently limited to using environment variables only.
 workaround certain registry limitations and user preferences:
 
 Given `KO_DOCKER_REPO=registry.example.com/repo`, by default,
-`ko publish ./cmd/app` will produce an image named like
+`ko build ./cmd/app` will produce an image named like
 `registry.example.com/repo/app-<md5>`, which includes the MD5 hash of the full
 import path, to avoid collisions.
 
@@ -253,18 +256,18 @@ import path, to avoid collisions.
 `ko` is normally used to publish images to container image registries,
 identified by `KO_DOCKER_REPO`.
 
-`ko` can also publish images to a local Docker daemon, if available, by setting
+`ko` can also load images to a local Docker daemon, if available, by setting
 `KO_DOCKER_REPO=ko.local`, or by passing the `--local` (`-L`) flag.
 
-Locally-published images can be used as a base image for other `ko` images:
+Local images can be used as a base image for other `ko` images:
 
 ```yaml
 defaultBaseImage: ko.local/example/base/image
 ```
 
-`ko` can also publish images to a local [KinD](https://kind.sigs.k8s.io)
+`ko` can also load images into a local [KinD](https://kind.sigs.k8s.io)
 cluster, if available, by setting `KO_DOCKER_REPO=kind.local`. By default this
-publishes to the default KinD cluster name (`kind`). To publish to another KinD
+loads into the default KinD cluster name (`kind`). To load into another KinD
 cluster, set `KIND_CLUSTER_NAME=my-other-cluster`.
 
 ## Multi-Platform Images
@@ -381,7 +384,7 @@ With this small change, running `ko resolve -f deployment.yaml` will instruct
 `ko` to:
 
 1. scan the YAML file(s) for values with the `ko://` prefix,
-2. for each unique `ko://`-prefixed string, execute `ko publish <importpath>` to
+2. for each unique `ko://`-prefixed string, execute `ko build <importpath>` to
    build and push an image,
 3. replace `ko://`-prefixed string(s) in the input YAML with the fully-specified
    image reference of the built image(s), for example:
@@ -445,7 +448,7 @@ this flag directly; however, you can use the `GOFLAGS` environment variable
 instead:
 
 ```sh
-GOFLAGS="-ldflags=-X=main.version=1.2.3" ko publish .
+GOFLAGS="-ldflags=-X=main.version=1.2.3" ko build .
 ```
 
 ## How can I set multiple `ldflags`?
@@ -491,7 +494,7 @@ You can try out building a Windows container image by [setting the base image](#
 For example, to build a Windows container image for `ko`, from within this repo:
 
 ```
-ko publish ./ --platform=windows/amd64
+ko build ./ --platform=windows/amd64
 ```
 
 This works because the `ko` image is configured in [`.ko.yaml`](./.ko.yaml) to be based on a `golang` base image, which provides platform-specific images for both Linux and Windows.
