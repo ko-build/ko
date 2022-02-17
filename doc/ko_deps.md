@@ -27,6 +27,12 @@ ko deps IMAGE [flags]
       --sbom string   Format for SBOM output (supports: spdx, go.version-m). (default "spdx")
 ```
 
+### Options inherited from parent commands
+
+```
+  -v, --verbose   Enable debug logs
+```
+
 ### SEE ALSO
 
 * [ko](ko.md)	 - Rapidly iterate with Go, Containers, and Kubernetes.

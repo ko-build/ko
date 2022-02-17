@@ -49,6 +49,12 @@ ko run IMPORTPATH [flags]
       --tarball string           File to save images tarballs
 ```
 
+### Options inherited from parent commands
+
+```
+  -v, --verbose   Enable debug logs
+```
+
 ### SEE ALSO
 
 * [ko](ko.md)	 - Rapidly iterate with Go, Containers, and Kubernetes.
