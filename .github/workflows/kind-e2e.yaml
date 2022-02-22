@@ -35,7 +35,7 @@ jobs:
     - name: Install Cosign
       uses: sigstore/cosign-installer@main
       with:
-        cosign-release: 'v1.3.1'
+        cosign-release: 'v1.5.1'
 
     - name: Run Smoke Test
       run: |
