@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.11.0 // indirect
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220216180153-3d7835abdf40
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
-	github.com/containerd/stargz-snapshotter/estargz v0.11.0
+	github.com/containerd/stargz-snapshotter/estargz v0.11.1
 	github.com/docker/docker v20.10.12+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/fsnotify/fsnotify v1.5.1
