@@ -23,9 +23,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -768,6 +770,42 @@ func TestGoBuild(t *testing.T) {
 		got := cfg.Config.Labels
 		if d := cmp.Diff(got, want); d != "" {
 			t.Fatalf("Labels diff (-got,+want): %s", d)
+		}
+	})
+}
+
+func TestGoBuildWithKOCACHE(t *testing.T) {
+	now := time.Now() // current local time
+	sec := now.Unix()
+	koCacheDir := t.TempDir()
+	t.Setenv("KOCACHE", filepath.Join(koCacheDir, strconv.FormatInt(sec, 10)))
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	t.Run("check KOCACHE exists", func(t *testing.T) {
+		_, err := os.Stat(koCacheDir)
+		if os.IsNotExist(err) {
+			t.Fatalf("KOCACHE directory %s should be exists= %v", koCacheDir, err)
 		}
 	})
 }

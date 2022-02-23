@@ -261,6 +261,15 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	}
 
 	if dir := os.Getenv("KOCACHE"); dir != "" {
+		dirInfo, err := os.Stat(dir)
+		if os.IsNotExist(err) {
+			if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
+				return "", fmt.Errorf("could not create KOCACHE dir %s: %w", dir, err)
+			}
+		} else if !dirInfo.IsDir() {
+			return "", fmt.Errorf("KOCACHE should be a directory, %s is not a directory", dir)
+		}
+
 		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
 		tmpDir = filepath.Join(dir, "bin", ip, platform.String())
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
