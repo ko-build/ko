@@ -777,8 +777,10 @@ func TestGoBuild(t *testing.T) {
 func TestGoBuildWithKOCACHE(t *testing.T) {
 	now := time.Now() // current local time
 	sec := now.Unix()
-	koCacheDir := t.TempDir()
-	t.Setenv("KOCACHE", filepath.Join(koCacheDir, strconv.FormatInt(sec, 10)))
+	tmpDir := t.TempDir()
+	koCacheDir := filepath.Join(tmpDir, strconv.FormatInt(sec, 10))
+
+	t.Setenv("KOCACHE", koCacheDir)
 	baseLayers := int64(3)
 	base, err := random.Image(1024, baseLayers)
 	if err != nil {
