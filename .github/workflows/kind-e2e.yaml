@@ -26,46 +26,16 @@ jobs:
     - name: Install ko
       run: go install ./
 
-    - name: Configure KinD Cluster
-      run: |
-        # KinD configuration.
-        cat > kind.yaml <<EOF
-        apiVersion: kind.x-k8s.io/v1alpha4
-        kind: Cluster
-
-        # Configure registry for KinD.
-        containerdConfigPatches:
-        - |-
-          [plugins."io.containerd.grpc.v1.cri".registry.mirrors."$REGISTRY_NAME:$REGISTRY_PORT"]
-            endpoint = ["http://$REGISTRY_NAME:$REGISTRY_PORT"]
-        EOF
-
-    - uses: helm/kind-action@v1.2.0
+    - name: Setup Cluster
+      uses: chainguard-dev/actions/setup-kind@84c993eaf02da1c325854fb272a4df9184bd80fc # main
       with:
-        cluster_name: kind
-        config: kind.yaml
-
-    - name: Setup local registry
-      run: |
-        # Run a registry.
-        docker run -d --restart=always \
-          -p $REGISTRY_PORT:$REGISTRY_PORT --name $REGISTRY_NAME registry:2
-
-        # Connect the registry to the KinD network.
-        docker network connect "kind" $REGISTRY_NAME
-
-        # Make the $REGISTRY_NAME -> 127.0.0.1, to tell `ko` to publish to
-        # local reigstry, even when pushing $REGISTRY_NAME:$REGISTRY_PORT/some/image
-        sudo echo "127.0.0.1 $REGISTRY_NAME" | sudo tee -a /etc/hosts
-
-    - name: Wait for ready nodes
-      run: |
-        kubectl wait --timeout=2m --for=condition=Ready nodes --all
+        k8s-version: v1.23.x
+        registry-authority: ${{ env.REGISTRY_NAME }}:${{ env.REGISTRY_PORT }}
 
     - name: Install Cosign
       uses: sigstore/cosign-installer@main
       with:
-        cosign-release: 'v1.3.1'
+        cosign-release: 'v1.5.1'
 
     - name: Run Smoke Test
       run: |
@@ -101,14 +71,6 @@ jobs:
           exit 1
         fi
 
-    - name: Collect logs
-      if: ${{ always() }}
-      run: |
-        mkdir -p /tmp/logs
-        kind export logs /tmp/logs
-    - name: Upload artifacts
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v2
-      with:
-        name: logs
-        path: /tmp/logs
+    - name: Collect diagnostics and upload
+      if: ${{ failure() }}
+      uses: chainguard-dev/actions/kind-diag@84c993eaf02da1c325854fb272a4df9184bd80fc # main

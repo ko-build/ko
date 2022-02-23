@@ -6,214 +6,58 @@ on:
 
 jobs:
 
-  autoformat:
-    name: Auto-format and Check
+  gofmt:
+    name: check gofmt
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false # Keep running if one leg fails.
-      matrix:
-        tool:
-          - goimports
-          - gofmt
-
-        include:
-        - tool: gofmt
-          options: -s
-        - tool: goimports
-          importpath: golang.org/x/tools/cmd/goimports
-
     steps:
       - uses: actions/setup-go@v2
         with:
           go-version: 1.17.x
       - uses: actions/checkout@v2
+      - uses: chainguard-dev/actions/gofmt@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+        with:
+          args: -s
 
-      - name: Install Dependencies
-        if: ${{ matrix.importpath != '' }}
-        run: |
-          cd $(mktemp -d)
-          GO111MODULE=on go get ${{ matrix.importpath }}
-
-      - name: ${{ matrix.tool }} ${{ matrix.options }}
-        run: >
-          ${{ matrix.tool }} ${{ matrix.options }} -w
-          $(find .
-          -path './vendor' -prune
-          -o -path './third_party' -prune
-          -o -name '*.pb.go' -prune
-          -o -name 'wire_gen.go' -prune
-          -o -type f -name '*.go' -print)
-
-      - name: Verify ${{ matrix.tool }}
-        run: |
-          # From: https://backreference.org/2009/12/23/how-to-match-newlines-in-sed/
-          # This is to leverage this workaround:
-          # https://github.com/actions/toolkit/issues/193#issuecomment-605394935
-          function urlencode() {
-            sed ':begin;$!N;s/\n/%0A/;tbegin'
-          }
-          if [[ $(git diff-index --name-only HEAD --) ]]; then
-              for x in $(git diff-index --name-only HEAD --); do
-                echo "::error file=$x::Please run ${{ matrix.tool }} ${{ matrix.options }}.%0A$(git diff $x | urlencode)"
-              done
-              echo "${{ github.repository }} is out of style. Please run ${{ matrix.tool }} ${{ matrix.options }}."
-              exit 1
-          fi
-          echo "${{ github.repository }} is formatted correctly."
+  goimports:
+    name: check goimports
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.x
+      - uses: actions/checkout@v2
+      - uses: chainguard-dev/actions/goimports@84c993eaf02da1c325854fb272a4df9184bd80fc # main
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/setup-go@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
         with:
           go-version: 1.17.x
-      - uses: actions/checkout@v2
 
-      - uses: golangci/golangci-lint-action@v2
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - uses: chainguard-dev/actions/trailing-space@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+        if: ${{ always() }}
+
+      - uses: chainguard-dev/actions/eof-newline@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+        if: ${{ always() }}
+
+      - uses: reviewdog/action-misspell@v1
+        if: ${{ always() }}
         with:
-          version: v1.43
+          github_token: ${{ secrets.github_token }}
+          fail_on_error: true
+          locale: "US"
 
-      - name: Install Tools
-        env:
-          WOKE_VERSION: v0.5.0
-        run: |
-          TEMP_PATH="$(mktemp -d)"
-          cd $TEMP_PATH
-
-          echo '::group::🐶 Installing reviewdog ... https://github.com/reviewdog/reviewdog'
-          curl -sfL https://raw.githubusercontent.com/reviewdog/reviewdog/master/install.sh | sh -s -- -b "${TEMP_PATH}" 2>&1
-          echo '::endgroup::'
-
-          echo '::group:: Installing misspell ... https://github.com/client9/misspell'
-          go get github.com/client9/misspell/cmd/misspell
-          echo '::endgroup::'
-
-          echo '::group:: Installing woke ... https://github.com/get-woke/woke'
-          curl -sfL https://raw.githubusercontent.com/get-woke/woke/main/install.sh | sh -s -- -b "${TEMP_PATH}" "${WOKE_VERSION}" 2>&1
-          echo '::endgroup::'
-
-          echo "${TEMP_PATH}" >> $GITHUB_PATH
-
-      - name: misspell
+      - uses: get-woke/woke-action-reviewdog@v0
         if: ${{ always() }}
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
-        run: |
-          set -e
-          cd "${GITHUB_WORKSPACE}" || exit 1
-
-          echo '::group:: Running github.com/client9/misspell with reviewdog 🐶 ...'
-          # Don't fail because of misspell
-          set +o pipefail
-          # Exclude generated and vendored files, plus some legacy
-          # paths until we update all .gitattributes
-          git ls-files |
-          git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
-          git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
-          grep -Ev '^(vendor/|third_party/|.git)' |
-          xargs misspell -i importas -error |
-          reviewdog -efm="%f:%l:%c: %m" \
-                -name="github.com/client9/misspell" \
-                -reporter="github-pr-check" \
-                -filter-mode="added" \
-                -fail-on-error="true" \
-                -level="error"
-
-          echo '::endgroup::'
-
-      - name: trailing whitespace
-        if: ${{ always() }}
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
-        run: |
-          set -e
-          cd "${GITHUB_WORKSPACE}" || exit 1
-
-          echo '::group:: Flagging trailing whitespace with reviewdog 🐶 ...'
-          # Don't fail because of grep
-          set +o pipefail
-          
-          # Exclude generated and vendored files, plus some legacy
-          # paths until we update all .gitattributes
-          git ls-files |
-          git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
-          git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
-          grep -Ev '^(vendor/|third_party/|.git)' |
-          xargs grep -nE " +$" |
-          reviewdog -efm="%f:%l:%m" \
-                -name="trailing whitespace" \
-                -reporter="github-pr-check" \
-                -filter-mode="added" \
-                -fail-on-error="true" \
-                -level="error"
-
-          echo '::endgroup::'
-
-      - name: EOF newline
-        if: ${{ always() }}
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
-        run: |
-          set -e
-          cd "${GITHUB_WORKSPACE}" || exit 1
-
-          echo '::group:: Flagging missing EOF newlines with reviewdog 🐶 ...'
-          # Don't fail because of misspell
-          set +o pipefail
-          # Lint exclude rule:
-          #  - nothing in vendor/
-          #  - nothing in third_party
-          #  - nothing in .git/
-          #  - no *.ai (Adobe Illustrator) files.
-          LINT_FILES=$(git ls-files |
-          git check-attr --stdin linguist-generated | grep -Ev ': (set|true)$' | cut -d: -f1 |
-          git check-attr --stdin linguist-vendored | grep -Ev ': (set|true)$' | cut -d: -f1 |
-          grep -Ev '^(vendor/|third_party/|.git)' |
-          grep -v '\.ai$')
-
-          for x in $LINT_FILES; do
-            # Based on https://stackoverflow.com/questions/34943632/linux-check-if-there-is-an-empty-line-at-the-end-of-a-file
-            if [[ -f $x && ! ( -s "$x" && -z "$(tail -c 1 $x)" ) ]]; then
-              # We add 1 to `wc -l` here because of this limitation (from the man page):
-              # Characters beyond the final <newline> character will not be included in the line count.
-              echo $x:$((1 + $(wc -l $x | tr -s ' ' | cut -d' ' -f 1))): Missing newline
-            fi
-          done |
-          reviewdog -efm="%f:%l: %m" \
-                -name="EOF Newline" \
-                -reporter="github-pr-check" \
-                -filter-mode="added" \
-                -fail-on-error="true" \
-                -level="error"
-
-          echo '::endgroup::'
-
-      # This is mostly copied from https://github.com/get-woke/woke-action-reviewdog/blob/main/entrypoint.sh
-      # since their action is not yet released under a stable version.
-      - name: Language
-        if: ${{ always() && github.event_name == 'pull_request' }}
-        env:
-          REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
-        run: |
-          set -e
-          cd "${GITHUB_WORKSPACE}" || exit 1
-
-          # Create a minimal .wokeignore if none already exist.
-          if [ ! -f .wokeignore ]; then
-            cat > .wokeignore <<EOF
-            vendor/*
-            third_party/*
-          EOF
-          fi
-
-          echo '::group:: Running woke with reviewdog 🐶 ...'
-          woke --output simple \
-            | reviewdog -efm="%f:%l:%c: %m" \
-                -name="woke" \
-                -reporter="github-pr-check" \
-                -filter-mode="added" \
-                -fail-on-error="true" \
-                -level="error"
-          echo '::endgroup::'
+        with:
+          github-token: ${{ secrets.github_token }}
+          reporter: github-pr-check
+          level: error
+          fail-on-error: true
