@@ -51,6 +51,12 @@ func addRun(topLevel *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
+			if bo.WorkingDirectory != "" {
+				if err := os.Chdir(bo.WorkingDirectory); err != nil {
+					return fmt.Errorf("chdir: %w", err)
+				}
+			}
+
 			// Args after -- are for kubectl, so only consider importPaths before it.
 			importPaths := args
 			dashes := cmd.Flags().ArgsLenAtDash()

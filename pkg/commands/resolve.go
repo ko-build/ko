@@ -56,8 +56,14 @@ func addResolve(topLevel *cobra.Command) {
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
-
 			bo.InsecureRegistry = po.InsecureRegistry
+
+			if bo.WorkingDirectory != "" {
+				if err := os.Chdir(bo.WorkingDirectory); err != nil {
+					return fmt.Errorf("chdir: %w", err)
+				}
+			}
+
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				return fmt.Errorf("error creating builder: %w", err)

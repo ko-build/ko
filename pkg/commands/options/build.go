@@ -44,7 +44,7 @@ type BuildOptions struct {
 	// BaseImageOverrides stores base image overrides for import paths.
 	BaseImageOverrides map[string]string
 
-	// WorkingDirectory allows for setting the working directory for invocations of the `go` tool.
+	// WorkingDirectory allows for setting the working directory before any actions are taken.
 	// Empty string means the current working directory.
 	WorkingDirectory string
 
@@ -80,15 +80,15 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
+	cmd.Flags().StringVarP(&bo.WorkingDirectory, "directory", "C", ".",
+		"Change to this directory before performing any operations.")
 	bo.Trimpath = true
 }
 
 // LoadConfig reads build configuration from defaults, environment variables, and the `.ko.yaml` config file.
 func (bo *BuildOptions) LoadConfig() error {
 	v := viper.New()
-	if bo.WorkingDirectory == "" {
-		bo.WorkingDirectory = "."
-	}
+
 	// If omitted, use this base image.
 	v.SetDefault("defaultBaseImage", configDefaultBaseImage)
 	const configName = ".ko"
