@@ -20,7 +20,6 @@ jobs:
     - uses: actions/setup-go@v2
       with:
         go-version: 1.17.x
-    - uses: imjasonh/setup-crane@v0.1
 
     - name: Build and run ko container
       env:
@@ -68,12 +67,3 @@ jobs:
         EOF
         docker run $(go run ./ build ./test/ --platform=${PLATFORM}) --wait=false 2>&1 | grep "${{ github.sha }}"
 
-        # Check that images are produced in OCI formats unless explicitly requested otherwise.
-        crane manifest $(go run ./ build ./test/) | jq -r '.mediaType' | \
-            grep "application/vnd.oci.image.manifest.v1+json"
-        crane manifest $(go run ./ build ./test/ --preserve-docker-media-type) | jq -r '.mediaType' | \
-            grep "application/vnd.docker.distribution.manifest.v2+json"
-        crane manifest $(go run ./ build ./test/ --platform=all) | jq -r '.mediaType' | \
-            grep "application/vnd.oci.image.index.v1+json"
-        crane manifest $(go run ./ build ./test/ --platform=all --preserve-docker-media-type) | jq -r '.mediaType' | \
-            grep "application/vnd.docker.distribution.manifest.list.v2+json"
