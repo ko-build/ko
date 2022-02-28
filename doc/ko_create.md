@@ -69,6 +69,7 @@ ko create -f FILENAME [flags]
       --oci-layout-path string         Path to save the OCI image layout of the built images
       --password string                Password for basic authentication to the API server (DEPRECATED)
       --platform strings               Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
+      --preserve-docker-media-type     If false, push images in OCI format regardless of base image format
   -P, --preserve-import-paths          Whether to preserve the full import path after KO_DOCKER_REPO.
       --push                           Push images to KO_DOCKER_REPO (default true)
   -R, --recursive                      Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.

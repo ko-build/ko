@@ -180,7 +180,6 @@ func pushResult(ctx context.Context, tag name.Tag, br build.Result, opt []remote
 				return err
 			}
 		}
-
 		return remote.WriteIndex(tag, idx, opt...)
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		img, ok := br.(v1.Image)
