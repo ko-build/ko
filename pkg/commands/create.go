@@ -67,6 +67,10 @@ func addCreate(topLevel *cobra.Command) {
   ko apply -f config -- --namespace=foo --kubeconfig=cfg.yaml
 `,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := options.Validate(po, bo); err != nil {
+				return fmt.Errorf("validating options: %w", err)
+			}
+
 			if !isKubectlAvailable() {
 				return errors.New("error: kubectl is not available. kubectl must be installed to use ko create")
 			}

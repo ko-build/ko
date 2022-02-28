@@ -49,6 +49,10 @@ func addRun(topLevel *cobra.Command) {
   # You can also supply args and flags to the command.
   ko run ./cmd/baz -- -v arg1 arg2 --yes`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := options.Validate(po, bo); err != nil {
+				return fmt.Errorf("validating options: %w", err)
+			}
+
 			ctx := cmd.Context()
 
 			// Args after -- are for kubectl, so only consider importPaths before it.

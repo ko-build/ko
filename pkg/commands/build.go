@@ -58,6 +58,10 @@ func addBuild(topLevel *cobra.Command) {
   ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := options.Validate(po, bo); err != nil {
+				return fmt.Errorf("validating options: %w", err)
+			}
+
 			ctx := cmd.Context()
 
 			bo.InsecureRegistry = po.InsecureRegistry
