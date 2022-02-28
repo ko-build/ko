@@ -73,6 +73,16 @@ func WithTrimpath(v bool) Option {
 	}
 }
 
+// WithPreserveDockerMediaType is a functional option that controls whether to
+// preserve Docker media types from base images. If false, images that are
+// produced will use OCI media types.
+func WithPreserveDockerMediaType(v bool) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.preserveDockerMediaType = v
+		return nil
+	}
+}
+
 // WithConfig is a functional option for providing GoReleaser Build influenced
 // build settings for importpaths.
 //
