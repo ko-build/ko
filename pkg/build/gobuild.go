@@ -776,6 +776,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
+	cfg.Config.Cmd = nil
 	if platform.OS == "windows" {
 		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFilename(ref.Path())}
 		updatePath(cfg, `C:\ko-app`)
