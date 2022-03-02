@@ -727,9 +727,23 @@ func TestGoBuild(t *testing.T) {
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
 		withBuilder(writeTempFile),
+		WithConfig(map[string]Config{
+			importpath: {ID: "ko"},
+		}),
+		WithImageConfig(map[string]*ImageConfig{
+			importpath: {ID: "ko", Labels: map[string]string{
+				"fooo": "baaar",
+			}},
+		}),
 		withSBOMber(fauxSBOM),
 		WithLabel("foo", "bar"),
 		WithLabel("hello", "world"),
+		WithDefaultImageConfig(&ImageConfig{
+			Labels: map[string]string{
+				"baz": "qux",
+			}, Annotations: map[string]string{
+				"qux": "quux",
+			}}),
 	)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
@@ -777,10 +791,30 @@ func TestGoBuild(t *testing.T) {
 		want := map[string]string{
 			"foo":   "bar",
 			"hello": "world",
+			"baz":   "qux",
 		}
 		got := cfg.Config.Labels
 		if d := cmp.Diff(got, want); d != "" {
 			t.Fatalf("Labels diff (-got,+want): %s", d)
+		}
+	})
+
+	t.Run("check annotations", func(t *testing.T) {
+		m, err := img.Manifest()
+		if err != nil {
+			t.Fatalf("Manifest() = %v", err)
+		}
+
+		want := map[string]string{
+			"qux": "quux",
+		}
+		got := m.Annotations
+
+		if d := cmp.Diff(got, want, cmp.FilterPath(func(p cmp.Path) bool {
+			return p.GoString() == "{map[string]string}[\"org.opencontainers.image.base.digest\"]" ||
+				p.GoString() == "{map[string]string}[\"org.opencontainers.image.base.name\"]"
+		}, cmp.Ignore())); d != "" {
+			t.Fatalf("Annotations diff (-got,+want): %s", d)
 		}
 	})
 }

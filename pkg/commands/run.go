@@ -76,6 +76,9 @@ func addRun(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating builder: %w", err)
 			}
+			if bo.DockerRepo != "" {
+				po.DockerRepo = bo.DockerRepo
+			}
 			publisher, err := makePublisher(po)
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)

@@ -80,6 +80,8 @@ type gobuild struct {
 	trimpath             bool
 	preserveMediaType    bool
 	buildConfigs         map[string]Config
+	imageConfigs         map[string]*ImageConfig
+	defaultImageConfig   *ImageConfig
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
@@ -102,6 +104,8 @@ type gobuildOpener struct {
 	trimpath             bool
 	preserveMediaType    bool
 	buildConfigs         map[string]Config
+	imageConfigs         map[string]*ImageConfig
+	defaultImageConfig   *ImageConfig
 	platforms            []string
 	labels               map[string]string
 	dir                  string
@@ -130,6 +134,8 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		trimpath:             gbo.trimpath,
 		preserveMediaType:    gbo.preserveMediaType,
 		buildConfigs:         gbo.buildConfigs,
+		imageConfigs:         gbo.imageConfigs,
+		defaultImageConfig:   gbo.defaultImageConfig,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
 		platformMatcher:      matcher,
@@ -803,6 +809,26 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	if cfg.Config.Labels == nil {
 		cfg.Config.Labels = map[string]string{}
 	}
+
+	annotations := map[string]string{}
+	// initialize default image labels and annotations
+	if g.defaultImageConfig != nil {
+		for k, v := range g.defaultImageConfig.Labels {
+			cfg.Config.Labels[k] = v
+		}
+		annotations = g.defaultImageConfig.Annotations
+	}
+
+	// override the defaultImageConfig.labels
+	if ic := g.imageConfigs[ref.Path()]; ic != nil {
+		for k, v := range ic.Labels {
+			cfg.Config.Labels[k] = v
+		}
+		for k, v := range ic.Annotations {
+			annotations[k] = v
+		}
+	}
+
 	for k, v := range g.labels {
 		cfg.Config.Labels[k] = v
 	}
@@ -816,6 +842,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	if err != nil {
 		return nil, err
 	}
+
+	image = mutate.Annotations(image, annotations).(v1.Image)
 
 	si := signed.Image(image)
 
