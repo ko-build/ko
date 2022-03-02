@@ -18,16 +18,17 @@
 package sbom
 
 import (
+	"fmt"
 	"runtime/debug"
 )
 
 type BuildInfo debug.BuildInfo
 
 func (bi *BuildInfo) UnmarshalText(data []byte) error {
-	dbi := (*debug.BuildInfo)(bi)
-	if err := dbi.UnmarshalText(data); err != nil {
-		return err
+	dbi, err := debug.ParseBuildInfo(string(data))
+	if err != nil {
+		return fmt.Errorf("parsing build info: %w", err)
 	}
-	bi = (*BuildInfo)(dbi)
+	*bi = BuildInfo(*dbi)
 	return nil
 }
