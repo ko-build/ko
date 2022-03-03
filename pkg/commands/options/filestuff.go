@@ -19,25 +19,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/spf13/cobra"
 )
-
-const deprecation412 = `NOTICE!
------------------------------------------------------------------
-Watch mode is deprecated and unsupported, and will be removed in
-a future release.
-
-For more information see:
-   https://github.com/google/ko/issues/412
------------------------------------------------------------------
-`
 
 // FilenameOptions is from pkg/kubectl.
 type FilenameOptions struct {
 	Filenames []string
 	Recursive bool
-	Watch     bool
 }
 
 func AddFileArg(cmd *cobra.Command, fo *FilenameOptions) {
@@ -46,8 +34,6 @@ func AddFileArg(cmd *cobra.Command, fo *FilenameOptions) {
 		"Filename, directory, or URL to files to use to create the resource")
 	cmd.Flags().BoolVarP(&fo.Recursive, "recursive", "R", fo.Recursive,
 		"Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.")
-	cmd.Flags().BoolVarP(&fo.Watch, "watch", "W", fo.Watch,
-		"Continuously monitor the transitive dependencies of the passed yaml files, and redeploy whenever anything changes. (DEPRECATED)")
 }
 
 // Based heavily on pkg/kubectl
@@ -56,19 +42,6 @@ func EnumerateFiles(fo *FilenameOptions) chan string {
 	go func() {
 		// When we're done enumerating files, close the channel
 		defer close(files)
-		// When we are in --watch mode, we set up watches on the filesystem locations
-		// that we are supplied and continuously stream files, until we are sent an
-		// interrupt.
-		var watcher *fsnotify.Watcher
-		if fo.Watch {
-			log.Print(deprecation412)
-			var err error
-			watcher, err = fsnotify.NewWatcher()
-			if err != nil {
-				log.Fatalf("Unexpected error initializing fsnotify: %v", err)
-			}
-			defer watcher.Close()
-		}
 		for _, paths := range fo.Filenames {
 			// Just pass through '-' as it is indicative of stdin.
 			if paths == "-" {
@@ -90,9 +63,6 @@ func EnumerateFiles(fo *FilenameOptions) chan string {
 					if path != paths && !fo.Recursive {
 						return filepath.SkipDir
 					}
-					if watcher != nil {
-						watcher.Add(path)
-					}
 					// We don't stream back directories, we just decide to skip them, or not.
 					return nil
 				}
@@ -105,14 +75,6 @@ func EnumerateFiles(fo *FilenameOptions) chan string {
 					default:
 						return nil
 					}
-					// We weren't passed this explicitly, so elide the watch as we
-					// are already watching the directory.
-				} else {
-					// We were passed this directly, and so we may not be watching the
-					// directory, so watch this file explicitly.
-					if watcher != nil {
-						watcher.Add(path)
-					}
 				}
 
 				files <- path
@@ -120,23 +82,6 @@ func EnumerateFiles(fo *FilenameOptions) chan string {
 			})
 			if err != nil {
 				log.Fatalf("Error enumerating files: %v", err)
-			}
-		}
-
-		// We're done watching the files we were passed and setting up watches.
-		// Now listen for change events from the watches we set up and resend
-		// files that change as if we just saw them (so they can be reprocessed).
-		if watcher != nil {
-			for {
-				select {
-				case event := <-watcher.Events:
-					switch filepath.Ext(event.Name) {
-					case ".json", ".yaml":
-						files <- event.Name
-					}
-				case err := <-watcher.Errors:
-					log.Fatalf("Error watching: %v", err)
-				}
 			}
 		}
 	}()

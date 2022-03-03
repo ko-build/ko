@@ -175,7 +175,6 @@ github.com/evanphx/json-patch/v5
 # github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 github.com/form3tech-oss/jwt-go
 # github.com/fsnotify/fsnotify v1.5.1
-## explicit
 github.com/fsnotify/fsnotify
 # github.com/go-logr/logr v1.2.0
 github.com/go-logr/logr
@@ -259,9 +258,6 @@ github.com/klauspost/compress/zstd
 github.com/klauspost/compress/zstd/internal/xxhash
 # github.com/magiconair/properties v1.8.5
 github.com/magiconair/properties
-# github.com/mattmoor/dep-notify v0.0.0-20190205035814-a45dec370a17
-## explicit
-github.com/mattmoor/dep-notify/pkg/graph
 # github.com/mattn/go-isatty v0.0.14
 github.com/mattn/go-isatty
 # github.com/mitchellh/go-homedir v1.1.0

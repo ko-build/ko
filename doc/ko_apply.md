@@ -83,7 +83,6 @@ ko apply -f FILENAME [flags]
       --token string                   Bearer token for authentication to the API server (DEPRECATED)
       --user string                    The name of the kubeconfig user to use (DEPRECATED)
       --username string                Username for basic authentication to the API server (DEPRECATED)
-  -W, --watch                          Continuously monitor the transitive dependencies of the passed yaml files, and redeploy whenever anything changes. (DEPRECATED)
 ```
 
 ### Options inherited from parent commands
