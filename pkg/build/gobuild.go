@@ -78,6 +78,7 @@ type gobuild struct {
 	sbom                 sbomber
 	disableOptimizations bool
 	trimpath             bool
+	preserveMediaType    bool
 	buildConfigs         map[string]Config
 	platformMatcher      *platformMatcher
 	dir                  string
@@ -99,6 +100,7 @@ type gobuildOpener struct {
 	sbom                 sbomber
 	disableOptimizations bool
 	trimpath             bool
+	preserveMediaType    bool
 	buildConfigs         map[string]Config
 	platforms            []string
 	labels               map[string]string
@@ -126,6 +128,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		sbom:                 gbo.sbom,
 		disableOptimizations: gbo.disableOptimizations,
 		trimpath:             gbo.trimpath,
+		preserveMediaType:    gbo.preserveMediaType,
 		buildConfigs:         gbo.buildConfigs,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
@@ -694,6 +697,16 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	ref := newRef(refStr)
 
+	baseType := types.OCIManifestSchema1
+	if g.preserveMediaType {
+		var err error
+		baseType, err = base.MediaType()
+		if err != nil {
+			return nil, err
+		}
+	}
+	base = mutate.MediaType(base, baseType)
+
 	cf, err := base.ConfigFile()
 	if err != nil {
 		return nil, err
@@ -884,7 +897,7 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	// Annotate the base image we pass to the build function with
 	// annotations indicating the digest (and possibly tag) of the
 	// base image.  This will be inherited by the image produced.
-	if mt != types.DockerManifestList {
+	if mt != types.DockerManifestList && !g.preserveMediaType {
 		anns := map[string]string{
 			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
 		}
@@ -963,11 +976,17 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			if err != nil {
 				return err
 			}
+
+			mt := types.OCIManifestSchema1
+			if g.preserveMediaType {
+				mt = desc.MediaType
+			}
+
 			adds[i] = ocimutate.IndexAddendum{
 				Add: img,
 				Descriptor: v1.Descriptor{
 					URLs:        desc.URLs,
-					MediaType:   desc.MediaType,
+					MediaType:   mt,
 					Annotations: desc.Annotations,
 					Platform:    desc.Platform,
 				},
@@ -979,9 +998,12 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 		return nil, err
 	}
 
-	baseType, err := baseIndex.MediaType()
-	if err != nil {
-		return nil, err
+	baseType := types.OCIImageIndex
+	if g.preserveMediaType {
+		baseType, err = baseIndex.MediaType()
+		if err != nil {
+			return nil, err
+		}
 	}
 	idx := ocimutate.AppendManifests(mutate.IndexMediaType(empty.Index, baseType), adds...)
 

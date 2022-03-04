@@ -55,6 +55,7 @@ ko build IMPORTPATH... [flags]
       --oci-layout-path string   Path to save the OCI image layout of the built images
       --platform strings         Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths    Whether to preserve the full import path after KO_DOCKER_REPO.
+      --preserve-media-type      If false, push images in OCI format regardless of base image format
       --push                     Push images to KO_DOCKER_REPO (default true)
       --sbom string              The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, go.version-m). (default "spdx")
       --tag-only                 Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.
