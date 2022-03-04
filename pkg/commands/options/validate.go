@@ -40,14 +40,6 @@ The --local flag might be deprecated in the future.
 -----------------------------------------------------------------
 `
 
-const platformsFlagWarning = `ERROR!
------------------------------------------------------------------------
-The --platform was set with all and other specific platforms.
-
-Please choose either all or a specific one, ie. --platform=linux/arm64
------------------------------------------------------------------------
-`
-
 func Validate(po *PublishOptions, bo *BuildOptions) error {
 	if po.Bare && po.BaseImportPaths {
 		log.Print(bareBaseFlagsWarning)
@@ -59,17 +51,10 @@ func Validate(po *PublishOptions, bo *BuildOptions) error {
 	}
 
 	if len(bo.Platforms) > 1 {
-		hasAll := false
-
 		for _, platform := range bo.Platforms {
 			if platform == "all" {
-				hasAll = true
+				return errors.New("all or specific platforms should be used")
 			}
-		}
-
-		if hasAll {
-			log.Print(platformsFlagWarning)
-			return errors.New("all or specific platforms should be used")
 		}
 	}
 
