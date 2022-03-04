@@ -949,7 +949,7 @@ func TestGoBuildIndex(t *testing.T) {
 	})
 }
 
-func TestPreserveDockerMediaType(t *testing.T) {
+func TestPreserveMediaType(t *testing.T) {
 	mustRandomImage := func(t *testing.T) v1.Image {
 		img, err := random.Image(1, 1)
 		if err != nil {
@@ -1008,7 +1008,7 @@ func TestPreserveDockerMediaType(t *testing.T) {
 				"",
 				WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, c.base, nil }),
 				WithPlatforms("all"),
-				WithPreserveDockerMediaType(c.preserve),
+				WithPreserveMediaType(c.preserve),
 				withBuilder(writeTempFile),
 			)
 			if err != nil {

@@ -69,7 +69,7 @@ type BuildOptions struct {
 	BuildConfigs map[string]build.Config
 
 	// If true, don't convert Docker-typed base images to OCI when building.
-	PreserveDockerMediaType bool
+	PreserveMediaType bool
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -84,7 +84,7 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
 
-	cmd.Flags().BoolVar(&bo.PreserveDockerMediaType, "preserve-docker-media-type", false, "If false, push images in OCI format regardless of base image format")
+	cmd.Flags().BoolVar(&bo.PreserveMediaType, "preserve-media-type", false, "If false, push images in OCI format regardless of base image format")
 
 	bo.Trimpath = true
 }

@@ -70,20 +70,20 @@ type platformMatcher struct {
 }
 
 type gobuild struct {
-	ctx                     context.Context
-	getBase                 GetBase
-	creationTime            v1.Time
-	kodataCreationTime      v1.Time
-	build                   builder
-	sbom                    sbomber
-	disableOptimizations    bool
-	trimpath                bool
-	preserveDockerMediaType bool
-	buildConfigs            map[string]Config
-	platformMatcher         *platformMatcher
-	dir                     string
-	labels                  map[string]string
-	semaphore               *semaphore.Weighted
+	ctx                  context.Context
+	getBase              GetBase
+	creationTime         v1.Time
+	kodataCreationTime   v1.Time
+	build                builder
+	sbom                 sbomber
+	disableOptimizations bool
+	trimpath             bool
+	preserveMediaType    bool
+	buildConfigs         map[string]Config
+	platformMatcher      *platformMatcher
+	dir                  string
+	labels               map[string]string
+	semaphore            *semaphore.Weighted
 
 	cache *layerCache
 }
@@ -92,20 +92,20 @@ type gobuild struct {
 type Option func(*gobuildOpener) error
 
 type gobuildOpener struct {
-	ctx                     context.Context
-	getBase                 GetBase
-	creationTime            v1.Time
-	kodataCreationTime      v1.Time
-	build                   builder
-	sbom                    sbomber
-	disableOptimizations    bool
-	trimpath                bool
-	preserveDockerMediaType bool
-	buildConfigs            map[string]Config
-	platforms               []string
-	labels                  map[string]string
-	dir                     string
-	jobs                    int
+	ctx                  context.Context
+	getBase              GetBase
+	creationTime         v1.Time
+	kodataCreationTime   v1.Time
+	build                builder
+	sbom                 sbomber
+	disableOptimizations bool
+	trimpath             bool
+	preserveMediaType    bool
+	buildConfigs         map[string]Config
+	platforms            []string
+	labels               map[string]string
+	dir                  string
+	jobs                 int
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -120,19 +120,19 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		gbo.jobs = runtime.GOMAXPROCS(0)
 	}
 	return &gobuild{
-		ctx:                     gbo.ctx,
-		getBase:                 gbo.getBase,
-		creationTime:            gbo.creationTime,
-		kodataCreationTime:      gbo.kodataCreationTime,
-		build:                   gbo.build,
-		sbom:                    gbo.sbom,
-		disableOptimizations:    gbo.disableOptimizations,
-		trimpath:                gbo.trimpath,
-		preserveDockerMediaType: gbo.preserveDockerMediaType,
-		buildConfigs:            gbo.buildConfigs,
-		labels:                  gbo.labels,
-		dir:                     gbo.dir,
-		platformMatcher:         matcher,
+		ctx:                  gbo.ctx,
+		getBase:              gbo.getBase,
+		creationTime:         gbo.creationTime,
+		kodataCreationTime:   gbo.kodataCreationTime,
+		build:                gbo.build,
+		sbom:                 gbo.sbom,
+		disableOptimizations: gbo.disableOptimizations,
+		trimpath:             gbo.trimpath,
+		preserveMediaType:    gbo.preserveMediaType,
+		buildConfigs:         gbo.buildConfigs,
+		labels:               gbo.labels,
+		dir:                  gbo.dir,
+		platformMatcher:      matcher,
 		cache: &layerCache{
 			buildToDiff: map[string]buildIDToDiffID{},
 			diffToDesc:  map[string]diffIDToDescriptor{},
@@ -698,7 +698,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	ref := newRef(refStr)
 
 	baseType := types.OCIManifestSchema1
-	if g.preserveDockerMediaType {
+	if g.preserveMediaType {
 		var err error
 		baseType, err = base.MediaType()
 		if err != nil {
@@ -897,7 +897,7 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	// Annotate the base image we pass to the build function with
 	// annotations indicating the digest (and possibly tag) of the
 	// base image.  This will be inherited by the image produced.
-	if mt != types.DockerManifestList && !g.preserveDockerMediaType {
+	if mt != types.DockerManifestList && !g.preserveMediaType {
 		anns := map[string]string{
 			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
 		}
@@ -978,7 +978,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			}
 
 			mt := types.OCIManifestSchema1
-			if g.preserveDockerMediaType {
+			if g.preserveMediaType {
 				mt = desc.MediaType
 			}
 
@@ -999,7 +999,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 	}
 
 	baseType := types.OCIImageIndex
-	if g.preserveDockerMediaType {
+	if g.preserveMediaType {
 		baseType, err = baseIndex.MediaType()
 		if err != nil {
 			return nil, err
