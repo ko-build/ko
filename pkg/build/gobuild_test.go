@@ -449,7 +449,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 
 	img, ok := result.(v1.Image)
 	if !ok {
-		t.Fatalf("Build() not an image: %v", result)
+		t.Fatalf("Build() not an Image: %T", result)
 	}
 
 	ls, err := img.Layers()
@@ -742,7 +742,7 @@ func TestGoBuild(t *testing.T) {
 
 	img, ok := result.(oci.SignedImage)
 	if !ok {
-		t.Fatalf("Build() not an image: %v", result)
+		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
 	validateImage(t, img, baseLayers, creationTime, true, true)
@@ -854,7 +854,7 @@ func TestGoBuildWithoutSBOM(t *testing.T) {
 
 	img, ok := result.(oci.SignedImage)
 	if !ok {
-		t.Fatalf("Build() not an image: %v", result)
+		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
 	validateImage(t, img, baseLayers, creationTime, true, false)
@@ -890,7 +890,7 @@ func TestGoBuildIndex(t *testing.T) {
 
 	idx, ok := result.(oci.SignedImageIndex)
 	if !ok {
-		t.Fatalf("Build() not an image: %v", result)
+		t.Fatalf("Build() not a SignedImageIndex: %T", result)
 	}
 
 	im, err := idx.IndexManifest()
