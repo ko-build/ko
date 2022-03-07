@@ -888,16 +888,15 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		return nil, err
 	}
 
-	// Take the digest of the base index or image, to annotate images we'll build later.
-	baseDigest, err := base.Digest()
-	if err != nil {
-		return nil, err
-	}
-
 	// Annotate the base image we pass to the build function with
 	// annotations indicating the digest (and possibly tag) of the
 	// base image.  This will be inherited by the image produced.
-	if mt != types.DockerManifestList && !g.preserveMediaType {
+	if !(mt == types.DockerManifestList && g.preserveMediaType) {
+		baseDigest, err := base.Digest()
+		if err != nil {
+			return nil, err
+		}
+
 		anns := map[string]string{
 			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
 		}
@@ -957,6 +956,8 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 		if err != nil {
 			return nil, fmt.Errorf("error getting matching image from index: %w", err)
 		}
+		// Carry forward the base index's annotations, which include base image annotations.
+		img = mutate.Annotations(img, im.Annotations).(v1.Image)
 		return g.buildOne(ctx, ref, img, matches[0].Platform)
 	}
 
@@ -1005,7 +1006,12 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			return nil, err
 		}
 	}
-	idx := ocimutate.AppendManifests(mutate.IndexMediaType(empty.Index, baseType), adds...)
+
+	idx := ocimutate.AppendManifests(
+		mutate.Annotations(
+			mutate.IndexMediaType(empty.Index, baseType),
+			im.Annotations).(v1.ImageIndex),
+		adds...)
 
 	// TODO(mattmoor): If we want to attach anything (e.g. signatures, attestations, SBOM)
 	// at the index level, we would do it here!
