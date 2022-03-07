@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-go@v1
         with:
           go-version: 1.17.x
-      - uses: goreleaser/goreleaser-action@v2.9.0
+      - uses: goreleaser/goreleaser-action@v2.9.1
         with:
           version: latest
           args: release --rm-dist
