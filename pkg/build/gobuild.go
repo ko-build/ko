@@ -704,6 +704,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		base = mutate.ConfigMediaType(base, types.OCIConfigJSON)
 	}
 	base = mutate.MediaType(base, baseType)
 
@@ -728,7 +730,32 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		defer os.RemoveAll(filepath.Dir(file))
 	}
 
+	mediaType := types.OCIManifestSchema1
+	configMediaType := types.OCIConfigJSON
+	layerMediaType := types.OCILayer
+	if baseType == types.DockerManifestSchema2 && g.preserveMediaType {
+		mediaType = types.DockerManifestSchema2
+		configMediaType = types.DockerConfigJSON
+		layerMediaType = types.DockerLayer
+	}
+
 	var layers []mutate.Addendum
+
+	baseLayers, err := base.Layers()
+	if err != nil {
+		return nil, err
+	}
+	for _, l := range baseLayers {
+		layers = append(layers, mutate.Addendum{
+			MediaType: layerMediaType,
+			Layer:     l,
+		})
+	}
+	baseManifest, err := base.Manifest()
+	if err != nil {
+		return nil, err
+	}
+	anns := baseManifest.Annotations
 
 	// Create a layer from the kodata directory under this import path.
 	dataLayerBuf, err := g.tarKoData(ref, platform)
@@ -743,7 +770,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, err
 	}
 	layers = append(layers, mutate.Addendum{
-		Layer: dataLayer,
+		Layer:     dataLayer,
+		MediaType: layerMediaType,
 		History: v1.History{
 			Author:    "ko",
 			CreatedBy: "ko build " + ref.String(),
@@ -765,7 +793,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 
 	layers = append(layers, mutate.Addendum{
-		Layer: binaryLayer,
+		Layer:     binaryLayer,
+		MediaType: layerMediaType,
 		History: v1.History{
 			Author:    "ko",
 			Created:   g.creationTime,
@@ -774,8 +803,13 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		},
 	})
 
-	// Augment the base image with our application layer.
-	withApp, err := mutate.Append(base, layers...)
+	// Add all the base layers to an empty base, with the correct config
+	// and manifest media types, and all the base's annotations.
+	withApp, err := mutate.Append(
+		mutate.Annotations(
+			mutate.MediaType(
+				mutate.ConfigMediaType(empty.Image, configMediaType), mediaType), anns).(v1.Image),
+		layers...)
 	if err != nil {
 		return nil, err
 	}
