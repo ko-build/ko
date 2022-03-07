@@ -14,7 +14,7 @@ jobs:
   image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/setup-go@v1
         with:
           go-version: 1.17.x

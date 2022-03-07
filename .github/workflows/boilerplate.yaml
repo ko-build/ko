@@ -24,7 +24,7 @@ jobs:
           language: Bash
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - uses: chainguard-dev/actions/boilerplate@84c993eaf02da1c325854fb272a4df9184bd80fc # main
         with:
