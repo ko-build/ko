@@ -17,6 +17,7 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
@@ -65,7 +66,7 @@ func addBuild(topLevel *cobra.Command) {
 			}
 			ctx := cmd.Context()
 
-			importpaths, err := importPaths(args)
+			importpaths, err := importPaths(bo.WorkingDirectory, args)
 			if err != nil {
 				return fmt.Errorf("resolving import paths: %w", err)
 			}
@@ -98,8 +99,12 @@ func addBuild(topLevel *cobra.Command) {
 // importPaths resolves a list of importpath strings that may contain wildcards
 // like "./cmd/..." or "./...", and returns the 'package main' packages matched
 // by those importpaths.
-func importPaths(args []string) ([]string, error) {
-	ps, err := packages.Load(&packages.Config{}, args...)
+func importPaths(dir string, args []string) ([]string, error) {
+	dir = filepath.Clean(dir)
+	if dir == "." {
+		dir = ""
+	}
+	ps, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName}, args...)
 	if err != nil {
 		return nil, fmt.Errorf("loading packages: %w", err)
 	}
