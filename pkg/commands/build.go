@@ -15,18 +15,12 @@
 package commands
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"go/build"
-	"io"
-	"os/exec"
-	"strings"
 
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
+	"golang.org/x/tools/go/packages"
 )
 
 // addBuild augments our CLI surface with build.
@@ -71,28 +65,10 @@ func addBuild(topLevel *cobra.Command) {
 			}
 			ctx := cmd.Context()
 
-			uniq := map[string]struct{}{}
-			for _, a := range args {
-				if strings.HasSuffix(a, "/...") {
-					matches, err := importPaths(ctx, a)
-					if err != nil {
-						return fmt.Errorf("resolving import path %q: %w", a, err)
-					}
-					for _, m := range matches {
-						uniq[m] = struct{}{}
-					}
-				} else {
-					uniq[a] = struct{}{}
-				}
+			importpaths, err := importPaths(args)
+			if err != nil {
+				return fmt.Errorf("resolving import paths: %w", err)
 			}
-			importpaths := make([]string, 0, len(uniq))
-			for k := range uniq {
-				importpaths = append(importpaths, k)
-			}
-			if len(importpaths) == 0 {
-				return errors.New("no package main packages matched")
-			}
-			// TODO: sort?
 
 			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
@@ -119,28 +95,22 @@ func addBuild(topLevel *cobra.Command) {
 	topLevel.AddCommand(build)
 }
 
-// importPaths resolves a wildcard importpath string like "./cmd/..." or
-// "./..." and returns the 'package main' packages matched by that wildcard,
-// using `go list`.
-func importPaths(ctx context.Context, s string) ([]string, error) {
-	var buf bytes.Buffer
-	cmd := exec.CommandContext(ctx, "go", "list", "-json", s)
-	cmd.Stdout = &buf
-	if err := cmd.Run(); err != nil {
-		return nil, err
+// importPaths resolves a list of importpath strings that may contain wildcards
+// like "./cmd/..." or "./...", and returns the 'package main' packages matched
+// by those importpaths.
+func importPaths(args []string) ([]string, error) {
+	ps, err := packages.Load(&packages.Config{}, args...)
+	if err != nil {
+		return nil, fmt.Errorf("loading packages: %w", err)
 	}
-	var out []string
-	dec := json.NewDecoder(&buf)
-	for {
-		var p build.Package
-		if err := dec.Decode(&p); errors.Is(err, io.EOF) {
-			break
-		} else if err != nil {
-			return nil, err
-		}
+	out := []string{}
+	for _, p := range ps {
 		if p.Name == "main" {
-			out = append(out, p.ImportPath)
+			out = append(out, p.String())
 		}
+	}
+	if len(importpaths) == 0 {
+		return nil, errors.New("no package main packages matched")
 	}
 	return out, nil
 }
