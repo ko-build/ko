@@ -15,7 +15,15 @@
 package commands
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"go/build"
+	"io"
+	"os/exec"
+	"strings"
 
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
@@ -61,8 +69,27 @@ func addBuild(topLevel *cobra.Command) {
 			if err := options.Validate(po, bo); err != nil {
 				return fmt.Errorf("validating options: %w", err)
 			}
-
 			ctx := cmd.Context()
+
+			uniq := map[string]struct{}{}
+			for _, a := range args {
+				if strings.HasSuffix(a, "/...") {
+					matches, err := importPaths(ctx, a)
+					if err != nil {
+						return fmt.Errorf("resolving import path %q: %w", a, err)
+					}
+					for _, m := range matches {
+						uniq[m] = struct{}{}
+					}
+				} else {
+					uniq[a] = struct{}{}
+				}
+			}
+			importpaths := make([]string, 0, len(uniq))
+			for k := range uniq {
+				importpaths = append(importpaths, k)
+			}
+			// TODO: sort?
 
 			bo.InsecureRegistry = po.InsecureRegistry
 			builder, err := makeBuilder(ctx, bo)
@@ -74,7 +101,7 @@ func addBuild(topLevel *cobra.Command) {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
 			defer publisher.Close()
-			images, err := publishImages(ctx, args, publisher, builder)
+			images, err := publishImages(ctx, importpaths, publisher, builder)
 			if err != nil {
 				return fmt.Errorf("failed to publish images: %w", err)
 			}
@@ -87,4 +114,30 @@ func addBuild(topLevel *cobra.Command) {
 	options.AddPublishArg(build, po)
 	options.AddBuildOptions(build, bo)
 	topLevel.AddCommand(build)
+}
+
+// importPaths resolves a wildcard importpath string like "./cmd/..." or
+// "./..." and returns the 'package main' packages matched by that wildcard,
+// using `go list`.
+func importPaths(ctx context.Context, s string) ([]string, error) {
+	var buf bytes.Buffer
+	cmd := exec.CommandContext(ctx, "go", "list", "-json", s)
+	cmd.Stdout = &buf
+	if err := cmd.Run(); err != nil {
+		return nil, err
+	}
+	var out []string
+	dec := json.NewDecoder(&buf)
+	for {
+		var p build.Package
+		if err := dec.Decode(&p); errors.Is(err, io.EOF) {
+			break
+		} else if err != nil {
+			return nil, err
+		}
+		if p.Name == "main" {
+			out = append(out, p.ImportPath)
+		}
+	}
+	return out, nil
 }
