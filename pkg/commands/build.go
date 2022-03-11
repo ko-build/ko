@@ -89,6 +89,9 @@ func addBuild(topLevel *cobra.Command) {
 			for k := range uniq {
 				importpaths = append(importpaths, k)
 			}
+			if len(importpaths) == 0 {
+				return errors.New("no package main packages matched")
+			}
 			// TODO: sort?
 
 			bo.InsecureRegistry = po.InsecureRegistry
