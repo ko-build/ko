@@ -109,7 +109,7 @@ func importPaths(args []string) ([]string, error) {
 			out = append(out, p.String())
 		}
 	}
-	if len(importpaths) == 0 {
+	if len(out) == 0 {
 		return nil, errors.New("no package main packages matched")
 	}
 	return out, nil
