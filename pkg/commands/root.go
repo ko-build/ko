@@ -20,6 +20,7 @@ import (
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/spf13/cobra"
+	"go.uber.org/automaxprocs/maxprocs"
 )
 
 var Root = New()
@@ -37,6 +38,8 @@ func New() *cobra.Command {
 				logs.Debug.SetOutput(os.Stderr)
 			}
 			logs.Progress.SetOutput(os.Stderr)
+
+			maxprocs.Set(maxprocs.Logger(logs.Debug.Printf))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
