@@ -32,8 +32,8 @@ import (
 
 // Export exports the kubeconfig given the cluster context and a path to write it to
 // This will always be an external kubeconfig
-func Export(p providers.Provider, name, explicitPath string) error {
-	cfg, err := get(p, name, true)
+func Export(p providers.Provider, name, explicitPath string, external bool) error {
+	cfg, err := get(p, name, external)
 	if err != nil {
 		return err
 	}
@@ -63,7 +63,7 @@ func Get(p providers.Provider, name string, external bool) (string, error) {
 }
 
 // ContextForCluster returns the context name for a kind cluster based on
-// it's name. This key is used for all list entries of kind clusters
+// its name. This key is used for all list entries of kind clusters
 func ContextForCluster(kindClusterName string) string {
 	return kubeconfig.KINDClusterKey(kindClusterName)
 }
@@ -80,7 +80,8 @@ func get(p providers.Provider, name string, external bool) (*kubeconfig.Config, 
 		return nil, err
 	}
 	if len(nodes) < 1 {
-		return nil, errors.New("could not locate any control plane nodes")
+		return nil, errors.Errorf("could not locate any control plane nodes for cluster named '%s'. "+
+			"Use the --name option to select a different cluster", name)
 	}
 	node := nodes[0]
 

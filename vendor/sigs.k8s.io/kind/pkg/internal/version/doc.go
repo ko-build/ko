@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2021 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -15,4 +15,8 @@ limitations under the License.
 */
 
 // Package version provides utilities for version number comparisons
-package version // import "k8s.io/apimachinery/pkg/util/version"
+//
+// This is forked from k8s.io/apimachinery/pkg/util/version to make
+// kind easier to import (k8s.io/apimachinery/pkg/util/version is a stable,
+// mature package with no externaldependencies within a large, heavy module)
+package version

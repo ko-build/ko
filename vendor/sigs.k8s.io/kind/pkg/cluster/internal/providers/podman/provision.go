@@ -17,10 +17,12 @@ limitations under the License.
 package podman
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"sigs.k8s.io/kind/pkg/cluster/constants"
 	"sigs.k8s.io/kind/pkg/errors"
@@ -43,7 +45,7 @@ func planCreation(cfg *config.Cluster, networkName string) (createContainerFuncs
 	// only the external LB should reflect the port if we have multiple control planes
 	apiServerPort := cfg.Networking.APIServerPort
 	apiServerAddress := cfg.Networking.APIServerAddress
-	if clusterHasImplicitLoadBalancer(cfg) {
+	if config.ClusterHasImplicitLoadBalancer(cfg) {
 		// TODO: picking ports locally is less than ideal with a remote runtime
 		// (does podman have this?)
 		// but this is supposed to be an implementation detail and NOT picking
@@ -62,7 +64,7 @@ func planCreation(cfg *config.Cluster, networkName string) (createContainerFuncs
 			if err != nil {
 				return err
 			}
-			return createContainer(args)
+			return createContainer(name, args)
 		})
 	}
 
@@ -96,7 +98,7 @@ func planCreation(cfg *config.Cluster, networkName string) (createContainerFuncs
 				if err != nil {
 					return err
 				}
-				return createContainer(args)
+				return createContainerWithWaitUntilSystemdReachesMultiUserSystem(name, args)
 			})
 		case config.WorkerRole:
 			createContainerFuncs = append(createContainerFuncs, func() error {
@@ -104,35 +106,13 @@ func planCreation(cfg *config.Cluster, networkName string) (createContainerFuncs
 				if err != nil {
 					return err
 				}
-				return createContainer(args)
+				return createContainerWithWaitUntilSystemdReachesMultiUserSystem(name, args)
 			})
 		default:
 			return nil, errors.Errorf("unknown node role: %q", node.Role)
 		}
 	}
 	return createContainerFuncs, nil
-}
-
-func createContainer(args []string) error {
-	if err := exec.Command("podman", args...).Run(); err != nil {
-		return errors.Wrap(err, "podman run error")
-	}
-	return nil
-}
-
-func clusterIsIPv6(cfg *config.Cluster) bool {
-	return cfg.Networking.IPFamily == config.IPv6Family || cfg.Networking.IPFamily == config.DualStackFamily
-}
-
-func clusterHasImplicitLoadBalancer(cfg *config.Cluster) bool {
-	controlPlanes := 0
-	for _, configNode := range cfg.Nodes {
-		role := string(configNode.Role)
-		if role == constants.ControlPlaneNodeRoleValue {
-			controlPlanes++
-		}
-	}
-	return controlPlanes > 1
 }
 
 // commonArgs computes static arguments that apply to all containers
@@ -149,7 +129,7 @@ func commonArgs(cfg *config.Cluster, networkName string) ([]string, error) {
 	}
 
 	// enable IPv6 if necessary
-	if clusterIsIPv6(cfg) {
+	if config.ClusterHasIPv6(cfg) {
 		args = append(args, "--sysctl=net.ipv6.conf.all.disable_ipv6=0", "--sysctl=net.ipv6.conf.all.forwarding=1")
 	}
 
@@ -168,6 +148,12 @@ func commonArgs(cfg *config.Cluster, networkName string) ([]string, error) {
 		args = append(args, "--volume", "/dev/mapper:/dev/mapper")
 	}
 
+	// rootless: use fuse-overlayfs by default
+	// https://github.com/kubernetes-sigs/kind/issues/2275
+	if mountFuse() {
+		args = append(args, "--device", "/dev/fuse")
+	}
+
 	return args, nil
 }
 
@@ -180,9 +166,7 @@ func runArgsForNode(node *config.Node, clusterIPFamily config.ClusterIPFamily, n
 	}
 
 	args = append([]string{
-		"run",
 		"--hostname", name, // make hostname match container name
-		"--name", name, // ... and set the container name
 		// label the node with the role ID
 		"--label", fmt.Sprintf("%s=%s", nodeRoleLabelKey, node.Role),
 		// running containers in a container requires privileged
@@ -206,6 +190,8 @@ func runArgsForNode(node *config.Node, clusterIPFamily config.ClusterIPFamily, n
 		"--volume", fmt.Sprintf("%s:/var:suid,exec,dev", varVolume),
 		// some k8s things want to read /lib/modules
 		"--volume", "/lib/modules:/lib/modules:ro",
+		// propagate KIND_EXPERIMENTAL_CONTAINERD_SNAPSHOTTER to the entrypoint script
+		"-e", "KIND_EXPERIMENTAL_CONTAINERD_SNAPSHOTTER",
 	},
 		args...,
 	)
@@ -230,9 +216,7 @@ func runArgsForNode(node *config.Node, clusterIPFamily config.ClusterIPFamily, n
 
 func runArgsForLoadBalancer(cfg *config.Cluster, name string, args []string) ([]string, error) {
 	args = append([]string{
-		"run",
 		"--hostname", name, // make hostname match container name
-		"--name", name, // ... and set the container name
 		// label the node with the role ID
 		"--label", fmt.Sprintf("%s=%s", nodeRoleLabelKey, constants.ExternalLoadBalancerNodeRoleValue),
 	},
@@ -336,7 +320,7 @@ func generatePortMappings(clusterIPFamily config.ClusterIPFamily, portMappings .
 		// in a future API revision we will handle this at the API level and remove this
 		if pm.ListenAddress == "" {
 			switch clusterIPFamily {
-			case config.IPv4Family:
+			case config.IPv4Family, config.DualStackFamily:
 				pm.ListenAddress = "0.0.0.0"
 			case config.IPv6Family:
 				pm.ListenAddress = "::"
@@ -374,4 +358,22 @@ func generatePortMappings(clusterIPFamily config.ClusterIPFamily, portMappings .
 		args = append(args, fmt.Sprintf("--publish=%s:%d/%s", hostPortBinding, pm.ContainerPort, strings.ToLower(protocol)))
 	}
 	return args, nil
+}
+
+func createContainer(name string, args []string) error {
+	if err := exec.Command("podman", append([]string{"run", "--name", name}, args...)...).Run(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func createContainerWithWaitUntilSystemdReachesMultiUserSystem(name string, args []string) error {
+	if err := exec.Command("podman", append([]string{"run", "--name", name}, args...)...).Run(); err != nil {
+		return err
+	}
+
+	logCtx, logCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer logCancel()
+	logCmd := exec.CommandContext(logCtx, "podman", "logs", "-f", name)
+	return common.WaitUntilLogRegexpMatches(logCtx, logCmd, common.NodeReachedCgroupsReadyRegexp())
 }
