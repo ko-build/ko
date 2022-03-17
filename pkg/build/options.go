@@ -73,16 +73,6 @@ func WithTrimpath(v bool) Option {
 	}
 }
 
-// WithPreserveMediaType is a functional option that controls whether to
-// preserve media types from base images. If false, images that are produced
-// will use OCI media types instead.
-func WithPreserveMediaType(v bool) Option {
-	return func(gbo *gobuildOpener) error {
-		gbo.preserveMediaType = v
-		return nil
-	}
-}
-
 // WithConfig is a functional option for providing GoReleaser Build influenced
 // build settings for importpaths.
 //

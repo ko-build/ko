@@ -67,9 +67,6 @@ type BuildOptions struct {
 
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
-
-	// If true, don't convert Docker-typed base images to OCI when building.
-	PreserveMediaType bool
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -83,9 +80,6 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
-
-	cmd.Flags().BoolVar(&bo.PreserveMediaType, "preserve-media-type", false, "If false, push images in OCI format regardless of base image format")
-
 	bo.Trimpath = true
 }
 
