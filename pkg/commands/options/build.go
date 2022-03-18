@@ -70,6 +70,14 @@ type BuildOptions struct {
 
 	// If true, don't convert Docker-typed base images to OCI when building.
 	PreserveMediaType bool
+	// ImageConfigs stores the per-image image config from `.ko.yaml`.
+	ImageConfigs map[string]*build.ImageConfig `yaml:",omitempty"`
+
+	// DockerRepo stores the docker repo from `.ko.yaml`.
+	DockerRepo string `yaml:",omitempty"`
+
+	// DefaultImageConfig stores the default image config for all the images ko built from `.ko.yaml`.
+	DefaultImageConfig *build.ImageConfig `yaml:",omitempty"`
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -154,7 +162,55 @@ func (bo *BuildOptions) LoadConfig() error {
 		bo.BuildConfigs = buildConfigs
 	}
 
+	if len(bo.ImageConfigs) == 0 {
+		var imageConfigs []build.ImageConfig
+		if err := v.UnmarshalKey("images", &imageConfigs); err != nil {
+			return fmt.Errorf("configuration section 'images' cannot be parsed")
+		}
+		imageConfigsPerImage, err := createImageConfigMap(imageConfigs, bo.BuildConfigs)
+		if err != nil {
+			return fmt.Errorf("could not create image config map: %w", err)
+		}
+		bo.ImageConfigs = imageConfigsPerImage
+	}
+
+	if bo.DockerRepo == "" {
+		bo.DockerRepo = v.GetString("dockerRepo")
+	}
+
+	if bo.DefaultImageConfig == nil {
+		var defaultImageConfig build.ImageConfig
+		if err := v.UnmarshalKey("defaultImageConfig", &defaultImageConfig); err != nil {
+			return fmt.Errorf("configuration section 'defaultImageConfig' cannot be parsed")
+		}
+		bo.DefaultImageConfig = &defaultImageConfig
+	}
+
 	return nil
+}
+
+func createImageConfigMap(imageConfigs []build.ImageConfig, buildConfigs map[string]build.Config) (map[string]*build.ImageConfig, error) {
+	imageConfigsPerImage := make(map[string]*build.ImageConfig)
+
+	for ip, bc := range buildConfigs {
+		for i, config := range imageConfigs {
+			if config.ID == "" {
+				config.ID = fmt.Sprintf("#%d", i)
+			}
+
+			if config.Annotations == nil {
+				config.Annotations = map[string]string{}
+			}
+			if config.Labels == nil {
+				config.Labels = map[string]string{}
+			}
+
+			if bc.ID == config.ID {
+				imageConfigsPerImage[ip] = &config
+			}
+		}
+	}
+	return imageConfigsPerImage, nil
 }
 
 func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[string]build.Config, error) {

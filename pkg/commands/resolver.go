@@ -121,6 +121,14 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithConfig(bo.BuildConfigs))
 	}
 
+	if bo.ImageConfigs != nil {
+		opts = append(opts, build.WithImageConfig(bo.ImageConfigs))
+	}
+
+	if bo.DefaultImageConfig != nil {
+		opts = append(opts, build.WithDefaultImageConfig(bo.DefaultImageConfig))
+	}
+
 	return opts, nil
 }
 

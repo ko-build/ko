@@ -96,3 +96,9 @@ type Config struct {
 	// ModTimestamp string      `yaml:"mod_timestamp,omitempty"`
 	// GoBinary     string      `yaml:",omitempty"`
 }
+
+type ImageConfig struct {
+	ID          string            `yaml:",omitempty"`
+	Annotations map[string]string `yaml:",omitempty"`
+	Labels      map[string]string `yaml:",omitempty"`
+}

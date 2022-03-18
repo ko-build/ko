@@ -37,6 +37,7 @@ func Test_gobuilds(t *testing.T) {
 		description       string
 		workingDirectory  string
 		buildConfigs      map[string]Config
+		imageConfigs      map[string]*ImageConfig
 		opts              []Option
 		nilDefaultBuilder bool // set to true if you want to test build config and don't want the test to fall back to the default builder
 		importpath        string
@@ -123,6 +124,7 @@ func Test_gobuilds(t *testing.T) {
 			if result == nil {
 				t.Fatalf("gobuilds.Build(%s): expected non-nil result", qualifiedImportpath)
 			}
+
 		})
 	}
 }

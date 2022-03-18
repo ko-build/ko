@@ -95,6 +95,20 @@ func WithConfig(buildConfigs map[string]Config) Option {
 	}
 }
 
+func WithImageConfig(imageConfigs map[string]*ImageConfig) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.imageConfigs = imageConfigs
+		return nil
+	}
+}
+
+func WithDefaultImageConfig(defaultImageConfig *ImageConfig) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.defaultImageConfig = defaultImageConfig
+		return nil
+	}
+}
+
 // WithPlatforms is a functional option for building certain platforms for
 // multi-platform base images. To build everything from the base, use "all",
 // otherwise use a list of platform specs, i.e.:
