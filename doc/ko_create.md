@@ -70,7 +70,6 @@ ko create -f FILENAME [flags]
       --password string                Password for basic authentication to the API server (DEPRECATED)
       --platform strings               Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths          Whether to preserve the full import path after KO_DOCKER_REPO.
-      --preserve-media-type            If false, push images in OCI format regardless of base image format
       --push                           Push images to KO_DOCKER_REPO (default true)
   -R, --recursive                      Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.
       --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (DEPRECATED)

@@ -513,17 +513,6 @@ func TestGoBuildNoKoData(t *testing.T) {
 			t.Errorf("created = %v, want %v", actual, creationTime)
 		}
 	})
-
-	t.Run("check OCI media type", func(t *testing.T) {
-		mt, err := img.MediaType()
-		if err != nil {
-			t.Errorf("MediaType() = %v", err)
-		}
-
-		if got, want := mt, types.OCIManifestSchema1; got != want {
-			t.Errorf("mediaType = %v, want %v", got, want)
-		}
-	})
 }
 
 func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
@@ -930,104 +919,6 @@ func TestGoBuildIndex(t *testing.T) {
 			t.Errorf("Digest mismatch: %s != %s", d1, d2)
 		}
 	})
-
-	t.Run("check OCI media type", func(t *testing.T) {
-		mt, err := idx.MediaType()
-		if err != nil {
-			t.Fatalf("MediaType() = %v", err)
-		}
-
-		if got, want := mt, types.OCIImageIndex; got != want {
-			t.Errorf("mediaType = %v, want %v", got, want)
-		}
-
-		for i, mf := range im.Manifests {
-			if got, want := mf.MediaType, types.OCIManifestSchema1; got != want {
-				t.Errorf("manifest[%d] mediaType = %s, want %s", i, got, want)
-			}
-		}
-	})
-}
-
-func TestPreserveMediaType(t *testing.T) {
-	mustRandomImage := func(t *testing.T) v1.Image {
-		img, err := random.Image(1, 1)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return img
-	}
-	mustRandomIndex := func(t *testing.T) v1.ImageIndex {
-		idx, err := random.Index(1, 1, 3)
-		if err != nil {
-			t.Fatal(err)
-		}
-		return idx
-	}
-
-	for _, c := range []struct {
-		desc     string
-		preserve bool
-		base     Result
-		want     types.MediaType
-	}{{
-		desc:     "docker image -> oci image",
-		preserve: false,
-		base:     mustRandomImage(t),
-		want:     types.OCIManifestSchema1,
-	}, {
-		desc:     "docker index -> oci index",
-		preserve: false,
-		base:     mustRandomIndex(t),
-		want:     types.OCIImageIndex,
-	}, {
-		desc:     "docker image, preserved",
-		preserve: true,
-		base:     mustRandomImage(t),
-		want:     types.DockerManifestSchema2,
-	}, {
-		desc:     "docker index, preserved",
-		preserve: true,
-		base:     mutate.IndexMediaType(mustRandomIndex(t), types.DockerManifestList),
-		want:     types.DockerManifestList,
-	}, {
-		desc:     "oci image",
-		preserve: true,
-		base:     mutate.MediaType(mustRandomImage(t), types.OCIManifestSchema1),
-		want:     types.OCIManifestSchema1,
-	}, {
-		desc:     "oci index",
-		preserve: true,
-		base:     mutate.IndexMediaType(mustRandomIndex(t), types.OCIImageIndex),
-		want:     types.OCIImageIndex,
-	}} {
-		t.Run(c.desc, func(t *testing.T) {
-			importpath := "github.com/google/ko"
-			ng, err := NewGo(
-				context.Background(),
-				"",
-				WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, c.base, nil }),
-				WithPlatforms("all"),
-				WithPreserveMediaType(c.preserve),
-				withBuilder(writeTempFile),
-			)
-			if err != nil {
-				t.Fatalf("NewGo() = %v", err)
-			}
-
-			result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
-			if err != nil {
-				t.Fatalf("Build() = %v", err)
-			}
-
-			got, err := result.MediaType()
-			if err != nil {
-				t.Errorf("MediaType() = %v", err)
-			} else if got != c.want {
-				t.Errorf("Got %q, want %q", got, c.want)
-			}
-		})
-	}
 }
 
 func TestNestedIndex(t *testing.T) {
