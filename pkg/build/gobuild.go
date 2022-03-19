@@ -369,7 +369,7 @@ func massageGoVersionM(b []byte) ([]byte, error) {
 	var out bytes.Buffer
 	scanner := bufio.NewScanner(bytes.NewReader(b))
 	if !scanner.Scan() {
-		return nil, errors.New("malformed input: no new lines")
+		return nil, errors.New("malformed input: no newlines")
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("malformed input: %w", err)
