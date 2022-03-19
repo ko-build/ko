@@ -17,7 +17,6 @@ package sbom
 import (
 	"bufio"
 	"bytes"
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -31,7 +30,12 @@ func massageGoVersionM(b []byte) ([]byte, error) {
 	var out bytes.Buffer
 	scanner := bufio.NewScanner(bytes.NewReader(b))
 	if !scanner.Scan() {
-		return nil, errors.New("malformed input: no newlines")
+		// Input was malformed, and doesn't contain any newlines (it
+		// may even be empty). This seems to happen on Windows
+		// (https://github.com/google/ko/issues/535) and in unit tests.
+		// Just proceed with an empty output for now, and SBOMs will be empty.
+		// TODO: This should be an error.
+		return nil, nil
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("malformed input: %w", err)
