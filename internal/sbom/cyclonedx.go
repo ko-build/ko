@@ -39,8 +39,14 @@ func h1ToSHA256(s string) string {
 }
 
 func GenerateCycloneDX(mod []byte) ([]byte, error) {
-	bi := &BuildInfo{}
-	if err := bi.UnmarshalText(mod); err != nil {
+	var err error
+	mod, err = massageGoVersionM(mod)
+	if err != nil {
+		return nil, err
+	}
+
+	bi, err := ParseBuildInfo(string(mod))
+	if err != nil {
 		return nil, err
 	}
 

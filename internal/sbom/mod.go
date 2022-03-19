@@ -23,11 +23,13 @@
 package sbom
 
 import (
-	"bytes"
 	"fmt"
+	"strconv"
+	"strings"
 )
 
 // BuildInfo represents the build information read from a Go binary.
+// https://cs.opensource.google/go/go/+/release-branch.go1.18:src/runtime/debug/mod.go;drc=release-branch.go1.18;l=41
 type BuildInfo struct {
 	GoVersion string         // Version of Go that produced this binary.
 	Path      string         // The main package path
@@ -47,13 +49,32 @@ type Module struct {
 // BuildSetting describes a setting that may be used to understand how the
 // binary was built. For example, VCS commit and dirty status is stored here.
 type BuildSetting struct {
-	// Key and Value describe the build setting. They must not contain tabs
-	// or newlines.
+	// Key and Value describe the build setting.
+	// Key must not contain an equals sign, space, tab, or newline.
+	// Value must not contain newlines ('\n').
 	Key, Value string
 }
 
-func (bi *BuildInfo) UnmarshalText(data []byte) (err error) {
-	*bi = BuildInfo{}
+// https://cs.opensource.google/go/go/+/release-branch.go1.18:src/strings/strings.go;drc=release-branch.go1.18;l=1181
+func stringsCut(s, sep string) (before, after string, found bool) {
+	if i := strings.Index(s, sep); i >= 0 {
+		return s[:i], s[i+len(sep):], true
+	}
+	return s, "", false
+}
+
+// quoteKey reports whether key is required to be quoted.
+func quoteKey(key string) bool {
+	return len(key) == 0 || strings.ContainsAny(key, "= \t\r\n\"`")
+}
+
+// quoteValue reports whether value is required to be quoted.
+func quoteValue(value string) bool {
+	return strings.ContainsAny(value, " \t\r\n\"`")
+}
+
+// https://cs.opensource.google/go/go/+/release-branch.go1.18:src/runtime/debug/mod.go;drc=release-branch.go1.18;l=121
+func ParseBuildInfo(data string) (bi *BuildInfo, err error) {
 	lineNum := 1
 	defer func() {
 		if err != nil {
@@ -62,68 +83,69 @@ func (bi *BuildInfo) UnmarshalText(data []byte) (err error) {
 	}()
 
 	var (
-		pathLine  = []byte("path\t")
-		modLine   = []byte("mod\t")
-		depLine   = []byte("dep\t")
-		repLine   = []byte("=>\t")
-		buildLine = []byte("build\t")
-		newline   = []byte("\n")
-		tab       = []byte("\t")
+		pathLine  = "path\t"
+		modLine   = "mod\t"
+		depLine   = "dep\t"
+		repLine   = "=>\t"
+		buildLine = "build\t"
+		newline   = "\n"
+		tab       = "\t"
 	)
 
-	readModuleLine := func(elem [][]byte) (Module, error) {
+	readModuleLine := func(elem []string) (Module, error) {
 		if len(elem) != 2 && len(elem) != 3 {
 			return Module{}, fmt.Errorf("expected 2 or 3 columns; got %d", len(elem))
 		}
+		version := elem[1]
 		sum := ""
 		if len(elem) == 3 {
-			sum = string(elem[2])
+			sum = elem[2]
 		}
 		return Module{
-			Path:    string(elem[0]),
-			Version: string(elem[1]),
+			Path:    elem[0],
+			Version: version,
 			Sum:     sum,
 		}, nil
 	}
 
+	bi = new(BuildInfo)
 	var (
 		last *Module
-		line []byte
+		line string
 		ok   bool
 	)
 	// Reverse of BuildInfo.String(), except for go version.
 	for len(data) > 0 {
-		line, data, ok = bytesCut(data, newline)
+		line, data, ok = stringsCut(data, newline)
 		if !ok {
 			break
 		}
-		line = bytes.TrimPrefix(line, []byte("\t"))
 		switch {
-		case bytes.HasPrefix(line, pathLine):
+		case strings.HasPrefix(line, pathLine):
 			elem := line[len(pathLine):]
 			bi.Path = string(elem)
-		case bytes.HasPrefix(line, modLine):
-			elem := bytes.Split(line[len(modLine):], tab)
+		case strings.HasPrefix(line, modLine):
+			elem := strings.Split(line[len(modLine):], tab)
 			last = &bi.Main
 			*last, err = readModuleLine(elem)
 			if err != nil {
-				return err
+				return nil, err
 			}
-		case bytes.HasPrefix(line, depLine):
-			elem := bytes.Split(line[len(depLine):], tab)
+		case strings.HasPrefix(line, depLine):
+			elem := strings.Split(line[len(depLine):], tab)
 			last = new(Module)
 			bi.Deps = append(bi.Deps, last)
 			*last, err = readModuleLine(elem)
 			if err != nil {
-				return err
+				return nil, err
 			}
-		case bytes.HasPrefix(line, repLine):
-			elem := bytes.Split(line[len(repLine):], tab)
+		case strings.HasPrefix(line, repLine):
+			elem := strings.Split(line[len(repLine):], tab)
 			if len(elem) != 3 {
-				return fmt.Errorf("expected 3 columns for replacement; got %d", len(elem))
+				return nil, fmt.Errorf("expected 3 columns for replacement; got %d", len(elem))
 			}
 			if last == nil {
-				return fmt.Errorf("replacement with no module on previous line")
+				return nil, fmt.Errorf("replacement with no module on previous line")
 			}
 			last.Replace = &Module{
 				Path:    string(elem[0]),
@@ -131,30 +153,63 @@ func (bi *BuildInfo) UnmarshalText(data []byte) (err error) {
 				Sum:     string(elem[2]),
 			}
 			last = nil
-		case bytes.HasPrefix(line, buildLine):
-			elem := bytes.Split(line[len(buildLine):], tab)
-			if len(elem) != 2 {
-				return fmt.Errorf("expected 2 columns for build setting; got %d", len(elem))
+		case strings.HasPrefix(line, buildLine):
+			kv := line[len(buildLine):]
+			if len(kv) < 1 {
+				return nil, fmt.Errorf("build line missing '='")
 			}
-			if len(elem[0]) == 0 {
-				return fmt.Errorf("empty key")
+
+			var key, rawValue string
+			switch kv[0] {
+			case '=':
+				return nil, fmt.Errorf("build line with missing key")
+
+			case '`', '"':
+				rawKey, err := strconv.QuotedPrefix(kv)
+				if err != nil {
+					return nil, fmt.Errorf("invalid quoted key in build line")
+				}
+				if len(kv) == len(rawKey) {
+					return nil, fmt.Errorf("build line missing '=' after quoted key")
+				}
+				if c := kv[len(rawKey)]; c != '=' {
+					return nil, fmt.Errorf("unexpected character after quoted key: %q", c)
+				}
+				key, _ = strconv.Unquote(rawKey)
+				rawValue = kv[len(rawKey)+1:]
+
+			default:
+				var ok bool
+				key, rawValue, ok = stringsCut(kv, "=")
+				if !ok {
+					return nil, fmt.Errorf("build line missing '=' after key")
+				}
+				if quoteKey(key) {
+					return nil, fmt.Errorf("unquoted key %q must be quoted", key)
+				}
 			}
-			bi.Settings = append(bi.Settings, BuildSetting{Key: string(elem[0]), Value: string(elem[1])})
+
+			var value string
+			if len(rawValue) > 0 {
+				switch rawValue[0] {
+				case '`', '"':
+					var err error
+					value, err = strconv.Unquote(rawValue)
+					if err != nil {
+						return nil, fmt.Errorf("invalid quoted value in build line")
+					}
+
+				default:
+					value = rawValue
+					if quoteValue(value) {
+						return nil, fmt.Errorf("unquoted value %q must be quoted", value)
+					}
+				}
+			}
+
+			bi.Settings = append(bi.Settings, BuildSetting{Key: key, Value: value})
 		}
 		lineNum++
 	}
-	return nil
-}
-
-// bytesCut slices s around the first instance of sep,
-// returning the text before and after sep.
-// The found result reports whether sep appears in s.
-// If sep does not appear in s, cut returns s, nil, false.
-//
-// bytesCut returns slices of the original slice s, not copies.
-func bytesCut(s, sep []byte) (before, after []byte, found bool) {
-	if i := bytes.Index(s, sep); i >= 0 {
-		return s[:i], s[i+len(sep):], true
-	}
-	return s, nil, false
+	return bi, nil
 }

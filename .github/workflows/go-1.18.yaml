@@ -1,0 +1,33 @@
+name: Go 1.18 compat test
+
+on:
+  pull_request:
+    branches: ['main']
+
+jobs:
+  go118:
+    strategy:
+      fail-fast: false
+      matrix:
+        ko-go-version: ['1.17.x', '1.18.x']
+        user-go-version: ['1.17.x', '1.18.x']
+    name: Go 1.18 compat (ko=${{ matrix.ko-go-version }} / user=${{ matrix.user-go-version }})
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    # Build ko using ko-go-version
+    - uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.ko-go-version }}
+    - run: go install ./
+
+    # Run ko using user-go-version
+    - uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.user-go-version }}
+    - run: |
+        go install github.com/google/go-containerregistry/cmd/registry@latest
+        registry &
+        KO_DOCKER_REPO=localhost:1338 ko build ./test/
