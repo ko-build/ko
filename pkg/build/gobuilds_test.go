@@ -31,7 +31,6 @@ func Test_gobuilds(t *testing.T) {
 	opts := []Option{
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
 		withBuilder(writeTempFile),
-		WithDisabledSBOM(),
 	}
 
 	tests := []struct {
