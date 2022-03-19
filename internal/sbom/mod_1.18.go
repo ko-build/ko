@@ -24,11 +24,11 @@ import (
 
 type BuildInfo debug.BuildInfo
 
-func (bi *BuildInfo) UnmarshalText(data []byte) error {
+func ParseBuildInfo(data string) (*BuildInfo, error) {
 	dbi, err := debug.ParseBuildInfo(string(data))
 	if err != nil {
-		return fmt.Errorf("parsing build info: %w", err)
+		return nil, fmt.Errorf("parsing build info: %w", err)
 	}
-	*bi = BuildInfo(*dbi)
-	return nil
+	bi := BuildInfo(*dbi)
+	return &bi, nil
 }
