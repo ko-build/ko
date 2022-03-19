@@ -18,7 +18,6 @@ package build
 
 import (
 	"archive/tar"
-	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -322,11 +321,6 @@ func spdx(version string) sbomber {
 			return nil, "", err
 		}
 
-		b, err = massageGoVersionM(b)
-		if err != nil {
-			return nil, "", err
-		}
-
 		cfg, err := img.ConfigFile()
 		if err != nil {
 			return nil, "", err
@@ -347,41 +341,12 @@ func cycloneDX() sbomber {
 			return nil, "", err
 		}
 
-		b, err = massageGoVersionM(b)
-		if err != nil {
-			return nil, "", err
-		}
-
 		b, err = sbom.GenerateCycloneDX(b)
 		if err != nil {
 			return nil, "", err
 		}
 		return b, ctypes.CycloneDXMediaType, nil
 	}
-}
-
-// massageGoModVersion massages the output of `go version -m` into a form that
-// can be consumed by ParseBuildInfo.
-//
-// `go version -m` adds a line at the beginning of its output, and tabs at the
-// beginning of every line, that ParseBuildInfo doesn't like.
-func massageGoVersionM(b []byte) ([]byte, error) {
-	var out bytes.Buffer
-	scanner := bufio.NewScanner(bytes.NewReader(b))
-	if !scanner.Scan() {
-		return nil, errors.New("malformed input: no newlines")
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("malformed input: %w", err)
-	}
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		fmt.Fprintln(&out, line)
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return out.Bytes(), nil
 }
 
 // buildEnv creates the environment variables used by the `go build` command.

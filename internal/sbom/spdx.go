@@ -27,6 +27,12 @@ import (
 const dateFormat = "2006-01-02T15:04:05Z"
 
 func GenerateSPDX(koVersion string, date time.Time, mod []byte) ([]byte, error) {
+	var err error
+	mod, err = massageGoVersionM(mod)
+	if err != nil {
+		return nil, err
+	}
+
 	bi, err := ParseBuildInfo(string(mod))
 	if err != nil {
 		return nil, err
