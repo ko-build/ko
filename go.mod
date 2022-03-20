@@ -3,10 +3,10 @@ module github.com/google/ko
 go 1.16
 
 require (
-	github.com/aws/aws-sdk-go-v2/config v1.13.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.14.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.11.0 // indirect
-	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220216180153-3d7835abdf40
+	github.com/aws/aws-sdk-go-v2/config v1.15.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.16.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ecrpublic v1.13.0 // indirect
+	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220228164355-396b2034c795
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220119192733-fe33c00cee21
 	github.com/containerd/stargz-snapshotter/estargz v0.11.3
 	github.com/docker/docker v20.10.14+incompatible

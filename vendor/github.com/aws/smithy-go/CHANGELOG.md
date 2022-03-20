@@ -1,3 +1,15 @@
+# Release (v1.11.1)
+
+## Module Highlights
+* `github.com/aws/smithy-go`: v1.11.1
+  * **Bug Fix**: Updates the smithy-go HTTP Request to correctly handle building the request to an http.Request. Related to [aws/aws-sdk-go-v2#1583](https://github.com/aws/aws-sdk-go-v2/issues/1583)
+
+# Release (v1.11.0)
+
+## Module Highlights
+* `github.com/aws/smithy-go`: v1.11.0
+  * **Feature**: Updates deserialization of header list to supported quoted strings
+
 # Release (v1.10.0)
 
 ## Module Highlights
