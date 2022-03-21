@@ -182,6 +182,11 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			return publish.NewKindPublisher(namer, po.Tags), nil
 		}
 
+		// handle the k3s distros
+		if repoName == publish.K3sDomain {
+			return publish.NewK3sPublisher(namer, po.Tags), nil
+		}
+
 		if repoName == "" && po.Push {
 			return nil, errors.New("KO_DOCKER_REPO environment variable is unset")
 		}
