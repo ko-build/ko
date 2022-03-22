@@ -1,20 +1,31 @@
+// Copyright 2020 Google LLC All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package publish
 
 import (
 	"context"
 	"fmt"
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish/k3s"
 	"log"
-	"os"
 	"strings"
 )
 
 const (
-	//K3sDomain   k3s local sentinel registry where the images gets loaded
-	// TODO(kamesh) handle namespaces as part of URI ??
+	//K3sDomain   k3s local sentinel registry where the images get's loaded
 	K3sDomain = "k3s.local"
 )
 
@@ -36,44 +47,9 @@ func (k *k3sPublisher) Publish(ctx context.Context, br build.Result, s string) (
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	s = strings.ToLower(s)
 
-	// There's no way to write an index to a kind, so attempt to downcast it to an image.
-	var img v1.Image
-	switch i := br.(type) {
-	case v1.Image:
-		img = i
-	case v1.ImageIndex:
-		im, err := i.IndexManifest()
-		if err != nil {
-			return nil, err
-		}
-		goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
-		if goos == "" {
-			goos = "linux"
-		}
-		if goarch == "" {
-			goarch = "amd64"
-		}
-		for _, manifest := range im.Manifests {
-			if manifest.Platform == nil {
-				continue
-			}
-			if manifest.Platform.OS != goos {
-				continue
-			}
-			if manifest.Platform.Architecture != goarch {
-				continue
-			}
-			img, err = i.Image(manifest.Digest)
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-		if img == nil {
-			return nil, fmt.Errorf("failed to find %s/%s image in index for image: %v", goos, goarch, s)
-		}
-	default:
-		return nil, fmt.Errorf("failed to interpret %s result as image: %v", s, br)
+	img, err := ToImage(br, s)
+	if err != nil {
+		return nil, err
 	}
 
 	h, err := img.Digest()
@@ -93,7 +69,6 @@ func (k *k3sPublisher) Publish(ctx context.Context, br build.Result, s string) (
 	log.Printf("Loaded %v", digestTag)
 
 	for _, tagName := range k.tags {
-		log.Printf("Adding tag %s", tagName)
 		tag, err := name.NewTag(fmt.Sprintf("%s:%s", k.namer(K3sDomain, s), tagName))
 		if err != nil {
 			return nil, err

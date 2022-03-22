@@ -12,5 +12,5 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package k3s defines methods for publishing images into k3s nodes.
+// Package k3s defines methods for publishing images into k3s clusters using containerd
 package k3s

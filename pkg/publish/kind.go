@@ -18,11 +18,9 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish/kind"
 )
@@ -51,44 +49,9 @@ func (t *kindPublisher) Publish(ctx context.Context, br build.Result, s string) 
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
-	// There's no way to write an index to a kind, so attempt to downcast it to an image.
-	var img v1.Image
-	switch i := br.(type) {
-	case v1.Image:
-		img = i
-	case v1.ImageIndex:
-		im, err := i.IndexManifest()
-		if err != nil {
-			return nil, err
-		}
-		goos, goarch := os.Getenv("GOOS"), os.Getenv("GOARCH")
-		if goos == "" {
-			goos = "linux"
-		}
-		if goarch == "" {
-			goarch = "amd64"
-		}
-		for _, manifest := range im.Manifests {
-			if manifest.Platform == nil {
-				continue
-			}
-			if manifest.Platform.OS != goos {
-				continue
-			}
-			if manifest.Platform.Architecture != goarch {
-				continue
-			}
-			img, err = i.Image(manifest.Digest)
-			if err != nil {
-				return nil, err
-			}
-			break
-		}
-		if img == nil {
-			return nil, fmt.Errorf("failed to find %s/%s image in index for image: %v", goos, goarch, s)
-		}
-	default:
-		return nil, fmt.Errorf("failed to interpret %s result as image: %v", s, br)
+	img, err := ToImage(br, s)
+	if err != nil {
+		return nil, err
 	}
 
 	h, err := img.Digest()

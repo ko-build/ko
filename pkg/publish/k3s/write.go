@@ -1,3 +1,17 @@
+// Copyright 2020 Google LLC All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package k3s
 
 import (
@@ -12,28 +26,24 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 )
 
 const (
-	limaInstanceEnvKey            = "LIMA_INSTANCE"
-	rancherDesktopLimaInstanceKey = "0"
+	limaInstanceEnvKey             = "LIMA_INSTANCE"
+	rancherDesktopLimaInstanceName = "0"
 )
 
 // Tag adds a tag to an already existent image.
 func Tag(ctx context.Context, src, dest name.Tag) error {
-	li, ok := os.LookupEnv(limaInstanceEnvKey)
-	if !ok {
-		li = rancherDesktopLimaInstanceKey
-	}
-	env := buildCommandEnv(li)
-	ctl, err := findNerdctl(li)
-	if err != nil {
-		return err
-	}
-	cmd := exec.CommandContext(ctx, ctl, "--namespace=k8s.io", "tag", src.String(), dest.String())
+	nerdctl, li, env := commandWithEnv()
+
+	var stdErr bytes.Buffer
+	cmd := exec.CommandContext(ctx, nerdctl, "--namespace=k8s.io", "tag", src.String(), dest.String())
 	cmd.Env = env
+	cmd.Stderr = &stdErr
+
 	if err := cmd.Run(); err != nil {
+		log.Printf("Error while excuting command %s %s", cmd.String(), stdErr.String())
 		return fmt.Errorf("failed to tag image to instance %q: %w", li, err)
 	}
 
@@ -49,26 +59,16 @@ func Write(ctx context.Context, tag name.Tag, img v1.Image) error {
 		return pw.CloseWithError(tarball.Write(tag, img, pw))
 	})
 
-	li, ok := os.LookupEnv(limaInstanceEnvKey)
-	//TODO(kamesh) for now its assumed that if no LIMA_INSTANCE env is defined it defaults to Rancher Desktop
-	// is this safe assumption or need to find other ways??
-	if !ok {
-		li = rancherDesktopLimaInstanceKey
-	}
-	env := buildCommandEnv(li)
+	nerdctl, li, env := commandWithEnv()
 
 	var stdErr bytes.Buffer
-	//check of nerdctl exists on the system
-	ctl, err := findNerdctl(li)
-	if err != nil {
-		return err
-	}
-	cmd := exec.CommandContext(ctx, ctl, "--namespace=k8s.io", "load")
+	cmd := exec.CommandContext(ctx, nerdctl, "--namespace=k8s.io", "load")
 	cmd.Stdin = pr
 	cmd.Env = env
 	cmd.Stderr = &stdErr
+
 	if err := cmd.Run(); err != nil {
-		log.Printf("%s", stdErr.String())
+		log.Printf("Error while excuting command %s %s", cmd.String(), stdErr.String())
 		return fmt.Errorf("failed to load image to instance %q: %w", li, err)
 	}
 
@@ -79,47 +79,18 @@ func Write(ctx context.Context, tag name.Tag, img v1.Image) error {
 	return nil
 }
 
-//buildCommandEnv adds the required environment variables that will be passed to the
-// command context
-//TODO(kamesh) add other required environment variables
-func buildCommandEnv(li string) []string {
-	var env = make([]string, 5)
-
-	env[0] = fmt.Sprintf("HOME=%s", os.Getenv("HOME"))
-	env[1] = fmt.Sprintf("LIMA_INSTANCE=%s", li)
-	env[2] = fmt.Sprintf("PATH=%s", os.Getenv("PATH"))
-
-	return env
-}
-
-//findNerdctl helps to find the nerdctl to use
-//TODO(kamesh) improve the nerdctl find
-//TODO(kamesh) not very efficient
-func findNerdctl(li string) (string, error) {
-	var nerdctlPath string
-	// use rancher desktop nerdctl wrapper script
-	if li == "0" {
-		f, err := exec.LookPath("nerdctl")
-		if err != nil {
-			return "", err
-		}
-		nerdctlPath, err = filepath.Abs(f)
-		if err != nil {
-			return "", err
-		}
-	} else {
-		//if rancher desktop is on the system there should be an alternate script nerdctl.lima
-		f, err1 := exec.LookPath("nerdctl.lima")
-		nerdctlPath, err1 = filepath.Abs(f)
-		if err1 != nil {
-			return "", err1
-		}
+//commandWithEnv build the nerdctl command with correct instance name and required environment variables
+func commandWithEnv() (string, string, []string) {
+	nerdctl := "nerdctl"
+	env := os.Environ()
+	// If no LIMA_INSTANCE env is defined it defaults to Rancher Desktop "0"
+	li, ok := os.LookupEnv(limaInstanceEnvKey)
+	if !ok {
+		nerdctl = "nerdctl.lima"
+		li = rancherDesktopLimaInstanceName
+		env = append(env,
+			fmt.Sprintf("LIMA_INSTANCE=%s", li))
 	}
 
-	_, err := os.Stat(nerdctlPath)
-	if err != nil {
-		return "", err
-	}
-
-	return nerdctlPath, nil
+	return nerdctl, li, env
 }
