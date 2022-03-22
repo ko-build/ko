@@ -81,12 +81,12 @@ func Write(ctx context.Context, tag name.Tag, img v1.Image) error {
 
 //commandWithEnv build the nerdctl command with correct instance name and required environment variables
 func commandWithEnv() (string, string, []string) {
-	nerdctl := "nerdctl"
+	nerdctl := "nerdctl.lima"
 	env := os.Environ()
 	// If no LIMA_INSTANCE env is defined it defaults to Rancher Desktop "0"
 	li, ok := os.LookupEnv(limaInstanceEnvKey)
 	if !ok {
-		nerdctl = "nerdctl.lima"
+		nerdctl = "nerdctl"
 		li = rancherDesktopLimaInstanceName
 		env = append(env,
 			fmt.Sprintf("LIMA_INSTANCE=%s", li))
