@@ -25,7 +25,7 @@ import (
 type BuildInfo debug.BuildInfo
 
 func ParseBuildInfo(data string) (*BuildInfo, error) {
-	dbi, err := debug.ParseBuildInfo(string(data))
+	dbi, err := debug.ParseBuildInfo(fixLocalReplaceDirectives(data))
 	if err != nil {
 		return nil, fmt.Errorf("parsing build info: %w", err)
 	}
