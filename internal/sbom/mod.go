@@ -75,9 +75,6 @@ func quoteValue(value string) bool {
 
 // https://cs.opensource.google/go/go/+/release-branch.go1.18:src/runtime/debug/mod.go;drc=release-branch.go1.18;l=121
 func ParseBuildInfo(data string) (bi *BuildInfo, err error) {
-	// Workaround for parsing go1.18 output from go1.17-compiled ko:
-	data = fixLocalReplaceDirectives(data)
-
 	lineNum := 1
 	defer func() {
 		if err != nil {

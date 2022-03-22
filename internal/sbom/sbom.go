@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+	"unicode"
 )
 
 // massageGoModVersion massages the output of `go version -m` into a form that
@@ -41,7 +42,8 @@ func massageGoVersionM(b []byte) ([]byte, error) {
 		return nil, fmt.Errorf("malformed input: %w", err)
 	}
 	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+		// NOTE: debug.ParseBuildInfo relies on trailing tabs.
+		line := strings.TrimLeftFunc(scanner.Text(), unicode.IsSpace)
 		fmt.Fprintln(&out, line)
 	}
 	if err := scanner.Err(); err != nil {
