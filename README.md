@@ -166,12 +166,7 @@ fn update function \
   --image $(ko build -P . | sed 's/@sha256:/:sha256-/')
 ```
 
-* Note: The image must be pushed to [OCIR](https://www.oracle.com/cloud-native/container-registry/), `KO_DOCKER_REPO` should point to the registory with following form.
-
-```
-KO_DOCKER_REPO=<region-key>.ocir.io/<tenancy-namespace>/<repo-prefix>
-```
-See [official docs](https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionscreatefncontext.htm) for more information.
+* Note: The image must be pushed to [OCIR](https://www.oracle.com/cloud-native/container-registry/). See [official docs](https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionscreatefncontext.htm) for more information.
 
 ## Configuration
 
