@@ -171,6 +171,7 @@ fn update function \
 ```
 KO_DOCKER_REPO=<region-key>.ocir.io/<tenancy-namespace>/<repo-prefix>
 ```
+See [official docs](https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionscreatefncontext.htm) for more information.
 
 ## Configuration
 
