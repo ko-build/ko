@@ -155,6 +155,9 @@ az containerapp update \
   --image $(ko build ./cmd/app)
 ```
 
+* Note: The image must be pushed to [ACR](https://azure.microsoft.com/services/container-registry/) or other registry service.
+See [official docs](https://docs.microsoft.com/azure/container-apps/) for more information.
+
 Or [Oracle Cloud Functions](https://www.oracle.com/cloud-native/functions/)
 
 ```
@@ -163,8 +166,11 @@ fn update function \
   --image $(ko build -P . | sed 's/@sha256:/:sha256-/')
 ```
 
-* Note: The image must be pushed to [ACR](https://azure.microsoft.com/services/container-registry/) or other registry service.
-See [official docs](https://docs.microsoft.com/azure/container-apps/) for more information.
+* Note: The image must be pushed to [OCIR](https://www.oracle.com/cloud-native/container-registry/), `KO_DOCKER_REPO` should point to the registory with following form.
+
+```
+KO_DOCKER_REPO=<region-key>.ocir.io/<tenancy-namespace>/<repo-prefix>
+```
 
 ## Configuration
 
