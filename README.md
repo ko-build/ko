@@ -166,7 +166,7 @@ fn update function \
   --image $(ko build --bare -P . | sed 's/@sha256:/:sha256-/')
 ```
 
-* Note: The image must be pushed to [OCIR](https://www.oracle.com/cloud-native/container-registry/). See [official docs](https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionscreatefncontext.htm) for more information.
+* Note: The image must be pushed to [OCIR](https://www.oracle.com/cloud-native/container-registry/) or other registry service. See [official docs](https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionscreatefncontext.htm) for more information.
 
 ## Configuration
 
