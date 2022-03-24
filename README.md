@@ -163,7 +163,7 @@ Or [Oracle Cloud Functions](https://www.oracle.com/cloud-native/functions/)
 ```
 fn update function \
   my-container-app my-function-name \
-  --image $(ko build -P . | sed 's/@sha256:/:sha256-/')
+  --image $(ko build --bare -P . | sed 's/@sha256:/:sha256-/')
 ```
 
 * Note: The image must be pushed to [OCIR](https://www.oracle.com/cloud-native/container-registry/). See [official docs](https://docs.oracle.com/en-us/iaas/Content/Functions/Tasks/functionscreatefncontext.htm) for more information.
