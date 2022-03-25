@@ -49,7 +49,7 @@ func (t *kindPublisher) Publish(ctx context.Context, br build.Result, s string) 
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
-	img, err := ToImage(br, s)
+	img, err := toImage(br, s)
 	if err != nil {
 		return nil, err
 	}

@@ -17,11 +17,12 @@ package publish
 import (
 	"context"
 	"fmt"
+	"log"
+	"strings"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish/k3s"
-	"log"
-	"strings"
 )
 
 const (
@@ -47,7 +48,7 @@ func (k *k3sPublisher) Publish(ctx context.Context, br build.Result, s string) (
 	s = strings.TrimPrefix(s, build.StrictScheme)
 	s = strings.ToLower(s)
 
-	img, err := ToImage(br, s)
+	img, err := toImage(br, s)
 	if err != nil {
 		return nil, err
 	}

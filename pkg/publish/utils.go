@@ -16,13 +16,14 @@ package publish
 
 import (
 	"fmt"
+	"os"
+
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/ko/pkg/build"
-	"os"
 )
 
-//ToImage builds the image reference from the build result
-func ToImage(br build.Result, s string) (v1.Image, error) {
+//toImage builds the image reference from the build result
+func toImage(br build.Result, s string) (v1.Image, error) {
 	// There's no way to write an index to a kind, so attempt to downcast it to an image.
 	var img v1.Image
 	switch i := br.(type) {

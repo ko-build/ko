@@ -18,14 +18,15 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/google/go-containerregistry/pkg/name"
-	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/tarball"
-	"golang.org/x/sync/errgroup"
 	"io"
 	"log"
 	"os"
 	"os/exec"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -68,8 +69,7 @@ func Write(ctx context.Context, tag name.Tag, img v1.Image) error {
 	cmd.Stderr = &stdErr
 
 	if err := cmd.Run(); err != nil {
-		log.Printf("Error while excuting command %s %s", cmd.String(), stdErr.String())
-		return fmt.Errorf("failed to load image to instance %q: %w", li, err)
+		return fmt.Errorf("failed to load image to instance %q: %s", li, stdErr.String())
 	}
 
 	if err := grp.Wait(); err != nil {
