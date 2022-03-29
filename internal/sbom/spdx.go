@@ -56,7 +56,8 @@ type tmplInfo struct {
 
 // TODO: use k8s.io/release/pkg/bom
 var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
-	"dots": func(s string) string { return strings.ReplaceAll(s, "/", ".") },
+	"dots":   func(s string) string { return strings.ReplaceAll(s, "/", ".") },
+	"bomRef": func(p, v string) string { return bomRef(p, v) },
 	"h1toSHA256": func(s string) (string, error) {
 		if !strings.HasPrefix(s, "h1:") {
 			return "", fmt.Errorf("malformed sum prefix: %q", s)
@@ -108,6 +109,7 @@ PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NOASSERTION
 PackageLicenseComments: NOASSERTION
 PackageComment: NOASSERTION
+ExternalRef: PACKAGE-MANAGER purl {{ bomRef .Path .Version }}
 
 {{ end }}
 `))
