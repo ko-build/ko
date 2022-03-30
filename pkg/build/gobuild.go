@@ -325,8 +325,11 @@ func spdx(version string) sbomber {
 		if err != nil {
 			return nil, "", err
 		}
-
-		b, err = sbom.GenerateSPDX(version, cfg.Created.Time, b)
+		imgDigest, err := img.Digest()
+		if err != nil {
+			return nil, "", err
+		}
+		b, err = sbom.GenerateSPDX(version, cfg.Created.Time, b, imgDigest)
 		if err != nil {
 			return nil, "", err
 		}
