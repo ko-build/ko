@@ -21,10 +21,32 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 func bomRef(path, version string) string {
 	return fmt.Sprintf("pkg:golang/%s@%s?type=module", path, version)
+}
+
+func goRef(path, version string) string {
+	// Try to lowercase the first 2 path elements to comply with spec
+	// https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst#golang
+	p := strings.Split(path, "/")
+	if len(p) > 2 {
+		path = strings.Join(
+			append(
+				[]string{strings.ToLower(p[0]), strings.ToLower(p[1])},
+				p[2:(len(p)-1)]...,
+			), "/",
+		)
+	}
+	return fmt.Sprintf("pkg:golang/%s@%s?type=module", path, version)
+}
+
+func ociRef(path string, imgDigest v1.Hash) string {
+	parts := strings.Split(path, "/")
+	return fmt.Sprintf("pkg:oci/%s@%s", parts[len(parts)-1], imgDigest.String())
 }
 
 func h1ToSHA256(s string) string {

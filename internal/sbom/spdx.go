@@ -22,11 +22,13 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
 const dateFormat = "2006-01-02T15:04:05Z"
 
-func GenerateSPDX(koVersion string, date time.Time, mod []byte) ([]byte, error) {
+func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Hash) ([]byte, error) {
 	var err error
 	mod, err = massageGoVersionM(mod)
 	if err != nil {
@@ -43,6 +45,7 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte) ([]byte, error) 
 		BuildInfo: *bi,
 		Date:      date.Format(dateFormat),
 		KoVersion: koVersion,
+		ImgDigest: imgDigest,
 	}); err != nil {
 		return nil, err
 	}
@@ -52,12 +55,14 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte) ([]byte, error) 
 type tmplInfo struct {
 	BuildInfo
 	Date, UUID, KoVersion string
+	ImgDigest             v1.Hash
 }
 
 // TODO: use k8s.io/release/pkg/bom
 var tmpl = template.Must(template.New("").Funcs(template.FuncMap{
 	"dots":   func(s string) string { return strings.ReplaceAll(s, "/", ".") },
-	"bomRef": func(p, v string) string { return bomRef(p, v) },
+	"goRef":  func(p, v string) string { return goRef(p, v) },
+	"ociRef": func(p string, d v1.Hash) string { return ociRef(p, d) },
 	"h1toSHA256": func(s string) (string, error) {
 		if !strings.HasPrefix(s, "h1:") {
 			return "", fmt.Errorf("malformed sum prefix: %q", s)
@@ -89,6 +94,7 @@ PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NOASSERTION
 PackageLicenseComments: NOASSERTION
 PackageComment: NOASSERTION
+ExternalRef: PACKAGE-MANAGER purl {{ ociRef .Path .ImgDigest }}
 
 Relationship: SPDXRef-DOCUMENT DESCRIBES SPDXRef-Package-{{ .BuildInfo.Main.Path | dots }}
 
@@ -109,7 +115,7 @@ PackageLicenseDeclared: NOASSERTION
 PackageCopyrightText: NOASSERTION
 PackageLicenseComments: NOASSERTION
 PackageComment: NOASSERTION
-ExternalRef: PACKAGE-MANAGER purl {{ bomRef .Path .Version }}
+ExternalRef: PACKAGE-MANAGER purl {{ goRef .Path .Version }}
 
 {{ end }}
 `))

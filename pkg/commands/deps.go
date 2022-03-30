@@ -132,9 +132,13 @@ If the image was not built using ko, or if it was built without embedding depend
 					[]byte(n),
 					[]byte(path.Join("/ko-app", filepath.Base(filepath.Clean(h.Name)))),
 					1)
+				imgDigest, err := img.Digest()
+				if err != nil {
+					return err
+				}
 				switch sbomType {
 				case "spdx":
-					b, err := sbom.GenerateSPDX(Version, cfg.Created.Time, mod)
+					b, err := sbom.GenerateSPDX(Version, cfg.Created.Time, mod, imgDigest)
 					if err != nil {
 						return err
 					}
