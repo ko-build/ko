@@ -56,7 +56,7 @@ jobs:
           go run ./ deps $img --sbom=cyclonedx > sbom.json
           ./cyclonedx-linux-x64 validate --input-file=sbom.json --fail-on-errors
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ always() }}
         with:
           name: sbom.json
@@ -91,7 +91,7 @@ jobs:
 
           java -jar ./spdx-tools-2.2.7-jar-with-dependencies.jar Verify sbom.txt
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         if: ${{ always() }}
         with:
           name: sbom.txt
