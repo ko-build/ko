@@ -13,7 +13,7 @@ jobs:
       KO_DOCKER_REPO: localhost:1338
 
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: '1.17.x'
       - name: Install cmd/registry
@@ -36,7 +36,7 @@ jobs:
       KO_DOCKER_REPO: localhost:1338
 
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: '1.17.x'
       - name: Install cmd/registry
@@ -70,7 +70,7 @@ jobs:
       KO_DOCKER_REPO: localhost:1338
 
     steps:
-      - uses: actions/setup-go@v2
+      - uses: actions/setup-go@v3
         with:
           go-version: '1.17.x'
       - name: Install cmd/registry
