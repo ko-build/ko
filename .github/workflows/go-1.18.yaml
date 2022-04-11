@@ -18,13 +18,13 @@ jobs:
     - uses: actions/checkout@v3
 
     # Build ko using ko-go-version
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.ko-go-version }}
     - run: go install ./
 
     # Run ko using user-go-version
-    - uses: actions/setup-go@v2
+    - uses: actions/setup-go@v3
       with:
         go-version: ${{ matrix.user-go-version }}
     - run: |
