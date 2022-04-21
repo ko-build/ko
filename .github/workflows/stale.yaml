@@ -22,7 +22,7 @@ jobs:
         stale-pr-message: |-
           This Pull Request is stale because it has been open for 90 days with
           no activity. It will automatically close after 30 more days of
-          inactivity. Keep fresh with the 'lifecycle/frozen' label. 
+          inactivity. Keep fresh with the 'lifecycle/frozen' label.
         stale-pr-label: 'lifecycle/stale'
         exempt-pr-labels: 'lifecycle/frozen'
 

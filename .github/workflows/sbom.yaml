@@ -1,7 +1,7 @@
 name: Validate SBOMs
 
 on:
-  pull_request: 
+  pull_request:
     branches: ['main']
 
 jobs:
@@ -15,7 +15,8 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.17.x'
+          go-version: 1.17
+          check-latest: true
       - name: Install cmd/registry
         run: |
           go install github.com/google/go-containerregistry/cmd/registry@latest
@@ -38,14 +39,15 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.17.x'
+          go-version: 1.17
+          check-latest: true
       - name: Install cmd/registry
         run: |
           go install github.com/google/go-containerregistry/cmd/registry@latest
           registry &
       - uses: actions/checkout@v3
 
-      - name: Install CycloneDX 
+      - name: Install CycloneDX
         run: |
           wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.22.0/cyclonedx-linux-x64
           chmod +x cyclonedx-linux-x64
@@ -72,7 +74,8 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: '1.17.x'
+          go-version: 1.17
+          check-latest: true
       - name: Install cmd/registry
         run: |
           go install github.com/google/go-containerregistry/cmd/registry@latest
