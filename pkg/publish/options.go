@@ -120,3 +120,21 @@ func Insecure(b bool) Option {
 		return nil
 	}
 }
+
+func NoOpWithNamer(n Namer) NoOpOption {
+	return func(noo *noOpOpener) {
+		noo.namer = n
+	}
+}
+
+func NoOpWithTags(t []string) NoOpOption {
+	return func(noo *noOpOpener) {
+		noo.tags = t
+	}
+}
+
+func NoOpWithTagOnly(to bool) NoOpOption {
+	return func(noo *noOpOpener) {
+		noo.tagOnly = to
+	}
+}

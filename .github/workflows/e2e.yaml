@@ -57,6 +57,10 @@ jobs:
           docker run ${testimg} --wait=false -f HEAD
         fi
 
+        # Check that building without push prints the tag (and sha)
+        go run ./ build --push=false -t test ./test | grep ":test@sha256:"
+        go run ./ build --push=false -t test --tag-only ./test | grep ":test$"
+
         # Check that using ldflags to set variables works.
         cat > .ko.yaml << EOF
         builds:
