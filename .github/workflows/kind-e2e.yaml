@@ -35,9 +35,9 @@ jobs:
         registry-authority: ${{ env.REGISTRY_NAME }}:${{ env.REGISTRY_PORT }}
 
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v2.2.0
+      uses: sigstore/cosign-installer@v2.2.1
       with:
-        cosign-release: 'v1.5.1'
+        cosign-release: 'v1.7.2'
 
     - name: Run Smoke Test
       run: |
