@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: ['main']
 
-env:
-  GO_VERSION: '1.17'
-
 jobs:
 
   gofmt:
@@ -15,7 +12,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: 1.17
           check-latest: true
       - uses: actions/checkout@v3
       - uses: chainguard-dev/actions/gofmt@84c993eaf02da1c325854fb272a4df9184bd80fc # main
@@ -28,7 +25,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: 1.17
           check-latest: true
       - uses: actions/checkout@v3
       - uses: chainguard-dev/actions/goimports@84c993eaf02da1c325854fb272a4df9184bd80fc # main
@@ -41,7 +38,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: 1.17
           check-latest: true
 
       - name: Check out code

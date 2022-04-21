@@ -4,9 +4,6 @@ on:
   pull_request:
     branches: ['main']
 
-env:
-  GO_VERSION: '1.17'
-
 jobs:
   go-version-m:
     name: Generate go version -m
@@ -18,7 +15,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: 1.17
           check-latest: true
       - name: Install cmd/registry
         run: |
@@ -42,7 +39,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: 1.17
           check-latest: true
       - name: Install cmd/registry
         run: |
@@ -77,7 +74,7 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: ${{ env.GO_VERSION }}
+          go-version: 1.17
           check-latest: true
       - name: Install cmd/registry
         run: |
