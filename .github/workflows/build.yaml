@@ -1,7 +1,7 @@
 name: Build
 
 on:
-  pull_request: 
+  pull_request:
     branches: ['main']
 
 jobs:
@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: ['1.17.x', '1.18.x']
+        go-version: ['1.17', '1.18']
     name: Build ${{ matrix.go-version }}
     runs-on: ubuntu-latest
 
@@ -19,6 +19,7 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
+          check-latest: true
 
       - run: |
           go build ./...
