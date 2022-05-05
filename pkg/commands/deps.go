@@ -52,7 +52,7 @@ If the image was not built using ko, or if it was built without embedding depend
 			switch sbomType {
 			case "cyclonedx", "spdx", "go.version-m":
 			default:
-				return fmt.Errorf("invalid sbom type %q: must be spdx or go.version-m", sbomType)
+				return fmt.Errorf("invalid sbom type %q: must be spdx, cyclonedx or go.version-m", sbomType)
 			}
 
 			ref, err := name.ParseReference(args[0])
@@ -157,6 +157,6 @@ If the image was not built using ko, or if it was built without embedding depend
 			// unreachable
 		},
 	}
-	deps.Flags().StringVar(&sbomType, "sbom", "spdx", "Format for SBOM output (supports: spdx, go.version-m).")
+	deps.Flags().StringVar(&sbomType, "sbom", "spdx", "Format for SBOM output (supports: spdx, cyclonedx, go.version-m).")
 	topLevel.AddCommand(deps)
 }
