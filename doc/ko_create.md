@@ -73,7 +73,7 @@ ko create -f FILENAME [flags]
       --push                           Push images to KO_DOCKER_REPO (default true)
   -R, --recursive                      Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.
       --request-timeout string         The length of time to wait before giving up on a single server request. Non-zero values should contain a corresponding time unit (e.g. 1s, 2m, 3h). A value of zero means don't timeout requests. (DEPRECATED)
-      --sbom string                    The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, go.version-m). (default "spdx")
+      --sbom string                    The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, cyclonedx, go.version-m). (default "spdx")
   -l, --selector string                Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)
   -s, --server string                  The address and port of the Kubernetes API server (DEPRECATED)
       --tag-only                       Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.

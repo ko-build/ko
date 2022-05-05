@@ -24,7 +24,7 @@ ko deps IMAGE [flags]
 
 ```
   -h, --help          help for deps
-      --sbom string   Format for SBOM output (supports: spdx, go.version-m). (default "spdx")
+      --sbom string   Format for SBOM output (supports: spdx, cyclonedx, go.version-m). (default "spdx")
 ```
 
 ### Options inherited from parent commands
