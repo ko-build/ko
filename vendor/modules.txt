@@ -20,7 +20,7 @@ github.com/Azure/go-autorest/autorest/date
 github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 github.com/Azure/go-autorest/tracing
-# github.com/BurntSushi/toml v0.4.1
+# github.com/BurntSushi/toml v1.0.0
 github.com/BurntSushi/toml
 github.com/BurntSushi/toml/internal
 # github.com/Microsoft/go-winio v0.5.1
@@ -444,7 +444,7 @@ k8s.io/klog/v2/internal/severity
 k8s.io/utils/internal/third_party/forked/golang/net
 k8s.io/utils/net
 k8s.io/utils/strings/slices
-# sigs.k8s.io/kind v0.12.0
+# sigs.k8s.io/kind v0.13.0
 ## explicit
 sigs.k8s.io/kind/pkg/apis/config/defaults
 sigs.k8s.io/kind/pkg/apis/config/v1alpha4
@@ -465,7 +465,6 @@ sigs.k8s.io/kind/pkg/cluster/internal/kubeconfig
 sigs.k8s.io/kind/pkg/cluster/internal/kubeconfig/internal/kubeconfig
 sigs.k8s.io/kind/pkg/cluster/internal/loadbalancer
 sigs.k8s.io/kind/pkg/cluster/internal/logs
-sigs.k8s.io/kind/pkg/cluster/internal/patch
 sigs.k8s.io/kind/pkg/cluster/internal/providers
 sigs.k8s.io/kind/pkg/cluster/internal/providers/common
 sigs.k8s.io/kind/pkg/cluster/internal/providers/docker
@@ -481,6 +480,7 @@ sigs.k8s.io/kind/pkg/internal/apis/config
 sigs.k8s.io/kind/pkg/internal/apis/config/encoding
 sigs.k8s.io/kind/pkg/internal/cli
 sigs.k8s.io/kind/pkg/internal/env
+sigs.k8s.io/kind/pkg/internal/patch
 sigs.k8s.io/kind/pkg/internal/sets
 sigs.k8s.io/kind/pkg/internal/version
 sigs.k8s.io/kind/pkg/log
