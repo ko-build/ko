@@ -15,7 +15,7 @@ jobs:
         with:
           go-version: 1.18
           check-latest: true
-      - uses: goreleaser/goreleaser-action@v2.9.1
+      - uses: goreleaser/goreleaser-action@v3.0.0
         with:
           version: latest
           args: release --rm-dist
