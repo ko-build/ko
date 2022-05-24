@@ -284,6 +284,10 @@ produce a manifest list containing an image for each platform.
 You can also select specific platforms, for example,
 `--platform=linux/amd64,linux/arm64`
 
+## Generating an SBOM automatically
+
+Generating a Software Bill of Materials (SBOM) as part of your DevOps process is a crucial to help secure your software supply chain,and ko provides you for free. ko always builds container image security in mind. One of the excellent capabilities supported with v0.9.x in ko from the security standpoint is that it generates SBOMs in various formats such as SPDX and Cyclone DX by default for your container images while building them and then uploading them to the registry alongside an image. Although this behavior is enabled by default, you need to specify `--sbom=false` with your ko build command to disable this.
+
 ## Static Assets
 
 `ko` can also bundle static assets into the images it produces.
