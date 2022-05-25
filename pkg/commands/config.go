@@ -24,6 +24,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
@@ -55,7 +56,7 @@ var (
 
 // getBaseImage returns a function that determines the base image for a given import path.
 func getBaseImage(bo *options.BuildOptions) build.GetBase {
-	cache := map[string]build.Result{}
+	var cache sync.Map
 	fetch := func(ctx context.Context, ref name.Reference) (build.Result, error) {
 		// For ko.local, look in the daemon.
 		if ref.Context().RegistryStr() == publish.LocalDomain {
@@ -102,8 +103,8 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			return nil, nil, fmt.Errorf("parsing base image (%q): %w", baseImage, err)
 		}
 
-		if cached, ok := cache[ref.String()]; ok {
-			return ref, cached, nil
+		if v, ok := cache.Load(ref.String()); ok {
+			return ref, v.(build.Result), nil
 		}
 
 		result, err := fetch(ctx, ref)
@@ -121,7 +122,7 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			log.Printf("Using base %s@%s for %s", ref, dig, s)
 		}
 
-		cache[ref.String()] = result
+		cache.Store(ref.String(), result)
 		return ref, result, nil
 	}
 }
