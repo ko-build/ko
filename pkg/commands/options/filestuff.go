@@ -35,21 +35,15 @@ func AddFileArg(cmd *cobra.Command, fo *FilenameOptions) {
 	cmd.Flags().BoolVarP(&fo.Recursive, "recursive", "R", fo.Recursive,
 		"Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.")
 
-	err := cmd.MarkFlagFilename("filename", "yaml", "yml", "json")
-
-	if err != nil {
+	if err := cmd.MarkFlagFilename("filename", "yaml", "yml", "json"); err != nil {
 		log.Fatalf("Error marking filename flag as Cobra's filename: %v", err)
 	}
 
-	err = cmd.MarkFlagDirname("filename")
-
-	if err != nil {
+	if err := cmd.MarkFlagDirname("filename"); err != nil {
 		log.Fatalf("Error marking filename flag as Cobra's Dirname: %v", err)
 	}
 
-	err = cmd.MarkFlagRequired("filename")
-
-	if err != nil {
+	if err := cmd.MarkFlagRequired("filename"); err != nil {
 		log.Fatalf("Error marking filename flag as required: %v", err)
 	}
 }
