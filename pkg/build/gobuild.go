@@ -348,7 +348,7 @@ func cycloneDX() sbomber {
 		if err != nil {
 			return nil, "", err
 		}
-		return b, ctypes.CycloneDXMediaType, nil
+		return b, ctypes.CycloneDXJSONMediaType, nil
 	}
 }
 
