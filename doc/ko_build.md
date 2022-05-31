@@ -14,27 +14,26 @@ ko build IMPORTPATH... [flags]
 
 ```
 
-  # Build and publish import path references to a Docker
-  # Registry as:
+  # Build and publish import path references to a Docker Registry as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local and --preserve-import-paths were passed.
+  # When KO_DOCKER_REPO is ko.local, it is the same as if --local and
+  # --preserve-import-paths were passed.
+  # If the import path is not provided, the current working directory is the
+  # default.
   ko build github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
 
   # Build and publish a relative import path as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local and --preserve-import-paths were passed.
+  # When KO_DOCKER_REPO is ko.local, it is the same as if --local and
+  # --preserve-import-paths were passed.
   ko build ./cmd/blah
 
   # Build and publish a relative import path as:
   #   ${KO_DOCKER_REPO}/<import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local was passed.
+  # When KO_DOCKER_REPO is ko.local, it is the same as if --local was passed.
   ko build --preserve-import-paths ./cmd/blah
 
-  # Build and publish import path references to a Docker
-  # daemon as:
+  # Build and publish import path references to a Docker daemon as:
   #   ko.local/<import path>
   # This always preserves import paths.
   ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
