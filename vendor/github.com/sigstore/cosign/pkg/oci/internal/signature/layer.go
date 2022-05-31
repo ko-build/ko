@@ -24,6 +24,7 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/pkg/errors"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
@@ -104,13 +105,13 @@ func (s *sigLayer) Chain() ([]*x509.Certificate, error) {
 }
 
 // Bundle implements oci.Signature
-func (s *sigLayer) Bundle() (*oci.Bundle, error) {
-	bundle := s.desc.Annotations[BundleKey]
-	if bundle == "" {
+func (s *sigLayer) Bundle() (*bundle.RekorBundle, error) {
+	val := s.desc.Annotations[BundleKey]
+	if val == "" {
 		return nil, nil
 	}
-	var b oci.Bundle
-	if err := json.Unmarshal([]byte(bundle), &b); err != nil {
+	var b bundle.RekorBundle
+	if err := json.Unmarshal([]byte(val), &b); err != nil {
 		return nil, errors.Wrap(err, "unmarshaling bundle")
 	}
 	return &b, nil

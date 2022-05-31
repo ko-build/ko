@@ -16,9 +16,18 @@
 package types
 
 const (
-	CycloneDXMediaType     = "application/vnd.cyclonedx"
+	JSONInputFormat = "json"
+	XMLInputFormat  = "xml"
+	TextInputFormat = "text"
+)
+
+const (
+	CycloneDXXMLMediaType  = "application/vnd.cyclonedx+xml"
+	CycloneDXJSONMediaType = "application/vnd.cyclonedx+json"
+	SyftMediaType          = "application/vnd.syft+json"
 	SimpleSigningMediaType = "application/vnd.dev.cosign.simplesigning.v1+json"
 	SPDXMediaType          = "text/spdx"
+	SPDXJSONMediaType      = "spdx+json"
 	WasmLayerMediaType     = "application/vnd.wasm.content.layer.v1+wasm"
 	WasmConfigMediaType    = "application/vnd.wasm.config.v1+json"
 )

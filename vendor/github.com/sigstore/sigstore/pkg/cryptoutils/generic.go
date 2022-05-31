@@ -19,8 +19,10 @@ import (
 	"encoding/pem"
 )
 
+// PEMType is a specific type for string constants used during PEM encoding and decoding
 type PEMType string
 
+// PEMEncode encodes the specified byte slice in PEM format using the provided type string
 func PEMEncode(typeStr PEMType, bytes []byte) []byte {
 	return pem.EncodeToMemory(&pem.Block{
 		Type:  string(typeStr),
