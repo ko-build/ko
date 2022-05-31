@@ -1,4 +1,4 @@
-# cloud.google.com/go/compute v1.5.0
+# cloud.google.com/go/compute v1.6.1
 cloud.google.com/go/compute/metadata
 # github.com/Azure/azure-sdk-for-go v55.8.0+incompatible
 github.com/Azure/azure-sdk-for-go/services/preview/containerregistry/runtime/2019-08-15-preview/containerregistry
@@ -169,7 +169,7 @@ github.com/dprotaso/go-yit
 github.com/evanphx/json-patch/v5
 # github.com/form3tech-oss/jwt-go v3.2.5+incompatible
 github.com/form3tech-oss/jwt-go
-# github.com/fsnotify/fsnotify v1.5.1
+# github.com/fsnotify/fsnotify v1.5.4
 github.com/fsnotify/fsnotify
 # github.com/go-logr/logr v1.2.0
 github.com/go-logr/logr
@@ -253,7 +253,7 @@ github.com/magiconair/properties
 github.com/mattn/go-isatty
 # github.com/mitchellh/go-homedir v1.1.0
 github.com/mitchellh/go-homedir
-# github.com/mitchellh/mapstructure v1.4.3
+# github.com/mitchellh/mapstructure v1.5.0
 github.com/mitchellh/mapstructure
 # github.com/opencontainers/go-digest v1.0.0
 github.com/opencontainers/go-digest
@@ -261,9 +261,9 @@ github.com/opencontainers/go-digest
 ## explicit
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/pelletier/go-toml v1.9.4
+# github.com/pelletier/go-toml v1.9.5
 github.com/pelletier/go-toml
-# github.com/pelletier/go-toml/v2 v2.0.0-beta.8
+# github.com/pelletier/go-toml/v2 v2.0.1
 github.com/pelletier/go-toml/v2
 github.com/pelletier/go-toml/v2/internal/ast
 github.com/pelletier/go-toml/v2/internal/danger
@@ -290,7 +290,7 @@ github.com/sirupsen/logrus
 # github.com/spf13/afero v1.8.2
 github.com/spf13/afero
 github.com/spf13/afero/mem
-# github.com/spf13/cast v1.4.1
+# github.com/spf13/cast v1.5.0
 github.com/spf13/cast
 # github.com/spf13/cobra v1.4.0
 ## explicit
@@ -301,7 +301,7 @@ github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.5
 ## explicit
 github.com/spf13/pflag
-# github.com/spf13/viper v1.11.0
+# github.com/spf13/viper v1.12.0
 ## explicit
 github.com/spf13/viper
 github.com/spf13/viper/internal/encoding
@@ -312,7 +312,7 @@ github.com/spf13/viper/internal/encoding/javaproperties
 github.com/spf13/viper/internal/encoding/json
 github.com/spf13/viper/internal/encoding/toml
 github.com/spf13/viper/internal/encoding/yaml
-# github.com/subosito/gotenv v1.2.0
+# github.com/subosito/gotenv v1.3.0
 github.com/subosito/gotenv
 # github.com/theupdateframework/go-tuf v0.0.0-20210722233521-90e262754396
 github.com/theupdateframework/go-tuf/encrypted
@@ -334,7 +334,7 @@ golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
 # golang.org/x/mod v0.6.0-dev.0.20220106191415-9b9b3d81d5e3
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20220412020605-290c469a71a5
+# golang.org/x/net v0.0.0-20220520000938-2e3eb7b945c2
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/internal/socks
@@ -347,11 +347,11 @@ golang.org/x/oauth2/google/internal/externalaccount
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+# golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20220412211240-33da011f77ad
+# golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
@@ -377,7 +377,7 @@ golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/packagesinternal
 golang.org/x/tools/internal/typeparams
 golang.org/x/tools/internal/typesinternal
-# golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f
+# golang.org/x/xerrors v0.0.0-20220517211312-f3a8303e98df
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
 # google.golang.org/appengine v1.6.7
@@ -423,7 +423,7 @@ google.golang.org/protobuf/types/descriptorpb
 gopkg.in/ini.v1
 # gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
-# gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+# gopkg.in/yaml.v3 v3.0.0
 ## explicit
 gopkg.in/yaml.v3
 # k8s.io/apimachinery v0.24.1
