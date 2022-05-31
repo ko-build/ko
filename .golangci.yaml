@@ -6,6 +6,9 @@ issues:
     - path: test # Excludes /test, *_test.go etc.
       linters:
         - gosec
+    - path: vendor
+      linters:
+        - misspell
 
 linters:
   enable:

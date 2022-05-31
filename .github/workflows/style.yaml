@@ -56,6 +56,7 @@ jobs:
           github_token: ${{ secrets.github_token }}
           fail_on_error: true
           locale: "US"
+          exclude: ./vendor/*
 
       - uses: get-woke/woke-action-reviewdog@v0
         if: ${{ always() }}
