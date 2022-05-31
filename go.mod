@@ -18,11 +18,11 @@ require (
 	github.com/sigstore/cosign v1.3.2-0.20211120003522-90e2dcfe7b92
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.11.0
+	github.com/spf13/viper v1.12.0
 	go.uber.org/automaxprocs v1.4.1-0.20220314153950-975e177ad84f
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	golang.org/x/tools v0.1.10
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
+	gopkg.in/yaml.v3 v3.0.0
 	k8s.io/apimachinery v0.24.1
 	sigs.k8s.io/kind v0.14.0
 )
