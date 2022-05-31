@@ -1,3 +1,7 @@
+# Release (v1.11.2)
+
+* No change notes available for this release.
+
 # Release (v1.11.1)
 
 ## Module Highlights

@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	ctypes "github.com/sigstore/cosign/pkg/types"
 )
 
@@ -29,7 +29,7 @@ type Option func(*options)
 type options struct {
 	LayerMediaType  types.MediaType
 	ConfigMediaType types.MediaType
-	Bundle          *oci.Bundle
+	Bundle          *bundle.RekorBundle
 	Cert            []byte
 	Chain           []byte
 	Annotations     map[string]string
@@ -84,7 +84,7 @@ func WithAnnotations(ann map[string]string) Option {
 }
 
 // WithBundle sets the bundle to attach to the signature
-func WithBundle(b *oci.Bundle) Option {
+func WithBundle(b *bundle.RekorBundle) Option {
 	return func(o *options) {
 		o.Bundle = b
 	}

@@ -804,7 +804,10 @@ type ResourceDetails struct {
 	noSmithyDocumentSerde
 }
 
-// The details of a scanning repository filter.
+// The details of a scanning repository filter. For more information on how to use
+// filters, see Using filters
+// (https://docs.aws.amazon.com/AmazonECR/latest/userguide/image-scanning.html#image-scanning-filters)
+// in the Amazon Elastic Container Registry User Guide.
 type ScanningRepositoryFilter struct {
 
 	// The filter to use when scanning.

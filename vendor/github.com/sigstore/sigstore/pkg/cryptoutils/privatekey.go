@@ -30,8 +30,10 @@ import (
 )
 
 const (
-	PrivateKeyPEMType                  PEMType = "PRIVATE KEY"
-	encryptedCosignPrivateKeyPEMType   PEMType = "ENCRYPTED COSIGN PRIVATE KEY"
+	// PrivateKeyPEMType is the string "PRIVATE KEY" to be used during PEM encoding and decoding
+	PrivateKeyPEMType                PEMType = "PRIVATE KEY"
+	encryptedCosignPrivateKeyPEMType PEMType = "ENCRYPTED COSIGN PRIVATE KEY"
+	// EncryptedSigstorePrivateKeyPEMType is the string "ENCRYPTED SIGSTORE PRIVATE KEY" to be used during PEM encoding and decoding
 	EncryptedSigstorePrivateKeyPEMType PEMType = "ENCRYPTED SIGSTORE PRIVATE KEY"
 )
 
@@ -79,6 +81,7 @@ func GeneratePEMEncodedRSAKeyPair(keyLengthBits int, pf PassFunc) (privPEM, pubP
 	return pemEncodeKeyPair(priv, priv.Public(), pf)
 }
 
+// MarshalPrivateKeyToEncryptedDER marshals the private key and encrypts the DER-encoded value using the specified password function
 func MarshalPrivateKeyToEncryptedDER(priv crypto.PrivateKey, pf PassFunc) ([]byte, error) {
 	derKey, err := MarshalPrivateKeyToDER(priv)
 	if err != nil {

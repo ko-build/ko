@@ -1,3 +1,39 @@
+# v1.15.9 (2022-05-26)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.8 (2022-05-25)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.7 (2022-05-17)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.6 (2022-05-16)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.5 (2022-05-09)
+
+* **Bug Fix**: Fixes a bug in LoadDefaultConfig to correctly assign ConfigSources so all config resolvers have access to the config sources. This fixes the feature/ec2/imds client not having configuration applied via config.LoadOptions such as EC2IMDSClientEnableState. PR [#1682](https://github.com/aws/aws-sdk-go-v2/pull/1682)
+
+# v1.15.4 (2022-04-25)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.3 (2022-03-30)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.2 (2022-03-24)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.15.1 (2022-03-23)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.15.0 (2022-03-08)
 
 * **Feature**: Updated `github.com/aws/smithy-go` to latest version

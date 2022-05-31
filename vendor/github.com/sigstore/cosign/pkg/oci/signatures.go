@@ -19,6 +19,7 @@ import (
 	"crypto/x509"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/sigstore/cosign/pkg/cosign/bundle"
 )
 
 // Signatures represents a set of signatures that are associated with a particular
@@ -57,19 +58,5 @@ type Signature interface {
 
 	// Bundle fetches the optional metadata that records the ephemeral
 	// Fulcio key in the transparency log.
-	Bundle() (*Bundle, error)
-}
-
-// Bundle holds metadata about recording a Signature's ephemeral key to
-// a Rekor transparency log.
-type Bundle struct {
-	SignedEntryTimestamp []byte
-	Payload              BundlePayload
-}
-
-type BundlePayload struct {
-	Body           interface{} `json:"body"`
-	IntegratedTime int64       `json:"integratedTime"`
-	LogIndex       int64       `json:"logIndex"`
-	LogID          string      `json:"logID"`
+	Bundle() (*bundle.RekorBundle, error)
 }
