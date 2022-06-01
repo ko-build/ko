@@ -22,7 +22,7 @@ require (
 	go.uber.org/automaxprocs v1.4.1-0.20220314153950-975e177ad84f
 	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	golang.org/x/tools v0.1.10
-	gopkg.in/yaml.v3 v3.0.0
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.24.1
 	sigs.k8s.io/kind v0.14.0
 )
