@@ -16,8 +16,12 @@
 package remote
 
 import (
+	"errors"
+	"net/http"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/sigstore/cosign/pkg/oci"
 )
 
@@ -25,7 +29,10 @@ import (
 func SignedImage(ref name.Reference, options ...Option) (oci.SignedImage, error) {
 	o := makeOptions(ref.Context(), options...)
 	ri, err := remoteImage(ref, o.ROpt...)
-	if err != nil {
+	var te *transport.Error
+	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
+		return nil, errors.New("image not found in registry")
+	} else if err != nil {
 		return nil, err
 	}
 	return &image{

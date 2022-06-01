@@ -16,12 +16,15 @@
 package remote
 
 import (
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/oci"
 )
@@ -40,7 +43,10 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	o := makeOptions(ref.Context(), options...)
 
 	got, err := remoteGet(ref, o.ROpt...)
-	if err != nil {
+	var te *transport.Error
+	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
+		return nil, errors.New("entity not found in registry")
+	} else if err != nil {
 		return nil, err
 	}
 
@@ -156,26 +162,26 @@ func attachment(digestable digestable, attName string, o *options) (oci.File, er
 		return nil, fmt.Errorf("expected exactly one layer in attachment, got %d", len(ls))
 	}
 
-	return &attache{
+	return &attached{
 		SignedImage: img,
 		layer:       ls[0],
 	}, nil
 }
 
-type attache struct {
+type attached struct {
 	oci.SignedImage
 	layer v1.Layer
 }
 
-var _ oci.File = (*attache)(nil)
+var _ oci.File = (*attached)(nil)
 
 // FileMediaType implements oci.File
-func (f *attache) FileMediaType() (types.MediaType, error) {
+func (f *attached) FileMediaType() (types.MediaType, error) {
 	return f.layer.MediaType()
 }
 
 // Payload implements oci.File
-func (f *attache) Payload() ([]byte, error) {
+func (f *attached) Payload() ([]byte, error) {
 	// remote layers are believed to be stored
 	// compressed, but we don't compress attachments
 	// so use "Compressed" to access the raw byte

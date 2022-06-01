@@ -16,22 +16,30 @@ package cmd
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/spf13/cobra"
 )
 
 // NewCmdExport creates a new cobra.Command for the export subcommand.
 func NewCmdExport(options *[]crane.Option) *cobra.Command {
 	return &cobra.Command{
-		Use:   "export IMAGE TARBALL",
-		Short: "Export contents of a remote image as a tarball",
+		Use:   "export IMAGE|- TARBALL|-",
+		Short: "Export filesystem of a container image as a tarball",
 		Example: `  # Write tarball to stdout
   crane export ubuntu -
 
   # Write tarball to file
-  crane export ubuntu ubuntu.tar`,
+  crane export ubuntu ubuntu.tar
+
+  # Read image from stdin
+  crane export - ubuntu.tar`,
 		Args: cobra.RangeArgs(1, 2),
 		RunE: func(_ *cobra.Command, args []string) error {
 			src, dst := args[0], "-"
@@ -45,9 +53,28 @@ func NewCmdExport(options *[]crane.Option) *cobra.Command {
 			}
 			defer f.Close()
 
-			img, err := crane.Pull(src, *options...)
-			if err != nil {
-				return fmt.Errorf("pulling %s: %w", src, err)
+			var img v1.Image
+			if src == "-" {
+				tmpfile, err := ioutil.TempFile("", "crane")
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer os.Remove(tmpfile.Name())
+
+				if _, err := io.Copy(tmpfile, os.Stdin); err != nil {
+					log.Fatal(err)
+				}
+				tmpfile.Close()
+
+				img, err = tarball.ImageFromPath(tmpfile.Name(), nil)
+				if err != nil {
+					return fmt.Errorf("reading tarball from stdin: %w", err)
+				}
+			} else {
+				img, err = crane.Pull(src, *options...)
+				if err != nil {
+					return fmt.Errorf("pulling %s: %w", src, err)
+				}
 			}
 
 			return crane.Export(img, f)

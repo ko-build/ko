@@ -24,6 +24,7 @@ import (
 	"golang.org/x/term"
 )
 
+// PassFunc is a type of function that takes a boolean (representing whether confirmation is desired) and returns the password as read, along with an error if one occurred
 type PassFunc func(bool) ([]byte, error)
 
 var (
