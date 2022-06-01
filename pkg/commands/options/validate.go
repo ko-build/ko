@@ -14,7 +14,10 @@
 
 package options
 
-import "log"
+import (
+	"log"
+	"strings"
+)
 
 const bareBaseFlagsWarning = `WARNING!
 -----------------------------------------------------------------
@@ -26,10 +29,24 @@ In a future release this will be an error.
 -----------------------------------------------------------------
 `
 
+const localFlagsWarning = `WARNING!
+-----------------------------------------------------------------
+The --local flag is set and KO_DOCKER_REPO is set to ko.local
+
+You can choose either one to build a local image.
+
+The --local flag might be deprecated in the future.
+-----------------------------------------------------------------
+`
+
 func Validate(po *PublishOptions, bo *BuildOptions) error {
 	if po.Bare && po.BaseImportPaths {
 		log.Print(bareBaseFlagsWarning)
 		// TODO: return error when we decided to make this an error, for now it is a warning
+	}
+
+	if po.Local && strings.Contains(po.DockerRepo, "ko.local") {
+		log.Print(localFlagsWarning)
 	}
 
 	return nil
