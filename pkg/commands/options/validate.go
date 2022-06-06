@@ -15,6 +15,7 @@
 package options
 
 import (
+	"errors"
 	"log"
 	"strings"
 )
@@ -47,6 +48,14 @@ func Validate(po *PublishOptions, bo *BuildOptions) error {
 
 	if po.Local && strings.Contains(po.DockerRepo, "ko.local") {
 		log.Print(localFlagsWarning)
+	}
+
+	if len(bo.Platforms) > 1 {
+		for _, platform := range bo.Platforms {
+			if platform == "all" {
+				return errors.New("all or specific platforms should be used")
+			}
+		}
 	}
 
 	return nil
