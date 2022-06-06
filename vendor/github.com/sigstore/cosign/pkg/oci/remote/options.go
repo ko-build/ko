@@ -16,12 +16,12 @@
 package remote
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -127,7 +127,10 @@ func WithTargetRepository(repo name.Repository) Option {
 func GetEnvTargetRepository() (name.Repository, error) {
 	if ro := os.Getenv(RepoOverrideEnvKey); ro != "" {
 		repo, err := name.NewRepository(ro)
-		return repo, errors.Wrap(err, "parsing $"+RepoOverrideEnvKey)
+		if err != nil {
+			return name.Repository{}, fmt.Errorf("parsing $"+RepoOverrideEnvKey+": %w", err)
+		}
+		return repo, nil
 	}
 	return name.Repository{}, nil
 }

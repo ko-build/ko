@@ -18,11 +18,11 @@ import (
 	"bytes"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"io"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/cosign/pkg/oci/static"
@@ -132,7 +132,7 @@ func Signature(original oci.Signature, opts ...SignatureOption) (oci.Signature, 
 	so := makeSignatureOption(opts...)
 	oldAnn, err := original.Annotations()
 	if err != nil {
-		return nil, errors.Wrap(err, "could not get annotations from signature to mutate")
+		return nil, fmt.Errorf("could not get annotations from signature to mutate: %w", err)
 	}
 
 	var newAnn map[string]string

@@ -23,12 +23,11 @@ require (
 	github.com/klauspost/compress v1.15.5 // indirect
 	github.com/letsencrypt/boulder v0.0.0-20220525221457-11544756bbe8 // indirect
 	github.com/opencontainers/image-spec v1.0.3-0.20220114050600-8b9d41f48198
-	github.com/sigstore/cosign v1.8.0
+	github.com/sigstore/cosign v1.9.0
 	github.com/sigstore/rekor v0.7.0 // indirect
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
-	github.com/theupdateframework/go-tuf v0.3.0 // indirect
 	go.mongodb.org/mongo-driver v1.9.1 // indirect
 	go.uber.org/automaxprocs v1.5.1
 	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e // indirect

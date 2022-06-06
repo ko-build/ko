@@ -16,10 +16,11 @@
 package remote
 
 import (
+	"fmt"
+
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/oci"
 )
 
@@ -34,22 +35,22 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, o
 	// write the image index if there is one
 	ii, err := sii.SignedImageIndex(v1.Hash{})
 	if err != nil {
-		return errors.Wrap(err, "signed image index")
+		return fmt.Errorf("signed image index: %w", err)
 	}
 	if ii != nil {
 		if err := remote.WriteIndex(ref, ii, o.ROpt...); err != nil {
-			return errors.Wrap(err, "writing index")
+			return fmt.Errorf("writing index: %w", err)
 		}
 	}
 
 	// write the image if there is one
 	si, err := sii.SignedImage(v1.Hash{})
 	if err != nil {
-		return errors.Wrap(err, "signed image")
+		return fmt.Errorf("signed image: %w", err)
 	}
 	if si != nil {
 		if err := remoteWrite(ref, si, o.ROpt...); err != nil {
-			return errors.Wrap(err, "remote write")
+			return fmt.Errorf("remote write: %w", err)
 		}
 	}
 
@@ -61,7 +62,7 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, o
 	if sigs != nil { // will be nil if there are no associated signatures
 		sigsTag, err := SignatureTag(ref, opts...)
 		if err != nil {
-			return errors.Wrap(err, "sigs tag")
+			return fmt.Errorf("sigs tag: %w", err)
 		}
 		if err := remoteWrite(sigsTag, sigs, o.ROpt...); err != nil {
 			return err
@@ -76,7 +77,7 @@ func WriteSignedImageIndexImages(ref name.Reference, sii oci.SignedImageIndex, o
 	if atts != nil { // will be nil if there are no associated attestations
 		attsTag, err := AttestationTag(ref, opts...)
 		if err != nil {
-			return errors.Wrap(err, "sigs tag")
+			return fmt.Errorf("sigs tag: %w", err)
 		}
 		return remoteWrite(attsTag, atts, o.ROpt...)
 	}

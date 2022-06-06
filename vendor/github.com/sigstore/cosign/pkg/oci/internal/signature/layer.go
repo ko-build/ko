@@ -23,7 +23,6 @@ import (
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/pkg/errors"
 	"github.com/sigstore/cosign/pkg/cosign/bundle"
 	"github.com/sigstore/cosign/pkg/oci"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
@@ -112,7 +111,7 @@ func (s *sigLayer) Bundle() (*bundle.RekorBundle, error) {
 	}
 	var b bundle.RekorBundle
 	if err := json.Unmarshal([]byte(val), &b); err != nil {
-		return nil, errors.Wrap(err, "unmarshaling bundle")
+		return nil, fmt.Errorf("unmarshaling bundle: %w", err)
 	}
 	return &b, nil
 }
