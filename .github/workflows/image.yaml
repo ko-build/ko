@@ -19,7 +19,7 @@ jobs:
         with:
           go-version: 1.17
           check-latest: true
-      - uses: sigstore/cosign-installer@v2.3.0
+      - uses: sigstore/cosign-installer@v2.4.0
 
       # Build ko from HEAD, build and push an image tagged with the commit SHA,
       # then keylessly sign it with cosign.
