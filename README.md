@@ -23,30 +23,24 @@ tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
 
 ## Install
 
-### Install from [Releases](https://github.com/google/ko/releases)
+### Download from [Releases](https://github.com/google/ko/releases)
 
-We are one of the first repositories to generate SLSA3+ provenance using the OpenSSF's [slsa-framework/slsa-github-generator](https://github.com/slsa-framework/slsa-github-generator) project.
-For more information about SLSA, visit [slsa.dev](slsa.dev).
-We are piloting the generation for ko's Linux x86_64 binary. If you want to use this binary, install the verification tool from [slsa-framework/slsa-verifier#installation](https://github.com/slsa-framework/slsa-verifier#installation). Then:
-
-```shell
-$ VERSION=TODO # choose the latest version
-$ OS=Linux
-$ ARCH=x86_64
-$ curl -sL https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH} > ko
-$ curl -sL https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.intoto.jsonl > provenance.intoto.jsonl
-$ slsa-verifier -artifact-path ./ko -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
- PASSED: Verified SLSA provenance
-$ chmod +x ./ko
-```
-
-If you download other builds:
 ```
 $ VERSION=TODO # choose the latest version
 $ OS=Linux     # or Darwin
 $ ARCH=x86_64  # or arm64, i386, s390x
 $ curl -L https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz | tar xzf - ko
 $ chmod +x ./ko
+```
+
+We generate SLSA3 provenance using the OpenSSF's [slsa-framework/slsa-github-generator](https://github.com/slsa-framework/slsa-github-generator) 
+for ko's Linux x86_64 binary. To verify this binary, install the verification tool from [slsa-framework/slsa-verifier#installation](https://github.com/slsa-framework/slsa-verifier#installation) and verify ko's binary as:
+
+```shell
+$ curl -sL https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH} > ko
+$ curl -sL https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.intoto.jsonl > provenance.intoto.jsonl
+$ slsa-verifier -artifact-path ./ko -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
+ PASSED: Verified SLSA provenance
 ```
 
 ### Install using [Homebrew](https://brew.sh)
