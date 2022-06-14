@@ -25,6 +25,22 @@ tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
 
 ### Install from [Releases](https://github.com/google/ko/releases)
 
+We are one of the first repositories to generate SLSA3+ provenance with the OpenSSF's [](https://github.com/slsa-framework/slsa-github-generator) project.
+For more information about SLSA, visit [slsa.dev](slsa.dev).
+We are piloting it with the Linux x86_64 binary. If you want to use this binary, install the verification tool from [slsa-framework/slsa-verifier#installation](https://github.com/slsa-framework/slsa-verifier#installation). Then:
+
+```
+VERSION=TODO # choose the latest version
+OS=Linux
+ARCH=x86_64
+curl -sL https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH} > ko
+curl -sL https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.intoto.jsonl > provenance.intoto.jsonl
+slsa-verifier -artifact-path ./ko -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
+ PASSED: Verified SLSA provenance
+chmod +x ./ko
+```
+
+If you download other builds, do:
 ```
 VERSION=TODO # choose the latest version
 OS=Linux     # or Darwin

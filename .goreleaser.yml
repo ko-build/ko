@@ -25,6 +25,9 @@ builds:
   - 386
   - mips64le
   - ppc64le
+  ignore:
+      - goos: linux
+        goarch: amd64
 archives:
 - replacements:
     darwin: Darwin
