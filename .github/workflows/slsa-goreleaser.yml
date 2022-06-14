@@ -20,7 +20,7 @@ jobs:
           fetch-depth: 0
       - id: ldflags
         run: |
-          echo "::set-output name=version::$(git describe --tags --always --dirty | cut -c2-)"
+          echo "::set-output name=version::$(echo $GITHUB_REF_NAME | cut -c2-)"
 
   # Trusted builder.
   build:
