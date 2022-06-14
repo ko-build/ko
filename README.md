@@ -36,11 +36,13 @@ $ chmod +x ./ko
 We generate SLSA3 provenance using the OpenSSF's [slsa-framework/slsa-github-generator](https://github.com/slsa-framework/slsa-github-generator) 
 for ko's Linux x86_64 binary. To verify this binary, install the verification tool from [slsa-framework/slsa-verifier#installation](https://github.com/slsa-framework/slsa-verifier#installation) and verify ko's binary as:
 
+
 ```shell
 $ curl -sL https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH} > ko
 $ curl -sL https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.intoto.jsonl > provenance.intoto.jsonl
 $ slsa-verifier -artifact-path ./ko -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
  PASSED: Verified SLSA provenance
+$ chmod +x ./ko
 ```
 
 ### Install using [Homebrew](https://brew.sh)
