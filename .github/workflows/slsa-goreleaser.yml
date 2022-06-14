@@ -15,7 +15,7 @@ jobs:
       version: ${{ steps.ldflags.outputs.version }}
     steps:
       - id: checkout
-        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v2.3.4
+        uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579 # v3.0.2
         with:
           fetch-depth: 0
       - id: ldflags
@@ -33,4 +33,3 @@ jobs:
     with:
       go-version: 1.17
       evaluated-envs: "VERSION:${{needs.args.outputs.version}}"
-      compile-builder: true
