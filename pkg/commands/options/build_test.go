@@ -112,12 +112,15 @@ func TestOverrideConfigPath(t *testing.T) {
 		koConfigPath: "testdata",
 		err:          "testdata/.ko.yaml: no such file or directory",
 	}, {
-		name:         ".ko.yaml is dir",
+		name:         "config path does not contain .ko.yaml",
 		koConfigPath: "testdata/bad-config",
 		err:          "testdata/bad-config/.ko.yaml is not a regular file",
 	}, {
-		name:         "good",
+		name:         "config path is a directory containing a .ko.yaml",
 		koConfigPath: "testdata/config",
+	}, {
+		name:         "config path points to a file",
+		koConfigPath: "testdata/config/my-ko.yaml",
 	}} {
 		t.Run(tc.name, func(t *testing.T) {
 			oldEnv := os.Getenv(envName)
@@ -126,13 +129,16 @@ func TestOverrideConfigPath(t *testing.T) {
 			os.Setenv(envName, tc.koConfigPath)
 			err := bo.LoadConfig()
 			if err == nil {
-				if tc.err == "" {
-					return
+				if tc.err != "" {
+					t.Fatalf("expected error %q, saw nil", tc.err)
 				}
-				t.Fatalf("expected error %q, saw nil", tc.err)
-			}
-			if !strings.Contains(err.Error(), tc.err) {
-				t.Errorf("expected error to contain %q, saw: %v", tc.err, err)
+			} else {
+				if tc.err == "" {
+					t.Errorf("expected no error, saw: %v", err)
+				}
+				if !strings.Contains(err.Error(), tc.err) {
+					t.Errorf("expected error to contain %q, saw: %v", tc.err, err)
+				}
 			}
 		})
 	}
