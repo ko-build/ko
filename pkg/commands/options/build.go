@@ -98,11 +98,21 @@ func (bo *BuildOptions) LoadConfig() error {
 	v.AutomaticEnv()
 
 	if override := os.Getenv("KO_CONFIG_PATH"); override != "" {
-		path := filepath.Join(override, configName+".yaml")
-		file, err := os.Stat(path)
+		file, err := os.Stat(override)
 		if err != nil {
 			return fmt.Errorf("error looking for config file: %w", err)
 		}
+		var path string
+		if file.IsDir() {
+			path = filepath.Join(override, configName+".yaml")
+			file, err = os.Stat(path)
+			if err != nil {
+				return fmt.Errorf("error looking for config file: %w", err)
+			}
+		} else {
+			path = override
+		}
+
 		if !file.Mode().IsRegular() {
 			return fmt.Errorf("config file %s is not a regular file", path)
 		}
