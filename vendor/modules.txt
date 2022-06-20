@@ -578,7 +578,7 @@ gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# k8s.io/apimachinery v0.24.1
+# k8s.io/apimachinery v0.24.2
 ## explicit
 k8s.io/apimachinery/pkg/labels
 k8s.io/apimachinery/pkg/selection

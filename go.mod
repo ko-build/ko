@@ -39,6 +39,6 @@ require (
 	google.golang.org/genproto v0.0.0-20220531173845-685668d2de03 // indirect
 	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.24.1
+	k8s.io/apimachinery v0.24.2
 	sigs.k8s.io/kind v0.14.0
 )
