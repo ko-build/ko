@@ -30,11 +30,6 @@ import (
 	"github.com/google/ko/pkg/build"
 )
 
-const (
-	// configDefaultBaseImage is the default base image if not specified in .ko.yaml.
-	configDefaultBaseImage = "gcr.io/distroless/static:nonroot"
-)
-
 // BuildOptions represents options for the ko builder.
 type BuildOptions struct {
 	// BaseImage enables setting the default base image programmatically.
@@ -89,8 +84,6 @@ func (bo *BuildOptions) LoadConfig() error {
 	if bo.WorkingDirectory == "" {
 		bo.WorkingDirectory = "."
 	}
-	// If omitted, use this base image.
-	v.SetDefault("defaultBaseImage", configDefaultBaseImage)
 	const configName = ".ko"
 
 	v.SetConfigName(configName) // .yaml is implicit
@@ -128,10 +121,12 @@ func (bo *BuildOptions) LoadConfig() error {
 
 	if bo.BaseImage == "" {
 		ref := v.GetString("defaultBaseImage")
-		if _, err := name.ParseReference(ref); err != nil {
-			return fmt.Errorf("'defaultBaseImage': error parsing %q as image reference: %w", ref, err)
+		if ref != "" {
+			if _, err := name.ParseReference(ref); err != nil {
+				return fmt.Errorf("'defaultBaseImage': error parsing %q as image reference: %w", ref, err)
+			}
+			bo.BaseImage = ref
 		}
-		bo.BaseImage = ref
 	}
 
 	if len(bo.BaseImageOverrides) == 0 {

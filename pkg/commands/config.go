@@ -54,6 +54,34 @@ var (
 	)
 )
 
+var baseOnce sync.Once
+
+const defaultBaseImageWarning = `NOTICE!
+-----------------------------------------------------------------
+The default base image used by ko is changing in a future release, from:
+
+    gcr.io/distroless/static:nonroot
+
+to:
+
+    ghcr.io/distroless/static:latest
+
+To retain the existing default, add this to your .ko.yaml:
+
+    defaultBaseImage: gcr.io/distroless/static:nonroot
+
+To opt-in to the new behavior now, add this:
+
+    defaultBaseImage: ghcr.io/distroless/static:latest
+
+For more information see:
+    https://github.com/google/ko/issues/722
+-----------------------------------------------------------------
+`
+
+// configDefaultBaseImage is the default base image if not specified in .ko.yaml.
+const configDefaultBaseImage = "gcr.io/distroless/static:nonroot"
+
 // getBaseImage returns a function that determines the base image for a given import path.
 func getBaseImage(bo *options.BuildOptions) build.GetBase {
 	var cache sync.Map
@@ -92,7 +120,14 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 		//    github.com/googlecloudplatform/foo/cmd/bar
 		baseImage, ok := bo.BaseImageOverrides[strings.ToLower(s)]
 		if !ok || baseImage == "" {
-			baseImage = bo.BaseImage
+			if bo.BaseImage != "" {
+				baseImage = bo.BaseImage
+			} else {
+				baseOnce.Do(func() {
+					log.Print(defaultBaseImageWarning)
+					baseImage = configDefaultBaseImage
+				})
+			}
 		}
 		var nameOpts []name.Option
 		if bo.InsecureRegistry {
