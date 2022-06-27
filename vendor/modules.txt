@@ -230,7 +230,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.9.0
+# github.com/google/go-containerregistry v0.10.0
 ## explicit
 github.com/google/go-containerregistry/cmd/crane/cmd
 github.com/google/go-containerregistry/internal/and
@@ -428,7 +428,6 @@ golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
 golang.org/x/net/trace
 # golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401
-## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
 golang.org/x/oauth2/google
