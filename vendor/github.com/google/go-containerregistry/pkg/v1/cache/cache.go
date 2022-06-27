@@ -156,3 +156,39 @@ func (i *image) LayerByDiffID(h v1.Hash) (v1.Layer, error) {
 	}
 	return l, err
 }
+
+// ImageIndex returns a new ImageIndex which wraps the given ImageIndex's
+// children with either Image(child, c) or ImageIndex(child, c) depending on type.
+func ImageIndex(ii v1.ImageIndex, c Cache) v1.ImageIndex {
+	return &imageIndex{
+		inner: ii,
+		c:     c,
+	}
+}
+
+type imageIndex struct {
+	inner v1.ImageIndex
+	c     Cache
+}
+
+func (ii *imageIndex) MediaType() (types.MediaType, error)       { return ii.inner.MediaType() }
+func (ii *imageIndex) Digest() (v1.Hash, error)                  { return ii.inner.Digest() }
+func (ii *imageIndex) Size() (int64, error)                      { return ii.inner.Size() }
+func (ii *imageIndex) IndexManifest() (*v1.IndexManifest, error) { return ii.inner.IndexManifest() }
+func (ii *imageIndex) RawManifest() ([]byte, error)              { return ii.inner.RawManifest() }
+
+func (ii *imageIndex) Image(h v1.Hash) (v1.Image, error) {
+	i, err := ii.inner.Image(h)
+	if err != nil {
+		return nil, err
+	}
+	return Image(i, ii.c), nil
+}
+
+func (ii *imageIndex) ImageIndex(h v1.Hash) (v1.ImageIndex, error) {
+	idx, err := ii.inner.ImageIndex(h)
+	if err != nil {
+		return nil, err
+	}
+	return ImageIndex(idx, ii.c), nil
+}

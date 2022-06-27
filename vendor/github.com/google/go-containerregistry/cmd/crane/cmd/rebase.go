@@ -35,7 +35,7 @@ func NewCmdRebase(options *[]crane.Option) *cobra.Command {
 	rebaseCmd := &cobra.Command{
 		Use:   "rebase",
 		Short: "Rebase an image onto a new base image",
-		Args:  cobra.MaximumNArgs(1),
+		Args:  cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if orig == "" {
 				orig = args[0]
