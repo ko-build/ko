@@ -16,12 +16,14 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	// Give this an interesting import
 	_ "github.com/google/go-containerregistry/pkg/registry"
@@ -39,6 +41,14 @@ func main() {
 	flag.Parse()
 
 	log.Println("version =", version)
+
+	// Exercise timezone conversions, which demonstrates tzdata is provided
+	// by the base image.
+	now := time.Now()
+	loc, _ := time.LoadLocation("UTC")
+	fmt.Printf("UTC Time: %s\n", now.In(loc))
+	loc, _ = time.LoadLocation("America/New_York")
+	fmt.Printf("New York Time: %s\n", now.In(loc))
 
 	dp := os.Getenv("KO_DATA_PATH")
 	file := filepath.Join(dp, *f)
