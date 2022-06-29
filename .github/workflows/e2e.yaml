@@ -50,7 +50,7 @@ jobs:
 
         # Build and run the test/ binary, which should log "Hello there" served from KO_DATA_PATH
         testimg=$(go run ./ build ./test --platform=${PLATFORM} --preserve-import-paths)
-        docker run ${testimg} --wait=false 2>&1 | grep "Hello there"
+        docker run ${testimg} --wait=false 2>&1 | tee >(grep "Hello there") # Log all output too.
 
         # Check that symlinks in kodata are chased.
         # Skip this test on Windows.
