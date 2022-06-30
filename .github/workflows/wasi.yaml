@@ -1,0 +1,53 @@
+name: Integration test for wasi
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  wasi:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - ubuntu-latest
+    name: wasi
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.17
+          check-latest: true
+      - name: setup tinygo
+        shell: bash
+        env:
+          TINYGO_VERSION: 0.23.0
+        run: |
+          wget https://github.com/tinygo-org/tinygo/releases/download/v"${TINYGO_VERSION}"/tinygo_${TINYGO_VERSION}_amd64.deb
+          sudo dpkg -i tinygo_${TINYGO_VERSION}_amd64.deb
+      - name: create crun wasmedge binary
+        shell: bash
+        run: ./test/wasi/crun-wasmedge.sh
+
+      - name: Build and run ko container
+        env:
+          KO_DOCKER_REPO: ko.local
+        shell: bash
+        run: |
+          set -euxo pipefail
+
+          # Build and run the test/wasi binary, which should print "hello from wasi"
+          testimg=$(go run ./ build ./test/wasi/ --platform="wasm/wasi")
+  
+          # export built image from docker into tar to load into podman
+          docker save $testimg -o testimg.tar
+
+          # run a nested podman container to use annotations (could be removed once docker is able to specify annotations on containers)
+          docker run --priviliged \
+            -v $(pwd)/testimg.tar:/tmp/testimg.tar \
+            -v /tmp/crun/crun:/usr/bin/crun \
+            quay.io/containers/podman:v4 \
+            sh -c "podman load -i /tmp/testimg.tar && podman run --runtime=/usr/bin/crun --annotations=module.wasm.image/variant=compat $testimg" \
+            | grep "hello from wasi"

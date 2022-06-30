@@ -34,6 +34,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/google"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
@@ -97,6 +98,15 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 		var nameOpts []name.Option
 		if bo.InsecureRegistry {
 			nameOpts = append(nameOpts, name.Insecure)
+		}
+
+		// look for wasm/wasi platform
+		for _, p := range bo.Platforms {
+			// use scratch image because wasm/wasi is not an official platform
+			if p == "wasm/wasi" {
+				// FIXME: not sure if returning a nil reference is a good idea
+				return nil, empty.Image, nil
+			}
 		}
 		ref, err := name.ParseReference(baseImage, nameOpts...)
 		if err != nil {

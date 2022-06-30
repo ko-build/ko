@@ -241,15 +241,6 @@ func getGoarm(platform v1.Platform) (string, error) {
 }
 
 func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
-	buildArgs, err := createBuildArgs(config)
-	if err != nil {
-		return "", err
-	}
-
-	args := make([]string, 0, 4+len(buildArgs))
-	args = append(args, "build")
-	args = append(args, buildArgs...)
-
 	env, err := buildEnv(platform, os.Environ(), config.Env)
 	if err != nil {
 		return "", fmt.Errorf("could not create env for %s: %w", ip, err)
@@ -279,25 +270,50 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	file := filepath.Join(tmpDir, "out")
 
-	args = append(args, "-o", file)
-	args = append(args, ip)
-	cmd := exec.CommandContext(ctx, "go", args...)
-	cmd.Dir = dir
-	cmd.Env = env
-
+	goBinary := "go"
+	if platform.String() == "wasm/wasi" {
+		goBinary = "tinygo"
+	}
+	cmd, err := gobuildCommand(ctx, config, goBinary, ip, file, dir, env)
+	if err != nil {
+		return "", fmt.Errorf("creating %v build exec.Cmd: %w", goBinary, err)
+	}
 	var output bytes.Buffer
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s for %s", ip, platform)
+	log.Printf("Building %s for %v with %v", ip, platform, goBinary)
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)
 		}
-		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
+		log.Printf("Unexpected error running \"%v build\": %v\n%v", goBinary, err, output.String())
 		return "", err
 	}
 	return file, nil
+}
+
+func gobuildCommand(ctx context.Context, config Config, goBinary string, ip string, outDir string, dir string, env []string) (*exec.Cmd, error) {
+	buildArgs, err := createBuildArgs(config)
+	if err != nil {
+		return nil, err
+	}
+
+	args := make([]string, 0, 4+len(buildArgs))
+	args = append(args, "build")
+	args = append(args, buildArgs...)
+	// if we are using tinygo, add wasi target
+	if goBinary == "tinygo" {
+		args = append(args, "-target", "wasi")
+	}
+
+	args = append(args, "-o", outDir)
+	args = append(args, ip)
+	cmd := exec.CommandContext(ctx, goBinary, args...)
+	cmd.Dir = dir
+	cmd.Env = env
+
+	return cmd, nil
 }
 
 func goversionm(ctx context.Context, file string, appPath string, _ v1.Image) ([]byte, types.MediaType, error) {
@@ -689,6 +705,8 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	return config
 }
 
+const wasmLayerAnnotationKey = "module.wasm.image/variant"
+
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
 	if err := g.semaphore.Acquire(ctx, 1); err != nil {
 		return nil, err
@@ -709,6 +727,10 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 	}
 
+	// disable trimpath flag because it doesn't exists in tinygo
+	if platform.String() == "wasm/wasi" {
+		g.trimpath = false
+	}
 	// Do the build into a temporary file.
 	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.configForImportPath(ref.Path()))
 	if err != nil {
@@ -720,30 +742,41 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	var layers []mutate.Addendum
 
-	// Create a layer from the kodata directory under this import path.
-	dataLayerBuf, err := g.tarKoData(ref, platform)
-	if err != nil {
-		return nil, err
+	// don't add kodata layer into wasi image
+	if platform.String() != "wasm/wasi" {
+		// Create a layer from the kodata directory under this import path.
+		dataLayerBuf, err := g.tarKoData(ref, platform)
+		if err != nil {
+			return nil, err
+		}
+		dataLayerBytes := dataLayerBuf.Bytes()
+		dataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+			return ioutil.NopCloser(bytes.NewBuffer(dataLayerBytes)), nil
+		}, tarball.WithCompressedCaching)
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, mutate.Addendum{
+			Layer: dataLayer,
+			History: v1.History{
+				Author:    "ko",
+				CreatedBy: "ko build " + ref.String(),
+				Created:   g.kodataCreationTime,
+				Comment:   "kodata contents, at $KO_DATA_PATH",
+			},
+		})
 	}
-	dataLayerBytes := dataLayerBuf.Bytes()
-	dataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewBuffer(dataLayerBytes)), nil
-	}, tarball.WithCompressedCaching)
-	if err != nil {
-		return nil, err
-	}
-	layers = append(layers, mutate.Addendum{
-		Layer: dataLayer,
-		History: v1.History{
-			Author:    "ko",
-			CreatedBy: "ko build " + ref.String(),
-			Created:   g.kodataCreationTime,
-			Comment:   "kodata contents, at $KO_DATA_PATH",
-		},
-	})
 
 	appDir := "/ko-app"
-	appPath := path.Join(appDir, appFilename(ref.Path()))
+	var filename string
+	if platform.String() == "wasm/wasi" {
+		// module.wasm.image/variant=compat-smart expects the entrypoint binary to be of form .wasm
+		filename = appFilename(fmt.Sprintf("%v.wasm", ref.Path()))
+	} else {
+		filename = appFilename(ref.Path())
+	}
+
+	appPath := path.Join(appDir, filename)
 
 	miss := func() (v1.Layer, error) {
 		return buildLayer(appPath, file, platform)
@@ -784,7 +817,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFilename(ref.Path())}
 		updatePath(cfg, `C:\ko-app`)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
-	} else {
+	} else if platform.String() != "wasm/wasi" {
 		updatePath(cfg, appDir)
 		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	}
@@ -909,7 +942,12 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as image: %v", base)
 		}
-		res, err = g.buildOne(ctx, s, baseImage, nil)
+		// user specified a platform, so force this platform, even if it fails
+		var platform *v1.Platform
+		if len(g.platformMatcher.platforms) == 1 {
+			platform = &g.platformMatcher.platforms[0]
+		}
+		res, err = g.buildOne(ctx, s, baseImage, platform)
 	default:
 		return nil, fmt.Errorf("base image media type: %s", mt)
 	}
