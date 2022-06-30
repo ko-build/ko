@@ -287,7 +287,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)
 		}
-		log.Printf("Unexpected error running \"%v build\": %v\n%v", goBinary, err, output.String())
+		log.Printf(`Unexpected error running "%v build": %v\n%v`, goBinary, err, output.String())
 		return "", err
 	}
 	return file, nil
