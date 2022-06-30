@@ -768,12 +768,10 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 
 	appDir := "/ko-app"
-	var filename string
+	filename := appFilename(ref.Path())
 	if platform.String() == "wasm/wasi" {
 		// module.wasm.image/variant=compat-smart expects the entrypoint binary to be of form .wasm
-		filename = appFilename(fmt.Sprintf("%v.wasm", ref.Path()))
-	} else {
-		filename = appFilename(ref.Path())
+		filename += ".wasm"
 	}
 
 	appPath := path.Join(appDir, filename)
