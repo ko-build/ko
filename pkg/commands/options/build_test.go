@@ -32,7 +32,7 @@ func TestDefaultBaseImage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	wantDefaultBaseImage := "gcr.io/distroless/base:nonroot" // matches value in ./testdata/.ko.yaml
+	wantDefaultBaseImage := "alpine" // matches value in ./testdata/config/.ko.yaml
 	if bo.BaseImage != wantDefaultBaseImage {
 		t.Fatalf("wanted BaseImage %s, got %s", wantDefaultBaseImage, bo.BaseImage)
 	}

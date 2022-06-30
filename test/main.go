@@ -16,12 +16,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"syscall"
+	"time"
 
 	// Give this an interesting import
 	_ "github.com/google/go-containerregistry/pkg/registry"
@@ -39,6 +42,24 @@ func main() {
 	flag.Parse()
 
 	log.Println("version =", version)
+
+	if runtime.GOOS == "windows" {
+		// Go seems to not load location data from Windows, so timezone
+		// conversion fails unless tzdata is embedded in the Go program
+		// with the go build tag `timetzdata`. Since we want to test
+		// loading tzdata provided by the base image below, we'll just
+		// skip that for Windows here.
+		// See https://github.com/google/ko/issues/739
+		log.Println("skipping timezone conversion on Windows")
+	} else {
+		// Exercise timezone conversions, which demonstrates tzdata is provided
+		// by the base image.
+		now := time.Now()
+		loc, _ := time.LoadLocation("UTC")
+		fmt.Printf("UTC Time: %s\n", now.In(loc))
+		loc, _ = time.LoadLocation("America/New_York")
+		fmt.Printf("New York Time: %s\n", now.In(loc))
+	}
 
 	dp := os.Getenv("KO_DATA_PATH")
 	file := filepath.Join(dp, *f)
