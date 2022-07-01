@@ -37,7 +37,7 @@ func goRef(path, version string) string {
 		path = strings.Join(
 			append(
 				[]string{strings.ToLower(p[0]), strings.ToLower(p[1])},
-				p[2:(len(p)-1)]...,
+				p[2:]...,
 			), "/",
 		)
 	}
