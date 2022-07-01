@@ -71,7 +71,7 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 		CopyrightText: "NOASSERTION",
 		// TODO: PackageComment: "NOASSERTION"
 		ExternalRefs: []ExternalRef{{
-			Category: "PACKAGE-MANAGER",
+			Category: "PACKAGE_MANAGER",
 			Type:     "purl",
 			Locator:  ociRef(bi.Path, imgDigest),
 		}},
@@ -101,7 +101,7 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 			CopyrightText: "NOASSERTION",
 			// TODO: PackageComment: "NOASSERTION"
 			ExternalRefs: []ExternalRef{{
-				Category: "PACKAGE-MANAGER",
+				Category: "PACKAGE_MANAGER",
 				Type:     "purl",
 				Locator:  goRef(dep.Path, dep.Version),
 			}},
