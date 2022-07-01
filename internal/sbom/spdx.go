@@ -170,22 +170,22 @@ type CreationInfo struct {
 }
 
 type Package struct {
-	ID                   string                  `json:"SPDXID"`
-	Name                 string                  `json:"name"`
-	Version              string                  `json:"versionInfo"`
-	FilesAnalyzed        bool                    `json:"filesAnalyzed"`
-	LicenseDeclared      string                  `json:"licenseDeclared"`
-	LicenseConcluded     string                  `json:"licenseConcluded"`
-	Description          string                  `json:"description,omitempty"`
-	DownloadLocation     string                  `json:"downloadLocation"`
-	Originator           string                  `json:"originator,omitempty"`
-	SourceInfo           string                  `json:"sourceInfo,omitempty"`
-	CopyrightText        string                  `json:"copyrightText"`
-	HasFiles             []string                `json:"hasFiles,omitempty"`
-	LicenseInfoFromFiles []string                `json:"licenseInfoFromFiles,omitempty"`
-	Checksums            []Checksum              `json:"checksums"`
-	ExternalRefs         []ExternalRef           `json:"externalRefs,omitempty"`
-	VerificationCode     PackageVerificationCode `json:"packageVerificationCode,omitempty"`
+	ID                   string                   `json:"SPDXID"`
+	Name                 string                   `json:"name"`
+	Version              string                   `json:"versionInfo"`
+	FilesAnalyzed        bool                     `json:"filesAnalyzed"`
+	LicenseDeclared      string                   `json:"licenseDeclared"`
+	LicenseConcluded     string                   `json:"licenseConcluded"`
+	Description          string                   `json:"description,omitempty"`
+	DownloadLocation     string                   `json:"downloadLocation"`
+	Originator           string                   `json:"originator,omitempty"`
+	SourceInfo           string                   `json:"sourceInfo,omitempty"`
+	CopyrightText        string                   `json:"copyrightText"`
+	HasFiles             []string                 `json:"hasFiles,omitempty"`
+	LicenseInfoFromFiles []string                 `json:"licenseInfoFromFiles,omitempty"`
+	Checksums            []Checksum               `json:"checksums,omitempty"`
+	ExternalRefs         []ExternalRef            `json:"externalRefs,omitempty"`
+	VerificationCode     *PackageVerificationCode `json:"packageVerificationCode,omitempty"`
 }
 
 type PackageVerificationCode struct {
