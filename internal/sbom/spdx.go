@@ -43,7 +43,7 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 		DataLicense: "CC0-1.0",
 		ID:          "SPDXRef-DOCUMENT",
 		Name:        bi.Main.Path,
-		Namespace:   "http://spdx.org/spdxpackages/" + bi.Main.Path,
+		Namespace:   "http://spdx.org/spdxdocs/" + bi.Main.Path,
 		CreationInfo: CreationInfo{
 			Creators: []string{"Tool: ko " + koVersion},
 		},
