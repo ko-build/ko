@@ -333,7 +333,7 @@ func spdx(version string) sbomber {
 		if err != nil {
 			return nil, "", err
 		}
-		return b, ctypes.SPDXMediaType, nil
+		return b, ctypes.SPDXJSONMediaType, nil
 	}
 }
 

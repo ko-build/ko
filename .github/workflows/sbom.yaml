@@ -90,12 +90,12 @@ jobs:
       - name: Generate and Validate
         run: |
           img=$(go run ./ build ./)
-          go run ./ deps $img --sbom=spdx > sbom.txt
+          go run ./ deps $img --sbom=spdx > sbom.json
 
-          java -jar ./spdx-tools-2.2.7-jar-with-dependencies.jar Verify sbom.txt
+          java -jar ./spdx-tools-2.2.7-jar-with-dependencies.jar Verify sbom.json
 
       - uses: actions/upload-artifact@v3
         if: ${{ always() }}
         with:
-          name: sbom.txt
-          path: sbom.txt
+          name: sbom.json
+          path: sbom.json
