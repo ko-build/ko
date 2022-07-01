@@ -71,7 +71,8 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 		ID:   imageID,
 		Name: imgDigest.String(),
 		// TODO: PackageSupplier: "Organization: " + bs.Main.Path
-		FilesAnalyzed: false,
+		DownloadLocation: NOASSERTION,
+		FilesAnalyzed:    false,
 		// TODO: PackageHomePage:  "https://" + bi.Main.Path,
 		LicenseConcluded: NOASSERTION,
 		LicenseDeclared:  NOASSERTION,
@@ -195,6 +196,7 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 	doc.Packages = []Package{{
 		ID:               indexID,
 		Name:             d.String(),
+		DownloadLocation: NOASSERTION,
 		FilesAnalyzed:    false,
 		LicenseConcluded: NOASSERTION,
 		LicenseDeclared:  NOASSERTION,
