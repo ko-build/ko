@@ -43,6 +43,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/internal/sbom"
+	buildplatform "github.com/google/ko/pkg/build/platform"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
 	ocimutate "github.com/sigstore/cosign/pkg/oci/mutate"
@@ -64,11 +65,6 @@ type GetBase func(context.Context, string) (name.Reference, Result, error)
 type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
 type sbomber func(context.Context, string, string, v1.Image) ([]byte, types.MediaType, error)
 
-type platformMatcher struct {
-	spec      []string
-	platforms []v1.Platform
-}
-
 type gobuild struct {
 	ctx                  context.Context
 	getBase              GetBase
@@ -79,7 +75,7 @@ type gobuild struct {
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
-	platformMatcher      *platformMatcher
+	platformMatcher      *buildplatform.Matcher
 	dir                  string
 	labels               map[string]string
 	semaphore            *semaphore.Weighted
@@ -110,7 +106,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	if gbo.getBase == nil {
 		return nil, errors.New("a way of providing base images must be specified, see build.WithBaseImages")
 	}
-	matcher, err := parseSpec(gbo.platforms)
+	matcher, err := buildplatform.ParseSpec(gbo.platforms)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +267,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	file := filepath.Join(tmpDir, "out")
 
 	goBinary := "go"
-	if platform.String() == "wasm/wasi" {
+	if buildplatform.IsWasi(&platform) {
 		goBinary = "tinygo"
 	}
 	cmd, err := gobuildCommand(ctx, config, goBinary, ip, file, dir, env)
@@ -705,7 +701,7 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	return config
 }
 
-const wasmLayerAnnotationKey = "module.wasm.image/variant"
+const wasmImageAnnotationKey = "module.wasm.image/variant"
 
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
 	if err := g.semaphore.Acquire(ctx, 1); err != nil {
@@ -727,8 +723,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 	}
 
+	isWasiPlatform := buildplatform.IsWasi(platform)
 	// disable trimpath flag because it doesn't exists in tinygo
-	if platform.String() == "wasm/wasi" {
+	if isWasiPlatform {
 		g.trimpath = false
 	}
 	// Do the build into a temporary file.
@@ -743,7 +740,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	var layers []mutate.Addendum
 
 	// don't add kodata layer into wasi image
-	if platform.String() != "wasm/wasi" {
+	if !isWasiPlatform {
 		// Create a layer from the kodata directory under this import path.
 		dataLayerBuf, err := g.tarKoData(ref, platform)
 		if err != nil {
@@ -769,7 +766,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	appDir := "/ko-app"
 	filename := appFilename(ref.Path())
-	if platform.String() == "wasm/wasi" {
+	if isWasiPlatform {
 		// module.wasm.image/variant=compat-smart expects the entrypoint binary to be of form .wasm
 		filename += ".wasm"
 	}
@@ -785,7 +782,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, err
 	}
 
-	layers = append(layers, mutate.Addendum{
+	binaryLayerAddendum := mutate.Addendum{
 		Layer: binaryLayer,
 		History: v1.History{
 			Author:    "ko",
@@ -793,7 +790,13 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 			CreatedBy: "ko build " + ref.String(),
 			Comment:   "go build output, at " + appPath,
 		},
-	})
+	}
+
+	if isWasiPlatform {
+		binaryLayerAddendum.MediaType = types.OCILayer
+	}
+
+	layers = append(layers, binaryLayerAddendum)
 
 	// Augment the base image with our application layer.
 	withApp, err := mutate.Append(base, layers...)
@@ -838,21 +841,38 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, err
 	}
 
-	si := signed.Image(image)
+	if isWasiPlatform {
+		image = mutate.MediaType(image, types.OCIManifestSchema1)
+		image = mutate.ConfigMediaType(image, types.OCIConfigJSON)
+		// annotate image for runtime to automaticly see that this image is run using a wasi runtime
+		image = mutate.Annotations(image, map[string]string{
+			wasmImageAnnotationKey: "compat-smart",
+		}).(v1.Image)
+	}
 
-	if g.sbom != nil {
-		sbom, mt, err := g.sbom(ctx, file, appPath, image)
-		if err != nil {
-			return nil, err
-		}
-		f, err := static.NewFile(sbom, static.WithLayerMediaType(mt))
-		if err != nil {
-			return nil, err
-		}
-		si, err = ocimutate.AttachFileToImage(si, "sbom", f)
-		if err != nil {
-			return nil, err
-		}
+	si, err := generateSbom(ctx, file, appPath, g.sbom, signed.Image(image))
+	if err != nil {
+		return nil, fmt.Errorf("generating sbom: %w", err)
+	}
+	return si, nil
+}
+
+func generateSbom(ctx context.Context, file string, appPath string, sbomFunc sbomber, si oci.SignedImage) (oci.SignedImage, error) {
+	if sbomFunc == nil {
+		return si, nil
+	}
+
+	sbom, mt, err := sbomFunc(ctx, file, appPath, si)
+	if err != nil {
+		return nil, err
+	}
+	f, err := static.NewFile(sbom, static.WithLayerMediaType(mt))
+	if err != nil {
+		return nil, err
+	}
+	si, err = ocimutate.AttachFileToImage(si, "sbom", f)
+	if err != nil {
+		return nil, err
 	}
 	return si, nil
 }
@@ -942,8 +962,8 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		}
 		// user specified a platform, so force this platform, even if it fails
 		var platform *v1.Platform
-		if len(g.platformMatcher.platforms) == 1 {
-			platform = &g.platformMatcher.platforms[0]
+		if len(g.platformMatcher.Platforms) == 1 {
+			platform = &g.platformMatcher.Platforms[0]
 		}
 		res, err = g.buildOne(ctx, s, baseImage, platform)
 	default:
@@ -968,7 +988,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, ref)
 		}
 
-		if g.platformMatcher.matches(desc.Platform) {
+		if g.platformMatcher.Matches(desc.Platform) {
 			matches = append(matches, desc)
 		}
 	}
@@ -1033,85 +1053,4 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 	// TODO(mattmoor): If we want to attach anything (e.g. signatures, attestations, SBOM)
 	// at the index level, we would do it here!
 	return idx, nil
-}
-
-func parseSpec(spec []string) (*platformMatcher, error) {
-	// Don't bother parsing "all".
-	// Empty slice should never happen because we default to linux/amd64 (or GOOS/GOARCH).
-	if len(spec) == 0 || spec[0] == "all" {
-		return &platformMatcher{spec: spec}, nil
-	}
-
-	platforms := []v1.Platform{}
-	for _, s := range spec {
-		p, err := v1.ParsePlatform(s)
-		if err != nil {
-			return nil, err
-		}
-		platforms = append(platforms, *p)
-	}
-	return &platformMatcher{spec: spec, platforms: platforms}, nil
-}
-
-func (pm *platformMatcher) matches(base *v1.Platform) bool {
-	if len(pm.spec) > 0 && pm.spec[0] == "all" {
-		return true
-	}
-
-	// Don't build anything without a platform field unless "all". Unclear what we should do here.
-	if base == nil {
-		return false
-	}
-
-	for _, p := range pm.platforms {
-		if p.OS != "" && base.OS != p.OS {
-			continue
-		}
-		if p.Architecture != "" && base.Architecture != p.Architecture {
-			continue
-		}
-		if p.Variant != "" && base.Variant != p.Variant {
-			continue
-		}
-
-		// Windows is... weird. Windows base images use osversion to
-		// communicate what Windows version is used, which matters for image
-		// selection at runtime.
-		//
-		// Windows osversions include the usual major/minor/patch version
-		// components, as well as an incrementing "build number" which can
-		// change when new Windows base images are released.
-		//
-		// In order to avoid having to match the entire osversion including the
-		// incrementing build number component, we allow matching a platform
-		// that only matches the first three osversion components, only for
-		// Windows images.
-		//
-		// If the X.Y.Z components don't match (or aren't formed as we expect),
-		// the platform doesn't match. Only if X.Y.Z matches and the extra
-		// build number component doesn't, do we consider the platform to
-		// match.
-		//
-		// Ref: https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility?tabs=windows-server-2022%2Cwindows-10-21H1#build-number-new-release-of-windows
-		if p.OSVersion != "" && p.OSVersion != base.OSVersion {
-			if p.OS != "windows" {
-				// osversion mismatch is only possibly allowed when os == windows.
-				continue
-			} else {
-				if pcount, bcount := strings.Count(p.OSVersion, "."), strings.Count(base.OSVersion, "."); pcount == 2 && bcount == 3 {
-					if p.OSVersion != base.OSVersion[:strings.LastIndex(base.OSVersion, ".")] {
-						// If requested osversion is X.Y.Z and potential match is X.Y.Z.A, all of X.Y.Z must match.
-						// Any other form of these osversions are not a match.
-						continue
-					}
-				} else {
-					// Partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
-					continue
-				}
-			}
-		}
-		return true
-	}
-
-	return false
 }

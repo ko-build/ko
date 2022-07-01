@@ -101,6 +101,7 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 		}
 
 		// look for wasm/wasi platform
+		// FIXME: with this implementation, if platforms has "wasm/wasi", only the first specified platform will be build using scratch
 		for _, p := range bo.Platforms {
 			// use scratch image because wasm/wasi is not an official platform
 			if p == "wasm/wasi" {
