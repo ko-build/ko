@@ -90,7 +90,7 @@ jobs:
       - name: Generate and Validate
         run: |
           img=$(go run ./ build ./)
-          go run ./ deps $img --sbom=spdx > sbom.json
+          go run ./ deps $img --sbom=spdx | tee sbom.json
 
           java -jar ./tools-java-1.0.4-jar-with-dependencies.jar Verify sbom.json
 
