@@ -38,12 +38,15 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 		return nil, err
 	}
 
+	mainPackageID := "SPDXRef-Package-" + strings.ReplaceAll(bi.Main.Path, "/", ".")
+
 	doc := Document{
-		Version:     "SPDX-2.2",
-		DataLicense: "CC0-1.0",
-		ID:          "SPDXRef-DOCUMENT",
-		Name:        bi.Main.Path,
-		Namespace:   "http://spdx.org/spdxdocs/" + bi.Main.Path,
+		Version:           "SPDX-2.2",
+		DataLicense:       "CC0-1.0",
+		ID:                "SPDXRef-DOCUMENT",
+		Name:              bi.Main.Path,
+		Namespace:         "http://spdx.org/spdxdocs/" + bi.Main.Path,
+		DocumentDescribes: []string{mainPackageID},
 		CreationInfo: CreationInfo{
 			Creators: []string{"Tool: ko " + koVersion},
 		},
@@ -51,7 +54,6 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 		Relationships: make([]Relationship, 0, 1+len(bi.Deps)),
 	}
 
-	mainPackageID := "SPDXRef-Package-" + strings.ReplaceAll(bi.Main.Path, "/", ".")
 	doc.Relationships = append(doc.Relationships, Relationship{
 		Element: "SPDXRef-DOCUMENT",
 		Type:    "DESCRIBES",
@@ -157,15 +159,15 @@ type Document struct {
 	CreationInfo      CreationInfo   `json:"creationInfo"`
 	DataLicense       string         `json:"dataLicense"`
 	Namespace         string         `json:"documentNamespace"`
-	DocumentDescribes []string       `json:"documentDescribes"`
+	DocumentDescribes []string       `json:"documentDescribes,omitempty"`
 	Files             []File         `json:"files,omitempty"`
-	Packages          []Package      `json:"packages"`
-	Relationships     []Relationship `json:"relationships"`
+	Packages          []Package      `json:"packages,omitempty"`
+	Relationships     []Relationship `json:"relationships,omitempty"`
 }
 
 type CreationInfo struct {
 	Created            string   `json:"created"` // Date
-	Creators           []string `json:"creators"`
+	Creators           []string `json:"creators,omitempty"`
 	LicenseListVersion string   `json:"licenseListVersion,omitempty"`
 }
 
