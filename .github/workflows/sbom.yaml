@@ -84,18 +84,18 @@ jobs:
 
       - name: Install SPDX Tools
         run: |
-          wget https://github.com/spdx/tools/releases/download/v2.2.7/spdx-tools-2.2.7.zip
-          unzip spdx-tools-2.2.7.zip
+          wget https://github.com/spdx/tools-java/releases/download/v1.0.4/tools-java-1.0.4.zip
+          unzip tools-java-1.0.4.zip
 
       - name: Generate and Validate
         run: |
           img=$(go run ./ build ./)
-          go run ./ deps $img --sbom=spdx > sbom.txt
+          go run ./ deps $img --sbom=spdx | tee sbom.json
 
-          java -jar ./spdx-tools-2.2.7-jar-with-dependencies.jar Verify sbom.txt
+          java -jar ./tools-java-1.0.4-jar-with-dependencies.jar Verify sbom.json
 
       - uses: actions/upload-artifact@v3
         if: ${{ always() }}
         with:
-          name: sbom.txt
-          path: sbom.txt
+          name: sbom.json
+          path: sbom.json
