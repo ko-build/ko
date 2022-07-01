@@ -150,16 +150,17 @@ const (
 )
 
 type Document struct {
-	ID                string         `json:"SPDXID"`
-	Name              string         `json:"name"`
-	Version           string         `json:"spdxVersion"`
-	CreationInfo      CreationInfo   `json:"creationInfo"`
-	DataLicense       string         `json:"dataLicense"`
-	Namespace         string         `json:"documentNamespace"`
-	DocumentDescribes []string       `json:"documentDescribes,omitempty"`
-	Files             []File         `json:"files,omitempty"`
-	Packages          []Package      `json:"packages,omitempty"`
-	Relationships     []Relationship `json:"relationships,omitempty"`
+	ID                   string                `json:"SPDXID"`
+	Name                 string                `json:"name"`
+	Version              string                `json:"spdxVersion"`
+	CreationInfo         CreationInfo          `json:"creationInfo"`
+	DataLicense          string                `json:"dataLicense"`
+	Namespace            string                `json:"documentNamespace"`
+	DocumentDescribes    []string              `json:"documentDescribes,omitempty"`
+	Files                []File                `json:"files,omitempty"`
+	Packages             []Package             `json:"packages,omitempty"`
+	Relationships        []Relationship        `json:"relationships,omitempty"`
+	ExternalDocumentRefs []ExternalDocumentRef `json:"externalDocumentRefs,omitempty"`
 }
 
 type CreationInfo struct {
@@ -219,4 +220,10 @@ type Relationship struct {
 	Element string `json:"spdxElementId"`
 	Type    string `json:"relationshipType"`
 	Related string `json:"relatedSpdxElement"`
+}
+
+type ExternalDocumentRef struct {
+	Checksum           Checksum `json:"checksum"`
+	ExternalDocumentID string   `json:"externalDocumentId"`
+	SPDXDocument       string   `json:"spdxDocument"`
 }
