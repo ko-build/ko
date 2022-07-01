@@ -41,7 +41,7 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 	mainPackageID := "SPDXRef-Package-" + strings.ReplaceAll(bi.Main.Path, "/", ".")
 
 	doc := Document{
-		Version:           "SPDX-2.2",
+		Version:           Version,
 		DataLicense:       "CC0-1.0",
 		ID:                "SPDXRef-DOCUMENT",
 		Name:              bi.Main.Path,
@@ -68,11 +68,9 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 		DownloadLocation: "https://" + bi.Main.Path,
 		FilesAnalyzed:    false,
 		// TODO: PackageHomePage:  "https://" + bi.Main.Path,
-		LicenseConcluded: "NOASSERTION",
-		LicenseDeclared:  "NOASSERTION",
-		// TODO: PackageLicenseComments: "NOASSERTION"
-		CopyrightText: "NOASSERTION",
-		// TODO: PackageComment: "NOASSERTION"
+		LicenseConcluded: NOASSERTION,
+		LicenseDeclared:  NOASSERTION,
+		CopyrightText:    NOASSERTION,
 		ExternalRefs: []ExternalRef{{
 			Category: "PACKAGE_MANAGER",
 			Type:     "purl",
@@ -98,11 +96,9 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 			// TODO: PackageSupplier: "Organization: " + dep.Path
 			DownloadLocation: fmt.Sprintf("https://proxy.golang.org/%s/@v/%s.zip", dep.Path, dep.Version),
 			FilesAnalyzed:    false,
-			LicenseConcluded: "NOASSERTION",
-			LicenseDeclared:  "NOASSERTION",
-			// TODO: PackageLicenseComments: "NOASSERTION"
-			CopyrightText: "NOASSERTION",
-			// TODO: PackageComment: "NOASSERTION"
+			LicenseConcluded: NOASSERTION,
+			LicenseDeclared:  NOASSERTION,
+			CopyrightText:    NOASSERTION,
 			ExternalRefs: []ExternalRef{{
 				Category: "PACKAGE_MANAGER",
 				Type:     "purl",
