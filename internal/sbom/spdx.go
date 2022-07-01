@@ -19,7 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"runtime/debug"
 	"strings"
 	"time"
 
@@ -27,6 +26,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/sigstore/cosign/pkg/oci"
 )
+
+func ociRef(path string, imgDigest v1.Hash) string {
+	parts := strings.Split(path, "/")
+	return fmt.Sprintf("pkg:oci/%s@%s", parts[len(parts)-1], imgDigest.String())
+}
 
 const dateFormat = "2006-01-02T15:04:05Z"
 
@@ -276,12 +280,6 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 
 func ociPackageName(d v1.Hash) string {
 	return fmt.Sprintf("SPDXRef-Package-%s-%s", d.Algorithm, d.Hex)
-}
-
-func modulePackageName(mod *debug.Module) string {
-	return fmt.Sprintf("SPDXRef-Package-%s-%s",
-		strings.ReplaceAll(mod.Path, "/", "."),
-		mod.Version)
 }
 
 func starterDocument(koVersion string, date time.Time, d v1.Hash) (Document, string) {

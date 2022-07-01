@@ -19,38 +19,10 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"runtime/debug"
 	"strings"
 
-	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/sigstore/cosign/pkg/oci"
 )
-
-func bomRef(path, version string) string {
-	return fmt.Sprintf("pkg:golang/%s@%s?type=module", path, version)
-}
-
-func goRef(mod *debug.Module) string {
-	path := mod.Path
-	// Try to lowercase the first 2 path elements to comply with spec
-	// https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst#golang
-	p := strings.Split(path, "/")
-	if len(p) > 2 {
-		path = strings.Join(
-			append(
-				[]string{strings.ToLower(p[0]), strings.ToLower(p[1])},
-				p[2:]...,
-			), "/",
-		)
-	}
-	return fmt.Sprintf("pkg:golang/%s@%s?type=module", path, mod.Version)
-}
-
-func ociRef(path string, imgDigest v1.Hash) string {
-	parts := strings.Split(path, "/")
-	return fmt.Sprintf("pkg:oci/%s@%s", parts[len(parts)-1], imgDigest.String())
-}
 
 func h1ToSHA256(s string) string {
 	if !strings.HasPrefix(s, "h1:") {
@@ -81,11 +53,11 @@ func GenerateImageCycloneDX(mod []byte) ([]byte, error) {
 		Version:     1,
 		Metadata: metadata{
 			Component: component{
-				BOMRef:  bomRef(bi.Main.Path, bi.Main.Version),
+				BOMRef:  bomRef(&bi.Main),
 				Type:    "application",
 				Name:    bi.Main.Path,
 				Version: bi.Main.Version,
-				Purl:    bomRef(bi.Main.Path, bi.Main.Version),
+				Purl:    bomRef(&bi.Main),
 				ExternalReferences: []externalReference{{
 					URL:  "https://" + bi.Main.Path,
 					Type: "vcs",
@@ -100,12 +72,12 @@ func GenerateImageCycloneDX(mod []byte) ([]byte, error) {
 			// TODO: include bi.Settings?
 		},
 		Dependencies: []dependency{{
-			Ref: bomRef(bi.Main.Path, bi.Main.Version),
+			Ref: bomRef(&bi.Main),
 		}},
 		Compositions: []composition{{
 			Aggregate: "complete",
 			Dependencies: []string{
-				bomRef(bi.Main.Path, bi.Main.Version),
+				bomRef(&bi.Main),
 			},
 		}, {
 			Aggregate:    "unknown",
@@ -118,12 +90,12 @@ func GenerateImageCycloneDX(mod []byte) ([]byte, error) {
 			continue
 		}
 		comp := component{
-			BOMRef:  bomRef(dep.Path, dep.Version),
+			BOMRef:  bomRef(dep),
 			Type:    "library",
 			Name:    dep.Path,
 			Version: dep.Version,
 			Scope:   "required",
-			Purl:    bomRef(dep.Path, dep.Version),
+			Purl:    bomRef(dep),
 			ExternalReferences: []externalReference{{
 				URL:  "https://" + dep.Path,
 				Type: "vcs",
@@ -136,12 +108,12 @@ func GenerateImageCycloneDX(mod []byte) ([]byte, error) {
 			}}
 		}
 		doc.Components = append(doc.Components, comp)
-		doc.Dependencies[0].DependsOn = append(doc.Dependencies[0].DependsOn, bomRef(dep.Path, dep.Version))
+		doc.Dependencies[0].DependsOn = append(doc.Dependencies[0].DependsOn, bomRef(dep))
 		doc.Dependencies = append(doc.Dependencies, dependency{
-			Ref: bomRef(dep.Path, dep.Version),
+			Ref: bomRef(dep),
 		})
 
-		doc.Compositions[1].Dependencies = append(doc.Compositions[1].Dependencies, bomRef(dep.Path, dep.Version))
+		doc.Compositions[1].Dependencies = append(doc.Compositions[1].Dependencies, bomRef(dep))
 	}
 
 	var buf bytes.Buffer
