@@ -20,16 +20,19 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/sigstore/cosign/pkg/oci"
 )
 
 func bomRef(path, version string) string {
 	return fmt.Sprintf("pkg:golang/%s@%s?type=module", path, version)
 }
 
-func goRef(path, version string) string {
+func goRef(mod *debug.Module) string {
+	path := mod.Path
 	// Try to lowercase the first 2 path elements to comply with spec
 	// https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst#golang
 	p := strings.Split(path, "/")
@@ -41,7 +44,7 @@ func goRef(path, version string) string {
 			), "/",
 		)
 	}
-	return fmt.Sprintf("pkg:golang/%s@%s?type=module", path, version)
+	return fmt.Sprintf("pkg:golang/%s@%s?type=module", path, mod.Version)
 }
 
 func ociRef(path string, imgDigest v1.Hash) string {
@@ -60,7 +63,7 @@ func h1ToSHA256(s string) string {
 	return hex.EncodeToString(b)
 }
 
-func GenerateCycloneDX(mod []byte) ([]byte, error) {
+func GenerateImageCycloneDX(mod []byte) ([]byte, error) {
 	var err error
 	mod, err = massageGoVersionM(mod)
 	if err != nil {
@@ -148,6 +151,10 @@ func GenerateCycloneDX(mod []byte) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func GenerateIndexCycloneDX(sii oci.SignedImageIndex) ([]byte, error) {
+	return nil, nil
 }
 
 type document struct {

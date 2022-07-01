@@ -62,7 +62,8 @@ const (
 type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
-type sbomber func(context.Context, string, string, v1.Image) ([]byte, types.MediaType, error)
+
+type sbomber func(context.Context, string, string, oci.SignedEntity) ([]byte, types.MediaType, error)
 
 type platformMatcher struct {
 	spec      []string
@@ -300,55 +301,76 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	return file, nil
 }
 
-func goversionm(ctx context.Context, file string, appPath string, _ v1.Image) ([]byte, types.MediaType, error) {
-	sbom := bytes.NewBuffer(nil)
-	cmd := exec.CommandContext(ctx, "go", "version", "-m", file)
-	cmd.Stdout = sbom
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return nil, "", err
-	}
+func goversionm(ctx context.Context, file string, appPath string, se oci.SignedEntity) ([]byte, types.MediaType, error) {
+	switch se.(type) {
+	case oci.SignedImage:
+		sbom := bytes.NewBuffer(nil)
+		cmd := exec.CommandContext(ctx, "go", "version", "-m", file)
+		cmd.Stdout = sbom
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return nil, "", err
+		}
 
-	// In order to get deterministics SBOMs replace our randomized
-	// file name with the path the app will get inside of the container.
-	return []byte(strings.Replace(sbom.String(), file, appPath, 1)), "application/vnd.go.version-m", nil
+		// In order to get deterministics SBOMs replace our randomized
+		// file name with the path the app will get inside of the container.
+		return []byte(strings.Replace(sbom.String(), file, appPath, 1)), "application/vnd.go.version-m", nil
+
+	case oci.SignedImageIndex:
+		return nil, "", nil
+
+	default:
+		return nil, "", fmt.Errorf("unrecognized type: %T", se)
+	}
 }
 
 func spdx(version string) sbomber {
-	return func(ctx context.Context, file string, appPath string, img v1.Image) ([]byte, types.MediaType, error) {
-		b, _, err := goversionm(ctx, file, appPath, img)
-		if err != nil {
-			return nil, "", err
-		}
+	return func(ctx context.Context, file string, appPath string, se oci.SignedEntity) ([]byte, types.MediaType, error) {
+		switch obj := se.(type) {
+		case oci.SignedImage:
+			b, _, err := goversionm(ctx, file, appPath, obj)
+			if err != nil {
+				return nil, "", err
+			}
 
-		cfg, err := img.ConfigFile()
-		if err != nil {
-			return nil, "", err
+			b, err = sbom.GenerateImageSPDX(version, b, obj)
+			if err != nil {
+				return nil, "", err
+			}
+			return b, ctypes.SPDXJSONMediaType, nil
+
+		case oci.SignedImageIndex:
+			b, err := sbom.GenerateIndexSPDX(version, obj)
+			return b, ctypes.SPDXJSONMediaType, err
+
+		default:
+			return nil, "", fmt.Errorf("unrecognized type: %T", se)
 		}
-		imgDigest, err := img.Digest()
-		if err != nil {
-			return nil, "", err
-		}
-		b, err = sbom.GenerateSPDX(version, cfg.Created.Time, b, imgDigest)
-		if err != nil {
-			return nil, "", err
-		}
-		return b, ctypes.SPDXJSONMediaType, nil
 	}
 }
 
 func cycloneDX() sbomber {
-	return func(ctx context.Context, file string, appPath string, img v1.Image) ([]byte, types.MediaType, error) {
-		b, _, err := goversionm(ctx, file, appPath, img)
-		if err != nil {
-			return nil, "", err
-		}
+	return func(ctx context.Context, file string, appPath string, se oci.SignedEntity) ([]byte, types.MediaType, error) {
+		switch obj := se.(type) {
+		case oci.SignedImage:
+			b, _, err := goversionm(ctx, file, appPath, obj)
+			if err != nil {
+				return nil, "", err
+			}
 
-		b, err = sbom.GenerateCycloneDX(b)
-		if err != nil {
-			return nil, "", err
+			b, err = sbom.GenerateImageCycloneDX(b)
+			if err != nil {
+				return nil, "", err
+			}
+			return b, ctypes.CycloneDXJSONMediaType, nil
+
+		case oci.SignedImageIndex:
+			b, err := sbom.GenerateIndexCycloneDX(obj)
+			return b, ctypes.SPDXJSONMediaType, err
+
+		default:
+			return nil, "", fmt.Errorf("unrecognized type: %T", se)
 		}
-		return b, ctypes.CycloneDXJSONMediaType, nil
 	}
 }
 
@@ -810,7 +832,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	si := signed.Image(image)
 
 	if g.sbom != nil {
-		sbom, mt, err := g.sbom(ctx, file, appPath, image)
+		sbom, mt, err := g.sbom(ctx, file, appPath, si)
 		if err != nil {
 			return nil, err
 		}
@@ -992,8 +1014,23 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			im.Annotations).(v1.ImageIndex),
 		adds...)
 
-	// TODO(mattmoor): If we want to attach anything (e.g. signatures, attestations, SBOM)
-	// at the index level, we would do it here!
+	if g.sbom != nil {
+		sbom, mt, err := g.sbom(ctx, "", "", idx)
+		if err != nil {
+			return nil, err
+		}
+		if sbom != nil {
+			f, err := static.NewFile(sbom, static.WithLayerMediaType(mt))
+			if err != nil {
+				return nil, err
+			}
+			idx, err = ocimutate.AttachFileToImageIndex(idx, "sbom", f)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return idx, nil
 }
 

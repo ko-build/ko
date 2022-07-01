@@ -30,6 +30,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/ko/internal/sbom"
+	"github.com/sigstore/cosign/pkg/oci/signed"
 	"github.com/spf13/cobra"
 )
 
@@ -132,19 +133,15 @@ If the image was not built using ko, or if it was built without embedding depend
 					[]byte(n),
 					[]byte(path.Join("/ko-app", filepath.Base(filepath.Clean(h.Name)))),
 					1)
-				imgDigest, err := img.Digest()
-				if err != nil {
-					return err
-				}
 				switch sbomType {
 				case "spdx":
-					b, err := sbom.GenerateSPDX(Version, cfg.Created.Time, mod, imgDigest)
+					b, err := sbom.GenerateImageSPDX(Version, mod, signed.Image(img))
 					if err != nil {
 						return err
 					}
 					io.Copy(os.Stdout, bytes.NewReader(b))
 				case "cyclonedx":
-					b, err := sbom.GenerateCycloneDX(mod)
+					b, err := sbom.GenerateImageCycloneDX(mod)
 					if err != nil {
 						return err
 					}
