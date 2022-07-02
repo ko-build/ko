@@ -391,12 +391,6 @@ type ExternalRef struct {
 	Type     string `json:"referenceType"`
 }
 
-type ExternalDocumentRef struct {
-	Checksum           Checksum `json:"checksum"`
-	ExternalDocumentID string   `json:"externalDocumentId"`
-	SPDXDocument       string   `json:"spdxDocument"`
-}
-
 type Relationship struct {
 	Element string `json:"spdxElementId"`
 	Type    string `json:"relationshipType"`
