@@ -182,7 +182,7 @@ func extractDate(sii oci.SignedImageIndex) (*time.Time, error) {
 }
 
 func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, error) {
-	d, err := sii.Digest()
+	indexDigest, err := sii.Digest()
 	if err != nil {
 		return nil, err
 	}
@@ -192,23 +192,23 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 		return nil, err
 	}
 
-	doc, indexID := starterDocument(koVersion, *date, d)
+	doc, indexID := starterDocument(koVersion, *date, indexDigest)
 	doc.Packages = []Package{{
 		ID:               indexID,
-		Name:             d.String(),
+		Name:             indexDigest.String(),
 		DownloadLocation: NOASSERTION,
 		FilesAnalyzed:    false,
 		LicenseConcluded: NOASSERTION,
 		LicenseDeclared:  NOASSERTION,
 		CopyrightText:    NOASSERTION,
 		Checksums: []Checksum{{
-			Algorithm: strings.ToUpper(d.Algorithm),
-			Value:     d.Hex,
+			Algorithm: strings.ToUpper(indexDigest.Algorithm),
+			Value:     indexDigest.Hex,
 		}},
 		ExternalRefs: []ExternalRef{{
 			Category: "PACKAGE_MANAGER",
 			Type:     "purl",
-			Locator:  ociRef("index", d),
+			Locator:  ociRef("index", indexDigest),
 		}},
 	}}
 
@@ -224,45 +224,41 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 				return nil, err
 			}
 
-			f, err := si.Attachment("sbom")
-			if err != nil {
-				return nil, err
-			}
-			sd, err := f.Digest()
+			imageDigest, err := si.Digest()
 			if err != nil {
 				return nil, err
 			}
 
-			// TODO: This should capture the ENTIRE desc.Platform, but I am
-			// starting with just architecture.
-			docID := fmt.Sprintf("DocumentRef-%s-image-sbom", desc.Platform.Architecture)
-
-			// This must match the name of the package in the image's SBOM.
-			spdxID := ociPackageName(desc.Digest)
+			depID := ociPackageName(imageDigest)
 
 			doc.Relationships = append(doc.Relationships, Relationship{
-				Element: fmt.Sprintf("%s:%s", docID, spdxID),
-				Type:    "VARIANT_OF",
-				Related: indexID,
+				Element: ociPackageName(indexDigest),
+				Type:    "CONTAINS",
+				Related: depID,
 			})
 
-			doc.ExternalDocumentRefs = append(doc.ExternalDocumentRefs, ExternalDocumentRef{
-				Checksum: Checksum{
-					Algorithm: strings.ToUpper(sd.Algorithm),
-					Value:     sd.Hex,
-				},
-				ExternalDocumentID: docID,
-				// This isn't quite right, but what we are trying to convey here
-				// is that the external document being referenced is the SBOM
-				// associated with `desc.Digest` with the checksum expressed
-				// above.  This will result in a pURL like:
-				//    pkg:oci/sbom@sha256:{image digest}
-				// We should look for this SBOM alongside the image with tag:
-				//    :sha256-{image digest}.sbom
-				// ... and the SBOM itself will have the digest presented in the
-				// checksum field above.
-				SPDXDocument: ociRef("sbom", desc.Digest),
-			})
+			pkg := Package{
+				ID:      depID,
+				Name:    imageDigest.String(),
+				Version: desc.Platform.String(),
+				// TODO: PackageSupplier: "Organization: " + dep.Path
+				DownloadLocation: NOASSERTION,
+				FilesAnalyzed:    false,
+				LicenseConcluded: NOASSERTION,
+				LicenseDeclared:  NOASSERTION,
+				CopyrightText:    NOASSERTION,
+				ExternalRefs: []ExternalRef{{
+					Category: "PACKAGE_MANAGER",
+					Type:     "purl",
+					Locator:  ociRef("image", imageDigest),
+				}},
+				Checksums: []Checksum{{
+					Algorithm: strings.ToUpper(imageDigest.Algorithm),
+					Value:     imageDigest.Hex,
+				}},
+			}
+
+			doc.Packages = append(doc.Packages, pkg)
 
 		default:
 			// We shouldn't need to handle nested indices, since we don't build
