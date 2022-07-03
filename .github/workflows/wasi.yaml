@@ -29,25 +29,41 @@ jobs:
           sudo dpkg -i tinygo_${TINYGO_VERSION}_amd64.deb
       - name: create crun wasmedge binary
         shell: bash
-        run: ./test/wasi/crun-wasmedge.sh
+        run: |
+          echo -e "Installing WasmEdge"
+          if [ -f install.sh ]; then
+            rm -f install.sh
+          fi
+          curl -L -o install.sh -q https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh
+          sudo chmod a+x install.sh
+          # use 0.9.1 because 0.10.0 had a breaking change which is not yet fixed in crun.
+          # See https://github.com/containers/crun/pull/933
+          sudo bash ./install.sh --path="/usr/local" -v 0.9.1
+          rm -rf install.sh
+
+          echo -e "Building and installing crun"
+          sudo apt install -y make git gcc build-essential pkgconf libtool libsystemd-dev \
+              libprotobuf-c-dev libcap-dev libseccomp-dev libyajl-dev \
+              go-md2man libtool autoconf python3 automake
+
+          git clone https://github.com/containers/crun /tmp/crun
+          cd /tmp/crun
+          ./autogen.sh
+          ./configure --with-wasmedge
+          make
 
       - name: Build and run ko container
-        env:
-          KO_DOCKER_REPO: ko.local
         shell: bash
         run: |
           set -euxo pipefail
-
+          export KO_DOCKER_REPO=$(uuidgen |tr "[:upper:]" "[:lower:]")
           # Build and run the test/wasi binary, which should print "hello from wasi"
           testimg=$(go run ./ build ./test/wasi/ --platform="wasm/wasi")
   
-          # export built image from docker into tar to load into podman
-          docker save $testimg -o testimg.tar
-
           # run a nested podman container to use annotations (could be removed once docker is able to specify annotations on containers)
           docker run --priviliged \
-            -v $(pwd)/testimg.tar:/tmp/testimg.tar \
             -v /tmp/crun/crun:/usr/bin/crun \
             quay.io/containers/podman:v4 \
-            sh -c "podman load -i /tmp/testimg.tar && podman run --runtime=/usr/bin/crun --annotations=module.wasm.image/variant=compat $testimg" \
+            podman run --runtime=/usr/bin/crun $testimg \
             | grep "hello from wasi"
+
