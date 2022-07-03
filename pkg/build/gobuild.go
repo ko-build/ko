@@ -890,9 +890,7 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		anns := map[string]string{
 			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
 		}
-		if _, ok := baseRef.(name.Tag); ok {
-			anns[specsv1.AnnotationBaseImageName] = baseRef.Name()
-		}
+		anns[specsv1.AnnotationBaseImageName] = baseRef.Name()
 		base = mutate.Annotations(base, anns).(Result)
 	}
 
