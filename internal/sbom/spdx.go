@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -27,9 +28,24 @@ import (
 	"github.com/sigstore/cosign/pkg/oci"
 )
 
-func ociRef(path string, imgDigest v1.Hash) string {
+type qualifier struct {
+	key   string
+	value string
+}
+
+// ociRef constructs a pURL for the OCI image according to:
+// https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst#oci
+func ociRef(path string, imgDigest v1.Hash, qual ...qualifier) string {
 	parts := strings.Split(path, "/")
-	return fmt.Sprintf("pkg:oci/%s@%s", parts[len(parts)-1], imgDigest.String())
+	purl := fmt.Sprintf("pkg:oci/%s@%s", parts[len(parts)-1], imgDigest.String())
+	if num := len(qual); num > 0 {
+		qs := make(url.Values, num)
+		for _, q := range qual {
+			qs.Add(q.key, q.value)
+		}
+		purl = purl + "?" + qs.Encode()
+	}
+	return purl
 }
 
 const dateFormat = "2006-01-02T15:04:05Z"
@@ -250,7 +266,10 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 				ExternalRefs: []ExternalRef{{
 					Category: "PACKAGE_MANAGER",
 					Type:     "purl",
-					Locator:  ociRef("image", imageDigest),
+					Locator: ociRef("image", imageDigest, qualifier{
+						key:   "arch",
+						value: desc.Platform.Architecture,
+					}),
 				}},
 				Checksums: []Checksum{{
 					Algorithm: strings.ToUpper(imageDigest.Algorithm),
