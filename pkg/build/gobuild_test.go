@@ -392,14 +392,14 @@ func TestBuildConfig(t *testing.T) {
 	}
 }
 
-func nilGetBase(_ context.Context, _ string) (name.Reference, Result, error) {
+func nilGetBase(context.Context, string) (name.Reference, Result, error) {
 	return nil, nil, nil
 }
 
 const wantSBOM = "This is our fake SBOM"
 
 // A helper method we use to substitute for the default "build" method.
-func fauxSBOM(_ context.Context, _ string, _ string, _ oci.SignedEntity) ([]byte, types.MediaType, error) {
+func fauxSBOM(context.Context, string, string, oci.SignedEntity) ([]byte, types.MediaType, error) {
 	return []byte(wantSBOM), "application/vnd.garbage", nil
 }
 
