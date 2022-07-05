@@ -17,16 +17,40 @@ package sbom
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/sigstore/cosign/pkg/oci"
 )
+
+type qualifier struct {
+	key   string
+	value string
+}
+
+// ociRef constructs a pURL for the OCI image according to:
+// https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst#oci
+func ociRef(path string, imgDigest v1.Hash, qual ...qualifier) string {
+	parts := strings.Split(path, "/")
+	purl := fmt.Sprintf("pkg:oci/%s@%s", parts[len(parts)-1], imgDigest.String())
+	if num := len(qual); num > 0 {
+		qs := make(url.Values, num)
+		for _, q := range qual {
+			qs.Add(q.key, q.value)
+		}
+		purl = purl + "?" + qs.Encode()
+	}
+	return purl
+}
 
 const dateFormat = "2006-01-02T15:04:05Z"
 
-func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Hash) ([]byte, error) {
+func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byte, error) {
 	var err error
 	mod, err = massageGoVersionM(mod)
 	if err != nil {
@@ -38,26 +62,49 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 		return nil, err
 	}
 
-	mainPackageID := "SPDXRef-Package-" + strings.ReplaceAll(bi.Main.Path, "/", ".")
-
-	doc := Document{
-		Version:           Version,
-		DataLicense:       "CC0-1.0",
-		ID:                "SPDXRef-DOCUMENT",
-		Name:              bi.Main.Path,
-		Namespace:         "http://spdx.org/spdxdocs/" + bi.Main.Path,
-		DocumentDescribes: []string{mainPackageID},
-		CreationInfo: CreationInfo{
-			Created:  date.Format(dateFormat),
-			Creators: []string{"Tool: ko " + koVersion},
-		},
-		Packages:      make([]Package, 0, 1+len(bi.Deps)),
-		Relationships: make([]Relationship, 0, 1+len(bi.Deps)),
+	imgDigest, err := img.Digest()
+	if err != nil {
+		return nil, err
 	}
+	cfg, err := img.ConfigFile()
+	if err != nil {
+		return nil, err
+	}
+
+	doc, imageID := starterDocument(koVersion, cfg.Created.Time, imgDigest)
+
+	// image -> main package -> transitive deps
+	doc.Packages = make([]Package, 0, 2+len(bi.Deps))
+	doc.Relationships = make([]Relationship, 0, 2+len(bi.Deps))
 
 	doc.Relationships = append(doc.Relationships, Relationship{
 		Element: "SPDXRef-DOCUMENT",
 		Type:    "DESCRIBES",
+		Related: imageID,
+	})
+
+	doc.Packages = append(doc.Packages, Package{
+		ID:   imageID,
+		Name: imgDigest.String(),
+		// TODO: PackageSupplier: "Organization: " + bs.Main.Path
+		DownloadLocation: NOASSERTION,
+		FilesAnalyzed:    false,
+		// TODO: PackageHomePage:  "https://" + bi.Main.Path,
+		LicenseConcluded: NOASSERTION,
+		LicenseDeclared:  NOASSERTION,
+		CopyrightText:    NOASSERTION,
+		ExternalRefs: []ExternalRef{{
+			Category: "PACKAGE_MANAGER",
+			Type:     "purl",
+			Locator:  ociRef("image", imgDigest),
+		}},
+	})
+
+	mainPackageID := modulePackageName(&bi.Main)
+
+	doc.Relationships = append(doc.Relationships, Relationship{
+		Element: imageID,
+		Type:    "CONTAINS",
 		Related: mainPackageID,
 	})
 
@@ -74,14 +121,12 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 		ExternalRefs: []ExternalRef{{
 			Category: "PACKAGE_MANAGER",
 			Type:     "purl",
-			Locator:  ociRef(bi.Path, imgDigest),
+			Locator:  goRef(&bi.Main),
 		}},
 	})
 
 	for _, dep := range bi.Deps {
-		depID := fmt.Sprintf("SPDXRef-Package-%s-%s",
-			strings.ReplaceAll(dep.Path, "/", "."),
-			dep.Version)
+		depID := modulePackageName(dep)
 
 		doc.Relationships = append(doc.Relationships, Relationship{
 			Element: mainPackageID,
@@ -90,8 +135,8 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 		})
 
 		pkg := Package{
-			Name:    dep.Path,
 			ID:      depID,
+			Name:    dep.Path,
 			Version: dep.Version,
 			// TODO: PackageSupplier: "Organization: " + dep.Path
 			DownloadLocation: fmt.Sprintf("https://proxy.golang.org/%s/@v/%s.zip", dep.Path, dep.Version),
@@ -102,7 +147,7 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 			ExternalRefs: []ExternalRef{{
 				Category: "PACKAGE_MANAGER",
 				Type:     "purl",
-				Locator:  goRef(dep.Path, dep.Version),
+				Locator:  goRef(dep),
 			}},
 		}
 
@@ -123,6 +168,151 @@ func GenerateSPDX(koVersion string, date time.Time, mod []byte, imgDigest v1.Has
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func extractDate(sii oci.SignedImageIndex) (*time.Time, error) {
+	im, err := sii.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	for _, desc := range im.Manifests {
+		switch desc.MediaType {
+		case types.OCIManifestSchema1, types.DockerManifestSchema2:
+			si, err := sii.SignedImage(desc.Digest)
+			if err != nil {
+				return nil, err
+			}
+			cfg, err := si.ConfigFile()
+			if err != nil {
+				return nil, err
+			}
+			return &cfg.Created.Time, nil
+
+		default:
+			// We shouldn't need to handle nested indices, since we don't build
+			// them, but if we do we will need to do some sort of recursion here.
+			return nil, fmt.Errorf("unknown media type: %v", desc.MediaType)
+		}
+	}
+	return nil, errors.New("unable to extract date, no imaged found")
+}
+
+func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, error) {
+	indexDigest, err := sii.Digest()
+	if err != nil {
+		return nil, err
+	}
+
+	date, err := extractDate(sii)
+	if err != nil {
+		return nil, err
+	}
+
+	doc, indexID := starterDocument(koVersion, *date, indexDigest)
+	doc.Packages = []Package{{
+		ID:               indexID,
+		Name:             indexDigest.String(),
+		DownloadLocation: NOASSERTION,
+		FilesAnalyzed:    false,
+		LicenseConcluded: NOASSERTION,
+		LicenseDeclared:  NOASSERTION,
+		CopyrightText:    NOASSERTION,
+		Checksums: []Checksum{{
+			Algorithm: strings.ToUpper(indexDigest.Algorithm),
+			Value:     indexDigest.Hex,
+		}},
+		ExternalRefs: []ExternalRef{{
+			Category: "PACKAGE_MANAGER",
+			Type:     "purl",
+			Locator:  ociRef("index", indexDigest),
+		}},
+	}}
+
+	im, err := sii.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	for _, desc := range im.Manifests {
+		switch desc.MediaType {
+		case types.OCIManifestSchema1, types.DockerManifestSchema2:
+			si, err := sii.SignedImage(desc.Digest)
+			if err != nil {
+				return nil, err
+			}
+
+			imageDigest, err := si.Digest()
+			if err != nil {
+				return nil, err
+			}
+
+			depID := ociPackageName(imageDigest)
+
+			doc.Relationships = append(doc.Relationships, Relationship{
+				Element: ociPackageName(indexDigest),
+				Type:    "CONTAINS",
+				Related: depID,
+			})
+
+			pkg := Package{
+				ID:      depID,
+				Name:    imageDigest.String(),
+				Version: desc.Platform.String(),
+				// TODO: PackageSupplier: "Organization: " + dep.Path
+				DownloadLocation: NOASSERTION,
+				FilesAnalyzed:    false,
+				LicenseConcluded: NOASSERTION,
+				LicenseDeclared:  NOASSERTION,
+				CopyrightText:    NOASSERTION,
+				ExternalRefs: []ExternalRef{{
+					Category: "PACKAGE_MANAGER",
+					Type:     "purl",
+					Locator: ociRef("image", imageDigest, qualifier{
+						key:   "arch",
+						value: desc.Platform.Architecture,
+					}),
+				}},
+				Checksums: []Checksum{{
+					Algorithm: strings.ToUpper(imageDigest.Algorithm),
+					Value:     imageDigest.Hex,
+				}},
+			}
+
+			doc.Packages = append(doc.Packages, pkg)
+
+		default:
+			// We shouldn't need to handle nested indices, since we don't build
+			// them, but if we do we will need to do some sort of recursion here.
+			return nil, fmt.Errorf("unknown media type: %v", desc.MediaType)
+		}
+	}
+
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(doc); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
+}
+
+func ociPackageName(d v1.Hash) string {
+	return fmt.Sprintf("SPDXRef-Package-%s-%s", d.Algorithm, d.Hex)
+}
+
+func starterDocument(koVersion string, date time.Time, d v1.Hash) (Document, string) {
+	digestID := ociPackageName(d)
+	return Document{
+		ID:      "SPDXRef-DOCUMENT",
+		Version: Version,
+		CreationInfo: CreationInfo{
+			Created:  date.Format(dateFormat),
+			Creators: []string{"Tool: ko " + koVersion},
+		},
+		DataLicense:       "CC0-1.0",
+		Name:              "sbom-" + d.String(),
+		Namespace:         "http://spdx.org/spdxdocs/ko" + d.String(),
+		DocumentDescribes: []string{digestID},
+	}, digestID
 }
 
 // Below this is forked from here:

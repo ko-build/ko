@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// TODO: All of this is copied from:
+// TODO: Most of this is copied from:
 // https://cs.opensource.google/go/go/+/master:src/debug/buildinfo/buildinfo.go
 // https://cs.opensource.google/go/go/+/master:src/runtime/debug/mod.go
 // It should be replaced with runtime/buildinfo.Read on the binary file when Go 1.18 is released.
@@ -27,6 +27,32 @@ import (
 	"strconv"
 	"strings"
 )
+
+func modulePackageName(mod *Module) string {
+	return fmt.Sprintf("SPDXRef-Package-%s-%s",
+		strings.ReplaceAll(mod.Path, "/", "."),
+		mod.Version)
+}
+
+func bomRef(mod *Module) string {
+	return fmt.Sprintf("pkg:golang/%s@%s?type=module", mod.Path, mod.Version)
+}
+
+func goRef(mod *Module) string {
+	path := mod.Path
+	// Try to lowercase the first 2 path elements to comply with spec
+	// https://github.com/package-url/purl-spec/blob/master/PURL-TYPES.rst#golang
+	p := strings.Split(path, "/")
+	if len(p) > 2 {
+		path = strings.Join(
+			append(
+				[]string{strings.ToLower(p[0]), strings.ToLower(p[1])},
+				p[2:]...,
+			), "/",
+		)
+	}
+	return fmt.Sprintf("pkg:golang/%s@%s?type=module", path, mod.Version)
+}
 
 // BuildInfo represents the build information read from a Go binary.
 // https://cs.opensource.google/go/go/+/release-branch.go1.18:src/runtime/debug/mod.go;drc=release-branch.go1.18;l=41
