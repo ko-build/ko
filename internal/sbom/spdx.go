@@ -23,8 +23,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
 )
 
@@ -70,12 +72,17 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 	if err != nil {
 		return nil, err
 	}
+	m, err := img.Manifest()
+	if err != nil {
+		return nil, err
+	}
 
 	doc, imageID := starterDocument(koVersion, cfg.Created.Time, imgDigest)
 
 	// image -> main package -> transitive deps
-	doc.Packages = make([]Package, 0, 2+len(bi.Deps))
-	doc.Relationships = make([]Relationship, 0, 2+len(bi.Deps))
+	//       -> base image
+	doc.Packages = make([]Package, 0, 3+len(bi.Deps))
+	doc.Relationships = make([]Relationship, 0, 3+len(bi.Deps))
 
 	doc.Relationships = append(doc.Relationships, Relationship{
 		Element: "SPDXRef-DOCUMENT",
@@ -99,6 +106,10 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 			Locator:  ociRef("image", imgDigest),
 		}},
 	})
+
+	if err := addBaseImage(&doc, m.Annotations, imgDigest); err != nil {
+		return nil, err
+	}
 
 	mainPackageID := modulePackageName(&bi.Main)
 
@@ -232,6 +243,9 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
+	if err := addBaseImage(&doc, im.Annotations, indexDigest); err != nil {
+		return nil, err
+	}
 	for _, desc := range im.Manifests {
 		switch desc.MediaType {
 		case types.OCIManifestSchema1, types.DockerManifestSchema2:
@@ -253,7 +267,7 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 				Related: depID,
 			})
 
-			pkg := Package{
+			doc.Packages = append(doc.Packages, Package{
 				ID:      depID,
 				Name:    imageDigest.String(),
 				Version: desc.Platform.String(),
@@ -275,9 +289,7 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 					Algorithm: strings.ToUpper(imageDigest.Algorithm),
 					Value:     imageDigest.Hex,
 				}},
-			}
-
-			doc.Packages = append(doc.Packages, pkg)
+			})
 
 		default:
 			// We shouldn't need to handle nested indices, since we don't build
@@ -313,6 +325,69 @@ func starterDocument(koVersion string, date time.Time, d v1.Hash) (Document, str
 		Namespace:         "http://spdx.org/spdxdocs/ko" + d.String(),
 		DocumentDescribes: []string{digestID},
 	}, digestID
+}
+
+func addBaseImage(doc *Document, annotations map[string]string, h v1.Hash) error {
+	// Check for the base image annotation.
+	base, ok := annotations[specsv1.AnnotationBaseImageName]
+	if !ok {
+		return nil
+	}
+	rawHash, ok := annotations[specsv1.AnnotationBaseImageDigest]
+	if !ok {
+		return nil
+	}
+	ref, err := name.ParseReference(base)
+	if err != nil {
+		return err
+	}
+	hash, err := v1.NewHash(rawHash)
+	if err != nil {
+		return err
+	}
+	digest := ref.Context().Digest(hash.String())
+
+	depID := ociPackageName(hash)
+
+	doc.Relationships = append(doc.Relationships, Relationship{
+		Element: ociPackageName(h),
+		Type:    "DESCENDANT_OF",
+		Related: depID,
+	})
+
+	qual := []qualifier{{
+		key:   "repository_url",
+		value: ref.Context().Name(),
+	}}
+
+	if t, ok := ref.(name.Tag); ok {
+		qual = append(qual, qualifier{
+			key:   "tag",
+			value: t.Identifier(),
+		})
+	}
+
+	doc.Packages = append(doc.Packages, Package{
+		ID:      depID,
+		Name:    digest.String(),
+		Version: ref.String(),
+		// TODO: PackageSupplier: "Organization: " + dep.Path
+		DownloadLocation: NOASSERTION,
+		FilesAnalyzed:    false,
+		LicenseConcluded: NOASSERTION,
+		LicenseDeclared:  NOASSERTION,
+		CopyrightText:    NOASSERTION,
+		ExternalRefs: []ExternalRef{{
+			Category: "PACKAGE_MANAGER",
+			Type:     "purl",
+			Locator:  ociRef("image", hash, qual...),
+		}},
+		Checksums: []Checksum{{
+			Algorithm: strings.ToUpper(hash.Algorithm),
+			Value:     hash.Hex,
+		}},
+	})
+	return nil
 }
 
 // Below this is forked from here:
@@ -362,7 +437,7 @@ type CreationInfo struct {
 type Package struct {
 	ID                   string                   `json:"SPDXID"`
 	Name                 string                   `json:"name"`
-	Version              string                   `json:"versionInfo"`
+	Version              string                   `json:"versionInfo,omitempty"`
 	FilesAnalyzed        bool                     `json:"filesAnalyzed"`
 	LicenseDeclared      string                   `json:"licenseDeclared"`
 	LicenseConcluded     string                   `json:"licenseConcluded"`
