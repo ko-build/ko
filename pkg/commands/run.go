@@ -102,7 +102,6 @@ func addRun(topLevel *cobra.Command) {
 
 				// These are better defaults:
 				defaults := []string{
-					"--generator=run-pod/v1",   // create a pod instead of deployment
 					"--attach",                 // stream logs back
 					"--rm",                     // clean up after ourselves
 					"--restart=Never",          // we just want to run once
