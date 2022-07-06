@@ -120,6 +120,10 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithConfig(bo.BuildConfigs))
 	}
 
+	if bo.OCIConversion {
+		opts = append(opts, build.WithOCIConversion())
+	}
+
 	return opts, nil
 }
 

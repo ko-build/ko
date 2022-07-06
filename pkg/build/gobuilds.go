@@ -21,6 +21,8 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+
+	config "github.com/google/ko/pkg/build/config"
 )
 
 type gobuilds struct {
@@ -37,11 +39,11 @@ type gobuilds struct {
 // builderWithConfig is not an imaginative name.
 type builderWithConfig struct {
 	builder Interface
-	config  Config
+	config  config.Config
 }
 
 // NewGobuilds returns a build.Interface that can dispatch to builders based on matching the import path to a build config in .ko.yaml.
-func NewGobuilds(ctx context.Context, workingDirectory string, buildConfigs map[string]Config, opts ...Option) (Interface, error) {
+func NewGobuilds(ctx context.Context, workingDirectory string, buildConfigs map[string]config.Config, opts ...Option) (Interface, error) {
 	if workingDirectory == "" {
 		workingDirectory = "."
 	}

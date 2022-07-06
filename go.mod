@@ -13,14 +13,15 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20191028211022-135eb7262960
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/google/go-cmp v0.5.8
-	github.com/google/go-containerregistry v0.8.1-0.20220209165246-a44adc326839
+	github.com/google/go-containerregistry v0.10.0
+	github.com/google/uuid v1.3.0
 	github.com/opencontainers/image-spec v1.0.3-0.20220114050600-8b9d41f48198
 	github.com/sigstore/cosign v1.3.2-0.20211120003522-90e2dcfe7b92
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.11.0
 	go.uber.org/automaxprocs v1.4.1-0.20220314153950-975e177ad84f
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
 	golang.org/x/tools v0.1.10
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
 	k8s.io/apimachinery v0.24.0

@@ -27,7 +27,7 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/tools/go/packages"
 
-	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/build/config"
 )
 
 const (
@@ -66,7 +66,9 @@ type BuildOptions struct {
 	Trimpath bool
 
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
-	BuildConfigs map[string]build.Config
+	BuildConfigs map[string]config.Config
+	// OCIConversion defines wether to convert base images into oci format
+	OCIConversion bool
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -78,6 +80,8 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, cyclonedx, go.version-m).")
 	cmd.Flags().StringSliceVar(&bo.Platforms, "platform", []string{},
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
+	cmd.Flags().BoolVar(&bo.OCIConversion, "oci-convert", false,
+		"Wether to convert the base image to oci format")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
 	bo.Trimpath = true
@@ -137,7 +141,7 @@ func (bo *BuildOptions) LoadConfig() error {
 	}
 
 	if len(bo.BuildConfigs) == 0 {
-		var builds []build.Config
+		var builds []config.Config
 		if err := v.UnmarshalKey("builds", &builds); err != nil {
 			return fmt.Errorf("configuration section 'builds' cannot be parsed")
 		}
@@ -151,8 +155,8 @@ func (bo *BuildOptions) LoadConfig() error {
 	return nil
 }
 
-func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[string]build.Config, error) {
-	buildConfigsByImportPath := make(map[string]build.Config)
+func createBuildConfigMap(workingDirectory string, configs []config.Config) (map[string]config.Config, error) {
+	buildConfigsByImportPath := make(map[string]config.Config)
 	for i, config := range configs {
 		// In case no ID is specified, use the index of the build config in
 		// the ko YAML file as a reference (debug help).

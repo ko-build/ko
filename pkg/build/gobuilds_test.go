@@ -20,6 +20,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	config "github.com/google/ko/pkg/build/config"
 )
 
 func Test_gobuilds(t *testing.T) {
@@ -36,7 +37,7 @@ func Test_gobuilds(t *testing.T) {
 	tests := []struct {
 		description       string
 		workingDirectory  string
-		buildConfigs      map[string]Config
+		buildConfigs      map[string]config.Config
 		opts              []Option
 		nilDefaultBuilder bool // set to true if you want to test build config and don't want the test to fall back to the default builder
 		importpath        string
@@ -49,7 +50,7 @@ func Test_gobuilds(t *testing.T) {
 		{
 			description:      "match build config using fully qualified import path",
 			workingDirectory: "../..",
-			buildConfigs: map[string]Config{
+			buildConfigs: map[string]config.Config{
 				"github.com/google/ko/test": {
 					ID:  "build-config-0",
 					Dir: "test",
@@ -62,7 +63,7 @@ func Test_gobuilds(t *testing.T) {
 		{
 			description:      "match build config using ko scheme-prefixed fully qualified import path",
 			workingDirectory: "../..",
-			buildConfigs: map[string]Config{
+			buildConfigs: map[string]config.Config{
 				"github.com/google/ko/test": {
 					ID:  "build-config-1",
 					Dir: "test",
@@ -75,7 +76,7 @@ func Test_gobuilds(t *testing.T) {
 		{
 			description:      "find build config by resolving local import path to fully qualified import path",
 			workingDirectory: "../../test",
-			buildConfigs: map[string]Config{
+			buildConfigs: map[string]config.Config{
 				"github.com/google/ko/test": {
 					ID: "build-config-2",
 				},
@@ -87,7 +88,7 @@ func Test_gobuilds(t *testing.T) {
 		{
 			description:      "find build config by matching local import path to build config directory",
 			workingDirectory: "../..",
-			buildConfigs: map[string]Config{
+			buildConfigs: map[string]config.Config{
 				"github.com/google/ko/tes12t": {
 					ID:  "build-config-3",
 					Dir: "test",

@@ -17,7 +17,6 @@ limitations under the License.
 package build
 
 import (
-	"archive/tar"
 	"bytes"
 	"context"
 	"errors"
@@ -31,9 +30,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
-	"text/template"
 
 	"github.com/containerd/stargz-snapshotter/estargz"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -43,6 +40,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/internal/sbom"
+	"github.com/google/ko/pkg/build/binary"
+	config "github.com/google/ko/pkg/build/config"
+	buildoci "github.com/google/ko/pkg/build/oci"
 	buildplatform "github.com/google/ko/pkg/build/platform"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
@@ -62,8 +62,10 @@ const (
 // GetBase takes an importpath and returns a base image reference and base image (or index).
 type GetBase func(context.Context, string) (name.Reference, Result, error)
 
-type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
-type sbomber func(context.Context, string, string, v1.Image) ([]byte, types.MediaType, error)
+type (
+	builder func(context.Context, string, string, v1.Platform, config.Config) (string, error)
+	sbomber func(context.Context, string, string, v1.Image) ([]byte, types.MediaType, error)
+)
 
 type gobuild struct {
 	ctx                  context.Context
@@ -74,11 +76,12 @@ type gobuild struct {
 	sbom                 sbomber
 	disableOptimizations bool
 	trimpath             bool
-	buildConfigs         map[string]Config
+	buildConfigs         map[string]config.Config
 	platformMatcher      *buildplatform.Matcher
 	dir                  string
 	labels               map[string]string
 	semaphore            *semaphore.Weighted
+	ociConversion        bool
 
 	cache *layerCache
 }
@@ -95,11 +98,12 @@ type gobuildOpener struct {
 	sbom                 sbomber
 	disableOptimizations bool
 	trimpath             bool
-	buildConfigs         map[string]Config
+	buildConfigs         map[string]config.Config
 	platforms            []string
 	labels               map[string]string
 	dir                  string
 	jobs                 int
+	ociConversion        bool
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -125,6 +129,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		buildConfigs:         gbo.buildConfigs,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
+		ociConversion:        gbo.ociConversion,
 		platformMatcher:      matcher,
 		cache: &layerCache{
 			buildToDiff: map[string]buildIDToDiffID{},
@@ -143,7 +148,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error) {
 	gbo := &gobuildOpener{
 		ctx:   ctx,
-		build: build,
+		build: binary.Build,
 		dir:   dir,
 		sbom:  spdx("(none)"),
 	}
@@ -216,102 +221,6 @@ func (g *gobuild) IsSupportedReference(s string) error {
 	return nil
 }
 
-func getGoarm(platform v1.Platform) (string, error) {
-	if !strings.HasPrefix(platform.Variant, "v") {
-		return "", fmt.Errorf("strange arm variant: %v", platform.Variant)
-	}
-
-	vs := strings.TrimPrefix(platform.Variant, "v")
-	variant, err := strconv.Atoi(vs)
-	if err != nil {
-		return "", fmt.Errorf("cannot parse arm variant %q: %w", platform.Variant, err)
-	}
-	if variant >= 5 {
-		// TODO(golang/go#29373): Allow for 8 in later go versions if this is fixed.
-		if variant > 7 {
-			vs = "7"
-		}
-		return vs, nil
-	}
-	return "", nil
-}
-
-func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
-	env, err := buildEnv(platform, os.Environ(), config.Env)
-	if err != nil {
-		return "", fmt.Errorf("could not create env for %s: %w", ip, err)
-	}
-
-	tmpDir, err := ioutil.TempDir("", "ko")
-	if err != nil {
-		return "", err
-	}
-
-	if dir := os.Getenv("KOCACHE"); dir != "" {
-		dirInfo, err := os.Stat(dir)
-		if os.IsNotExist(err) {
-			if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
-				return "", fmt.Errorf("could not create KOCACHE dir %s: %w", dir, err)
-			}
-		} else if !dirInfo.IsDir() {
-			return "", fmt.Errorf("KOCACHE should be a directory, %s is not a directory", dir)
-		}
-
-		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
-		tmpDir = filepath.Join(dir, "bin", ip, platform.String())
-		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
-			return "", err
-		}
-	}
-
-	file := filepath.Join(tmpDir, "out")
-
-	goBinary := "go"
-	if buildplatform.IsWasi(&platform) {
-		goBinary = "tinygo"
-	}
-	cmd, err := gobuildCommand(ctx, config, goBinary, ip, file, dir, env)
-	if err != nil {
-		return "", fmt.Errorf("creating %v build exec.Cmd: %w", goBinary, err)
-	}
-	var output bytes.Buffer
-	cmd.Stderr = &output
-	cmd.Stdout = &output
-
-	log.Printf("Building %s for %s with %s", ip, platform, goBinary)
-	if err := cmd.Run(); err != nil {
-		if os.Getenv("KOCACHE") == "" {
-			os.RemoveAll(tmpDir)
-		}
-		log.Printf(`Unexpected error running "%v build": %v\n%v`, goBinary, err, output.String())
-		return "", err
-	}
-	return file, nil
-}
-
-func gobuildCommand(ctx context.Context, config Config, goBinary string, ip string, outDir string, dir string, env []string) (*exec.Cmd, error) {
-	buildArgs, err := createBuildArgs(config)
-	if err != nil {
-		return nil, err
-	}
-
-	args := make([]string, 0, 4+len(buildArgs))
-	args = append(args, "build")
-	args = append(args, buildArgs...)
-	// if we are using tinygo, add wasi target
-	if goBinary == "tinygo" {
-		args = append(args, "-target", "wasi")
-	}
-
-	args = append(args, "-o", outDir)
-	args = append(args, ip)
-	cmd := exec.CommandContext(ctx, goBinary, args...)
-	cmd.Dir = dir
-	cmd.Env = env
-
-	return cmd, nil
-}
-
 func goversionm(ctx context.Context, file string, appPath string, _ v1.Image) ([]byte, types.MediaType, error) {
 	sbom := bytes.NewBuffer(nil)
 	cmd := exec.CommandContext(ctx, "go", "version", "-m", file)
@@ -364,38 +273,6 @@ func cycloneDX() sbomber {
 	}
 }
 
-// buildEnv creates the environment variables used by the `go build` command.
-// From `os/exec.Cmd`: If Env contains duplicate environment keys, only the last
-// value in the slice for each duplicate key is used.
-func buildEnv(platform v1.Platform, userEnv, configEnv []string) ([]string, error) {
-	// Default env
-	env := []string{
-		"CGO_ENABLED=0",
-		"GOOS=" + platform.OS,
-		"GOARCH=" + platform.Architecture,
-	}
-	if platform.Variant != "" {
-		switch platform.Architecture {
-		case "arm":
-			// See: https://pkg.go.dev/cmd/go#hdr-Environment_variables
-			goarm, err := getGoarm(platform)
-			if err != nil {
-				return nil, fmt.Errorf("goarm failure: %w", err)
-			}
-			if goarm != "" {
-				env = append(env, "GOARM="+goarm)
-			}
-		case "amd64":
-			// See: https://tip.golang.org/doc/go1.18#amd64
-			env = append(env, "GOAMD64="+platform.Variant)
-		}
-	}
-
-	env = append(env, userEnv...)
-	env = append(env, configEnv...)
-	return env, nil
-}
-
 func appFilename(importpath string) string {
 	base := filepath.Base(importpath)
 
@@ -408,280 +285,7 @@ func appFilename(importpath string) string {
 	return base
 }
 
-// userOwnerAndGroupSID is a magic value needed to make the binary executable
-// in a Windows container.
-//
-// owner: BUILTIN/Users group: BUILTIN/Users ($sddlValue="O:BUG:BU")
-const userOwnerAndGroupSID = "AQAAgBQAAAAkAAAAAAAAAAAAAAABAgAAAAAABSAAAAAhAgAAAQIAAAAAAAUgAAAAIQIAAA=="
-
-func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error) {
-	buf := bytes.NewBuffer(nil)
-	tw := tar.NewWriter(buf)
-	defer tw.Close()
-
-	// Write the parent directories to the tarball archive.
-	// For Windows, the layer must contain a Hives/ directory, and the root
-	// of the actual filesystem goes in a Files/ directory.
-	// For Linux, the binary goes into /ko-app/
-	dirs := []string{"ko-app"}
-	if platform.OS == "windows" {
-		dirs = []string{
-			"Hives",
-			"Files",
-			"Files/ko-app",
-		}
-		name = "Files" + name
-	}
-	for _, dir := range dirs {
-		if err := tw.WriteHeader(&tar.Header{
-			Name:     dir,
-			Typeflag: tar.TypeDir,
-			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
-			// under which it was created. Additionally, windows can only set 0222,
-			// 0444, or 0666, none of which are executable.
-			Mode: 0555,
-		}); err != nil {
-			return nil, fmt.Errorf("writing dir %q: %w", dir, err)
-		}
-	}
-
-	file, err := os.Open(binary)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	stat, err := file.Stat()
-	if err != nil {
-		return nil, err
-	}
-	header := &tar.Header{
-		Name:     name,
-		Size:     stat.Size(),
-		Typeflag: tar.TypeReg,
-		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
-		// under which it was created. Additionally, windows can only set 0222,
-		// 0444, or 0666, none of which are executable.
-		Mode: 0555,
-	}
-	if platform.OS == "windows" {
-		// This magic value is for some reason needed for Windows to be
-		// able to execute the binary.
-		header.PAXRecords = map[string]string{
-			"MSWINDOWS.rawsd": userOwnerAndGroupSID,
-		}
-	}
-	// write the header to the tarball archive
-	if err := tw.WriteHeader(header); err != nil {
-		return nil, err
-	}
-	// copy the file data to the tarball
-	if _, err := io.Copy(tw, file); err != nil {
-		return nil, err
-	}
-
-	return buf, nil
-}
-
-func (g *gobuild) kodataPath(ref reference) (string, error) {
-	dir := filepath.Clean(g.dir)
-	if dir == "." {
-		dir = ""
-	}
-	pkgs, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedFiles}, ref.Path())
-	if err != nil {
-		return "", fmt.Errorf("error loading package from %s: %w", ref.Path(), err)
-	}
-	if len(pkgs) != 1 {
-		return "", fmt.Errorf("found %d local packages, expected 1", len(pkgs))
-	}
-	if len(pkgs[0].GoFiles) == 0 {
-		return "", fmt.Errorf("package %s contains no Go files", pkgs[0])
-	}
-	return filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), "kodata"), nil
-}
-
-// Where kodata lives in the image.
-const kodataRoot = "/var/run/ko"
-
-// walkRecursive performs a filepath.Walk of the given root directory adding it
-// to the provided tar.Writer with root -> chroot.  All symlinks are dereferenced,
-// which is what leads to recursion when we encounter a directory symlink.
-func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, platform *v1.Platform) error {
-	return filepath.Walk(root, func(hostPath string, info os.FileInfo, err error) error {
-		if hostPath == root {
-			return nil
-		}
-		if err != nil {
-			return fmt.Errorf("filepath.Walk(%q): %w", root, err)
-		}
-		// Skip other directories.
-		if info.Mode().IsDir() {
-			return nil
-		}
-		newPath := path.Join(chroot, filepath.ToSlash(hostPath[len(root):]))
-
-		// Don't chase symlinks on Windows, where cross-compiled symlink support is not possible.
-		if platform.OS == "windows" {
-			if info.Mode()&os.ModeSymlink != 0 {
-				log.Println("skipping symlink in kodata for windows:", info.Name())
-				return nil
-			}
-		}
-
-		evalPath, err := filepath.EvalSymlinks(hostPath)
-		if err != nil {
-			return fmt.Errorf("filepath.EvalSymlinks(%q): %w", hostPath, err)
-		}
-
-		// Chase symlinks.
-		info, err = os.Stat(evalPath)
-		if err != nil {
-			return fmt.Errorf("os.Stat(%q): %w", evalPath, err)
-		}
-		// Skip other directories.
-		if info.Mode().IsDir() {
-			return walkRecursive(tw, evalPath, newPath, creationTime, platform)
-		}
-
-		// Open the file to copy it into the tarball.
-		file, err := os.Open(evalPath)
-		if err != nil {
-			return fmt.Errorf("os.Open(%q): %w", evalPath, err)
-		}
-		defer file.Close()
-
-		// Copy the file into the image tarball.
-		header := &tar.Header{
-			Name:     newPath,
-			Size:     info.Size(),
-			Typeflag: tar.TypeReg,
-			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
-			// under which it was created. Additionally, windows can only set 0222,
-			// 0444, or 0666, none of which are executable.
-			Mode:    0555,
-			ModTime: creationTime.Time,
-		}
-		if platform.OS == "windows" {
-			// This magic value is for some reason needed for Windows to be
-			// able to execute the binary.
-			header.PAXRecords = map[string]string{
-				"MSWINDOWS.rawsd": userOwnerAndGroupSID,
-			}
-		}
-		if err := tw.WriteHeader(header); err != nil {
-			return fmt.Errorf("tar.Writer.WriteHeader(%q): %w", newPath, err)
-		}
-		if _, err := io.Copy(tw, file); err != nil {
-			return fmt.Errorf("io.Copy(%q, %q): %w", newPath, evalPath, err)
-		}
-		return nil
-	})
-}
-
-func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer, error) {
-	buf := bytes.NewBuffer(nil)
-	tw := tar.NewWriter(buf)
-	defer tw.Close()
-
-	root, err := g.kodataPath(ref)
-	if err != nil {
-		return nil, err
-	}
-
-	creationTime := g.kodataCreationTime
-
-	// Write the parent directories to the tarball archive.
-	// For Windows, the layer must contain a Hives/ directory, and the root
-	// of the actual filesystem goes in a Files/ directory.
-	// For Linux, kodata starts at /var/run/ko.
-	chroot := kodataRoot
-	dirs := []string{
-		"/var",
-		"/var/run",
-		"/var/run/ko",
-	}
-	if platform.OS == "windows" {
-		chroot = "Files" + kodataRoot
-		dirs = []string{
-			"Hives",
-			"Files",
-			"Files/var",
-			"Files/var/run",
-			"Files/var/run/ko",
-		}
-	}
-	for _, dir := range dirs {
-		if err := tw.WriteHeader(&tar.Header{
-			Name:     dir,
-			Typeflag: tar.TypeDir,
-			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
-			// under which it was created. Additionally, windows can only set 0222,
-			// 0444, or 0666, none of which are executable.
-			Mode:    0555,
-			ModTime: creationTime.Time,
-		}); err != nil {
-			return nil, fmt.Errorf("writing dir %q: %w", dir, err)
-		}
-	}
-
-	return buf, walkRecursive(tw, root, chroot, creationTime, platform)
-}
-
-func createTemplateData() map[string]interface{} {
-	envVars := map[string]string{}
-	for _, entry := range os.Environ() {
-		kv := strings.SplitN(entry, "=", 2)
-		envVars[kv[0]] = kv[1]
-	}
-
-	return map[string]interface{}{
-		"Env": envVars,
-	}
-}
-
-func applyTemplating(list []string, data map[string]interface{}) error {
-	for i, entry := range list {
-		tmpl, err := template.New("argsTmpl").Option("missingkey=error").Parse(entry)
-		if err != nil {
-			return err
-		}
-
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, data); err != nil {
-			return err
-		}
-
-		list[i] = buf.String()
-	}
-
-	return nil
-}
-
-func createBuildArgs(buildCfg Config) ([]string, error) {
-	var args []string
-
-	data := createTemplateData()
-
-	if len(buildCfg.Flags) > 0 {
-		if err := applyTemplating(buildCfg.Flags, data); err != nil {
-			return nil, err
-		}
-
-		args = append(args, buildCfg.Flags...)
-	}
-
-	if len(buildCfg.Ldflags) > 0 {
-		if err := applyTemplating(buildCfg.Ldflags, data); err != nil {
-			return nil, err
-		}
-
-		args = append(args, fmt.Sprintf("-ldflags=%s", strings.Join(buildCfg.Ldflags, " ")))
-	}
-
-	return args, nil
-}
-
-func (g *gobuild) configForImportPath(ip string) Config {
+func (g *gobuild) configForImportPathGo(ip string) config.Config {
 	config := g.buildConfigs[ip]
 	if g.trimpath {
 		// The `-trimpath` flag removes file system paths from the resulting binary, to aid reproducibility.
@@ -701,9 +305,26 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	return config
 }
 
+func (g *gobuild) configForImportPathTinyGo(ip string) config.Config {
+	config := g.buildConfigs[ip]
+	if !g.disableOptimizations {
+		config.Flags = append(config.Flags, "-opt", "2")
+	}
+	if config.ID != "" {
+		log.Printf("Using build config %s for %s", config.ID, ip)
+	}
+
+	return config
+}
+
 const wasmImageAnnotationKey = "module.wasm.image/variant"
 
-func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
+func (g *gobuild) buildOne(
+	ctx context.Context,
+	refStr string,
+	base v1.Image,
+	platform *v1.Platform,
+) (oci.SignedImage, error) {
 	if err := g.semaphore.Acquire(ctx, 1); err != nil {
 		return nil, err
 	}
@@ -724,12 +345,15 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 
 	isWasiPlatform := buildplatform.IsWasi(platform)
-	// disable trimpath flag because it doesn't exists in tinygo
+	refPath := ref.Path()
+	var config config.Config
 	if isWasiPlatform {
-		g.trimpath = false
+		config = g.configForImportPathTinyGo(refPath)
+	} else {
+		config = g.configForImportPathGo(refPath)
 	}
 	// Do the build into a temporary file.
-	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.configForImportPath(ref.Path()))
+	file, err := g.build(ctx, refPath, g.dir, *platform, config)
 	if err != nil {
 		return nil, err
 	}
@@ -738,18 +362,26 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 
 	var layers []mutate.Addendum
+	layerOpts := []tarball.LayerOption{
+		tarball.WithCompressedCaching,
+	}
+
+	if g.ociConversion {
+		layerOpts = append(layerOpts, tarball.WithMediaType(types.OCILayer))
+	}
 
 	// don't add kodata layer into wasi image
 	if !isWasiPlatform {
 		// Create a layer from the kodata directory under this import path.
-		dataLayerBuf, err := g.tarKoData(ref, platform)
+		dataLayerBuf, err := tarKoData(g.dir, ref, platform, g.creationTime)
 		if err != nil {
 			return nil, err
 		}
+
 		dataLayerBytes := dataLayerBuf.Bytes()
 		dataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 			return ioutil.NopCloser(bytes.NewBuffer(dataLayerBytes)), nil
-		}, tarball.WithCompressedCaching)
+		}, layerOpts...)
 		if err != nil {
 			return nil, err
 		}
@@ -765,7 +397,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 
 	appDir := "/ko-app"
-	filename := appFilename(ref.Path())
+	filename := appFilename(refPath)
 	if isWasiPlatform {
 		// module.wasm.image/variant=compat-smart expects the entrypoint binary to be of form .wasm
 		filename += ".wasm"
@@ -774,7 +406,11 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	appPath := path.Join(appDir, filename)
 
 	miss := func() (v1.Layer, error) {
-		return buildLayer(appPath, file, platform)
+		// When using estargz, prioritize downloading the binary entrypoint.
+		layerOpts = append(layerOpts, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
+			appPath,
+		})))
+		return buildLayer(appPath, file, platform, layerOpts...)
 	}
 
 	binaryLayer, err := g.cache.get(ctx, file, miss)
@@ -790,10 +426,6 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 			CreatedBy: "ko build " + ref.String(),
 			Comment:   "go build output, at " + appPath,
 		},
-	}
-
-	if isWasiPlatform {
-		binaryLayerAddendum.MediaType = types.OCILayer
 	}
 
 	layers = append(layers, binaryLayerAddendum)
@@ -841,23 +473,33 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, err
 	}
 
+	// if g.ociConversion {
+	//   image = mutate.ConfigMediaType(image, types.OCIConfigJSON)
+	//   image = mutate.MediaType(image, types.OCIManifestSchema1)
+	// }
+
 	if isWasiPlatform {
-		image = mutate.MediaType(image, types.OCIManifestSchema1)
-		image = mutate.ConfigMediaType(image, types.OCIConfigJSON)
-		// annotate image for runtime to automaticly see that this image is run using a wasi runtime
 		image = mutate.Annotations(image, map[string]string{
 			wasmImageAnnotationKey: "compat-smart",
 		}).(v1.Image)
 	}
 
+	log.Printf("%#v", image)
 	si, err := generateSbom(ctx, file, appPath, g.sbom, signed.Image(image))
 	if err != nil {
 		return nil, fmt.Errorf("generating sbom: %w", err)
 	}
+	log.Printf("%#v", si)
 	return si, nil
 }
 
-func generateSbom(ctx context.Context, file string, appPath string, sbomFunc sbomber, si oci.SignedImage) (oci.SignedImage, error) {
+func generateSbom(
+	ctx context.Context,
+	file string,
+	appPath string,
+	sbomFunc sbomber,
+	si oci.SignedImage,
+) (oci.SignedImage, error) {
 	if sbomFunc == nil {
 		return si, nil
 	}
@@ -877,7 +519,7 @@ func generateSbom(ctx context.Context, file string, appPath string, sbomFunc sbo
 	return si, nil
 }
 
-func buildLayer(appPath, file string, platform *v1.Platform) (v1.Layer, error) {
+func buildLayer(appPath, file string, platform *v1.Platform, layerOpts ...tarball.LayerOption) (v1.Layer, error) {
 	// Construct a tarball with the binary and produce a layer.
 	binaryLayerBuf, err := tarBinary(appPath, file, platform)
 	if err != nil {
@@ -886,10 +528,7 @@ func buildLayer(appPath, file string, platform *v1.Platform) (v1.Layer, error) {
 	binaryLayerBytes := binaryLayerBuf.Bytes()
 	return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 		return ioutil.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
-	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
-		// When using estargz, prioritize downloading the binary entrypoint.
-		appPath,
-	})))
+	}, layerOpts...)
 }
 
 // Append appPath to the PATH environment variable, if it exists. Otherwise,
@@ -992,19 +631,15 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			matches = append(matches, desc)
 		}
 	}
+	// no base image will ever have wasiPlatform set in their index, which is why we need to specially look for it
+	if g.platformMatcher.Matches(buildplatform.Wasi) {
+		matches = append(matches, v1.Descriptor{
+      Platform: buildplatform.Wasi,
+    })
+	}
+
 	if len(matches) == 0 {
 		return nil, errors.New("no matching platforms in base image index")
-	}
-	if len(matches) == 1 {
-		// Filters resulted in a single matching platform; just produce
-		// a single-platform image.
-		img, err := baseIndex.Image(matches[0].Digest)
-		if err != nil {
-			return nil, fmt.Errorf("error getting matching image from index: %w", err)
-		}
-		// Carry forward the base index's annotations, which include base image annotations.
-		img = mutate.Annotations(img, im.Annotations).(v1.Image)
-		return g.buildOne(ctx, ref, img, matches[0].Platform)
 	}
 
 	// Build an image for each matching platform from the base and append
@@ -1015,9 +650,21 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 	for i, desc := range matches {
 		i, desc := i, desc
 		errg.Go(func() error {
-			baseImage, err := baseIndex.Image(desc.Digest)
-			if err != nil {
-				return err
+			var baseImage v1.Image
+			if buildplatform.IsWasi(desc.Platform) {
+				baseImage = empty.Image
+			} else {
+				baseImage, err = baseIndex.Image(desc.Digest)
+				if err != nil {
+					return err
+				}
+			}
+			if g.ociConversion {
+        log.Println("converting baseImage to oci format")
+				baseImage, err = buildoci.ConvertImage(baseImage)
+        if err != nil {
+          return err
+        }
 			}
 			img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
 			if err != nil {

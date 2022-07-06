@@ -18,6 +18,7 @@ import (
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/ko/pkg/build/config"
 )
 
 // WithBaseImages is a functional option for overriding the base images
@@ -78,7 +79,7 @@ func WithTrimpath(v bool) Option {
 //
 // Set a fully qualified importpath (e.g. github.com/my-user/my-repo/cmd/app)
 // as the mapping key for the respective Config.
-func WithConfig(buildConfigs map[string]Config) Option {
+func WithConfig(buildConfigs map[string]config.Config) Option {
 	return func(gbo *gobuildOpener) error {
 		gbo.buildConfigs = buildConfigs
 		return nil
@@ -166,6 +167,13 @@ func withSBOMber(sbom sbomber) Option {
 func WithJobs(jobs int) Option {
 	return func(gbo *gobuildOpener) error {
 		gbo.jobs = jobs
+		return nil
+	}
+}
+
+func WithOCIConversion() Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.ociConversion = true
 		return nil
 	}
 }

@@ -40,6 +40,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/build/config"
 	"github.com/google/ko/pkg/commands/options"
 	kotesting "github.com/google/ko/pkg/internal/testing"
 	"gopkg.in/yaml.v3"
@@ -192,7 +193,7 @@ func TestNewBuilder(t *testing.T) {
 			importpath:  "./test",
 			bo: &options.BuildOptions{
 				BaseImage: baseImage,
-				BuildConfigs: map[string]build.Config{
+				BuildConfigs: map[string]config.Config{
 					"github.com/google/ko/test": {
 						ID: "id-can-be-anything",
 						// no easy way to assert on the output, so trigger error to ensure config is picked up

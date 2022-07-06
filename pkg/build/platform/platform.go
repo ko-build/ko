@@ -12,10 +12,10 @@ type Matcher struct {
 }
 
 func IsWasi(p *v1.Platform) bool {
-	return p.OS == wasiPlatform.OS && p.Architecture == wasiPlatform.Architecture
+	return p.OS == Wasi.OS && p.Architecture == Wasi.Architecture
 }
 
-var wasiPlatform = v1.Platform{
+var Wasi = &v1.Platform{
 	OS:           "wasm",
 	Architecture: "wasi",
 }

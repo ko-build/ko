@@ -19,7 +19,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/google/ko/pkg/build"
+	"github.com/google/ko/pkg/build/config"
 	"github.com/spf13/cobra"
 )
 
@@ -63,7 +63,7 @@ func TestCreateBuildConfigs(t *testing.T) {
 		}
 	}
 
-	buildConfigs := []build.Config{
+	buildConfigs := []config.Config{
 		{ID: "defaults"},
 		{ID: "OnlyMain", Main: "test"},
 		{ID: "OnlyMainWithFile", Main: "test/main.go"},
@@ -72,7 +72,7 @@ func TestCreateBuildConfigs(t *testing.T) {
 	}
 
 	for _, b := range buildConfigs {
-		buildConfigMap, err := createBuildConfigMap("../../..", []build.Config{b})
+		buildConfigMap, err := createBuildConfigMap("../../..", []config.Config{b})
 		if err != nil {
 			t.Fatal(err)
 		}
