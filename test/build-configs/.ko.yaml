@@ -19,3 +19,9 @@ builds:
 - id: bar-app
   dir: ./bar
   main: ./cmd
+- id: toolexec
+  dir: ./toolexec
+  main: ./cmd
+  flags:
+  - -toolexec
+  - go

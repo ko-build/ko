@@ -688,6 +688,16 @@ func createBuildArgs(buildCfg Config) ([]string, error) {
 		args = append(args, fmt.Sprintf("-ldflags=%s", strings.Join(buildCfg.Ldflags, " ")))
 	}
 
+	// Reject any flags that attempt to set --toolexec (with or
+	// without =, with one or two -s)
+	for _, a := range args {
+		for _, d := range []string{"-", "--"} {
+			if a == d+"toolexec" || strings.HasPrefix(a, d+"toolexec=") {
+				return nil, fmt.Errorf("cannot set %s", a)
+			}
+		}
+	}
+
 	return args, nil
 }
 
