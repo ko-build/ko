@@ -62,6 +62,7 @@ func Build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	cmd.Stdout = &output
 
 	log.Printf("Building %s for %s with %s", ip, platform, goBinary)
+  log.Printf("binary build string: %s", cmd)
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)

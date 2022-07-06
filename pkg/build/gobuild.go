@@ -484,12 +484,10 @@ func (g *gobuild) buildOne(
 		}).(v1.Image)
 	}
 
-	log.Printf("%#v", image)
 	si, err := generateSbom(ctx, file, appPath, g.sbom, signed.Image(image))
 	if err != nil {
 		return nil, fmt.Errorf("generating sbom: %w", err)
 	}
-	log.Printf("%#v", si)
 	return si, nil
 }
 
@@ -615,12 +613,36 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 }
 
 func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (Result, error) {
+	matches := []v1.Descriptor{}
+	// no base image will ever have wasiPlatform set in their index, which is why we need to specially look for it
+	if g.platformMatcher.Matches(buildplatform.Wasi) {
+		// force oci conversion for this build, because wasm needs annotation support.
+		// reset after build for this binary is done
+		log.Println("detected wasi platform, forcing oci conversion")
+		before := g.ociConversion
+		defer func() {
+			g.ociConversion = before
+		}()
+		g.ociConversion = true
+		matches = append(matches, v1.Descriptor{
+			Platform: buildplatform.Wasi,
+		})
+	}
+
+	if g.ociConversion {
+		log.Println("converting baseIndex to oci format")
+		var err error
+		baseIndex, err = buildoci.ConvertImageIndex(baseIndex)
+		if err != nil {
+			return nil, fmt.Errorf("converting imageIndex: %w", err)
+		}
+	}
+
 	im, err := baseIndex.IndexManifest()
 	if err != nil {
 		return nil, err
 	}
 
-	matches := []v1.Descriptor{}
 	for _, desc := range im.Manifests {
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
@@ -630,12 +652,6 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 		if g.platformMatcher.Matches(desc.Platform) {
 			matches = append(matches, desc)
 		}
-	}
-	// no base image will ever have wasiPlatform set in their index, which is why we need to specially look for it
-	if g.platformMatcher.Matches(buildplatform.Wasi) {
-		matches = append(matches, v1.Descriptor{
-      Platform: buildplatform.Wasi,
-    })
 	}
 
 	if len(matches) == 0 {
@@ -653,20 +669,25 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			var baseImage v1.Image
 			if buildplatform.IsWasi(desc.Platform) {
 				baseImage = empty.Image
+				// empty.Image uses DockerManifestSchema2 by default, override if ociConversion is used
+				if g.ociConversion {
+					baseImage, err = buildoci.ConvertImage(baseImage)
+					if err != nil {
+						return err
+					}
+				}
 			} else {
 				baseImage, err = baseIndex.Image(desc.Digest)
 				if err != nil {
 					return err
 				}
 			}
-			if g.ociConversion {
-        log.Println("converting baseImage to oci format")
-				baseImage, err = buildoci.ConvertImage(baseImage)
-        if err != nil {
-          return err
-        }
-			}
 			img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
+			if err != nil {
+				return err
+			}
+			// lookup mediatype because it could have been changed by ociConversion
+			mt, err := baseImage.MediaType()
 			if err != nil {
 				return err
 			}
@@ -674,7 +695,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 				Add: img,
 				Descriptor: v1.Descriptor{
 					URLs:        desc.URLs,
-					MediaType:   desc.MediaType,
+					MediaType:   mt,
 					Annotations: desc.Annotations,
 					Platform:    desc.Platform,
 				},

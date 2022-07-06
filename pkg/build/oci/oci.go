@@ -2,15 +2,17 @@ package build
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/match"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
+
+// implementation from github.com/google/go-containerregistry/pull/1293
+// use upstream once merged
 
 // Drops docker specific properties
 // See: https://github.com/opencontainers/image-spec/blob/main/config.md
@@ -54,9 +56,10 @@ func convertLayers(layers []v1.Layer) ([]v1.Layer, error) {
 			if err != nil {
 				return nil, fmt.Errorf("getting layer: %w", err)
 			}
-			layer, err = tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-				return ioutil.NopCloser(reader), nil
-			}, tarball.WithMediaType(types.OCILayer))
+      // TODO: use tarball.LayerFromOpener, using nopCloser and reader doesn't work.
+      // Reader returns eof when trying to read from layer.uncompressedopener
+      // Ref: https://github.com/google/go-containerregistry/blob/4d7b65b04609719eb0f23afa8669ba4b47178571/pkg/v1/tarball/layer.go#L253
+			layer, err = tarball.LayerFromReader(reader, tarball.WithMediaType(types.OCILayer))
 			if err != nil {
 				return nil, fmt.Errorf("building layer: %w", err)
 			}
@@ -65,9 +68,7 @@ func convertLayers(layers []v1.Layer) ([]v1.Layer, error) {
 			if err != nil {
 				return nil, fmt.Errorf("getting layer: %w", err)
 			}
-			layer, err = tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-				return ioutil.NopCloser(reader), nil
-			}, tarball.WithMediaType(types.OCIUncompressedLayer))
+      layer, err = tarball.LayerFromReader(reader, tarball.WithMediaType(types.OCIUncompressedLayer))
 			if err != nil {
 				return nil, fmt.Errorf("building layer: %w", err)
 			}
@@ -95,17 +96,17 @@ func ConvertImage(base v1.Image) (v1.Image, error) {
 
 	layers, err := base.Layers()
 	if err != nil {
-		return nil, err
+    return nil, fmt.Errorf("getting image layers: %w", err)
 	}
 
 	layers, err = convertLayers(layers)
 	if err != nil {
-		return nil, err
+    return nil, fmt.Errorf("converting layers: %w", err)
 	}
 
 	base, err = mutate.AppendLayers(empty.Image, layers...)
 	if err != nil {
-		return nil, err
+    return nil, fmt.Errorf("appending layers to empty.Image: %w", err)
 	}
 
 	base = mutate.MediaType(base, types.OCIManifestSchema1)
@@ -115,5 +116,45 @@ func ConvertImage(base v1.Image) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
+	return base, nil
+}
+
+func ConvertImageIndex(base v1.ImageIndex) (v1.ImageIndex, error) {
+	base = mutate.IndexMediaType(base, types.OCIImageIndex)
+	mn, err := base.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+
+	removals := []v1.Hash{}
+	addendums := []mutate.IndexAddendum{}
+
+	for _, manifest := range mn.Manifests {
+		if !manifest.MediaType.IsImage() {
+			// it is not an image, leave it as is
+			continue
+		}
+		img, err := base.Image(manifest.Digest)
+		if err != nil {
+			return nil, err
+		}
+		img, err = ConvertImage(img)
+		if err != nil {
+			return nil, err
+		}
+		mt, err := img.MediaType()
+		if err != nil {
+			return nil, err
+		}
+		removals = append(removals, manifest.Digest)
+		addendums = append(addendums, mutate.IndexAddendum{Add: img, Descriptor: v1.Descriptor{
+			URLs:        manifest.URLs,
+			MediaType:   mt,
+			Annotations: manifest.Annotations,
+			Platform:    manifest.Platform,
+		}})
+	}
+	base = mutate.RemoveManifests(base, match.Digests(removals...))
+	base = mutate.AppendManifests(base, addendums...)
 	return base, nil
 }
