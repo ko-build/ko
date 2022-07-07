@@ -693,6 +693,13 @@ func createBuildArgs(buildCfg Config) ([]string, error) {
 
 func (g *gobuild) configForImportPath(ip string) Config {
 	config := g.buildConfigs[ip]
+
+	// Set -extldflags by default, but set it first so that it can be overridden.
+	config.Ldflags = append([]string{"-extldflags", `"-static-pie"`}, config.Ldflags...)
+
+	// TODO: Set -buildmode=pie (https://github.com/google/ko/issues/375)
+	// config.Flags = append([]string{"-buildmode=pie"}, config.Flags...)
+
 	if g.trimpath {
 		// The `-trimpath` flag removes file system paths from the resulting binary, to aid reproducibility.
 		// Ref: https://pkg.go.dev/cmd/go#hdr-Compile_packages_and_dependencies

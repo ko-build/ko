@@ -301,79 +301,97 @@ func TestBuildEnv(t *testing.T) {
 }
 
 func TestBuildConfig(t *testing.T) {
-	tests := []struct {
+	for _, test := range []struct {
 		description  string
 		options      []Option
 		importpath   string
 		expectConfig Config
-	}{
-		{
-			description: "minimal options",
-			options: []Option{
-				WithBaseImages(nilGetBase),
-			},
+	}{{
+		description: "minimal options",
+		options: []Option{
+			WithBaseImages(nilGetBase),
 		},
-		{
-			description: "trimpath flag",
-			options: []Option{
-				WithBaseImages(nilGetBase),
-				WithTrimpath(true),
-			},
-			expectConfig: Config{
-				Flags: FlagArray{"-trimpath"},
-			},
+		expectConfig: Config{
+			Ldflags: StringArray{"-extldflags", `"-static-pie"`},
 		},
-		{
-			description: "no trimpath flag",
-			options: []Option{
-				WithBaseImages(nilGetBase),
-				WithTrimpath(false),
-			},
+	}, {
+		description: "trimpath flag",
+		options: []Option{
+			WithBaseImages(nilGetBase),
+			WithTrimpath(true),
 		},
-		{
-			description: "build config and trimpath",
-			options: []Option{
-				WithBaseImages(nilGetBase),
-				WithConfig(map[string]Config{
-					"example.com/foo": {
-						Flags: FlagArray{"-v"},
-					},
-				}),
-				WithTrimpath(true),
-			},
-			importpath: "example.com/foo",
-			expectConfig: Config{
-				Flags: FlagArray{"-v", "-trimpath"},
-			},
+		expectConfig: Config{
+			Ldflags: StringArray{"-extldflags", `"-static-pie"`},
+			Flags:   FlagArray{"-trimpath"},
 		},
-		{
-			description: "no trimpath overridden by build config flag",
-			options: []Option{
-				WithBaseImages(nilGetBase),
-				WithConfig(map[string]Config{
-					"example.com/bar": {
-						Flags: FlagArray{"-trimpath"},
-					},
-				}),
-				WithTrimpath(false),
-			},
-			importpath: "example.com/bar",
-			expectConfig: Config{
-				Flags: FlagArray{"-trimpath"},
-			},
+	}, {
+		description: "no trimpath flag",
+		options: []Option{
+			WithBaseImages(nilGetBase),
+			WithTrimpath(false),
 		},
-		{
-			description: "disable optimizations",
-			options: []Option{
-				WithBaseImages(nilGetBase),
-				WithDisabledOptimizations(),
-			},
-			expectConfig: Config{
-				Flags: FlagArray{"-gcflags", "all=-N -l"},
-			},
+		expectConfig: Config{
+			Ldflags: StringArray{"-extldflags", `"-static-pie"`},
 		},
-	}
-	for _, test := range tests {
+	}, {
+		description: "build config and trimpath",
+		options: []Option{
+			WithBaseImages(nilGetBase),
+			WithConfig(map[string]Config{
+				"example.com/foo": {
+					Flags: FlagArray{"-v"},
+				},
+			}),
+			WithTrimpath(true),
+		},
+		importpath: "example.com/foo",
+		expectConfig: Config{
+			Ldflags: StringArray{"-extldflags", `"-static-pie"`},
+			Flags:   FlagArray{"-trimpath", "-v"},
+		},
+	}, {
+		description: "no trimpath overridden by build config flag",
+		options: []Option{
+			WithBaseImages(nilGetBase),
+			WithConfig(map[string]Config{
+				"example.com/bar": {
+					Flags: FlagArray{"-trimpath"},
+				},
+			}),
+			WithTrimpath(false),
+		},
+		importpath: "example.com/bar",
+		expectConfig: Config{
+			Ldflags: StringArray{"-extldflags", `"-static-pie"`},
+			Flags:   FlagArray{"-trimpath"},
+		},
+	}, {
+		description: "disable optimizations",
+		options: []Option{
+			WithBaseImages(nilGetBase),
+			WithDisabledOptimizations(),
+		},
+		expectConfig: Config{
+			Ldflags: StringArray{"-extldflags", `"-static-pie"`},
+			Flags:   FlagArray{"-gcflags", "all=-N -l"},
+		},
+	}, {
+		description: "explicit -extldflags",
+		options: []Option{
+			WithBaseImages(nilGetBase),
+			WithConfig(map[string]Config{
+				"example.com/foo": {
+					Ldflags: StringArray{"-extldflags", "-as-needed"},
+				},
+			}),
+			WithTrimpath(true),
+		},
+		importpath: "example.com/foo",
+		expectConfig: Config{
+			Ldflags: StringArray{"-extldflags", `"-static-pie"`, "-extldflags", "-as-needed"},
+			Flags:   FlagArray{"-trimpath"},
+		},
+	}} {
 		t.Run(test.description, func(t *testing.T) {
 			i, err := NewGo(context.Background(), "", test.options...)
 			if err != nil {
