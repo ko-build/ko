@@ -39,6 +39,16 @@ chmod +x ./ko
 brew install ko
 ```
 
+### Install on [Alpine Linux](https://www.alpinelinux.org)
+
+Installation on Alpine requires using the [`testing` repository](https://wiki.alpinelinux.org/wiki/Enable_Community_Repository#Using_testing_repositories)
+
+```
+echo https://dl-cdn.alpinelinux.org/alpine/edge/testing/ >> /etc/apk/repositories
+apk update
+apk add ko
+```
+
 ### Build and Install from Source
 
 With Go 1.16+, build and install the latest released version:
