@@ -539,7 +539,10 @@ func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, pl
 		}
 
 		evalPath, err := filepath.EvalSymlinks(hostPath)
-		if err != nil {
+		if os.IsNotExist(err) {
+			log.Printf("skipping symlink for %q: %v", hostPath, err)
+			return nil
+		} else if err != nil {
 			return fmt.Errorf("filepath.EvalSymlinks(%q): %w", hostPath, err)
 		}
 
