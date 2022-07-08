@@ -1,2 +1,7 @@
 baseImageOverrides:
   github.com/google/ko: golang:1.17
+
+builds:
+- id: ko
+  ldflags:
+  - "{{ .Env.LDFLAGS }}"

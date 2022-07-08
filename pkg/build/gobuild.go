@@ -638,7 +638,9 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 }
 
 func createTemplateData() map[string]interface{} {
-	envVars := map[string]string{}
+	envVars := map[string]string{
+		"LDFLAGS": "",
+	}
 	for _, entry := range os.Environ() {
 		kv := strings.SplitN(entry, "=", 2)
 		envVars[kv[0]] = kv[1]
