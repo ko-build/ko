@@ -925,7 +925,7 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as index: %v", base)
 		}
-		res, err = g.buildAll(ctx, s, baseIndex)
+		res, err = g.buildAll(ctx, s, baseRef, baseIndex)
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		baseImage, ok := base.(v1.Image)
 		if !ok {
@@ -941,7 +941,7 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	return res, nil
 }
 
-func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIndex) (Result, error) {
+func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Reference, baseIndex v1.ImageIndex) (Result, error) {
 	im, err := baseIndex.IndexManifest()
 	if err != nil {
 		return nil, err
@@ -968,8 +968,12 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 		if err != nil {
 			return nil, fmt.Errorf("error getting matching image from index: %w", err)
 		}
-		// Carry forward the base index's annotations, which include base image annotations.
-		img = mutate.Annotations(img, im.Annotations).(v1.Image)
+		// Decorate the image with the ref of the index, and the matching
+		// platform's digest.
+		img = mutate.Annotations(img, map[string]string{
+			specsv1.AnnotationBaseImageDigest: matches[0].Digest.String(),
+			specsv1.AnnotationBaseImageName:   baseRef.Name(),
+		}).(v1.Image)
 		return g.buildOne(ctx, ref, img, matches[0].Platform)
 	}
 
@@ -985,6 +989,14 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseIndex v1.ImageIn
 			if err != nil {
 				return err
 			}
+
+			// Decorate the image with the ref of the index, and the matching
+			// platform's digest.
+			baseImage = mutate.Annotations(baseImage, map[string]string{
+				specsv1.AnnotationBaseImageDigest: desc.Digest.String(),
+				specsv1.AnnotationBaseImageName:   baseRef.Name(),
+			}).(v1.Image)
+
 			img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
 			if err != nil {
 				return err
