@@ -103,7 +103,10 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 		ExternalRefs: []ExternalRef{{
 			Category: "PACKAGE_MANAGER",
 			Type:     "purl",
-			Locator:  ociRef("image", imgDigest),
+			Locator: ociRef("image", imgDigest, qualifier{
+				key:   "mediaType",
+				value: string(m.MediaType),
+			}),
 		}},
 	})
 
@@ -218,6 +221,10 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 	if err != nil {
 		return nil, err
 	}
+	im, err := sii.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
 
 	doc, indexID := starterDocument(koVersion, *date, indexDigest)
 	doc.Packages = []Package{{
@@ -235,14 +242,13 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 		ExternalRefs: []ExternalRef{{
 			Category: "PACKAGE_MANAGER",
 			Type:     "purl",
-			Locator:  ociRef("index", indexDigest),
+			Locator: ociRef("index", indexDigest, qualifier{
+				key:   "mediaType",
+				value: string(im.MediaType),
+			}),
 		}},
 	}}
 
-	im, err := sii.IndexManifest()
-	if err != nil {
-		return nil, err
-	}
 	if err := addBaseImage(&doc, im.Annotations, indexDigest); err != nil {
 		return nil, err
 	}
@@ -263,9 +269,38 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 
 			doc.Relationships = append(doc.Relationships, Relationship{
 				Element: ociPackageName(indexDigest),
-				Type:    "CONTAINS",
+				Type:    "VARIANT_OF",
 				Related: depID,
 			})
+
+			qual := []qualifier{{
+				key:   "mediaType",
+				value: string(desc.MediaType),
+			}, {
+				key:   "arch",
+				value: desc.Platform.Architecture,
+			}, {
+				key:   "os",
+				value: desc.Platform.OS,
+			}}
+			if desc.Platform.Variant != "" {
+				qual = append(qual, qualifier{
+					key:   "variant",
+					value: desc.Platform.Variant,
+				})
+			}
+			if desc.Platform.OSVersion != "" {
+				qual = append(qual, qualifier{
+					key:   "os-version",
+					value: desc.Platform.OSVersion,
+				})
+			}
+			for _, feat := range desc.Platform.OSFeatures {
+				qual = append(qual, qualifier{
+					key:   "os-feature",
+					value: feat,
+				})
+			}
 
 			doc.Packages = append(doc.Packages, Package{
 				ID:      depID,
@@ -280,10 +315,7 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 				ExternalRefs: []ExternalRef{{
 					Category: "PACKAGE_MANAGER",
 					Type:     "purl",
-					Locator: ociRef("image", imageDigest, qualifier{
-						key:   "arch",
-						value: desc.Platform.Architecture,
-					}),
+					Locator:  ociRef("image", imageDigest, qual...),
 				}},
 				Checksums: []Checksum{{
 					Algorithm: strings.ToUpper(imageDigest.Algorithm),
