@@ -991,7 +991,22 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 			}
 
 			// Decorate the image with the ref of the index, and the matching
-			// platform's digest.
+			// platform's digest.  The ref of the index encodes the critical
+			// repository information for fetching the base image's digest, but
+			// we leave `name` pointing at the index's full original ref to that
+			// folks could conceivably check for updates to the index over time.
+			// While the `digest` doesn't give us enough information to check
+			// for changes with a simple HEAD (because we need the full index
+			// manifest to get the per-architecture image), that optimization
+			// mainly matters for DockerHub where HEAD's are exempt from rate
+			// limiting.  However, in practice, the way DockerHub updates the
+			// indices for official images is to rebuild per-arch images and
+			// replace the per-arch images in the existing index, so an index
+			// with N manifest receives N updates.  If we only record the digest
+			// of the index here, then we cannot tell when the index updates are
+			// no-ops for us because we didn't record the digest of the actual
+			// image we used, and we would potentially end up doing Nx more work
+			// than we really need to do.
 			baseImage = mutate.Annotations(baseImage, map[string]string{
 				specsv1.AnnotationBaseImageDigest: desc.Digest.String(),
 				specsv1.AnnotationBaseImageName:   baseRef.Name(),
