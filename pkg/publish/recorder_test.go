@@ -84,6 +84,10 @@ func TestRecorder(t *testing.T) {
 
 	refs := strings.Split(strings.TrimSpace(buf.String()), "\n")
 
+	if want, got := len(refs), 5; got != want {
+		t.Errorf("len(refs) = %d, wanted %d", got, want)
+	}
+
 	for _, s := range refs {
 		ref, err := name.ParseReference(s)
 		if err != nil {
