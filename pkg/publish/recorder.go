@@ -17,9 +17,13 @@ package publish
 import (
 	"context"
 	"io"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/ko/pkg/build"
+	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/pkg/oci/walk"
 )
 
 // recorder wraps a publisher implementation in a layer that recordes the published
@@ -47,7 +51,26 @@ func (r *recorder) Publish(ctx context.Context, br build.Result, ref string) (na
 	if err != nil {
 		return nil, err
 	}
-	if _, err := r.wc.Write([]byte(result.String() + "\n")); err != nil {
+
+	references := make([]string, 0, 20 /* just try to avoid resizing*/)
+	switch t := br.(type) {
+	case oci.SignedImageIndex:
+		if err := walk.SignedEntity(ctx, t, func(ctx context.Context, se oci.SignedEntity) error {
+			// Both of the SignedEntity types implement Digest()
+			h, err := se.(interface{ Digest() (v1.Hash, error) }).Digest()
+			if err != nil {
+				return err
+			}
+			references = append(references, result.Context().Digest(h.String()).String())
+			return nil
+		}); err != nil {
+			return nil, err
+		}
+	default:
+		references = append(references, result.String())
+	}
+
+	if _, err := r.wc.Write([]byte(strings.Join(references, "\n") + "\n")); err != nil {
 		return nil, err
 	}
 	return result, nil

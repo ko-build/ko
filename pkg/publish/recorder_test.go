@@ -17,11 +17,13 @@ package publish
 import (
 	"bytes"
 	"context"
-	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/ko/pkg/build"
+	"github.com/sigstore/cosign/pkg/oci/signed"
 )
 
 type cbPublish struct {
@@ -39,10 +41,13 @@ func (sp *cbPublish) Close() error {
 }
 
 func TestRecorder(t *testing.T) {
-	num := 0
+	repo := name.MustParseReference("docker.io/ubuntu:latest")
 	inner := &cbPublish{cb: func(c context.Context, b build.Result, s string) (name.Reference, error) {
-		num++
-		return name.ParseReference(fmt.Sprintf("ubuntu:%d", num))
+		h, err := b.Digest()
+		if err != nil {
+			return nil, err
+		}
+		return repo.Context().Digest(h.String()), nil
 	}}
 
 	buf := bytes.NewBuffer(nil)
@@ -52,21 +57,45 @@ func TestRecorder(t *testing.T) {
 		t.Fatalf("NewRecorder() = %v", err)
 	}
 
-	if _, err := recorder.Publish(context.Background(), nil, ""); err != nil {
+	img, err := random.Image(3, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	si := signed.Image(img)
+
+	index, err := random.Index(3, 3, 2)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	sii := signed.ImageIndex(index)
+
+	if _, err := recorder.Publish(context.Background(), si, ""); err != nil {
 		t.Errorf("recorder.Publish() = %v", err)
 	}
-	if _, err := recorder.Publish(context.Background(), nil, ""); err != nil {
+	if _, err := recorder.Publish(context.Background(), si, ""); err != nil {
 		t.Errorf("recorder.Publish() = %v", err)
 	}
-	if _, err := recorder.Publish(context.Background(), nil, ""); err != nil {
+	if _, err := recorder.Publish(context.Background(), sii, ""); err != nil {
 		t.Errorf("recorder.Publish() = %v", err)
 	}
 	if err := recorder.Close(); err != nil {
 		t.Errorf("recorder.Close() = %v", err)
 	}
 
-	want, got := "ubuntu:1\nubuntu:2\nubuntu:3\n", buf.String()
-	if got != want {
-		t.Errorf("buf.String() = %s, wanted %s", got, want)
+	refs := strings.Split(strings.TrimSpace(buf.String()), "\n")
+
+	if want, got := len(refs), 5; got != want {
+		t.Errorf("len(refs) = %d, wanted %d", got, want)
+	}
+
+	for _, s := range refs {
+		ref, err := name.ParseReference(s)
+		if err != nil {
+			t.Fatalf("name.ParseReference() = %v", err)
+		}
+		// Don't compare the digests, they are random.
+		if want, got := repo.Context().String(), ref.Context().String(); want != got {
+			t.Errorf("reference repo = %v, wanted %v", got, want)
+		}
 	}
 }
