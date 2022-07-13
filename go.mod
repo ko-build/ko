@@ -26,7 +26,6 @@ require (
 	github.com/sigstore/cosign v1.9.0
 	github.com/sigstore/rekor v0.7.0 // indirect
 	github.com/spf13/cobra v1.5.0
-	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.12.0
 	go.mongodb.org/mongo-driver v1.9.1 // indirect
 	go.uber.org/automaxprocs v1.5.1

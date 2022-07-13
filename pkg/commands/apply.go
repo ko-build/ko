@@ -17,35 +17,16 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
-	"strings"
 
-	"github.com/google/ko/internal"
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )
 
-const kubectlFlagsWarningTemplate = `NOTICE!
------------------------------------------------------------------
-Passing kubectl global flags to ko directly is deprecated.
-
-Instead of passing:
-    ko %s ... %s
-
-Pass kubectl global flags separated by "--":
-    ko %s ... -- %s
-
-For more information see:
-    https://github.com/google/ko/issues/317
------------------------------------------------------------------
-`
-
 // addApply augments our CLI surface with apply.
 func addApply(topLevel *cobra.Command) {
-	var kf internal.KubectlFlags
 	po := &options.PublishOptions{}
 	fo := &options.FilenameOptions{}
 	so := &options.SelectorOptions{}
@@ -105,16 +86,7 @@ func addApply(topLevel *cobra.Command) {
 			// Issue a "kubectl apply" command reading from stdin,
 			// to which we will pipe the resolved files, and any
 			// remaining flags passed after '--'.
-			argv := []string{"apply", "-f", "-"}
-			if kflags := kf.Values(); len(kflags) != 0 {
-				skflags := strings.Join(kflags, " ")
-				log.Printf(kubectlFlagsWarningTemplate,
-					"apply", skflags,
-					"apply", skflags)
-				argv = append(argv, kflags...)
-			}
-			argv = append(argv, args...)
-			kubectlCmd := exec.CommandContext(ctx, "kubectl", argv...)
+			kubectlCmd := exec.CommandContext(ctx, "kubectl", append([]string{"apply", "-f", "-"}, args...)...)
 
 			// Pass through our environment
 			kubectlCmd.Env = os.Environ()
@@ -160,7 +132,6 @@ func addApply(topLevel *cobra.Command) {
 	options.AddFileArg(apply, fo)
 	options.AddSelectorArg(apply, so)
 	options.AddBuildOptions(apply, bo)
-	internal.AddFlags(&kf, apply.Flags())
 
 	topLevel.AddCommand(apply)
 }
