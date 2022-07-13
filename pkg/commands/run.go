@@ -67,7 +67,7 @@ func addRun(topLevel *cobra.Command) {
 
 			kubectlArgs := []string{}
 			dashes = unparsedDashes()
-			if dashes != -1 {
+			if dashes != -1 && dashes != len(os.Args) {
 				kubectlArgs = os.Args[dashes+1:]
 			}
 
