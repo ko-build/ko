@@ -68,7 +68,7 @@ func addRun(topLevel *cobra.Command) {
 			kubectlArgs := []string{}
 			dashes = unparsedDashes()
 			if dashes != -1 {
-				kubectlArgs = os.Args[dashes:]
+				kubectlArgs = os.Args[dashes+1:]
 			}
 
 			bo.InsecureRegistry = po.InsecureRegistry
