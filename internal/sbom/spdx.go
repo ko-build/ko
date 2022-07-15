@@ -354,7 +354,7 @@ func starterDocument(koVersion string, date time.Time, d v1.Hash) (Document, str
 		},
 		DataLicense:       "CC0-1.0",
 		Name:              "sbom-" + d.String(),
-		Namespace:         "http://spdx.org/spdxdocs/ko" + d.String(),
+		Namespace:         "http://spdx.org/spdxdocs/ko/" + d.String(),
 		DocumentDescribes: []string{digestID},
 	}, digestID
 }
