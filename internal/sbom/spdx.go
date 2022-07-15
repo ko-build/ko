@@ -27,6 +27,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/imjasonh/golicenses"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 )
@@ -150,6 +151,13 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 			Related: depID,
 		})
 
+		lic, err := golicenses.Get(dep.Path)
+		if err == golicenses.ErrNotFound {
+			lic = NOASSERTION
+		} else if err != nil {
+			return nil, err
+		}
+
 		pkg := Package{
 			ID:      depID,
 			Name:    dep.Path,
@@ -157,7 +165,7 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 			// TODO: PackageSupplier: "Organization: " + dep.Path
 			DownloadLocation: fmt.Sprintf("https://proxy.golang.org/%s/@v/%s.zip", dep.Path, dep.Version),
 			FilesAnalyzed:    false,
-			LicenseConcluded: NOASSERTION,
+			LicenseConcluded: lic,
 			LicenseDeclared:  NOASSERTION,
 			CopyrightText:    NOASSERTION,
 			ExternalRefs: []ExternalRef{{

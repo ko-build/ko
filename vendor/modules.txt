@@ -340,6 +340,9 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
+# github.com/imjasonh/golicenses v0.0.0-20220721185151-89ffd46a4f15
+## explicit; go 1.18
+github.com/imjasonh/golicenses
 # github.com/inconshreveable/mousetrap v1.0.1
 ## explicit; go 1.18
 github.com/inconshreveable/mousetrap

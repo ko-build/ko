@@ -1,0 +1,15 @@
+SELECT
+  Name,
+  lic
+FROM (SELECT
+  DISTINCT(Name),
+  ARRAY_TO_STRING(ARRAY(SELECT x FROM UNNEST(Licenses) AS x ORDER BY x), ",") AS lic,
+  MAX(SnapshotAt) as latest
+FROM
+  `bigquery-public-data.deps_dev_v1.PackageVersions`
+WHERE
+  System = "GO"
+  AND ARRAY_LENGTH(Licenses) != 0
+  AND Name != ""
+GROUP BY Name, lic
+ORDER BY Name, lic ASC)
