@@ -120,7 +120,7 @@ github.com/awslabs/amazon-ecr-credential-helper/ecr-login/version
 github.com/chrismellard/docker-credential-acr-env/pkg/credhelper
 github.com/chrismellard/docker-credential-acr-env/pkg/registry
 github.com/chrismellard/docker-credential-acr-env/pkg/token
-# github.com/containerd/stargz-snapshotter/estargz v0.11.4
+# github.com/containerd/stargz-snapshotter/estargz v0.12.0
 ## explicit
 github.com/containerd/stargz-snapshotter/estargz
 github.com/containerd/stargz-snapshotter/estargz/errorutil
@@ -284,8 +284,7 @@ github.com/inconshreveable/mousetrap
 github.com/jmespath/go-jmespath
 # github.com/josharian/intern v1.0.0
 github.com/josharian/intern
-# github.com/klauspost/compress v1.15.5
-## explicit
+# github.com/klauspost/compress v1.15.7
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
