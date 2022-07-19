@@ -33,9 +33,10 @@ func addRun(topLevel *cobra.Command) {
 	bo := &options.BuildOptions{}
 
 	run := &cobra.Command{
-		Use:   "run IMPORTPATH",
-		Short: "A variant of `kubectl run` that containerizes IMPORTPATH first.",
-		Long:  `This sub-command combines "ko build" and "kubectl run" to support containerizing and running Go binaries on Kubernetes in a single command.`,
+		Use:        "run IMPORTPATH",
+		Short:      "A variant of `kubectl run` that containerizes IMPORTPATH first.",
+		Long:       `This sub-command combines "ko build" and "kubectl run" to support containerizing and running Go binaries on Kubernetes in a single command.`,
+		Deprecated: "SBOMs are generated and uploaded by default; this command will be removed in a future release.",
 		Example: `
   # Publish the image and run it on Kubernetes as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
