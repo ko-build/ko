@@ -928,27 +928,22 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 		base = mutate.Annotations(base, anns).(Result)
 	}
 
-	var res Result
 	switch mt {
 	case types.OCIImageIndex, types.DockerManifestList:
 		baseIndex, ok := base.(v1.ImageIndex)
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as index: %v", base)
 		}
-		res, err = g.buildAll(ctx, s, baseRef, baseIndex)
+		return g.buildAll(ctx, s, baseRef, baseIndex)
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		baseImage, ok := base.(v1.Image)
 		if !ok {
 			return nil, fmt.Errorf("failed to interpret base as image: %v", base)
 		}
-		res, err = g.buildOne(ctx, s, baseImage, nil)
+		return g.buildOne(ctx, s, baseImage, nil)
 	default:
 		return nil, fmt.Errorf("base image media type: %s", mt)
 	}
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
 }
 
 func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Reference, baseIndex v1.ImageIndex) (Result, error) {
