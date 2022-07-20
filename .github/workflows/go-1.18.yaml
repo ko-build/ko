@@ -29,7 +29,7 @@ jobs:
       with:
         go-version: ${{ matrix.user-go-version }}
         check-latest: true
-    - run: |
-        go install github.com/google/go-containerregistry/cmd/registry@latest
-        registry &
-        KO_DOCKER_REPO=localhost:1338 ko build ./test/
+    - run: chainguard-dev/actions/setup-registry@main
+    - with:
+        KO_DOCKER_REPO: localhost:1338
+      run: ko build ./test/
