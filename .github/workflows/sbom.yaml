@@ -17,7 +17,7 @@ jobs:
         with:
           go-version: 1.17
           check-latest: true
-      - run: chainguard-dev/actions/setup-registry@main
+      - uses: chainguard-dev/actions/setup-registry@main
       - uses: actions/checkout@v3
 
       - name: Generate
@@ -38,7 +38,7 @@ jobs:
         with:
           go-version: 1.17
           check-latest: true
-      - run: chainguard-dev/actions/setup-registry@main
+      - uses: chainguard-dev/actions/setup-registry@main
       - uses: actions/checkout@v3
 
       - name: Install CycloneDX
@@ -70,7 +70,7 @@ jobs:
         with:
           go-version: 1.17
           check-latest: true
-      - run: chainguard-dev/actions/setup-registry@main
+      - uses: chainguard-dev/actions/setup-registry@main
       - uses: actions/checkout@v3
 
       - name: Install SPDX Tools
@@ -103,7 +103,7 @@ jobs:
         with:
           go-version: 1.17
           check-latest: true
-      - run: chainguard-dev/actions/setup-registry@main
+      - uses: chainguard-dev/actions/setup-registry@main
       - uses: actions/checkout@v3
 
       - name: Install SPDX Tools
