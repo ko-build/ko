@@ -46,7 +46,8 @@ If the image was not built using ko, or if it was built without embedding depend
 		Example: `
   # Fetch and extract Go dependency information from an image:
   ko deps docker.io/my-user/my-image:v3`,
-		Args: cobra.ExactArgs(1),
+		Args:       cobra.ExactArgs(1),
+		Deprecated: "SBOMs are generated and uploaded by default; this command will be removed in a future release.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := cmd.Context()
 
