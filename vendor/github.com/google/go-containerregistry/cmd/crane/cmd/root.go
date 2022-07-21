@@ -20,6 +20,7 @@ import (
 	"path/filepath"
 
 	"github.com/docker/cli/cli/config"
+	"github.com/google/go-containerregistry/internal/cmd"
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
@@ -92,17 +93,19 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 
 	commands := []*cobra.Command{
 		NewCmdAppend(&options),
-		NewCmdBlob(&options),
 		NewCmdAuth("crane", "auth"),
+		NewCmdBlob(&options),
 		NewCmdCatalog(&options),
 		NewCmdConfig(&options),
 		NewCmdCopy(&options),
 		NewCmdDelete(&options),
 		NewCmdDigest(&options),
+		cmd.NewCmdEdit(&options),
 		NewCmdExport(&options),
 		NewCmdFlatten(&options),
 		NewCmdList(&options),
 		NewCmdManifest(&options),
+		NewCmdMutate(&options),
 		NewCmdOptimize(&options),
 		NewCmdPull(&options),
 		NewCmdPush(&options),
@@ -110,7 +113,6 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 		NewCmdTag(&options),
 		NewCmdValidate(&options),
 		NewCmdVersion(),
-		NewCmdMutate(&options),
 	}
 
 	root.AddCommand(commands...)

@@ -1,4 +1,4 @@
-# cloud.google.com/go/compute v1.6.1
+# cloud.google.com/go/compute v1.7.0
 cloud.google.com/go/compute/metadata
 # github.com/Azure/azure-sdk-for-go v65.0.0+incompatible
 ## explicit
@@ -128,7 +128,7 @@ github.com/containerd/stargz-snapshotter/estargz/errorutil
 github.com/cpuguy83/go-md2man/v2/md2man
 # github.com/dimchansky/utfbom v1.1.1
 github.com/dimchansky/utfbom
-# github.com/docker/cli v20.10.16+incompatible
+# github.com/docker/cli v20.10.17+incompatible
 github.com/docker/cli/cli/config
 github.com/docker/cli/cli/config/configfile
 github.com/docker/cli/cli/config/credentials
@@ -230,10 +230,12 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/google/go-containerregistry v0.10.0
+# github.com/google/go-containerregistry v0.11.0
 ## explicit
 github.com/google/go-containerregistry/cmd/crane/cmd
 github.com/google/go-containerregistry/internal/and
+github.com/google/go-containerregistry/internal/cmd
+github.com/google/go-containerregistry/internal/editor
 github.com/google/go-containerregistry/internal/estargz
 github.com/google/go-containerregistry/internal/gzip
 github.com/google/go-containerregistry/internal/httptest
@@ -284,7 +286,7 @@ github.com/inconshreveable/mousetrap
 github.com/jmespath/go-jmespath
 # github.com/josharian/intern v1.0.0
 github.com/josharian/intern
-# github.com/klauspost/compress v1.15.7
+# github.com/klauspost/compress v1.15.8
 github.com/klauspost/compress
 github.com/klauspost/compress/fse
 github.com/klauspost/compress/huff0
@@ -351,7 +353,7 @@ github.com/sigstore/cosign/pkg/types
 github.com/sigstore/rekor/pkg/generated/models
 # github.com/sigstore/sigstore v1.2.1-0.20220512194100-3ed986cc9758
 github.com/sigstore/sigstore/pkg/cryptoutils
-# github.com/sirupsen/logrus v1.8.1
+# github.com/sirupsen/logrus v1.9.0
 github.com/sirupsen/logrus
 # github.com/spf13/afero v1.8.2
 github.com/spf13/afero
@@ -413,8 +415,7 @@ golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
 # golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20220531201128-c960675eff93
-## explicit
+# golang.org/x/net v0.0.0-20220708220712-1185a9018129
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
@@ -425,7 +426,7 @@ golang.org/x/net/internal/socks
 golang.org/x/net/internal/timeseries
 golang.org/x/net/proxy
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20220524215830-622c5d57e401
+# golang.org/x/oauth2 v0.0.0-20220718184931-c8730f7fcb92
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
 golang.org/x/oauth2/google
@@ -433,11 +434,11 @@ golang.org/x/oauth2/google/internal/externalaccount
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sync v0.0.0-20220513210516-0976fa681c29
+# golang.org/x/sync v0.0.0-20220601150217-0de741cfad7f
 ## explicit
 golang.org/x/sync/errgroup
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
+# golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/internal/unsafeheader
@@ -477,10 +478,9 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20220531173845-685668d2de03
-## explicit
+# google.golang.org/genproto v0.0.0-20220616135557-88e70c0c3a90
 google.golang.org/genproto/googleapis/rpc/status
-# google.golang.org/grpc v1.46.2
+# google.golang.org/grpc v1.47.0
 google.golang.org/grpc
 google.golang.org/grpc/attributes
 google.golang.org/grpc/backoff
