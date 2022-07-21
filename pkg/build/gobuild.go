@@ -731,6 +731,20 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	ref := newRef(refStr)
 
+	// Layers should be typed to match the underlying image, since some
+	// registries reject mixed-type layers.
+	var layerMediaType types.MediaType
+	mt, err := base.MediaType()
+	if err != nil {
+		return nil, err
+	}
+	switch mt {
+	case types.OCIManifestSchema1:
+		layerMediaType = types.OCILayer
+	case types.DockerManifestSchema2:
+		layerMediaType = types.DockerLayer
+	}
+
 	cf, err := base.ConfigFile()
 	if err != nil {
 		return nil, err
@@ -762,7 +776,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	dataLayerBytes := dataLayerBuf.Bytes()
 	dataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 		return ioutil.NopCloser(bytes.NewBuffer(dataLayerBytes)), nil
-	}, tarball.WithCompressedCaching)
+	}, tarball.WithCompressedCaching, tarball.WithMediaType(layerMediaType))
 	if err != nil {
 		return nil, err
 	}
@@ -780,7 +794,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	appPath := path.Join(appDir, appFilename(ref.Path()))
 
 	miss := func() (v1.Layer, error) {
-		return buildLayer(appPath, file, platform)
+		return buildLayer(appPath, file, platform, layerMediaType)
 	}
 
 	binaryLayer, err := g.cache.get(ctx, file, miss)
@@ -789,7 +803,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 
 	layers = append(layers, mutate.Addendum{
-		Layer: binaryLayer,
+		Layer:     binaryLayer,
+		MediaType: layerMediaType,
 		History: v1.History{
 			Author:    "ko",
 			Created:   g.creationTime,
@@ -860,7 +875,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	return si, nil
 }
 
-func buildLayer(appPath, file string, platform *v1.Platform) (v1.Layer, error) {
+func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType types.MediaType) (v1.Layer, error) {
 	// Construct a tarball with the binary and produce a layer.
 	binaryLayerBuf, err := tarBinary(appPath, file, platform)
 	if err != nil {
@@ -872,7 +887,7 @@ func buildLayer(appPath, file string, platform *v1.Platform) (v1.Layer, error) {
 	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
 		// When using estargz, prioritize downloading the binary entrypoint.
 		appPath,
-	})))
+	})), tarball.WithMediaType(layerMediaType))
 }
 
 // Append appPath to the PATH environment variable, if it exists. Otherwise,

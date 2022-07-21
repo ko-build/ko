@@ -1152,3 +1152,76 @@ func TestMatchesPlatformSpec(t *testing.T) {
 		}
 	}
 }
+
+func TestGoBuildConsistentMediaTypes(t *testing.T) {
+	for _, c := range []struct {
+		desc                      string
+		mediaType, layerMediaType types.MediaType
+	}{{
+		desc:           "docker types",
+		mediaType:      types.DockerManifestSchema2,
+		layerMediaType: types.DockerLayer,
+	}, {
+		desc:           "oci types",
+		mediaType:      types.OCIManifestSchema1,
+		layerMediaType: types.OCILayer,
+	}} {
+		t.Run(c.desc, func(t *testing.T) {
+			base := mutate.MediaType(empty.Image, c.mediaType)
+			l, err := random.Layer(10, c.layerMediaType)
+			if err != nil {
+				t.Fatal(err)
+			}
+			base, err = mutate.AppendLayers(base, l)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			ng, err := NewGo(
+				context.Background(),
+				"",
+				WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+				withBuilder(writeTempFile),
+				withSBOMber(fauxSBOM),
+			)
+			if err != nil {
+				t.Fatalf("NewGo() = %v", err)
+			}
+
+			importpath := "github.com/google/ko"
+
+			result, err := ng.Build(context.Background(), StrictScheme+importpath)
+			if err != nil {
+				t.Fatalf("Build() = %v", err)
+			}
+
+			img, ok := result.(v1.Image)
+			if !ok {
+				t.Fatalf("Build() not an Image: %T", result)
+			}
+
+			ls, err := img.Layers()
+			if err != nil {
+				t.Fatalf("Layers() = %v", err)
+			}
+
+			for i, l := range ls {
+				gotMT, err := l.MediaType()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if gotMT != c.layerMediaType {
+					t.Errorf("layer %d: got mediaType %q, want %q", i, gotMT, c.layerMediaType)
+				}
+			}
+
+			gotMT, err := img.MediaType()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if gotMT != c.mediaType {
+				t.Errorf("got image mediaType %q, want %q", gotMT, c.layerMediaType)
+			}
+		})
+	}
+}
