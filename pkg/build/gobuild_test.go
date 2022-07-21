@@ -1214,6 +1214,14 @@ func TestGoBuildConsistentMediaTypes(t *testing.T) {
 					t.Errorf("layer %d: got mediaType %q, want %q", i, gotMT, c.layerMediaType)
 				}
 			}
+
+			gotMT, err := img.MediaType()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if gotMT != c.mediaType {
+				t.Errorf("got image mediaType %q, want %q", gotMT, c.layerMediaType)
+			}
 		})
 	}
 }
