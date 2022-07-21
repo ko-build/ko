@@ -30,6 +30,6 @@ jobs:
         go-version: ${{ matrix.user-go-version }}
         check-latest: true
     - uses: chainguard-dev/actions/setup-registry@main
-    - with:
+    - env:
         KO_DOCKER_REPO: localhost:1338
       run: ko build ./test/
