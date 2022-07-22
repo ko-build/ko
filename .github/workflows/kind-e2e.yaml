@@ -51,6 +51,9 @@ jobs:
         kubectl wait --timeout=60s --for=condition=Ready pod/kodata
         kubectl delete pod kodata
 
+        # Test ko run with kind load
+        # This tests that --labels are passed to kubectl, and -wait is passed to the test binary.
+        KO_DOCKER_REPO=kind.local ko run ./test -- --labels=foo=bar -- -wait=false
 
     - name: Check SBOM
       run: |

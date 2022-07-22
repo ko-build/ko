@@ -15,6 +15,7 @@
 package kind
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -46,9 +47,12 @@ var GetProvider = func() provider {
 // Tag adds a tag to an already existent image.
 func Tag(ctx context.Context, src, dest name.Tag) error {
 	return onEachNode(func(n nodes.Node) error {
+		var buf bytes.Buffer
 		cmd := n.CommandContext(ctx, "ctr", "--namespace=k8s.io", "images", "tag", "--force", src.String(), dest.String())
+		cmd.SetStdout(&buf)
+		cmd.SetStderr(&buf)
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to tag image: %w", err)
+			return fmt.Errorf("failed to tag image: %w\n%s", err, buf.String())
 		}
 		return nil
 	})
@@ -64,9 +68,12 @@ func Write(ctx context.Context, tag name.Tag, img v1.Image) error {
 			return pw.CloseWithError(tarball.Write(tag, img, pw))
 		})
 
+		var buf bytes.Buffer
 		cmd := n.CommandContext(ctx, "ctr", "--namespace=k8s.io", "images", "import", "-").SetStdin(pr)
+		cmd.SetStdout(&buf)
+		cmd.SetStderr(&buf)
 		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to load image to node %q: %w", n, err)
+			return fmt.Errorf("failed to load image to node %q: %w\n%s", n, err, buf.String())
 		}
 
 		if err := grp.Wait(); err != nil {
