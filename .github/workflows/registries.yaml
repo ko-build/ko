@@ -1,0 +1,45 @@
+name: Push to registries
+
+on:
+  pull_request_target:
+    branches: ['main']
+  push:
+    branches: ['main']
+  workflow_dispatch:  # Allow manual runs.
+
+jobs:
+  quay:
+    name: Push to quay.io
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+        check-latest: true
+    - env:
+        QUAY_USERNAME: ko-testing
+        QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+        KO_DOCKER_REPO: quay.io/ko-testing/test
+      run: |
+        echo ${QUAY_PASSWORD} | go run ./ login --username=${QUAY_USERNAME} --password-stdin quay.io
+        go run ./ build --platform=all ./test/
+
+  dockerhub:
+    name: Push to dockerhub
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+        check-latest: true
+    - env:
+        DOCKERHUB_USERNAME: kotesting
+        DOCKERHUB_PASSWORD: ${{ secrets.DOCKERHUB_PASSWORD }}
+        KO_DOCKER_REPO: kotesting/test
+      run: |
+        echo ${DOCKERHUB_PASSWORD} | go run ./ login --username=${DOCKERHUB_USERNAME} --password-stdin index.docker.io
+        go run ./ build --platform=all ./test/
