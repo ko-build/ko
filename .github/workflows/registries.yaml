@@ -5,7 +5,7 @@ on:
     branches: ['main']
   push:
     branches: ['main']
-  workload_dispatch:
+  workflow_dispatch:  # Allow manual runs.
 
 jobs:
   quay:
