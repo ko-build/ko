@@ -19,12 +19,12 @@ jobs:
         go-version: 1.18
         check-latest: true
     - env:
-        QUAY_USERNAME: ko-testing
+        QUAY_USERNAME: ko-testing+test
         QUAY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
         KO_DOCKER_REPO: quay.io/ko-testing/test
       run: |
         echo ${QUAY_PASSWORD} | go run ./ login --username=${QUAY_USERNAME} --password-stdin quay.io
-        go run ./ build --platform=all ./test/
+        go run ./ build --platform=all ./test/ --sbom=none --bare
 
   dockerhub:
     name: Push to dockerhub
@@ -42,4 +42,4 @@ jobs:
         KO_DOCKER_REPO: kotesting/test
       run: |
         echo ${DOCKERHUB_PASSWORD} | go run ./ login --username=${DOCKERHUB_USERNAME} --password-stdin index.docker.io
-        go run ./ build --platform=all ./test/
+        go run ./ build --platform=all ./test/ --bare
