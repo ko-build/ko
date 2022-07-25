@@ -86,12 +86,11 @@ type valueReader struct {
 
 // NewBSONDocumentReader returns a ValueReader using b for the underlying BSON
 // representation. Parameter b must be a BSON Document.
-//
-// TODO(skriptble): There's a lack of symmetry between the reader and writer, since the reader takes
-// a []byte while the writer takes an io.Writer. We should have two versions of each, one that takes
-// a []byte and one that takes an io.Reader or io.Writer. The []byte version will need to return a
-// thing that can return the finished []byte since it might be reallocated when appended to.
 func NewBSONDocumentReader(b []byte) ValueReader {
+	// TODO(skriptble): There's a lack of symmetry between the reader and writer, since the reader takes a []byte while the
+	// TODO writer takes an io.Writer. We should have two versions of each, one that takes a []byte and one that takes an
+	// TODO io.Reader or io.Writer. The []byte version will need to return a thing that can return the finished []byte since
+	// TODO it might be reallocated when appended to.
 	return newValueReader(b)
 }
 

@@ -25,13 +25,15 @@ import (
 	"github.com/sigstore/cosign/pkg/oci"
 )
 
+var ErrImageNotFound = errors.New("image not found in registry")
+
 // SignedImage provides access to a remote image reference, and its signatures.
 func SignedImage(ref name.Reference, options ...Option) (oci.SignedImage, error) {
 	o := makeOptions(ref.Context(), options...)
 	ri, err := remoteImage(ref, o.ROpt...)
 	var te *transport.Error
 	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
-		return nil, errors.New("image not found in registry")
+		return nil, ErrImageNotFound
 	} else if err != nil {
 		return nil, err
 	}

@@ -242,7 +242,7 @@ func (si *signedImage) Attestations() (oci.Signatures, error) {
 		if err != nil {
 			return nil, err
 		}
-		return AppendSignatures(replace)
+		return ReplaceSignatures(replace)
 	}
 	return AppendSignatures(base, si.att)
 }
