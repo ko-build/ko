@@ -23,7 +23,7 @@ tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
 
 ## Install
 
-### Download from [Releases](https://github.com/google/ko/releases)
+### Install from [Releases](https://github.com/google/ko/releases)
 
 ```
 $ VERSION=TODO # choose the latest version
