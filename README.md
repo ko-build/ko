@@ -3,6 +3,7 @@
 [![GitHub Actions Build Status](https://github.com/google/ko/workflows/Build/badge.svg)](https://github.com/google/ko/actions?query=workflow%3ABuild)
 [![GoDoc](https://godoc.org/github.com/google/ko?status.svg)](https://godoc.org/github.com/google/ko)
 [![Go Report Card](https://goreportcard.com/badge/google/ko)](https://goreportcard.com/report/google/ko)
+[![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev/images/gh-badge-level3.svg)
 
 <img src="./logo/ko.png" width="300">
 
