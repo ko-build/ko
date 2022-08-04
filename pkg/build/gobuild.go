@@ -757,6 +757,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 	}
 
+	if !g.platformMatcher.matches(platform) {
+		return nil, fmt.Errorf("base image platform %q does not match desired platforms %v", platform, g.platformMatcher.platforms)
+	}
 	// Do the build into a temporary file.
 	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.configForImportPath(ref.Path()))
 	if err != nil {

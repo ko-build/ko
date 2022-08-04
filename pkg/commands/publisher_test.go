@@ -66,6 +66,7 @@ func TestPublishImages(t *testing.T) {
 		bo := &options.BuildOptions{
 			BaseImage:        baseImage,
 			ConcurrentBuilds: 1,
+			Platforms:        []string{"all"},
 		}
 		builder, err := NewBuilder(ctx, bo)
 		if err != nil {

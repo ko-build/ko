@@ -183,6 +183,7 @@ func TestNewBuilder(t *testing.T) {
 			bo: &options.BuildOptions{
 				BaseImage:        baseImage,
 				ConcurrentBuilds: 1,
+				Platforms:        []string{"all"},
 			},
 			wantQualifiedImportpath: "ko://github.com/google/ko/test",
 			shouldBuildError:        false,
