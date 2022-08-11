@@ -84,7 +84,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Verify the binaries.
           checksums=$(echo "$CHECKSUMS" | base64 -d)
           while read -r line; do
               fn=$(echo $line | cut -d ' ' -f2)
