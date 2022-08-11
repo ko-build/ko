@@ -49,8 +49,7 @@ jobs:
   verification:
     needs: [goreleaser, provenance]
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    permissions: read-all
     steps:
       # Note: this will be replaced with the GHA in the future.
       - name: Install the verifier
