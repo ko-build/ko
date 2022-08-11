@@ -46,7 +46,7 @@ jobs:
       base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
       upload-assets: true
 
-  release:
+  verification:
     needs: [goreleaser, provenance]
     runs-on: ubuntu-latest
     permissions:
