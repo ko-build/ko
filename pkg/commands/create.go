@@ -115,7 +115,7 @@ func addCreate(topLevel *cobra.Command) {
 					stdin.Write([]byte("---\n"))
 				}
 				// Once primed kick things off.
-				return resolveFilesToWriter(ctx, builder, publisher, fo, so, stdin)
+				return ResolveFilesToWriter(ctx, builder, publisher, fo, so, stdin)
 			})
 
 			g.Go(func() error {

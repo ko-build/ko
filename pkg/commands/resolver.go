@@ -272,7 +272,7 @@ func (n nopPublisher) Close() error { return nil }
 // resolvedFuture represents a "future" for the bytes of a resolved file.
 type resolvedFuture chan []byte
 
-func resolveFilesToWriter(
+func ResolveFilesToWriter(
 	ctx context.Context,
 	builder *build.Caching,
 	publisher publish.Interface,
