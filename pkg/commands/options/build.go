@@ -32,7 +32,7 @@ import (
 
 const (
 	// configDefaultBaseImage is the default base image if not specified in .ko.yaml.
-	configDefaultBaseImage = "ghcr.io/distroless/static:latest"
+	configDefaultBaseImage = "distroless.dev/static:latest"
 )
 
 // BuildOptions represents options for the ko builder.
