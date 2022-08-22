@@ -38,6 +38,7 @@ type StorageAuthorityClient interface {
 	// Return a count of authorizations with status "invalid" that belong to
 	// a given registration ID and expire in the given time range.
 	CountFQDNSets(ctx context.Context, in *CountFQDNSetsRequest, opts ...grpc.CallOption) (*Count, error)
+	FQDNSetTimestampsForWindow(ctx context.Context, in *CountFQDNSetsRequest, opts ...grpc.CallOption) (*Timestamps, error)
 	FQDNSetExists(ctx context.Context, in *FQDNSetExistsRequest, opts ...grpc.CallOption) (*Exists, error)
 	PreviousCertificateExists(ctx context.Context, in *PreviousCertificateExistsRequest, opts ...grpc.CallOption) (*Exists, error)
 	GetAuthorization2(ctx context.Context, in *AuthorizationID2, opts ...grpc.CallOption) (*proto.Authorization, error)
@@ -49,6 +50,7 @@ type StorageAuthorityClient interface {
 	GetValidAuthorizations2(ctx context.Context, in *GetValidAuthorizationsRequest, opts ...grpc.CallOption) (*Authorizations, error)
 	KeyBlocked(ctx context.Context, in *KeyBlockedRequest, opts ...grpc.CallOption) (*Exists, error)
 	SerialsForIncident(ctx context.Context, in *SerialsForIncidentRequest, opts ...grpc.CallOption) (StorageAuthority_SerialsForIncidentClient, error)
+	GetRevokedCerts(ctx context.Context, in *GetRevokedCertsRequest, opts ...grpc.CallOption) (StorageAuthority_GetRevokedCertsClient, error)
 	// Adders
 	NewRegistration(ctx context.Context, in *proto.Registration, opts ...grpc.CallOption) (*proto.Registration, error)
 	UpdateRegistration(ctx context.Context, in *proto.Registration, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -178,6 +180,15 @@ func (c *storageAuthorityClient) CountFQDNSets(ctx context.Context, in *CountFQD
 	return out, nil
 }
 
+func (c *storageAuthorityClient) FQDNSetTimestampsForWindow(ctx context.Context, in *CountFQDNSetsRequest, opts ...grpc.CallOption) (*Timestamps, error) {
+	out := new(Timestamps)
+	err := c.cc.Invoke(ctx, "/sa.StorageAuthority/FQDNSetTimestampsForWindow", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *storageAuthorityClient) FQDNSetExists(ctx context.Context, in *FQDNSetExistsRequest, opts ...grpc.CallOption) (*Exists, error) {
 	out := new(Exists)
 	err := c.cc.Invoke(ctx, "/sa.StorageAuthority/FQDNSetExists", in, out, opts...)
@@ -294,6 +305,38 @@ type storageAuthoritySerialsForIncidentClient struct {
 
 func (x *storageAuthoritySerialsForIncidentClient) Recv() (*IncidentSerial, error) {
 	m := new(IncidentSerial)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *storageAuthorityClient) GetRevokedCerts(ctx context.Context, in *GetRevokedCertsRequest, opts ...grpc.CallOption) (StorageAuthority_GetRevokedCertsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &StorageAuthority_ServiceDesc.Streams[1], "/sa.StorageAuthority/GetRevokedCerts", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &storageAuthorityGetRevokedCertsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type StorageAuthority_GetRevokedCertsClient interface {
+	Recv() (*proto.CRLEntry, error)
+	grpc.ClientStream
+}
+
+type storageAuthorityGetRevokedCertsClient struct {
+	grpc.ClientStream
+}
+
+func (x *storageAuthorityGetRevokedCertsClient) Recv() (*proto.CRLEntry, error) {
+	m := new(proto.CRLEntry)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
@@ -489,6 +532,7 @@ type StorageAuthorityServer interface {
 	// Return a count of authorizations with status "invalid" that belong to
 	// a given registration ID and expire in the given time range.
 	CountFQDNSets(context.Context, *CountFQDNSetsRequest) (*Count, error)
+	FQDNSetTimestampsForWindow(context.Context, *CountFQDNSetsRequest) (*Timestamps, error)
 	FQDNSetExists(context.Context, *FQDNSetExistsRequest) (*Exists, error)
 	PreviousCertificateExists(context.Context, *PreviousCertificateExistsRequest) (*Exists, error)
 	GetAuthorization2(context.Context, *AuthorizationID2) (*proto.Authorization, error)
@@ -500,6 +544,7 @@ type StorageAuthorityServer interface {
 	GetValidAuthorizations2(context.Context, *GetValidAuthorizationsRequest) (*Authorizations, error)
 	KeyBlocked(context.Context, *KeyBlockedRequest) (*Exists, error)
 	SerialsForIncident(*SerialsForIncidentRequest, StorageAuthority_SerialsForIncidentServer) error
+	GetRevokedCerts(*GetRevokedCertsRequest, StorageAuthority_GetRevokedCertsServer) error
 	// Adders
 	NewRegistration(context.Context, *proto.Registration) (*proto.Registration, error)
 	UpdateRegistration(context.Context, *proto.Registration) (*emptypb.Empty, error)
@@ -560,6 +605,9 @@ func (UnimplementedStorageAuthorityServer) CountOrders(context.Context, *CountOr
 func (UnimplementedStorageAuthorityServer) CountFQDNSets(context.Context, *CountFQDNSetsRequest) (*Count, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CountFQDNSets not implemented")
 }
+func (UnimplementedStorageAuthorityServer) FQDNSetTimestampsForWindow(context.Context, *CountFQDNSetsRequest) (*Timestamps, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FQDNSetTimestampsForWindow not implemented")
+}
 func (UnimplementedStorageAuthorityServer) FQDNSetExists(context.Context, *FQDNSetExistsRequest) (*Exists, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FQDNSetExists not implemented")
 }
@@ -592,6 +640,9 @@ func (UnimplementedStorageAuthorityServer) KeyBlocked(context.Context, *KeyBlock
 }
 func (UnimplementedStorageAuthorityServer) SerialsForIncident(*SerialsForIncidentRequest, StorageAuthority_SerialsForIncidentServer) error {
 	return status.Errorf(codes.Unimplemented, "method SerialsForIncident not implemented")
+}
+func (UnimplementedStorageAuthorityServer) GetRevokedCerts(*GetRevokedCertsRequest, StorageAuthority_GetRevokedCertsServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetRevokedCerts not implemented")
 }
 func (UnimplementedStorageAuthorityServer) NewRegistration(context.Context, *proto.Registration) (*proto.Registration, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NewRegistration not implemented")
@@ -861,6 +912,24 @@ func _StorageAuthority_CountFQDNSets_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _StorageAuthority_FQDNSetTimestampsForWindow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CountFQDNSetsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(StorageAuthorityServer).FQDNSetTimestampsForWindow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/sa.StorageAuthority/FQDNSetTimestampsForWindow",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(StorageAuthorityServer).FQDNSetTimestampsForWindow(ctx, req.(*CountFQDNSetsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _StorageAuthority_FQDNSetExists_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(FQDNSetExistsRequest)
 	if err := dec(in); err != nil {
@@ -1059,6 +1128,27 @@ type storageAuthoritySerialsForIncidentServer struct {
 }
 
 func (x *storageAuthoritySerialsForIncidentServer) Send(m *IncidentSerial) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func _StorageAuthority_GetRevokedCerts_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetRevokedCertsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(StorageAuthorityServer).GetRevokedCerts(m, &storageAuthorityGetRevokedCertsServer{stream})
+}
+
+type StorageAuthority_GetRevokedCertsServer interface {
+	Send(*proto.CRLEntry) error
+	grpc.ServerStream
+}
+
+type storageAuthorityGetRevokedCertsServer struct {
+	grpc.ServerStream
+}
+
+func (x *storageAuthorityGetRevokedCertsServer) Send(m *proto.CRLEntry) error {
 	return x.ServerStream.SendMsg(m)
 }
 
@@ -1456,6 +1546,10 @@ var StorageAuthority_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _StorageAuthority_CountFQDNSets_Handler,
 		},
 		{
+			MethodName: "FQDNSetTimestampsForWindow",
+			Handler:    _StorageAuthority_FQDNSetTimestampsForWindow_Handler,
+		},
+		{
 			MethodName: "FQDNSetExists",
 			Handler:    _StorageAuthority_FQDNSetExists_Handler,
 		},
@@ -1576,6 +1670,11 @@ var StorageAuthority_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "SerialsForIncident",
 			Handler:       _StorageAuthority_SerialsForIncident_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetRevokedCerts",
+			Handler:       _StorageAuthority_GetRevokedCerts_Handler,
 			ServerStreams: true,
 		},
 	},
