@@ -29,6 +29,6 @@ require (
 	golang.org/x/tools v0.1.12
 	gopkg.in/ini.v1 v1.66.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.24.3
+	k8s.io/apimachinery v0.24.4
 	sigs.k8s.io/kind v0.14.0
 )
