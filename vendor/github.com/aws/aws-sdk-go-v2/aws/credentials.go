@@ -23,41 +23,41 @@ import (
 // The following example demonstrates using the AnonymousCredentials to prevent
 // SDK's external config loading attempt to resolve credentials.
 //
-//     cfg, err := config.LoadDefaultConfig(context.TODO(),
-//          config.WithCredentialsProvider(aws.AnonymousCredentials{}),
-//     )
-//     if err != nil {
-//          log.Fatalf("failed to load config, %v", err)
-//     }
+//	cfg, err := config.LoadDefaultConfig(context.TODO(),
+//	     config.WithCredentialsProvider(aws.AnonymousCredentials{}),
+//	)
+//	if err != nil {
+//	     log.Fatalf("failed to load config, %v", err)
+//	}
 //
-//     client := s3.NewFromConfig(cfg)
+//	client := s3.NewFromConfig(cfg)
 //
 // Alternatively you can leave the API client Option's `Credential` member to
 // nil. If using the `NewFromConfig` constructor you'll need to explicitly set
 // the `Credentials` member to nil, if the external config resolved a
 // credential provider.
 //
-//     client := s3.New(s3.Options{
-//          // Credentials defaults to a nil value.
-//     })
+//	client := s3.New(s3.Options{
+//	     // Credentials defaults to a nil value.
+//	})
 //
 // This can also be configured for specific operations calls too.
 //
-//     cfg, err := config.LoadDefaultConfig(context.TODO())
-//     if err != nil {
-//          log.Fatalf("failed to load config, %v", err)
-//     }
+//	cfg, err := config.LoadDefaultConfig(context.TODO())
+//	if err != nil {
+//	     log.Fatalf("failed to load config, %v", err)
+//	}
 //
-//     client := s3.NewFromConfig(config)
+//	client := s3.NewFromConfig(config)
 //
-//     result, err := client.GetObject(context.TODO(), s3.GetObject{
-//          Bucket: aws.String("example-bucket"),
-//          Key: aws.String("example-key"),
-//     }, func(o *s3.Options) {
-//          o.Credentials = nil
-//          // Or
-//          o.Credentials = aws.AnonymousCredentials{}
-//     })
+//	result, err := client.GetObject(context.TODO(), s3.GetObject{
+//	     Bucket: aws.String("example-bucket"),
+//	     Key: aws.String("example-key"),
+//	}, func(o *s3.Options) {
+//	     o.Credentials = nil
+//	     // Or
+//	     o.Credentials = aws.AnonymousCredentials{}
+//	})
 type AnonymousCredentials struct{}
 
 // Retrieve implements the CredentialsProvider interface, but will always

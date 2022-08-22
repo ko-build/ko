@@ -162,13 +162,12 @@ func (cs configs) ResolveConfig(f func(configs []interface{}) error) error {
 // The custom configurations must satisfy the respective providers for their data
 // or the custom data will be ignored by the resolvers and config loaders.
 //
-//    cfg, err := config.LoadDefaultConfig( context.TODO(),
-//       WithSharedConfigProfile("test-profile"),
-//    )
-//    if err != nil {
-//       panic(fmt.Sprintf("failed loading config, %v", err))
-//    }
-//
+//	cfg, err := config.LoadDefaultConfig( context.TODO(),
+//	   WithSharedConfigProfile("test-profile"),
+//	)
+//	if err != nil {
+//	   panic(fmt.Sprintf("failed loading config, %v", err))
+//	}
 //
 // The default configuration sources are:
 // * Environment Variables

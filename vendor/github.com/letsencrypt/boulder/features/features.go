@@ -19,6 +19,7 @@ const (
 	StoreIssuerInfo
 	StreamlineOrderAndAuthzs
 	V1DisableNewValidations
+	ExpirationMailerDontLookTwice
 
 	//   Currently in-use features
 	// Check CAA and respect validationmethods parameter.
@@ -92,11 +93,18 @@ const (
 	// AllowUnrecognizedFeatures is internal to the features package: if true,
 	// skip error when unrecognized feature flag names are passed.
 	AllowUnrecognizedFeatures
+	// RejectDuplicateCSRExtensions enables verification that submitted CSRs do
+	// not contain duplicate extensions. This behavior will be on by default in
+	// go1.19.
+	RejectDuplicateCSRExtensions
 
-	// ExpirationMailerDontLookTwice enables a bug fix in expiration-mailer
-	// speeds up expiration-mailer processing by ensuring processed items
-	// get marked done.
-	ExpirationMailerDontLookTwice
+	// ROCSPStage1 enables querying Redis, live-signing response, and storing
+	// to Redis, but doesn't serve responses from Redis.
+	ROCSPStage1
+	// ROCSPStage2 enables querying Redis, live-signing a response, and storing
+	// to Redis, and does serve responses from Redis when appropriate (when
+	// they are fresh, and agree with MariaDB's status for the certificate).
+	ROCSPStage2
 )
 
 // List of features and their default value, protected by fMu
@@ -129,6 +137,9 @@ var features = map[FeatureFlag]bool{
 	SHA1CSRs:                       true,
 	AllowUnrecognizedFeatures:      false,
 	ExpirationMailerDontLookTwice:  false,
+	RejectDuplicateCSRExtensions:   false,
+	ROCSPStage1:                    false,
+	ROCSPStage2:                    false,
 }
 
 var fMu = new(sync.RWMutex)

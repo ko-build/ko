@@ -1,3 +1,15 @@
+# Release (v1.12.1)
+
+## Module Highlights
+* `github.com/aws/smithy-go`: v1.12.1
+  * **Bug Fix**: Fixes a bug where JSON object keys were not escaped.
+
+# Release (v1.12.0)
+
+## Module Highlights
+* `github.com/aws/smithy-go`: v1.12.0
+  * **Feature**: `transport/http`: Add utility for setting context metadata when operation serializer automatically assigns content-type default value.
+
 # Release (v1.11.3)
 
 ## Module Highlights

@@ -181,7 +181,7 @@ func (m *SearchLogQuery) validateEntryUUIDs(formats strfmt.Registry) error {
 
 	for i := 0; i < len(m.EntryUUIDs); i++ {
 
-		if err := validate.Pattern("entryUUIDs"+"."+strconv.Itoa(i), "body", m.EntryUUIDs[i], `^[0-9a-fA-F]{64}$`); err != nil {
+		if err := validate.Pattern("entryUUIDs"+"."+strconv.Itoa(i), "body", m.EntryUUIDs[i], `^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$`); err != nil {
 			return err
 		}
 

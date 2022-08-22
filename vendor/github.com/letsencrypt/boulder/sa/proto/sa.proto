@@ -21,6 +21,7 @@ service StorageAuthority {
   // Return a count of authorizations with status "invalid" that belong to
   // a given registration ID and expire in the given time range.
   rpc CountFQDNSets(CountFQDNSetsRequest) returns (Count) {}
+  rpc FQDNSetTimestampsForWindow(CountFQDNSetsRequest) returns (Timestamps) {}
   rpc FQDNSetExists(FQDNSetExistsRequest) returns (Exists) {}
   rpc PreviousCertificateExists(PreviousCertificateExistsRequest) returns (Exists) {}
   rpc GetAuthorization2(AuthorizationID2) returns (core.Authorization) {}
@@ -32,6 +33,7 @@ service StorageAuthority {
   rpc GetValidAuthorizations2(GetValidAuthorizationsRequest) returns (Authorizations) {}
   rpc KeyBlocked(KeyBlockedRequest) returns (Exists) {}
   rpc SerialsForIncident (SerialsForIncidentRequest) returns (stream IncidentSerial) {}
+  rpc GetRevokedCerts(GetRevokedCertsRequest) returns (stream core.CRLEntry) {}
   // Adders
   rpc NewRegistration(core.Registration) returns (core.Registration) {}
   rpc UpdateRegistration(core.Registration) returns (google.protobuf.Empty) {}
@@ -106,6 +108,10 @@ message Range {
 
 message Count {
   int64 count = 1;
+}
+
+message Timestamps {
+	repeated int64 timestamps = 1; // Unix timestamp (nanoseconds)
 }
 
 message CountCertificatesByNamesRequest {
@@ -290,4 +296,11 @@ message IncidentSerial {
   int64 registrationID = 2;
   int64 orderID = 3;
   int64 lastNoticeSent = 4; // Unix timestamp (nanoseconds)
+}
+
+message GetRevokedCertsRequest {
+  int64 issuerNameID = 1;
+  int64 expiresAfter = 2; // Unix timestamp (nanoseconds), inclusive
+  int64 expiresBefore = 3; // Unix timestamp (nanoseconds), exclusive
+  int64 revokedBefore = 4; // Unix timestamp (nanoseconds)
 }

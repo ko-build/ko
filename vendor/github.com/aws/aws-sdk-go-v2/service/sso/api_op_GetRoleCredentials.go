@@ -32,12 +32,12 @@ type GetRoleCredentialsInput struct {
 	// The token issued by the CreateToken API call. For more information, see
 	// CreateToken
 	// (https://docs.aws.amazon.com/singlesignon/latest/OIDCAPIReference/API_CreateToken.html)
-	// in the AWS SSO OIDC API Reference Guide.
+	// in the Amazon Web Services SSO OIDC API Reference Guide.
 	//
 	// This member is required.
 	AccessToken *string
 
-	// The identifier for the AWS account that is assigned to the user.
+	// The identifier for the Amazon Web Services account that is assigned to the user.
 	//
 	// This member is required.
 	AccountId *string
