@@ -168,7 +168,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	innerPublisher, err := func() (publish.Interface, error) {
 		repoName := po.DockerRepo
 		namer := options.MakeNamer(po)
-		if repoName == publish.LocalDomain || po.Local {
+		if strings.HasPrefix(repoName, publish.LocalDomain) || po.Local {
 			// TODO(jonjohnsonjr): I'm assuming that nobody will
 			// use local with other publishers, but that might
 			// not be true.
@@ -177,7 +177,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 				publish.WithLocalDomain(po.LocalDomain),
 			)
 		}
-		if repoName == publish.KindDomain {
+		if strings.HasPrefix(repoName, publish.KindDomain) {
 			return publish.NewKindPublisher(namer, po.Tags), nil
 		}
 
