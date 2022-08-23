@@ -225,7 +225,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		// publishing.
 		if len(publishers) == 0 {
 			// If one or more tags are specified, use the first tag in the list
-			tag := "latest"
+			var tag string
 			if len(po.Tags) >= 1 {
 				tag = po.Tags[0]
 			}
@@ -269,14 +269,21 @@ type nopPublisher struct {
 
 func (n nopPublisher) Publish(_ context.Context, br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
+	nm := n.namer(n.repoName, s)
 	if n.tagOnly {
-		return name.NewTag(fmt.Sprintf("%s:%s", n.namer(n.repoName, s), n.tag))
+		if n.tag == "" {
+			return nil, errors.New("must specify tag if requesting tag only")
+		}
+		return name.NewTag(fmt.Sprintf("%s:%s", nm, n.tag))
 	}
 	h, err := br.Digest()
 	if err != nil {
 		return nil, err
 	}
-	return name.NewDigest(fmt.Sprintf("%s:%s@%s", n.namer(n.repoName, s), n.tag, h))
+	if n.tag == "" {
+		return name.NewDigest(fmt.Sprintf("%s@%s", nm, h))
+	}
+	return name.NewDigest(fmt.Sprintf("%s:%s@%s", nm, n.tag, h))
 }
 
 func (n nopPublisher) Close() error { return nil }
