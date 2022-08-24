@@ -33,6 +33,11 @@ jobs:
         # cribbed from https://gist.github.com/Syeberman/39d81b1e17d091be5657ecd6fbff0753
         eval $(go env | sed -r 's/^(set )?(\w+)=("?)(.*)\3$/\2="\4"/gm')
 
+        # Check that building without push prints the tag (and sha)
+        KO_DOCKER_REPO="" go run ./ build --push=false ./test | grep ":latest@sha256:"
+        KO_DOCKER_REPO="" go run ./ build --push=false -t test ./test | grep ":test@sha256:"
+        KO_DOCKER_REPO="" go run ./ build --push=false -t test --tag-only ./test | grep ":test$"
+
         export PLATFORM=${GOOS}/${GOARCH}
 
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
