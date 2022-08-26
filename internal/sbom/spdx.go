@@ -100,6 +100,7 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 		LicenseConcluded: NOASSERTION,
 		LicenseDeclared:  NOASSERTION,
 		CopyrightText:    NOASSERTION,
+		PrimaryPurpose:   "CONTAINER",
 		ExternalRefs: []ExternalRef{{
 			Category: "PACKAGE-MANAGER",
 			Type:     "purl",
@@ -235,6 +236,7 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 		LicenseConcluded: NOASSERTION,
 		LicenseDeclared:  NOASSERTION,
 		CopyrightText:    NOASSERTION,
+		PrimaryPurpose:   "CONTAINER",
 		Checksums: []Checksum{{
 			Algorithm: strings.ToUpper(indexDigest.Algorithm),
 			Value:     indexDigest.Hex,
@@ -312,6 +314,7 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 				LicenseConcluded: NOASSERTION,
 				LicenseDeclared:  NOASSERTION,
 				CopyrightText:    NOASSERTION,
+				PrimaryPurpose:   "CONTAINER",
 				ExternalRefs: []ExternalRef{{
 					Category: "PACKAGE-MANAGER",
 					Type:     "purl",
@@ -443,7 +446,7 @@ limitations under the License.
 
 const (
 	NOASSERTION = "NOASSERTION"
-	Version     = "SPDX-2.2"
+	Version     = "SPDX-2.3"
 )
 
 type Document struct {
@@ -478,6 +481,7 @@ type Package struct {
 	Originator           string                   `json:"originator,omitempty"`
 	SourceInfo           string                   `json:"sourceInfo,omitempty"`
 	CopyrightText        string                   `json:"copyrightText"`
+	PrimaryPurpose       string                   `json:"primaryPackagePurpose,omitempty"`
 	HasFiles             []string                 `json:"hasFiles,omitempty"`
 	LicenseInfoFromFiles []string                 `json:"licenseInfoFromFiles,omitempty"`
 	Checksums            []Checksum               `json:"checksums,omitempty"`
