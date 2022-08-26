@@ -4,6 +4,9 @@ on:
   pull_request:
     branches: ['main']
 
+env:
+  SPDX_TOOLS_VERSION: 1.1.0
+
 jobs:
   go-version-m:
     name: Generate go version -m
@@ -75,15 +78,15 @@ jobs:
 
       - name: Install SPDX Tools
         run: |
-          wget https://github.com/spdx/tools-java/releases/download/v1.0.4/tools-java-1.0.4.zip
-          unzip tools-java-1.0.4.zip
+          wget https://github.com/spdx/tools-java/releases/download/v${SPDX_TOOLS_VERSION}/tools-java-${SPDX_TOOLS_VERSION}.zip
+          unzip tools-java-${SPDX_TOOLS_VERSION}.zip
 
       - name: Generate and Validate
         run: |
           img=$(go run ./ build ./)
           go run ./ deps $img --sbom=spdx | tee spdx.json
 
-          java -jar ./tools-java-1.0.4-jar-with-dependencies.jar Verify spdx.json
+          java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx.json
 
       - uses: actions/upload-artifact@v3
         if: ${{ always() }}
@@ -108,8 +111,8 @@ jobs:
 
       - name: Install SPDX Tools
         run: |
-          wget https://github.com/spdx/tools-java/releases/download/v1.0.4/tools-java-1.0.4.zip
-          unzip tools-java-1.0.4.zip
+          wget https://github.com/spdx/tools-java/releases/download/v${SPDX_TOOLS_VERSION}/tools-java-${SPDX_TOOLS_VERSION}.zip
+          unzip tools-java-${SPDX_TOOLS_VERSION}.zip
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v2.5.1
@@ -121,7 +124,7 @@ jobs:
           img=$(go run ./ build --platform=linux/amd64,linux/arm64 ./)
           cosign download sbom $img | tee spdx-multi-arch.json
 
-          java -jar ./tools-java-1.0.4-jar-with-dependencies.jar Verify spdx-multi-arch.json
+          java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx-multi-arch.json
 
       - uses: actions/upload-artifact@v3
         if: ${{ always() }}

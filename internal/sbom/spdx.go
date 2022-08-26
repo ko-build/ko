@@ -101,7 +101,7 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 		LicenseDeclared:  NOASSERTION,
 		CopyrightText:    NOASSERTION,
 		ExternalRefs: []ExternalRef{{
-			Category: "PACKAGE_MANAGER",
+			Category: "PACKAGE-MANAGER",
 			Type:     "purl",
 			Locator: ociRef("image", imgDigest, qualifier{
 				key:   "mediaType",
@@ -133,7 +133,7 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 		LicenseDeclared:  NOASSERTION,
 		CopyrightText:    NOASSERTION,
 		ExternalRefs: []ExternalRef{{
-			Category: "PACKAGE_MANAGER",
+			Category: "PACKAGE-MANAGER",
 			Type:     "purl",
 			Locator:  goRef(&bi.Main),
 		}},
@@ -159,7 +159,7 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 			LicenseDeclared:  NOASSERTION,
 			CopyrightText:    NOASSERTION,
 			ExternalRefs: []ExternalRef{{
-				Category: "PACKAGE_MANAGER",
+				Category: "PACKAGE-MANAGER",
 				Type:     "purl",
 				Locator:  goRef(dep),
 			}},
@@ -240,7 +240,7 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 			Value:     indexDigest.Hex,
 		}},
 		ExternalRefs: []ExternalRef{{
-			Category: "PACKAGE_MANAGER",
+			Category: "PACKAGE-MANAGER",
 			Type:     "purl",
 			Locator: ociRef("index", indexDigest, qualifier{
 				key:   "mediaType",
@@ -313,7 +313,7 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 				LicenseDeclared:  NOASSERTION,
 				CopyrightText:    NOASSERTION,
 				ExternalRefs: []ExternalRef{{
-					Category: "PACKAGE_MANAGER",
+					Category: "PACKAGE-MANAGER",
 					Type:     "purl",
 					Locator:  ociRef("image", imageDigest, qual...),
 				}},
@@ -410,7 +410,7 @@ func addBaseImage(doc *Document, annotations map[string]string, h v1.Hash) error
 		LicenseDeclared:  NOASSERTION,
 		CopyrightText:    NOASSERTION,
 		ExternalRefs: []ExternalRef{{
-			Category: "PACKAGE_MANAGER",
+			Category: "PACKAGE-MANAGER",
 			Type:     "purl",
 			Locator:  ociRef("image", hash, qual...),
 		}},
