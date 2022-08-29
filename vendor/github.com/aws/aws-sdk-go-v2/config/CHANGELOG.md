@@ -1,3 +1,7 @@
+# v1.17.1 (2022-08-15)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.17.0 (2022-08-14)
 
 * **Feature**: Add alternative mechanism for determning the users `$HOME` or `%USERPROFILE%` location when the environment variables are not present.
