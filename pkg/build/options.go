@@ -119,9 +119,9 @@ func WithLabel(k, v string) Option {
 
 // withBuilder is a functional option for overriding the way go binaries
 // are built.
-func withBuilder(b builder) Option {
+func withBuilder(b executableBuilder) Option {
 	return func(gbo *gobuildOpener) error {
-		gbo.build = b
+		gbo.executableBuilder = b
 		return nil
 	}
 }

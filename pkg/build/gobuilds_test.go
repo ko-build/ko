@@ -30,7 +30,7 @@ func Test_gobuilds(t *testing.T) {
 	baseRef := name.MustParseReference("all.your/base")
 	opts := []Option{
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-		withBuilder(writeTempFile),
+		withBuilder(tempFileExecutableBuilder{}),
 		WithPlatforms("all"),
 	}
 

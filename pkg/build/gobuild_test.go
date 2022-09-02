@@ -282,7 +282,10 @@ func TestBuildEnv(t *testing.T) {
 	}}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			env, err := buildEnv(test.platform, test.userEnv, test.configEnv)
+			builder := goExecutableBuilder{
+				platform: test.platform,
+			}
+			env, err := builder.buildEnv(test.userEnv, test.configEnv)
 			if err != nil {
 				t.Fatalf("unexpected error running buildEnv(): %v", err)
 			}
@@ -403,8 +406,12 @@ func fauxSBOM(context.Context, string, string, oci.SignedEntity) ([]byte, types.
 	return []byte(wantSBOM), "application/vnd.garbage", nil
 }
 
-// A helper method we use to substitute for the default "build" method.
-func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ Config) (string, error) {
+// A helper struct we use to substitute for the executableBuilder interface.
+type tempFileExecutableBuilder struct {
+	path string
+}
+
+func (b tempFileExecutableBuilder) BuildExecutable(_ context.Context, ip string, _ Config) (string, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
 		return "", err
@@ -415,7 +422,7 @@ func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ Confi
 		return "", err
 	}
 	defer file.Close()
-	if _, err := file.WriteString(filepath.ToSlash(s)); err != nil {
+	if _, err := file.WriteString(filepath.ToSlash(ip)); err != nil {
 		return "", err
 	}
 	return file.Name(), nil
@@ -435,7 +442,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-		withBuilder(writeTempFile),
+		withBuilder(tempFileExecutableBuilder{}),
 		withSBOMber(fauxSBOM),
 		WithPlatforms("all"),
 	)
@@ -716,7 +723,7 @@ func TestGoBuild(t *testing.T) {
 		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-		withBuilder(writeTempFile),
+		withBuilder(tempFileExecutableBuilder{}),
 		withSBOMber(fauxSBOM),
 		WithLabel("foo", "bar"),
 		WithLabel("hello", "world"),
@@ -829,7 +836,7 @@ func TestGoBuildWithoutSBOM(t *testing.T) {
 		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-		withBuilder(writeTempFile),
+		withBuilder(&tempFileExecutableBuilder{}),
 		withSBOMber(fauxSBOM),
 		WithLabel("foo", "bar"),
 		WithLabel("hello", "world"),
@@ -869,7 +876,7 @@ func TestGoBuildIndex(t *testing.T) {
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
 		WithPlatforms("all"),
-		withBuilder(writeTempFile),
+		withBuilder(tempFileExecutableBuilder{}),
 		withSBOMber(fauxSBOM),
 	)
 	if err != nil {
@@ -942,7 +949,7 @@ func TestNestedIndex(t *testing.T) {
 		"",
 		WithCreationTime(creationTime),
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, nestedBase, nil }),
-		withBuilder(writeTempFile),
+		withBuilder(&tempFileExecutableBuilder{}),
 		withSBOMber(fauxSBOM),
 	)
 	if err != nil {
@@ -1185,7 +1192,7 @@ func TestGoBuildConsistentMediaTypes(t *testing.T) {
 				context.Background(),
 				"",
 				WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-				withBuilder(writeTempFile),
+				withBuilder(&tempFileExecutableBuilder{}),
 				withSBOMber(fauxSBOM),
 				WithPlatforms("all"),
 			)

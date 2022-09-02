@@ -61,8 +61,6 @@ const (
 // GetBase takes an importpath and returns a base image reference and base image (or index).
 type GetBase func(context.Context, string) (name.Reference, Result, error)
 
-type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
-
 type sbomber func(context.Context, string, string, oci.SignedEntity) ([]byte, types.MediaType, error)
 
 type platformMatcher struct {
@@ -75,7 +73,7 @@ type gobuild struct {
 	getBase              GetBase
 	creationTime         v1.Time
 	kodataCreationTime   v1.Time
-	build                builder
+	executableBuilder    executableBuilder
 	sbom                 sbomber
 	disableOptimizations bool
 	trimpath             bool
@@ -96,7 +94,7 @@ type gobuildOpener struct {
 	getBase              GetBase
 	creationTime         v1.Time
 	kodataCreationTime   v1.Time
-	build                builder
+	executableBuilder    executableBuilder
 	sbom                 sbomber
 	disableOptimizations bool
 	trimpath             bool
@@ -123,7 +121,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		getBase:              gbo.getBase,
 		creationTime:         gbo.creationTime,
 		kodataCreationTime:   gbo.kodataCreationTime,
-		build:                gbo.build,
+		executableBuilder:    gbo.executableBuilder,
 		sbom:                 gbo.sbom,
 		disableOptimizations: gbo.disableOptimizations,
 		trimpath:             gbo.trimpath,
@@ -147,10 +145,9 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 // If `dir` is empty, the function uses the current process working directory.
 func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error) {
 	gbo := &gobuildOpener{
-		ctx:   ctx,
-		build: build,
-		dir:   dir,
-		sbom:  spdx("(none)"),
+		ctx:  ctx,
+		dir:  dir,
+		sbom: spdx("(none)"),
 	}
 
 	for _, option := range options {
@@ -241,8 +238,51 @@ func getGoarm(platform v1.Platform) (string, error) {
 	return "", nil
 }
 
-func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
-	buildArgs, err := createBuildArgs(config)
+type executableBuilder interface {
+	BuildExecutable(ctx context.Context, importPath string, config Config) (exectuablePath string, err error)
+}
+
+type tinygoExecutableBuilder struct {
+	dir string
+}
+
+func (b *tinygoExecutableBuilder) BuildExecutable(ctx context.Context, ip string, config Config) (string, error) {
+	tmpDir, err := createExecutableTempDir(ip, wasiPlatform)
+	if err != nil {
+		return "", fmt.Errorf("could not create tempdir for %s: %w", ip, err)
+	}
+	file := filepath.Join(tmpDir, "out")
+	args := []string{
+		"build",
+		"-o",
+		file,
+		"-target=wasi",
+		ip,
+	}
+	cmd := exec.CommandContext(ctx, "tinygo", args...)
+
+	var output bytes.Buffer
+	cmd.Stderr = &output
+	cmd.Stdout = &output
+
+	log.Printf("Building %s for wasi", ip)
+	if err := cmd.Run(); err != nil {
+		if os.Getenv("KOCACHE") == "" {
+			os.RemoveAll(tmpDir)
+		}
+		log.Printf("Unexpected error running \"tinygo build\": %v\n%v", err, output.String())
+		return "", err
+	}
+	return file, nil
+}
+
+type goExecutableBuilder struct {
+	platform v1.Platform
+	dir      string
+}
+
+func (b *goExecutableBuilder) BuildExecutable(ctx context.Context, ip string, config Config) (string, error) {
+	buildArgs, err := b.createBuildArgs(config)
 	if err != nil {
 		return "", err
 	}
@@ -251,10 +291,107 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	args = append(args, "build")
 	args = append(args, buildArgs...)
 
-	env, err := buildEnv(platform, os.Environ(), config.Env)
+	env, err := b.buildEnv(os.Environ(), config.Env)
 	if err != nil {
 		return "", fmt.Errorf("could not create env for %s: %w", ip, err)
 	}
+
+	tmpDir, err := createExecutableTempDir(ip, &b.platform)
+	if err != nil {
+		return "", fmt.Errorf("could not create tempdir for %s: %w", ip, err)
+	}
+
+	file := filepath.Join(tmpDir, "out")
+
+	args = append(args, "-o", file)
+	args = append(args, ip)
+	cmd := exec.CommandContext(ctx, "go", args...)
+	cmd.Dir = b.dir
+	cmd.Env = env
+
+	var output bytes.Buffer
+	cmd.Stderr = &output
+	cmd.Stdout = &output
+
+	log.Printf("Building %s for %s", ip, b.platform)
+	if err := cmd.Run(); err != nil {
+		if os.Getenv("KOCACHE") == "" {
+			os.RemoveAll(tmpDir)
+		}
+		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
+		return "", err
+	}
+	return file, nil
+}
+
+// buildEnv creates the environment variables used by the `go build` command.
+// From `os/exec.Cmd`: If Env contains duplicate environment keys, only the last
+// value in the slice for each duplicate key is used.
+func (b *goExecutableBuilder) buildEnv(userEnv, configEnv []string) ([]string, error) {
+	platform := b.platform
+	// Default env
+	env := []string{
+		"CGO_ENABLED=0",
+		"GOOS=" + platform.OS,
+		"GOARCH=" + platform.Architecture,
+	}
+	if platform.Variant != "" {
+		switch platform.Architecture {
+		case "arm":
+			// See: https://pkg.go.dev/cmd/go#hdr-Environment_variables
+			goarm, err := getGoarm(platform)
+			if err != nil {
+				return nil, fmt.Errorf("goarm failure: %w", err)
+			}
+			if goarm != "" {
+				env = append(env, "GOARM="+goarm)
+			}
+		case "amd64":
+			// See: https://tip.golang.org/doc/go1.18#amd64
+			env = append(env, "GOAMD64="+platform.Variant)
+		}
+	}
+
+	env = append(env, userEnv...)
+	env = append(env, configEnv...)
+	return env, nil
+}
+
+func (b *goExecutableBuilder) createBuildArgs(buildCfg Config) ([]string, error) {
+	var args []string
+
+	data := createTemplateData()
+
+	if len(buildCfg.Flags) > 0 {
+		if err := applyTemplating(buildCfg.Flags, data); err != nil {
+			return nil, err
+		}
+
+		args = append(args, buildCfg.Flags...)
+	}
+
+	if len(buildCfg.Ldflags) > 0 {
+		if err := applyTemplating(buildCfg.Ldflags, data); err != nil {
+			return nil, err
+		}
+
+		args = append(args, fmt.Sprintf("-ldflags=%s", strings.Join(buildCfg.Ldflags, " ")))
+	}
+
+	// Reject any flags that attempt to set --toolexec (with or
+	// without =, with one or two -s)
+	for _, a := range args {
+		for _, d := range []string{"-", "--"} {
+			if a == d+"toolexec" || strings.HasPrefix(a, d+"toolexec=") {
+				return nil, fmt.Errorf("cannot set %s", a)
+			}
+		}
+	}
+
+	return args, nil
+}
+
+func createExecutableTempDir(ip string, p *v1.Platform) (string, error) {
 
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
@@ -272,33 +409,13 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 		}
 
 		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
-		tmpDir = filepath.Join(dir, "bin", ip, platform.String())
+		tmpDir = filepath.Join(dir, "bin", ip, p.String())
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 			return "", err
 		}
 	}
 
-	file := filepath.Join(tmpDir, "out")
-
-	args = append(args, "-o", file)
-	args = append(args, ip)
-	cmd := exec.CommandContext(ctx, "go", args...)
-	cmd.Dir = dir
-	cmd.Env = env
-
-	var output bytes.Buffer
-	cmd.Stderr = &output
-	cmd.Stdout = &output
-
-	log.Printf("Building %s for %s", ip, platform)
-	if err := cmd.Run(); err != nil {
-		if os.Getenv("KOCACHE") == "" {
-			os.RemoveAll(tmpDir)
-		}
-		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
-		return "", err
-	}
-	return file, nil
+	return tmpDir, nil
 }
 
 func goversionm(ctx context.Context, file string, appPath string, se oci.SignedEntity) ([]byte, types.MediaType, error) {
@@ -372,38 +489,6 @@ func cycloneDX() sbomber {
 			return nil, "", fmt.Errorf("unrecognized type: %T", se)
 		}
 	}
-}
-
-// buildEnv creates the environment variables used by the `go build` command.
-// From `os/exec.Cmd`: If Env contains duplicate environment keys, only the last
-// value in the slice for each duplicate key is used.
-func buildEnv(platform v1.Platform, userEnv, configEnv []string) ([]string, error) {
-	// Default env
-	env := []string{
-		"CGO_ENABLED=0",
-		"GOOS=" + platform.OS,
-		"GOARCH=" + platform.Architecture,
-	}
-	if platform.Variant != "" {
-		switch platform.Architecture {
-		case "arm":
-			// See: https://pkg.go.dev/cmd/go#hdr-Environment_variables
-			goarm, err := getGoarm(platform)
-			if err != nil {
-				return nil, fmt.Errorf("goarm failure: %w", err)
-			}
-			if goarm != "" {
-				env = append(env, "GOARM="+goarm)
-			}
-		case "amd64":
-			// See: https://tip.golang.org/doc/go1.18#amd64
-			env = append(env, "GOAMD64="+platform.Variant)
-		}
-	}
-
-	env = append(env, userEnv...)
-	env = append(env, configEnv...)
-	return env, nil
 }
 
 func appFilename(importpath string) string {
@@ -669,38 +754,18 @@ func applyTemplating(list []string, data map[string]interface{}) error {
 	return nil
 }
 
-func createBuildArgs(buildCfg Config) ([]string, error) {
-	var args []string
-
-	data := createTemplateData()
-
-	if len(buildCfg.Flags) > 0 {
-		if err := applyTemplating(buildCfg.Flags, data); err != nil {
-			return nil, err
+func (g *gobuild) getExecutableBuilderForPlatform(p *v1.Platform) executableBuilder {
+	switch p.String() {
+	default:
+		return &goExecutableBuilder{
+			platform: *p,
+			dir:      g.dir,
 		}
-
-		args = append(args, buildCfg.Flags...)
-	}
-
-	if len(buildCfg.Ldflags) > 0 {
-		if err := applyTemplating(buildCfg.Ldflags, data); err != nil {
-			return nil, err
-		}
-
-		args = append(args, fmt.Sprintf("-ldflags=%s", strings.Join(buildCfg.Ldflags, " ")))
-	}
-
-	// Reject any flags that attempt to set --toolexec (with or
-	// without =, with one or two -s)
-	for _, a := range args {
-		for _, d := range []string{"-", "--"} {
-			if a == d+"toolexec" || strings.HasPrefix(a, d+"toolexec=") {
-				return nil, fmt.Errorf("cannot set %s", a)
-			}
+	case "wasm/wasi":
+		return &tinygoExecutableBuilder{
+			dir: g.dir,
 		}
 	}
-
-	return args, nil
 }
 
 func (g *gobuild) configForImportPath(ip string) Config {
@@ -760,8 +825,12 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	if !g.platformMatcher.matches(platform) {
 		return nil, fmt.Errorf("base image platform %q does not match desired platforms %v", platform, g.platformMatcher.platforms)
 	}
-	// Do the build into a temporary file.
-	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.configForImportPath(ref.Path()))
+
+	// check that executableBuilder was not overwritten
+	if g.executableBuilder == nil {
+		g.executableBuilder = g.getExecutableBuilderForPlatform(platform)
+	}
+	file, err := g.executableBuilder.BuildExecutable(ctx, ref.Path(), g.configForImportPath(ref.Path()))
 	if err != nil {
 		return nil, err
 	}
@@ -964,6 +1033,48 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 	}
 }
 
+func (g *gobuild) buildOneFromIndex(
+	ctx context.Context,
+	ref string,
+	baseRef name.Reference,
+	baseIndex v1.ImageIndex,
+	desc v1.Descriptor) (oci.SignedImage, error) {
+
+	var img v1.Image
+	var err error
+	if desc.Platform.Equals(*wasiPlatform) {
+		img = empty.Image
+	} else {
+		img, err = baseIndex.Image(desc.Digest)
+		if err != nil {
+			return nil, fmt.Errorf("error getting matching image from index: %w", err)
+		}
+
+		// Decorate the image with the ref of the index, and the matching
+		// platform's digest.  The ref of the index encodes the critical
+		// repository information for fetching the base image's digest, but
+		// we leave `name` pointing at the index's full original ref to that
+		// folks could conceivably check for updates to the index over time.
+		// While the `digest` doesn't give us enough information to check
+		// for changes with a simple HEAD (because we need the full index
+		// manifest to get the per-architecture image), that optimization
+		// mainly matters for DockerHub where HEAD's are exempt from rate
+		// limiting.  However, in practice, the way DockerHub updates the
+		// indices for official images is to rebuild per-arch images and
+		// replace the per-arch images in the existing index, so an index
+		// with N manifest receives N updates.  If we only record the digest
+		// of the index here, then we cannot tell when the index updates are
+		// no-ops for us because we didn't record the digest of the actual
+		// image we used, and we would potentially end up doing Nx more work
+		// than we really need to do.
+		img = mutate.Annotations(img, map[string]string{
+			specsv1.AnnotationBaseImageDigest: desc.Digest.String(),
+			specsv1.AnnotationBaseImageName:   baseRef.Name(),
+		}).(v1.Image)
+	}
+	return g.buildOne(ctx, ref, img, desc.Platform)
+}
+
 func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Reference, baseIndex v1.ImageIndex) (Result, error) {
 	im, err := baseIndex.IndexManifest()
 	if err != nil {
@@ -971,6 +1082,13 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	}
 
 	matches := []v1.Descriptor{}
+
+	if g.platformMatcher.matches(wasiPlatform) {
+		matches = append(matches, v1.Descriptor{
+			Platform: wasiPlatform,
+		})
+	}
+
 	for _, desc := range im.Manifests {
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
@@ -987,17 +1105,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	if len(matches) == 1 {
 		// Filters resulted in a single matching platform; just produce
 		// a single-platform image.
-		img, err := baseIndex.Image(matches[0].Digest)
-		if err != nil {
-			return nil, fmt.Errorf("error getting matching image from index: %w", err)
-		}
-		// Decorate the image with the ref of the index, and the matching
-		// platform's digest.
-		img = mutate.Annotations(img, map[string]string{
-			specsv1.AnnotationBaseImageDigest: matches[0].Digest.String(),
-			specsv1.AnnotationBaseImageName:   baseRef.Name(),
-		}).(v1.Image)
-		return g.buildOne(ctx, ref, img, matches[0].Platform)
+		return g.buildOneFromIndex(ctx, ref, baseRef, baseIndex, matches[0])
 	}
 
 	// Build an image for each matching platform from the base and append
@@ -1008,36 +1116,9 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	for i, desc := range matches {
 		i, desc := i, desc
 		errg.Go(func() error {
-			baseImage, err := baseIndex.Image(desc.Digest)
+			img, err := g.buildOneFromIndex(ctx, ref, baseRef, baseIndex, desc)
 			if err != nil {
-				return err
-			}
-
-			// Decorate the image with the ref of the index, and the matching
-			// platform's digest.  The ref of the index encodes the critical
-			// repository information for fetching the base image's digest, but
-			// we leave `name` pointing at the index's full original ref to that
-			// folks could conceivably check for updates to the index over time.
-			// While the `digest` doesn't give us enough information to check
-			// for changes with a simple HEAD (because we need the full index
-			// manifest to get the per-architecture image), that optimization
-			// mainly matters for DockerHub where HEAD's are exempt from rate
-			// limiting.  However, in practice, the way DockerHub updates the
-			// indices for official images is to rebuild per-arch images and
-			// replace the per-arch images in the existing index, so an index
-			// with N manifest receives N updates.  If we only record the digest
-			// of the index here, then we cannot tell when the index updates are
-			// no-ops for us because we didn't record the digest of the actual
-			// image we used, and we would potentially end up doing Nx more work
-			// than we really need to do.
-			baseImage = mutate.Annotations(baseImage, map[string]string{
-				specsv1.AnnotationBaseImageDigest: desc.Digest.String(),
-				specsv1.AnnotationBaseImageName:   baseRef.Name(),
-			}).(v1.Image)
-
-			img, err := g.buildOne(ctx, ref, baseImage, desc.Platform)
-			if err != nil {
-				return err
+				return fmt.Errorf("building image for digest %s: %w", desc.Digest, err)
 			}
 			adds[i] = ocimutate.IndexAddendum{
 				Add: img,
@@ -1165,4 +1246,13 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 	}
 
 	return false
+}
+
+func isWasi(p *v1.Platform) bool {
+	return p.OS == wasiPlatform.OS && p.Architecture == wasiPlatform.Architecture
+}
+
+var wasiPlatform = &v1.Platform{
+	OS:           "wasm",
+	Architecture: "wasi",
 }
