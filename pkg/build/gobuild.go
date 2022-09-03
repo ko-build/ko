@@ -42,6 +42,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/google/ko/internal/ociconv"
 	"github.com/google/ko/internal/sbom"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
@@ -788,6 +789,8 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	return config
 }
 
+const wasmImageAnnotationKey = "module.wasm.image/variant"
+
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
 	if err := g.semaphore.Acquire(ctx, 1); err != nil {
 		return nil, err
@@ -826,11 +829,14 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, fmt.Errorf("base image platform %q does not match desired platforms %v", platform, g.platformMatcher.platforms)
 	}
 
+	var executableBuilder executableBuilder
 	// check that executableBuilder was not overwritten
-	if g.executableBuilder == nil {
-		g.executableBuilder = g.getExecutableBuilderForPlatform(platform)
+	if g.executableBuilder != nil {
+		executableBuilder = g.executableBuilder
+	} else {
+		executableBuilder = g.getExecutableBuilderForPlatform(platform)
 	}
-	file, err := g.executableBuilder.BuildExecutable(ctx, ref.Path(), g.configForImportPath(ref.Path()))
+	file, err := executableBuilder.BuildExecutable(ctx, ref.Path(), g.configForImportPath(ref.Path()))
 	if err != nil {
 		return nil, err
 	}
@@ -926,6 +932,17 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	image, err := mutate.ConfigFile(withApp, cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	// currently only the oci spec supports annotations
+	if platform.Equals(*wasiPlatform) {
+		image, err = ociconv.OCIImage(image)
+		if err != nil {
+			return nil, fmt.Errorf("converting image to oci: %w", err)
+		}
+		image = mutate.Annotations(image, map[string]string{
+			wasmImageAnnotationKey: "compat-smart",
+		}).(v1.Image)
 	}
 
 	si := signed.Image(image)
@@ -1076,10 +1093,6 @@ func (g *gobuild) buildOneFromIndex(
 }
 
 func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Reference, baseIndex v1.ImageIndex) (Result, error) {
-	im, err := baseIndex.IndexManifest()
-	if err != nil {
-		return nil, err
-	}
 
 	matches := []v1.Descriptor{}
 
@@ -1087,6 +1100,16 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		matches = append(matches, v1.Descriptor{
 			Platform: wasiPlatform,
 		})
+		// var err error
+		// baseIndex, err = ociconv.OCIImageIndex(baseIndex)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("converting index to oci spec: %w", err)
+		// }
+	}
+
+	im, err := baseIndex.IndexManifest()
+	if err != nil {
+		return nil, err
 	}
 
 	for _, desc := range im.Manifests {
