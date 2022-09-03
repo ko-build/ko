@@ -1,0 +1,66 @@
+name: Integration test for wasi
+
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  wasi:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - ubuntu-latest
+    name: wasi
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+          check-latest: true
+      - name: setup tinygo
+        shell: bash
+        env:
+          TINYGO_VERSION: 0.23.0
+        run: |
+          wget https://github.com/tinygo-org/tinygo/releases/download/v"${TINYGO_VERSION}"/tinygo_${TINYGO_VERSION}_amd64.deb
+          sudo dpkg -i tinygo_${TINYGO_VERSION}_amd64.deb
+      - name: create crun wasmedge binary
+        shell: bash
+        run: |
+          echo -e "Installing WasmEdge"
+          if [ -f install.sh ]; then
+            rm -f install.sh
+          fi
+          curl -L -o install.sh -q https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh
+          sudo chmod a+x install.sh
+          sudo bash ./install.sh --path="/usr/local"
+          rm -rf install.sh
+
+          echo -e "Building and installing crun"
+          sudo apt install -y make git gcc build-essential pkgconf libtool libsystemd-dev \
+              libprotobuf-c-dev libcap-dev libseccomp-dev libyajl-dev \
+              go-md2man libtool autoconf python3 automake
+
+          git clone https://github.com/containers/crun /tmp/crun
+          cd /tmp/crun
+          ./autogen.sh
+          ./configure --with-wasmedge
+          make
+
+      - name: Build and run ko container
+        shell: bash
+        run: |
+          set -euxo pipefail
+          export KO_DOCKER_REPO=$(uuidgen |tr "[:upper:]" "[:lower:]")
+          # Build and run the test/wasi binary, which should print "hello from wasi"
+          testimg=$(go run ./ build ./test/wasi/ --platform="wasm/wasi")
+  
+          # run a nested podman container to use annotations (could be removed once docker is able to specify annotations on containers)
+          docker run --priviliged \
+            -v /tmp/crun/crun:/usr/bin/crun \
+            quay.io/containers/podman:v4 \
+            podman run --runtime=/usr/bin/crun $testimg \
+            | grep "hello from wasi"
