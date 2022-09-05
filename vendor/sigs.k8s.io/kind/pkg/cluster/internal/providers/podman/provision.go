@@ -18,6 +18,7 @@ package podman
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"path/filepath"
@@ -37,7 +38,16 @@ import (
 func planCreation(cfg *config.Cluster, networkName string) (createContainerFuncs []func() error, err error) {
 	// these apply to all container creation
 	nodeNamer := common.MakeNodeNamer(cfg.Name)
-	genericArgs, err := commonArgs(cfg, networkName)
+	names := make([]string, len(cfg.Nodes))
+	for i, node := range cfg.Nodes {
+		name := nodeNamer(string(node.Role)) // name the node
+		names[i] = name
+	}
+	haveLoadbalancer := config.ClusterHasImplicitLoadBalancer(cfg)
+	if haveLoadbalancer {
+		names = append(names, nodeNamer(constants.ExternalLoadBalancerNodeRoleValue))
+	}
+	genericArgs, err := commonArgs(cfg, networkName, names)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +68,7 @@ func planCreation(cfg *config.Cluster, networkName string) (createContainerFuncs
 			apiServerAddress = "::1" // only the LB needs to be non-local
 		}
 		// plan loadbalancer node
-		name := nodeNamer(constants.ExternalLoadBalancerNodeRoleValue)
+		name := names[len(names)-1]
 		createContainerFuncs = append(createContainerFuncs, func() error {
 			args, err := runArgsForLoadBalancer(cfg, name, genericArgs)
 			if err != nil {
@@ -69,9 +79,9 @@ func planCreation(cfg *config.Cluster, networkName string) (createContainerFuncs
 	}
 
 	// plan normal nodes
-	for _, node := range cfg.Nodes {
-		node := node.DeepCopy()              // copy so we can modify
-		name := nodeNamer(string(node.Role)) // name the node
+	for i, node := range cfg.Nodes {
+		node := node.DeepCopy() // copy so we can modify
+		name := names[i]
 
 		// fixup relative paths, podman can only handle absolute paths
 		for i := range node.ExtraMounts {
@@ -116,7 +126,7 @@ func planCreation(cfg *config.Cluster, networkName string) (createContainerFuncs
 }
 
 // commonArgs computes static arguments that apply to all containers
-func commonArgs(cfg *config.Cluster, networkName string) ([]string, error) {
+func commonArgs(cfg *config.Cluster, networkName string, nodeNames []string) ([]string, error) {
 	// standard arguments all nodes containers need, computed once
 	args := []string{
 		"--detach",           // run the container detached
@@ -134,7 +144,7 @@ func commonArgs(cfg *config.Cluster, networkName string) ([]string, error) {
 	}
 
 	// pass proxy environment variables
-	proxyEnv, err := getProxyEnv(cfg, networkName)
+	proxyEnv, err := getProxyEnv(cfg, networkName, nodeNames)
 	if err != nil {
 		return nil, errors.Wrap(err, "proxy setup error")
 	}
@@ -241,7 +251,7 @@ func runArgsForLoadBalancer(cfg *config.Cluster, name string, args []string) ([]
 	return append(args, image), nil
 }
 
-func getProxyEnv(cfg *config.Cluster, networkName string) (map[string]string, error) {
+func getProxyEnv(cfg *config.Cluster, networkName string, nodeNames []string) (map[string]string, error) {
 	envs := common.GetProxyEnvs(cfg)
 	// Specifically add the podman network subnets to NO_PROXY if we are using a proxy
 	if len(envs) > 0 {
@@ -251,11 +261,13 @@ func getProxyEnv(cfg *config.Cluster, networkName string) (map[string]string, er
 			return nil, err
 		}
 		noProxyList := append(subnets, envs[common.NOProxy])
-		// Add pod and service dns names to no_proxy to allow in cluster
+		noProxyList = append(noProxyList, nodeNames...)
+		// Add pod,service and all the cluster nodes' dns names to no_proxy to allow in cluster
 		// Note: this is best effort based on the default CoreDNS spec
 		// https://github.com/kubernetes/dns/blob/master/docs/specification.md
 		// Any user created pod/service hostnames, namespaces, custom DNS services
 		// are expected to be no-proxied by the user explicitly.
+
 		noProxyList = append(noProxyList, ".svc", ".svc.cluster", ".svc.cluster.local")
 		noProxyJoined := strings.Join(noProxyList, ",")
 		envs[common.NOProxy] = noProxyJoined
@@ -264,15 +276,54 @@ func getProxyEnv(cfg *config.Cluster, networkName string) (map[string]string, er
 	return envs, nil
 }
 
+type podmanNetworks []struct {
+	// v4+
+	Subnets []struct {
+		Subnet  string `json:"subnet"`
+		Gateway string `json:"gateway"`
+	} `json:"subnets"`
+	// v3 and anything still using CNI/IPAM
+	Plugins []struct {
+		Ipam struct {
+			Ranges [][]struct {
+				Gateway string `json:"gateway"`
+				Subnet  string `json:"subnet"`
+			} `json:"ranges"`
+		} `json:"ipam,omitempty"`
+	} `json:"plugins"`
+}
+
 func getSubnets(networkName string) ([]string, error) {
-	// TODO: unmarshall json and get rid of this complex query
-	format := `{{ range (index (index (index (index . "plugins") 0 ) "ipam" ) "ranges")}}{{ index ( index . 0 ) "subnet" }} {{end}}`
-	cmd := exec.Command("podman", "network", "inspect", "-f", format, networkName)
-	lines, err := exec.OutputLines(cmd)
+	cmd := exec.Command("podman", "network", "inspect", networkName)
+	out, err := exec.Output(cmd)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get subnets")
 	}
-	return strings.Split(strings.TrimSpace(lines[0]), " "), nil
+
+	networks := podmanNetworks{}
+	jsonErr := json.Unmarshal([]byte(out), &networks)
+	if jsonErr != nil {
+		return nil, errors.Wrap(jsonErr, "failed to get subnets")
+	}
+	subnets := []string{}
+	for _, network := range networks {
+		if len(network.Subnets) > 0 {
+			for _, subnet := range network.Subnets {
+				subnets = append(subnets, subnet.Subnet)
+			}
+		}
+		if len(network.Plugins) > 0 {
+			for _, plugin := range network.Plugins {
+				for _, r := range plugin.Ipam.Ranges {
+					for _, rr := range r {
+						subnets = append(subnets, rr.Subnet)
+					}
+				}
+			}
+		}
+	}
+	return subnets, nil
 }
 
 // generateMountBindings converts the mount list to a list of args for podman
