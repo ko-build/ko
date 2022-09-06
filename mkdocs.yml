@@ -22,7 +22,7 @@ nav:
     - features/k8s.md
     - features/static-assets.md
     - features/build-cache.md
-  - Advanced:
+  - Advanced: 
     - advanced/go-packages.md
     - advanced/limitations.md
     - advanced/migrating-from-dockerfile.md
