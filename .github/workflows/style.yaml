@@ -12,10 +12,10 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.18
           check-latest: true
       - uses: actions/checkout@v3
-      - uses: chainguard-dev/actions/gofmt@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+      - uses: chainguard-dev/actions/gofmt@d886686603afb809f7ef9b734b333e20b7ce5cda
         with:
           args: -s
 
@@ -25,10 +25,10 @@ jobs:
     steps:
       - uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.18
           check-latest: true
       - uses: actions/checkout@v3
-      - uses: chainguard-dev/actions/goimports@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+      - uses: chainguard-dev/actions/goimports@d886686603afb809f7ef9b734b333e20b7ce5cda
 
   lint:
     name: Lint
@@ -38,16 +38,16 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.17
+          go-version: 1.18
           check-latest: true
 
       - name: Check out code
         uses: actions/checkout@v3
 
-      - uses: chainguard-dev/actions/trailing-space@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+      - uses: chainguard-dev/actions/trailing-space@d886686603afb809f7ef9b734b333e20b7ce5cda
         if: ${{ always() }}
 
-      - uses: chainguard-dev/actions/eof-newline@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+      - uses: chainguard-dev/actions/eof-newline@d886686603afb809f7ef9b734b333e20b7ce5cda
         if: ${{ always() }}
 
       - uses: reviewdog/action-misspell@v1

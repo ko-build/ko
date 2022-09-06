@@ -67,7 +67,7 @@ apk add ko
 
 ### Build and Install from Source
 
-With Go 1.16+, build and install the latest released version:
+With Go 1.18+, build and install the latest released version:
 
 ```
 go install github.com/google/ko@latest

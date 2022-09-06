@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -59,7 +60,7 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 		return nil, err
 	}
 
-	bi, err := ParseBuildInfo(string(mod))
+	bi, err := debug.ParseBuildInfo(string(mod))
 	if err != nil {
 		return nil, err
 	}
