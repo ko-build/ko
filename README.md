@@ -1,10 +1,8 @@
 # `ko`: Easy Go Containers
 
-> :warning: Note: the ko project is growing, and to better facilitate community needs, we will be moving to our own GitHub organization: [ko-build](https://github.com/ko-build). While we do not anticipate this move to have any impact on most users, please, use the [ko-project Slack channel](https://kubernetes.slack.com/archives/C01T7DTP65S) to let us know if you see any impact we may have not yet considered. The project migration is currently scheduled for Tue, Sep 6th.
-
-[![GitHub Actions Build Status](https://github.com/google/ko/workflows/Build/badge.svg)](https://github.com/google/ko/actions?query=workflow%3ABuild)
-[![GoDoc](https://godoc.org/github.com/google/ko?status.svg)](https://godoc.org/github.com/google/ko)
-[![Go Report Card](https://goreportcard.com/badge/google/ko)](https://goreportcard.com/report/google/ko)
+[![GitHub Actions Build Status](https://github.com/ko-build/ko/workflows/Build/badge.svg)](https://github.com/ko-build/ko/actions?query=workflow%3ABuild)
+[![GoDoc](https://godoc.org/github.com/ko-build/ko?status.svg)](https://godoc.org/github.com/ko-build/ko)
+[![Go Report Card](https://goreportcard.com/badge/ko-build/ko)](https://goreportcard.com/report/ko-build/ko)
 [![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev/images/gh-badge-level3.svg)
 
 <img src="./logo/ko.png" width="300">
@@ -26,7 +24,7 @@ tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
 
 ## Install
 
-### Install from [Releases](https://github.com/google/ko/releases)
+### Install from [Releases](https://github.com/ko-build/ko/releases)
 
 ```
 $ VERSION=TODO # choose the latest version
@@ -38,9 +36,9 @@ We generate [SLSA3 provenance](slsa.dev) using the OpenSSF's [slsa-framework/sls
 
 
 ```shell
-$ curl -sL "https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
-$ curl -sL https://github.com/google/ko/releases/download/v${VERSION}/attestation.intoto.jsonl > provenance.intoto.jsonl
-$ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
+$ curl -sL "https://github.com/ko-build/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
+$ curl -sL https://github.com/ko-build/ko/releases/download/v${VERSION}/attestation.intoto.jsonl > provenance.intoto.jsonl
+$ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/ko-build/ko -tag "v${VERSION}"
   PASSED: Verified SLSA provenance
 ```
 
@@ -70,7 +68,7 @@ apk add ko
 With Go 1.18+, build and install the latest released version:
 
 ```
-go install github.com/google/ko@latest
+go install github.com/ko-build/ko@latest
 ```
 
 ### Setup on GitHub Actions
