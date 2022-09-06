@@ -9,7 +9,7 @@ jobs:
     name: Module Tests
     strategy:
       matrix:
-        go-version: [1.17, 1.18]
+        go-version: [1.18, 1.19]
 
     runs-on: 'ubuntu-latest'
     steps:
