@@ -50,9 +50,9 @@ github.com/aws/aws-sdk-go-v2/internal/sdkio
 github.com/aws/aws-sdk-go-v2/internal/strings
 github.com/aws/aws-sdk-go-v2/internal/sync/singleflight
 github.com/aws/aws-sdk-go-v2/internal/timeconv
-# github.com/aws/aws-sdk-go-v2/config v1.17.0
+# github.com/aws/aws-sdk-go-v2/config v1.17.1
 github.com/aws/aws-sdk-go-v2/config
-# github.com/aws/aws-sdk-go-v2/credentials v1.12.13
+# github.com/aws/aws-sdk-go-v2/credentials v1.12.14
 github.com/aws/aws-sdk-go-v2/credentials
 github.com/aws/aws-sdk-go-v2/credentials/ec2rolecreds
 github.com/aws/aws-sdk-go-v2/credentials/endpointcreds
@@ -81,7 +81,7 @@ github.com/aws/aws-sdk-go-v2/service/ecrpublic/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/ecrpublic/types
 # github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.12
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url
-# github.com/aws/aws-sdk-go-v2/service/sso v1.11.16
+# github.com/aws/aws-sdk-go-v2/service/sso v1.11.17
 github.com/aws/aws-sdk-go-v2/service/sso
 github.com/aws/aws-sdk-go-v2/service/sso/internal/endpoints
 github.com/aws/aws-sdk-go-v2/service/sso/types
@@ -173,8 +173,7 @@ github.com/evanphx/json-patch/v5
 github.com/fsnotify/fsnotify
 # github.com/go-logr/logr v1.2.3
 github.com/go-logr/logr
-# github.com/go-openapi/analysis v0.21.3
-## explicit
+# github.com/go-openapi/analysis v0.21.4
 github.com/go-openapi/analysis
 github.com/go-openapi/analysis/internal/debug
 github.com/go-openapi/analysis/internal/flatten/normalize
@@ -182,22 +181,22 @@ github.com/go-openapi/analysis/internal/flatten/operations
 github.com/go-openapi/analysis/internal/flatten/replace
 github.com/go-openapi/analysis/internal/flatten/schutils
 github.com/go-openapi/analysis/internal/flatten/sortref
-# github.com/go-openapi/errors v0.20.2
+# github.com/go-openapi/errors v0.20.3
 github.com/go-openapi/errors
 # github.com/go-openapi/jsonpointer v0.19.5
 github.com/go-openapi/jsonpointer
 # github.com/go-openapi/jsonreference v0.20.0
 github.com/go-openapi/jsonreference
 github.com/go-openapi/jsonreference/internal
-# github.com/go-openapi/loads v0.21.1
+# github.com/go-openapi/loads v0.21.2
 github.com/go-openapi/loads
 # github.com/go-openapi/runtime v0.24.1
 github.com/go-openapi/runtime
-# github.com/go-openapi/spec v0.20.6
+# github.com/go-openapi/spec v0.20.7
 github.com/go-openapi/spec
 # github.com/go-openapi/strfmt v0.21.3
 github.com/go-openapi/strfmt
-# github.com/go-openapi/swag v0.22.1
+# github.com/go-openapi/swag v0.22.3
 github.com/go-openapi/swag
 # github.com/go-openapi/validate v0.22.0
 github.com/go-openapi/validate
@@ -328,7 +327,7 @@ github.com/pelletier/go-toml/v2/internal/tracker
 github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.1.0
 github.com/russross/blackfriday/v2
-# github.com/sigstore/cosign v1.11.0
+# github.com/sigstore/cosign v1.11.1
 ## explicit
 github.com/sigstore/cosign/pkg/cosign/bundle
 github.com/sigstore/cosign/pkg/oci
@@ -340,7 +339,7 @@ github.com/sigstore/cosign/pkg/oci/signed
 github.com/sigstore/cosign/pkg/oci/static
 github.com/sigstore/cosign/pkg/oci/walk
 github.com/sigstore/cosign/pkg/types
-# github.com/sigstore/rekor v0.10.0
+# github.com/sigstore/rekor v0.11.0
 github.com/sigstore/rekor/pkg/generated/models
 # github.com/sigstore/sigstore v1.4.0
 github.com/sigstore/sigstore/pkg/cryptoutils
@@ -436,7 +435,7 @@ golang.org/x/sys/unix
 golang.org/x/sys/windows
 # golang.org/x/term v0.0.0-20220526004731-065cf7ba2467
 golang.org/x/term
-# golang.org/x/text v0.3.7
+# golang.org/x/text v0.3.8-0.20211004125949-5bd84dd9b33b
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
@@ -467,7 +466,7 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20220720214146-176da50484ac
+# google.golang.org/genproto v0.0.0-20220805133916-01dd62135a58
 google.golang.org/genproto/googleapis/rpc/status
 # google.golang.org/grpc v1.48.0
 google.golang.org/grpc
@@ -552,7 +551,7 @@ google.golang.org/protobuf/types/known/anypb
 google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/timestamppb
-# gopkg.in/ini.v1 v1.66.6
+# gopkg.in/ini.v1 v1.67.0
 gopkg.in/ini.v1
 # gopkg.in/square/go-jose.v2 v2.6.0
 gopkg.in/square/go-jose.v2
