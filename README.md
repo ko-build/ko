@@ -1,7 +1,5 @@
 # `ko`: Easy Go Containers
 
-> :warning: Note: the ko project is growing, and to better facilitate community needs, we will be moving to our own GitHub organization: [ko-build](https://github.com/ko-build). While we do not anticipate this move to have any impact on most users, please, use the [ko-project Slack channel](https://kubernetes.slack.com/archives/C01T7DTP65S) to let us know if you see any impact we may have not yet considered. The project migration is currently scheduled for Tue, Sep 6th.
-
 [![GitHub Actions Build Status](https://github.com/google/ko/workflows/Build/badge.svg)](https://github.com/google/ko/actions?query=workflow%3ABuild)
 [![GoDoc](https://godoc.org/github.com/google/ko?status.svg)](https://godoc.org/github.com/google/ko)
 [![Go Report Card](https://goreportcard.com/badge/google/ko)](https://goreportcard.com/report/google/ko)
