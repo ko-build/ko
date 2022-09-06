@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"runtime/debug"
 	"strings"
 
 	"github.com/sigstore/cosign/pkg/oci"
@@ -42,7 +43,7 @@ func GenerateImageCycloneDX(mod []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	bi, err := ParseBuildInfo(string(mod))
+	bi, err := debug.ParseBuildInfo(string(mod))
 	if err != nil {
 		return nil, err
 	}
