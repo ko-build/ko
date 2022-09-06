@@ -318,7 +318,7 @@ github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
 # github.com/pelletier/go-toml v1.9.5
 github.com/pelletier/go-toml
-# github.com/pelletier/go-toml/v2 v2.0.1
+# github.com/pelletier/go-toml/v2 v2.0.5
 github.com/pelletier/go-toml/v2
 github.com/pelletier/go-toml/v2/internal/ast
 github.com/pelletier/go-toml/v2/internal/danger
@@ -358,7 +358,7 @@ github.com/spf13/cobra/doc
 github.com/spf13/jwalterweatherman
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
-# github.com/spf13/viper v1.12.0
+# github.com/spf13/viper v1.13.0
 ## explicit
 github.com/spf13/viper
 github.com/spf13/viper/internal/encoding
@@ -369,7 +369,7 @@ github.com/spf13/viper/internal/encoding/javaproperties
 github.com/spf13/viper/internal/encoding/json
 github.com/spf13/viper/internal/encoding/toml
 github.com/spf13/viper/internal/encoding/yaml
-# github.com/subosito/gotenv v1.3.0
+# github.com/subosito/gotenv v1.4.1
 github.com/subosito/gotenv
 # github.com/theupdateframework/go-tuf v0.3.1
 github.com/theupdateframework/go-tuf/encrypted
