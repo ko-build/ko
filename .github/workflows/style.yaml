@@ -27,8 +27,8 @@ jobs:
         with:
           go-version: 1.18
           check-latest: true
-      - uses: actions/checkout@v3
       - uses: chainguard-dev/actions/goimports@84c993eaf02da1c325854fb272a4df9184bd80fc # main
+      - uses: actions/checkout@v3
 
   lint:
     name: Lint
