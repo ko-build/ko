@@ -1,6 +1,6 @@
 site_name: 'ko: Easy Go Containers'
 site_url: https://ko.build
-repo_url: https://github.com/google/ko
+repo_url: https://github.com/ko-build/ko
 
 theme:
   name: material
@@ -38,4 +38,5 @@ nav:
     - 'ko resolve': reference/ko_resolve.md
     - 'ko run': reference/ko_run.md
     - 'ko version': reference/ko_version.md
-  - Releases: "https://github.com/google/ko/releases"
+  - Releases: "https://github.com/ko-build/ko/releases"
+
