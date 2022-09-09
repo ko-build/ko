@@ -51,8 +51,15 @@ func Validate(po *PublishOptions, bo *BuildOptions) error {
 	}
 
 	if len(bo.Platforms) > 1 {
+		var hasWasi bool
+
 		for _, platform := range bo.Platforms {
-			if platform == "all" {
+			if platform == "wasm/wasi" {
+				hasWasi = true
+			}
+		}
+		for _, platform := range bo.Platforms {
+			if platform == "all" && !hasWasi {
 				return errors.New("all or specific platforms should be used")
 			}
 		}
