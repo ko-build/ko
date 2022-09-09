@@ -42,7 +42,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/ko/internal/ociconv"
 	"github.com/google/ko/internal/sbom"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
@@ -903,13 +902,10 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	// currently only the oci spec supports annotations
 	if platform.Equals(*wasiPlatform) {
-		image, err = ociconv.OCIImage(image)
+		image, err = annotateImageForWasi(image)
 		if err != nil {
-			return nil, fmt.Errorf("converting image to oci: %w", err)
+			return nil, err
 		}
-		image = mutate.Annotations(image, map[string]string{
-			wasmImageAnnotationKey: "compat-smart",
-		}).(v1.Image)
 	}
 
 	si := signed.Image(image)
