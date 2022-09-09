@@ -310,6 +310,12 @@ produce a manifest list containing an image for each platform.
 You can also select specific platforms, for example,
 `--platform=linux/amd64,linux/arm64`
 
+## WebAssembly System Interface
+
+`ko` supports the creation of WASI OCI images by specifying the platform `wasm/wasi`. It follows the `compat` spec from the [Wasm Image Specification](https://github.com/solo-io/wasm/blob/master/spec/spec-compat.md).
+
+To build a WASI compatible image, `ko` uses an empty image as the base and creates the executable binary via [tinygo](https://tinygo.org/), so make sure it is installed if you try to built for `wasm/wasi` platform.
+
 ## Generating SBOMs
 
 A [Software Bill of Materials](https://en.wikipedia.org/wiki/Software_bill_of_materials) (SBOM) is a list of software components that a software artifact depends on.
