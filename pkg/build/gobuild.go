@@ -64,6 +64,10 @@ type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 type sbomber func(context.Context, string, string, oci.SignedEntity) ([]byte, types.MediaType, error)
 
+type executableBuilder interface {
+	BuildExecutable(ctx context.Context, importPath string, config Config) (exectuablePath string, err error)
+}
+
 type platformMatcher struct {
 	spec      []string
 	platforms []v1.Platform
@@ -237,44 +241,6 @@ func getGoarm(platform v1.Platform) (string, error) {
 		return vs, nil
 	}
 	return "", nil
-}
-
-type executableBuilder interface {
-	BuildExecutable(ctx context.Context, importPath string, config Config) (exectuablePath string, err error)
-}
-
-type tinygoExecutableBuilder struct {
-	dir string
-}
-
-func (b *tinygoExecutableBuilder) BuildExecutable(ctx context.Context, ip string, config Config) (string, error) {
-	tmpDir, err := createExecutableTempDir(ip, wasiPlatform)
-	if err != nil {
-		return "", fmt.Errorf("could not create tempdir for %s: %w", ip, err)
-	}
-	file := filepath.Join(tmpDir, "out")
-	args := []string{
-		"build",
-		"-o",
-		file,
-		"-target=wasi",
-		ip,
-	}
-	cmd := exec.CommandContext(ctx, "tinygo", args...)
-
-	var output bytes.Buffer
-	cmd.Stderr = &output
-	cmd.Stdout = &output
-
-	log.Printf("Building %s for wasi", ip)
-	if err := cmd.Run(); err != nil {
-		if os.Getenv("KOCACHE") == "" {
-			os.RemoveAll(tmpDir)
-		}
-		log.Printf("Unexpected error running \"tinygo build\": %v\n%v", err, output.String())
-		return "", err
-	}
-	return file, nil
 }
 
 type goExecutableBuilder struct {
@@ -762,7 +728,7 @@ func (g *gobuild) getExecutableBuilderForPlatform(p *v1.Platform) executableBuil
 			platform: *p,
 			dir:      g.dir,
 		}
-	case "wasm/wasi":
+	case wasiPlatform.String():
 		return &tinygoExecutableBuilder{
 			dir: g.dir,
 		}
@@ -788,8 +754,6 @@ func (g *gobuild) configForImportPath(ip string) Config {
 
 	return config
 }
-
-const wasmImageAnnotationKey = "module.wasm.image/variant"
 
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
 	if err := g.semaphore.Acquire(ctx, 1); err != nil {
@@ -870,6 +834,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	appDir := "/ko-app"
 	appPath := path.Join(appDir, appFilename(ref.Path()))
+	if platform.Equals(*wasiPlatform) {
+		appPath = appendWasiExtension(appPath)
+	}
 
 	miss := func() (v1.Layer, error) {
 		return buildLayer(appPath, file, platform, layerMediaType)
@@ -1269,13 +1236,4 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 	}
 
 	return false
-}
-
-func isWasi(p *v1.Platform) bool {
-	return p.OS == wasiPlatform.OS && p.Architecture == wasiPlatform.Architecture
-}
-
-var wasiPlatform = &v1.Platform{
-	OS:           "wasm",
-	Architecture: "wasi",
 }
