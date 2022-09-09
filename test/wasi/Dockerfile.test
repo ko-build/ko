@@ -1,0 +1,20 @@
+FROM quay.io/containers/podman:v4
+
+RUN dnf install -y \
+  wget make python git gcc automake autoconf libcap-devel \
+  systemd-devel yajl-devel libseccomp-devel pkg-config \
+  go-md2man glibc-static python3-libmount libtool
+
+RUN wget -O install.sh  https://raw.githubusercontent.com/WasmEdge/WasmEdge/master/utils/install.sh
+# use version 0.10.0 of wasmedge lib since crun tag at 1.5 can only use this lib.
+# version 0.10+ had a breaking change in the lib structure
+RUN bash ./install.sh -p /usr/local -v 0.10.0
+
+
+WORKDIR /crun
+RUN git clone https://github.com/containers/crun . && git fetch --all --tags && git checkout tags/1.5
+RUN ./autogen.sh
+RUN ./configure --with-wasmedge
+RUN make -j $(nproc) && cp crun /bin/crun
+
+ENTRYPOINT [ "podman", "--runtime", "/bin/crun" ]
