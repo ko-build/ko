@@ -7,7 +7,6 @@ import (
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
-	"github.com/google/go-containerregistry/pkg/v1/match"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
@@ -105,46 +104,5 @@ func OCIImage(base v1.Image) (v1.Image, error) {
 	if err != nil {
 		return nil, err
 	}
-	return base, nil
-}
-
-// OCIImageIndex mutates the provided v1.ImageIndex to be OCI compliant v1.ImageIndex
-func OCIImageIndex(base v1.ImageIndex) (v1.ImageIndex, error) {
-	base = mutate.IndexMediaType(base, types.OCIImageIndex)
-	mn, err := base.IndexManifest()
-	if err != nil {
-		return nil, err
-	}
-
-	removals := []v1.Hash{}
-	addendums := []mutate.IndexAddendum{}
-
-	for _, manifest := range mn.Manifests {
-		if !manifest.MediaType.IsImage() {
-			// it is not an image, leave it as is
-			continue
-		}
-		img, err := base.Image(manifest.Digest)
-		if err != nil {
-			return nil, err
-		}
-		img, err = OCIImage(img)
-		if err != nil {
-			return nil, err
-		}
-		mt, err := img.MediaType()
-		if err != nil {
-			return nil, err
-		}
-		removals = append(removals, manifest.Digest)
-		addendums = append(addendums, mutate.IndexAddendum{Add: img, Descriptor: v1.Descriptor{
-			URLs:        manifest.URLs,
-			MediaType:   mt,
-			Annotations: manifest.Annotations,
-			Platform:    manifest.Platform,
-		}})
-	}
-	base = mutate.RemoveManifests(base, match.Digests(removals...))
-	base = mutate.AppendManifests(base, addendums...)
 	return base, nil
 }
