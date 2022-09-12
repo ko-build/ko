@@ -16,13 +16,18 @@ package publish
 
 import (
 	"crypto/tls"
-	"log"
 	"net/http"
-	"path"
 
 	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
 )
+
+type staticKeychain struct {
+	auth authn.Authenticator
+}
+
+func (s staticKeychain) Resolve(resource authn.Resource) (authn.Authenticator, error) {
+	return s.auth, nil
+}
 
 // WithTransport is a functional option for overriding the default transport
 // on a default publisher.
@@ -44,9 +49,9 @@ func WithUserAgent(ua string) Option {
 
 // WithAuth is a functional option for overriding the default authenticator
 // on a default publisher.
-func WithAuth(auth authn.Authenticator) Option {
+func WithAuth(a authn.Authenticator) Option {
 	return func(i *defaultOpener) error {
-		i.auth = auth
+		i.keychain = staticKeychain{a}
 		return nil
 	}
 }
@@ -55,25 +60,7 @@ func WithAuth(auth authn.Authenticator) Option {
 // authenticator on a default publisher using an authn.Keychain
 func WithAuthFromKeychain(keys authn.Keychain) Option {
 	return func(i *defaultOpener) error {
-		// We parse this lazily because it is a repository prefix, which
-		// means that docker.io/mattmoor actually gets interpreted as
-		// docker.io/library/mattmoor, which gets tricky when we start
-		// appending things to it in the publisher.
-		//
-		// We append a fake path "ko" to KO_DOCKER_REPO in order to
-		// make parsing out the registry easier.
-		repo, err := name.NewRepository(path.Join(i.base, "ko"))
-		if err != nil {
-			return err
-		}
-		auth, err := keys.Resolve(repo.Registry)
-		if err != nil {
-			return err
-		}
-		if auth == authn.Anonymous {
-			log.Println("No matching credentials were found, falling back on anonymous")
-		}
-		i.auth = auth
+		i.keychain = keys
 		return nil
 	}
 }

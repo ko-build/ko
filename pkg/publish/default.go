@@ -40,8 +40,8 @@ type defalt struct {
 	base      string
 	t         http.RoundTripper
 	userAgent string
-	auth      authn.Authenticator
 	namer     Namer
+	keychain  authn.Keychain
 	tags      []string
 	tagOnly   bool
 	insecure  bool
@@ -54,7 +54,7 @@ type defaultOpener struct {
 	base      string
 	t         http.RoundTripper
 	userAgent string
-	auth      authn.Authenticator
+	keychain  authn.Keychain
 	namer     Namer
 	tags      []string
 	tagOnly   bool
@@ -67,8 +67,9 @@ type Namer func(string, string) string
 
 // identity is the default namer, so import paths are affixed as-is under the repository
 // name for maximum clarity, e.g.
-//   gcr.io/foo/github.com/bar/baz/cmd/blah
-//   ^--base--^ ^-------import path-------^
+//
+//	gcr.io/foo/github.com/bar/baz/cmd/blah
+//	^--base--^ ^-------import path-------^
 func identity(base, in string) string { return path.Join(base, in) }
 
 // As some registries do not support pushing an image by digest, the default tag for pushing
@@ -89,7 +90,7 @@ func (do *defaultOpener) Open() (Interface, error) {
 		base:      do.base,
 		t:         do.t,
 		userAgent: do.userAgent,
-		auth:      do.auth,
+		keychain:  do.keychain,
 		namer:     do.namer,
 		tags:      do.tags,
 		tagOnly:   do.tagOnly,
@@ -104,7 +105,7 @@ func NewDefault(base string, options ...Option) (Interface, error) {
 		base:      base,
 		t:         http.DefaultTransport,
 		userAgent: "ko",
-		auth:      authn.Anonymous,
+		keychain:  authn.DefaultKeychain,
 		namer:     identity,
 		tags:      defaultTags,
 	}
@@ -203,7 +204,8 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
-	ro := []remote.Option{remote.WithAuth(d.auth), remote.WithTransport(d.t), remote.WithContext(ctx), remote.WithUserAgent(d.userAgent)}
+	ro := []remote.Option{remote.WithAuthFromKeychain(d.keychain), remote.WithTransport(d.t), remote.WithContext(ctx), remote.WithUserAgent(d.userAgent)}
+
 	no := []name.Option{}
 	if d.insecure {
 		no = append(no, name.Insecure)

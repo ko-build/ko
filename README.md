@@ -115,6 +115,11 @@ e.g.:
 - `KO_DOCKER_REPO=gcr.io/my-project`, or
 - `KO_DOCKER_REPO=my-dockerhub-user`
 
+`ko` will default to storing sboms in the same repo as the image it is building. But there is an environment variable
+named `COSIGN_REPOSITORY` that enables you to specify a different repository for storing sboms.
+
+`KO_DOCKER_REPO=my-dockerhub-user COSIGN_REPOSITORY=gcr.io/my-project/sboms`
+
 # Build an Image
 
 `ko build ./cmd/app` builds and pushes a container image, and prints the
