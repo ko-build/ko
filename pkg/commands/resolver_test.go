@@ -279,6 +279,15 @@ func TestNewPublisherCanPublish(t *testing.T) {
 			shouldError: true,
 			wantError:   errImageLoad,
 		},
+		{
+			description:   "bare with local domain and repo",
+			wantImageName: strings.ToLower(fmt.Sprintf("%s/foo", dockerRepo)),
+			po: &options.PublishOptions{
+				DockerRepo: dockerRepo + "/foo",
+				Local:      true,
+				Bare:       true,
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
