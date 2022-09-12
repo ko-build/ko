@@ -35,7 +35,7 @@ jobs:
         registry-authority: ${{ env.REGISTRY_NAME }}:${{ env.REGISTRY_PORT }}
 
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v2.5.1
+      uses: sigstore/cosign-installer@v2.6.0
       with:
         cosign-release: 'v1.7.2'
 
