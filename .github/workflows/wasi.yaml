@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update && apt-get install uuid-runtime
+          sudo apt-get update && sudo apt-get install uuid-runtime
           docker build -f test/wasi/Dockerfile.test -t podman-with-crun .
           export KO_DOCKER_REPO=ttl.sh/$(uuidgen |tr "[:upper:]" "[:lower:]") 
           export testimg=$(go run main.go build ./test/wasi --platform=${{ matrix.platforms }})
