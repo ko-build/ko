@@ -1146,7 +1146,17 @@ func TestMatchesPlatformSpec(t *testing.T) {
 			OSVersion:    "10.0.17763.1234.5678", // this won't happen in the wild, but it shouldn't match.
 		},
 		result: false,
-	}} {
+	},
+		{
+			platform: nil,
+			spec:     []string{"all", "wasm/wasi"},
+			result:   false,
+		},
+		{
+			platform: wasiPlatform,
+			spec:     []string{"all", "wasm/wasi"},
+			result:   true,
+		}} {
 		pm, err := parseSpec(tc.spec)
 		if tc.err {
 			if err == nil {

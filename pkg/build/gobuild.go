@@ -1022,7 +1022,7 @@ func (g *gobuild) buildOneFromIndex(
 
 	var img v1.Image
 	var err error
-	if desc.Platform.Equals(*wasiPlatform) {
+	if desc.Platform != nil && desc.Platform.Equals(*wasiPlatform) {
 		img = empty.Image
 	} else {
 		img, err = baseIndex.Image(desc.Digest)
@@ -1156,7 +1156,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 func parseSpec(spec []string) (*platformMatcher, error) {
 	// Don't bother parsing "all".
 	// Empty slice should never happen because we default to linux/amd64 (or GOOS/GOARCH).
-	if len(spec) == 0 || spec[0] == "all" {
+	if len(spec) == 0 || (len(spec) == 1 && spec[0] == "all") {
 		return &platformMatcher{spec: spec}, nil
 	}
 
@@ -1172,10 +1172,24 @@ func parseSpec(spec []string) (*platformMatcher, error) {
 }
 
 func (pm *platformMatcher) matches(base *v1.Platform) bool {
-	if len(pm.spec) > 0 && pm.spec[0] == "all" {
-		return true
+	var hasWasi bool
+	var hasAll bool
+	for _, s := range pm.spec {
+		if s == "wasm/wasi" {
+			hasWasi = true
+		}
+		if s == "all" {
+			hasAll = true
+		}
 	}
-
+	// Don't build wasi/wasm platform if only all is specified,
+	// could break a lot of builds because tinygo needs to be installed
+	if hasAll && !hasWasi {
+		if (base == nil || !base.Equals(*wasiPlatform)) {
+			return true
+		}
+	}
+	
 	// Don't build anything without a platform field unless "all". Unclear what we should do here.
 	if base == nil {
 		return false
