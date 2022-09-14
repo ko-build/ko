@@ -63,7 +63,7 @@ type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
 
-type sbomber func(context.Context, string, string, oci.SignedEntity) ([]byte, types.MediaType, error)
+type sbomber func(context.Context, string, string, string, oci.SignedEntity, string) ([]byte, types.MediaType, error)
 
 type platformMatcher struct {
 	spec      []string
@@ -77,6 +77,7 @@ type gobuild struct {
 	kodataCreationTime   v1.Time
 	build                builder
 	sbom                 sbomber
+	sbomDir              string
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
@@ -98,6 +99,7 @@ type gobuildOpener struct {
 	kodataCreationTime   v1.Time
 	build                builder
 	sbom                 sbomber
+	sbomDir              string
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
@@ -125,6 +127,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		kodataCreationTime:   gbo.kodataCreationTime,
 		build:                gbo.build,
 		sbom:                 gbo.sbom,
+		sbomDir:              gbo.sbomDir,
 		disableOptimizations: gbo.disableOptimizations,
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
@@ -301,7 +304,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	return file, nil
 }
 
-func goversionm(ctx context.Context, file string, appPath string, se oci.SignedEntity) ([]byte, types.MediaType, error) {
+func goversionm(ctx context.Context, file string, appPath string, appFileName string, se oci.SignedEntity, dir string) ([]byte, types.MediaType, error) {
 	switch se.(type) {
 	case oci.SignedImage:
 		sbom := bytes.NewBuffer(nil)
@@ -314,7 +317,13 @@ func goversionm(ctx context.Context, file string, appPath string, se oci.SignedE
 
 		// In order to get deterministics SBOMs replace our randomized
 		// file name with the path the app will get inside of the container.
-		return []byte(strings.Replace(sbom.String(), file, appPath, 1)), "application/vnd.go.version-m", nil
+		s := []byte(strings.Replace(sbom.String(), file, appPath, 1))
+
+		if err := writeSBOM(s, appFileName, dir, "go.version-m"); err != nil {
+			return nil, "", err
+		}
+
+		return s, "application/vnd.go.version-m", nil
 
 	case oci.SignedImageIndex:
 		return nil, "", nil
@@ -325,10 +334,10 @@ func goversionm(ctx context.Context, file string, appPath string, se oci.SignedE
 }
 
 func spdx(version string) sbomber {
-	return func(ctx context.Context, file string, appPath string, se oci.SignedEntity) ([]byte, types.MediaType, error) {
+	return func(ctx context.Context, file string, appPath string, appFileName string, se oci.SignedEntity, dir string) ([]byte, types.MediaType, error) {
 		switch obj := se.(type) {
 		case oci.SignedImage:
-			b, _, err := goversionm(ctx, file, appPath, obj)
+			b, _, err := goversionm(ctx, file, appPath, appFileName, obj, "")
 			if err != nil {
 				return nil, "", err
 			}
@@ -337,10 +346,23 @@ func spdx(version string) sbomber {
 			if err != nil {
 				return nil, "", err
 			}
+
+			if err := writeSBOM(b, appFileName, dir, "spdx.json"); err != nil {
+				return nil, "", err
+			}
+
 			return b, ctypes.SPDXJSONMediaType, nil
 
 		case oci.SignedImageIndex:
 			b, err := sbom.GenerateIndexSPDX(version, obj)
+			if err != nil {
+				return nil, "", err
+			}
+
+			if err := writeSBOM(b, appFileName, dir, "spdx.json"); err != nil {
+				return nil, "", err
+			}
+
 			return b, ctypes.SPDXJSONMediaType, err
 
 		default:
@@ -349,11 +371,24 @@ func spdx(version string) sbomber {
 	}
 }
 
+func writeSBOM(sbom []byte, appFileName, dir, ext string) error {
+	if dir != "" {
+		sbomDir := filepath.Clean(dir)
+		if err := os.MkdirAll(sbomDir, os.ModePerm); err != nil {
+			return err
+		}
+		sbomPath := filepath.Join(sbomDir, appFileName+"."+ext)
+		log.Printf("Writing SBOM to %s", sbomPath)
+		return os.WriteFile(sbomPath, sbom, 0644)
+	}
+	return nil
+}
+
 func cycloneDX() sbomber {
-	return func(ctx context.Context, file string, appPath string, se oci.SignedEntity) ([]byte, types.MediaType, error) {
+	return func(ctx context.Context, file string, appPath string, appFileName string, se oci.SignedEntity, dir string) ([]byte, types.MediaType, error) {
 		switch obj := se.(type) {
 		case oci.SignedImage:
-			b, _, err := goversionm(ctx, file, appPath, obj)
+			b, _, err := goversionm(ctx, file, appPath, appFileName, obj, "")
 			if err != nil {
 				return nil, "", err
 			}
@@ -362,10 +397,23 @@ func cycloneDX() sbomber {
 			if err != nil {
 				return nil, "", err
 			}
+
+			if err := writeSBOM(b, appFileName, dir, "cyclone.json"); err != nil {
+				return nil, "", err
+			}
+
 			return b, ctypes.CycloneDXJSONMediaType, nil
 
 		case oci.SignedImageIndex:
 			b, err := sbom.GenerateIndexCycloneDX(obj)
+			if err != nil {
+				return nil, "", err
+			}
+
+			if err := writeSBOM(b, appFileName, dir, "cyclonedx.json"); err != nil {
+				return nil, "", err
+			}
+
 			return b, ctypes.SPDXJSONMediaType, err
 
 		default:
@@ -794,7 +842,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	})
 
 	appDir := "/ko-app"
-	appPath := path.Join(appDir, appFilename(ref.Path()))
+	appFileName := appFilename(ref.Path())
+	appPath := path.Join(appDir, appFileName)
 
 	miss := func() (v1.Layer, error) {
 		return buildLayer(appPath, file, platform, layerMediaType)
@@ -833,7 +882,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	cfg.Config.Entrypoint = []string{appPath}
 	cfg.Config.Cmd = nil
 	if platform.OS == "windows" {
-		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFilename(ref.Path())}
+		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFileName}
 		updatePath(cfg, `C:\ko-app`)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
 	} else {
@@ -862,7 +911,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	si := signed.Image(image)
 
 	if g.sbom != nil {
-		sbom, mt, err := g.sbom(ctx, file, appPath, si)
+		sbom, mt, err := g.sbom(ctx, file, appPath, appFileName, si, g.sbomDir)
 		if err != nil {
 			return nil, err
 		}
@@ -1067,7 +1116,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		adds...)
 
 	if g.sbom != nil {
-		sbom, mt, err := g.sbom(ctx, "", "", idx)
+		sbom, mt, err := g.sbom(ctx, "", "", "", idx, g.sbomDir)
 		if err != nil {
 			return nil, err
 		}

@@ -318,6 +318,9 @@ From v0.9+, `ko` generates and uploads an SBOM for every image it produces by de
 `ko` will generate an SBOM in the [SPDX](https://spdx.dev/) format by default, but you can select the [CycloneDX](https://cyclonedx.org/) format instead with the `--sbom=cyclonedx` flag. To disable SBOM generation, pass `--sbom=none`.
 
 These SBOMs can be downloaded using the [`cosign download sbom`](https://github.com/sigstore/cosign/blob/main/doc/cosign_download_sbom.md) command.
+
+But you can prefer to write SBOM to disk by giving the `--sbom-dir` flag instead of uploading it to registry, and `ko` will decide the extension based on the format you defined in the `--sbom` flag and file name based on the import path of your project.
+
 ## Static Assets
 
 `ko` can also bundle static assets into the images it produces.

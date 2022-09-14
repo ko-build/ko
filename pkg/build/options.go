@@ -169,3 +169,11 @@ func WithJobs(jobs int) Option {
 		return nil
 	}
 }
+
+// WithSBOMDir is a functional option for overriding the directory
+func WithSBOMDir(dir string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.sbomDir = dir
+		return nil
+	}
+}
