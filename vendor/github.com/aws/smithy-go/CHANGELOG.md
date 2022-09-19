@@ -1,3 +1,17 @@
+# Release (v1.13.2)
+
+* No change notes available for this release.
+
+# Release (v1.13.1)
+
+* No change notes available for this release.
+
+# Release (v1.13.0)
+
+## Module Highlights
+* `github.com/aws/smithy-go`: v1.13.0
+  * **Feature**: Adds support for the Smithy httpBearerAuth authentication trait to smithy-go. This allows the SDK to support the bearer authentication flow for API operations decorated with httpBearerAuth. An API client will need to be provided with its own bearer.TokenProvider implementation or use the bearer.StaticTokenProvider implementation.
+
 # Release (v1.12.1)
 
 ## Module Highlights

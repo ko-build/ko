@@ -3,4 +3,4 @@
 package aws
 
 // goModuleVersion is the tagged release for this module
-const goModuleVersion = "1.16.11"
+const goModuleVersion = "1.16.14"
