@@ -54,6 +54,7 @@ ko resolve -f FILENAME [flags]
       --push                     Push images to KO_DOCKER_REPO (default true)
   -R, --recursive                Process the directory used in -f, --filename recursively. Useful when you want to manage related manifests organized within the same directory.
       --sbom string              The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, cyclonedx, go.version-m). (default "spdx")
+      --sbom-dir string          Path to file where the SBOM will be written.
   -l, --selector string          Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)
       --tag-only                 Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.
   -t, --tags strings             Which tags to use for the produced image instead of the default 'latest' tag (may not work properly with --base-import-paths or --bare). (default [latest])
