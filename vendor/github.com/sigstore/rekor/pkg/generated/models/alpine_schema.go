@@ -23,7 +23,7 @@ package models
 
 // AlpineSchema Alpine Package Schema
 //
-// Schema for Alpine package objects
+// # Schema for Alpine package objects
 //
 // swagger:model alpineSchema
 type AlpineSchema interface{}

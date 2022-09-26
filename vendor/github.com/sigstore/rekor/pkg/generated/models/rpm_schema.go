@@ -23,7 +23,7 @@ package models
 
 // RpmSchema RPM Schema
 //
-// Schema for RPM objects
+// # Schema for RPM objects
 //
 // swagger:model rpmSchema
 type RpmSchema interface{}

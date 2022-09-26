@@ -32,7 +32,7 @@ import (
 
 // TUFV001Schema TUF v0.0.1 Schema
 //
-// Schema for TUF metadata entries
+// # Schema for TUF metadata entries
 //
 // swagger:model tufV001Schema
 type TUFV001Schema struct {

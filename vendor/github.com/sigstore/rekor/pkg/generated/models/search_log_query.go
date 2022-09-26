@@ -42,9 +42,12 @@ type SearchLogQuery struct {
 	entriesField []ProposedEntry
 
 	// entry u UI ds
+	// Max Items: 10
+	// Min Items: 1
 	EntryUUIDs []string `json:"entryUUIDs"`
 
 	// log indexes
+	// Max Items: 10
 	// Min Items: 1
 	LogIndexes []*int64 `json:"logIndexes"`
 }
@@ -158,6 +161,16 @@ func (m *SearchLogQuery) validateEntries(formats strfmt.Registry) error {
 		return nil
 	}
 
+	iEntriesSize := int64(len(m.Entries()))
+
+	if err := validate.MinItems("entries", "body", iEntriesSize, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxItems("entries", "body", iEntriesSize, 10); err != nil {
+		return err
+	}
+
 	for i := 0; i < len(m.Entries()); i++ {
 
 		if err := m.entriesField[i].Validate(formats); err != nil {
@@ -179,6 +192,16 @@ func (m *SearchLogQuery) validateEntryUUIDs(formats strfmt.Registry) error {
 		return nil
 	}
 
+	iEntryUUIDsSize := int64(len(m.EntryUUIDs))
+
+	if err := validate.MinItems("entryUUIDs", "body", iEntryUUIDsSize, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxItems("entryUUIDs", "body", iEntryUUIDsSize, 10); err != nil {
+		return err
+	}
+
 	for i := 0; i < len(m.EntryUUIDs); i++ {
 
 		if err := validate.Pattern("entryUUIDs"+"."+strconv.Itoa(i), "body", m.EntryUUIDs[i], `^([0-9a-fA-F]{64}|[0-9a-fA-F]{80})$`); err != nil {
@@ -198,6 +221,10 @@ func (m *SearchLogQuery) validateLogIndexes(formats strfmt.Registry) error {
 	iLogIndexesSize := int64(len(m.LogIndexes))
 
 	if err := validate.MinItems("logIndexes", "body", iLogIndexesSize, 1); err != nil {
+		return err
+	}
+
+	if err := validate.MaxItems("logIndexes", "body", iLogIndexesSize, 10); err != nil {
 		return err
 	}
 

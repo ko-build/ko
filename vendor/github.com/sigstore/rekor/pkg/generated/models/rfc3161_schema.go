@@ -23,7 +23,7 @@ package models
 
 // Rfc3161Schema Timestamp Schema
 //
-// Schema for RFC 3161 timestamp objects
+// # Schema for RFC 3161 timestamp objects
 //
 // swagger:model rfc3161Schema
 type Rfc3161Schema interface{}

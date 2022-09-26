@@ -33,7 +33,7 @@ import (
 
 // RekordV001Schema Rekor v0.0.1 Schema
 //
-// Schema for Rekord object
+// # Schema for Rekord object
 //
 // swagger:model rekordV001Schema
 type RekordV001Schema struct {

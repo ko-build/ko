@@ -23,7 +23,7 @@ package models
 
 // JarSchema JAR Schema
 //
-// Schema for JAR objects
+// # Schema for JAR objects
 //
 // swagger:model jarSchema
 type JarSchema interface{}

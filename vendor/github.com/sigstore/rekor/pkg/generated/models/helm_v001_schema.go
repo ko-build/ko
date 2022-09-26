@@ -33,7 +33,7 @@ import (
 
 // HelmV001Schema Helm v0.0.1 Schema
 //
-// Schema for Helm object
+// # Schema for Helm object
 //
 // swagger:model helmV001Schema
 type HelmV001Schema struct {

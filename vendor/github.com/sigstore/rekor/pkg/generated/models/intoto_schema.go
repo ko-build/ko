@@ -23,7 +23,7 @@ package models
 
 // IntotoSchema Intoto Schema
 //
-// Intoto for Rekord objects
+// # Intoto for Rekord objects
 //
 // swagger:model intotoSchema
 type IntotoSchema interface{}

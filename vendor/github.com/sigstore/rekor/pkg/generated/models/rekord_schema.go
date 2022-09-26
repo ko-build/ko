@@ -23,7 +23,7 @@ package models
 
 // RekordSchema Rekor Schema
 //
-// Schema for Rekord objects
+// # Schema for Rekord objects
 //
 // swagger:model rekordSchema
 type RekordSchema interface{}

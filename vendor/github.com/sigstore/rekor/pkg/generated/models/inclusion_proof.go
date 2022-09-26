@@ -36,6 +36,10 @@ import (
 // swagger:model InclusionProof
 type InclusionProof struct {
 
+	// The checkpoint (signed tree head) that the inclusion proof is based on
+	// Required: true
+	Checkpoint *string `json:"checkpoint"`
+
 	// A list of hashes required to compute the inclusion proof, sorted in order from leaf to root
 	// Required: true
 	Hashes []string `json:"hashes"`
@@ -60,6 +64,10 @@ type InclusionProof struct {
 func (m *InclusionProof) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateCheckpoint(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateHashes(formats); err != nil {
 		res = append(res, err)
 	}
@@ -79,6 +87,15 @@ func (m *InclusionProof) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *InclusionProof) validateCheckpoint(formats strfmt.Registry) error {
+
+	if err := validate.Required("checkpoint", "body", m.Checkpoint); err != nil {
+		return err
+	}
+
 	return nil
 }
 

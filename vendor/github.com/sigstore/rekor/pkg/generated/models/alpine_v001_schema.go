@@ -33,7 +33,7 @@ import (
 
 // AlpineV001Schema Alpine v0.0.1 Schema
 //
-// Schema for Alpine Package entries
+// # Schema for Alpine Package entries
 //
 // swagger:model alpineV001Schema
 type AlpineV001Schema struct {
