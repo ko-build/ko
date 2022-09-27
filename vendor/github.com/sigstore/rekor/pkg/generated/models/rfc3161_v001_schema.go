@@ -32,7 +32,7 @@ import (
 
 // Rfc3161V001Schema Timestamp v0.0.1 Schema
 //
-// Schema for RFC3161 entries
+// # Schema for RFC3161 entries
 //
 // swagger:model rfc3161V001Schema
 type Rfc3161V001Schema struct {

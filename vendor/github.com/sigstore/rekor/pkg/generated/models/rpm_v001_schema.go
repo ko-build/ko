@@ -33,7 +33,7 @@ import (
 
 // RpmV001Schema RPM v0.0.1 Schema
 //
-// Schema for RPM entries
+// # Schema for RPM entries
 //
 // swagger:model rpmV001Schema
 type RpmV001Schema struct {

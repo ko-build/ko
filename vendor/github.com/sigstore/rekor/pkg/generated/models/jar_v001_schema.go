@@ -33,7 +33,7 @@ import (
 
 // JarV001Schema JAR v0.0.1 Schema
 //
-// Schema for JAR entries
+// # Schema for JAR entries
 //
 // swagger:model jarV001Schema
 type JarV001Schema struct {

@@ -33,7 +33,7 @@ import (
 
 // HashedrekordV001Schema Hashed Rekor v0.0.1 Schema
 //
-// Schema for Hashed Rekord object
+// # Schema for Hashed Rekord object
 //
 // swagger:model hashedrekordV001Schema
 type HashedrekordV001Schema struct {

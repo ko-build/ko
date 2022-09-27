@@ -26,7 +26,6 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/runtime"
@@ -84,7 +83,7 @@ func UnmarshalProposedEntrySlice(reader io.Reader, consumer runtime.Consumer) ([
 // UnmarshalProposedEntry unmarshals polymorphic ProposedEntry
 func UnmarshalProposedEntry(reader io.Reader, consumer runtime.Consumer) (ProposedEntry, error) {
 	// we need to read this twice, so first into a buffer
-	data, err := ioutil.ReadAll(reader)
+	data, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}

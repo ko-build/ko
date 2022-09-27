@@ -23,7 +23,7 @@ package models
 
 // CoseSchema COSE Schema
 //
-// COSE for Rekord objects
+// # COSE for Rekord objects
 //
 // swagger:model coseSchema
 type CoseSchema interface{}

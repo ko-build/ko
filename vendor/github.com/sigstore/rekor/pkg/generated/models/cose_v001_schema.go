@@ -33,7 +33,7 @@ import (
 
 // CoseV001Schema cose v0.0.1 Schema
 //
-// Schema for cose object
+// # Schema for cose object
 //
 // swagger:model coseV001Schema
 type CoseV001Schema struct {

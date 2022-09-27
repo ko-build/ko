@@ -334,7 +334,7 @@ github.com/pelletier/go-toml/v2/internal/tracker
 github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.1.0
 github.com/russross/blackfriday/v2
-# github.com/sigstore/cosign v1.12.0
+# github.com/sigstore/cosign v1.12.1
 ## explicit
 github.com/sigstore/cosign/pkg/cosign/bundle
 github.com/sigstore/cosign/pkg/oci
@@ -346,9 +346,9 @@ github.com/sigstore/cosign/pkg/oci/signed
 github.com/sigstore/cosign/pkg/oci/static
 github.com/sigstore/cosign/pkg/oci/walk
 github.com/sigstore/cosign/pkg/types
-# github.com/sigstore/rekor v0.11.0
+# github.com/sigstore/rekor v0.12.1-0.20220915152154-4bb6f441c1b2
 github.com/sigstore/rekor/pkg/generated/models
-# github.com/sigstore/sigstore v1.4.1-0.20220908204944-ec922cf4f1c2
+# github.com/sigstore/sigstore v1.4.1
 github.com/sigstore/sigstore/pkg/cryptoutils
 # github.com/sirupsen/logrus v1.9.0
 github.com/sirupsen/logrus
@@ -410,7 +410,7 @@ golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
 # golang.org/x/mod v0.6.0-dev.0.20220419223038-86c51ed26bb4
 golang.org/x/mod/semver
-# golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
+# golang.org/x/net v0.0.0-20220909164309-bea034e7d591
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
