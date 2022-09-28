@@ -18,6 +18,7 @@ require (
 	github.com/sigstore/cosign v1.12.1
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.13.0
+	go.mongodb.org/mongo-driver v1.10.2 // indirect
 	go.uber.org/automaxprocs v1.5.1
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	golang.org/x/tools v0.1.12
