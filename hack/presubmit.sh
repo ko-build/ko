@@ -29,4 +29,4 @@ find . -name "*.go" | grep -v vendor/ | xargs gofmt -d -e -l
 # Verify that generated Markdown docs are up-to-date.
 tmpdir=$(mktemp -d)
 go run cmd/help/main.go --dir "$tmpdir"
-diff -Naur -I '###### Auto generated' "$tmpdir" doc/
+diff -Naur -I '###### Auto generated' "$tmpdir" docs/reference/

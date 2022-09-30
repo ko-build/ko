@@ -1,0 +1,42 @@
+site_name: 'ko: Easy Go Containers'
+site_url: https://ko.build
+repo_url: https://github.com/ko-build/ko
+
+theme:
+  name: material
+  logo: images/favicon-96x96.png
+  favicon: images/favicon-96x96.png
+  custom_dir: docs/custom/
+  palette:
+    primary: light blue
+
+nav:
+  - index.md
+  - install.md
+  - get-started.md
+  - configuration.md
+  - deployment.md
+  - Features:
+    - features/multi-platform.md
+    - features/sboms.md
+    - features/k8s.md
+    - features/static-assets.md
+    - features/build-cache.md
+  - Advanced:
+    - advanced/go-packages.md
+    - advanced/limitations.md
+    - advanced/migrating-from-dockerfile.md
+    - advanced/faq.md
+  - CLI Reference:
+    - 'ko': reference/ko.md
+    - 'ko apply': reference/ko_apply.md
+    - 'ko build': reference/ko_build.md
+    - 'ko create': reference/ko_create.md
+    - 'ko delete': reference/ko_delete.md
+    - 'ko deps': reference/ko_deps.md
+    - 'ko login': reference/ko_login.md
+    - 'ko resolve': reference/ko_resolve.md
+    - 'ko run': reference/ko_run.md
+    - 'ko version': reference/ko_version.md
+  - Releases: "https://github.com/ko-build/ko/releases"
+
