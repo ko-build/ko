@@ -79,7 +79,7 @@ Registry](https://github.com/features/packages) in a GitHub Action workflow:
 
 ```
 steps:
-- uses: imjasonh/setup-ko@v0.4
+- uses: imjasonh/setup-ko@v0.6
 ```
 
 ## Authenticate
