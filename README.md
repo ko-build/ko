@@ -466,6 +466,11 @@ using `ko apply`:
 ko apply -f config/
 ```
 
+Also, any flags passed after `--` are passed to `kubectl apply` directly, for example to specify context and kubeconfig:
+```
+ko apply -f config -- --context=foo --kubeconfig=cfg.yaml
+```
+
 **NB:** This requires that `kubectl` is available.
 
 ## `ko delete`
