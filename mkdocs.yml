@@ -1,6 +1,7 @@
 site_name: 'ko: Easy Go Containers'
 site_url: https://ko.build
 repo_url: https://github.com/ko-build/ko
+edit_uri: edit/main/docs/
 
 theme:
   name: material
