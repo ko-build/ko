@@ -115,7 +115,7 @@ jobs:
           unzip tools-java-${SPDX_TOOLS_VERSION}.zip
 
       - name: Install Cosign
-        uses: sigstore/cosign-installer@v2.7.0
+        uses: sigstore/cosign-installer@v2.8.0
         with:
           cosign-release: 'v1.7.2'
 
