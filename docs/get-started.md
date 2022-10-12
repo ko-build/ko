@@ -2,7 +2,7 @@
 
 ## Setup
 
-First, [install `ko`](./install).
+First, [install `ko`](../install).
 
 ### Authenticate
 
