@@ -46,6 +46,9 @@ func NewFile(payload []byte, opts ...Option) (oci.File, error) {
 		return nil, err
 	}
 
+	// Add annotations from options
+	img = mutate.Annotations(img, o.Annotations).(v1.Image)
+
 	// Set the Created date to time of execution
 	img, err = mutate.CreatedAt(img, v1.Time{Time: time.Now()})
 	if err != nil {
