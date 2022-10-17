@@ -92,7 +92,7 @@ Oh, you betcha. Here's a partial list:
 - `ko` extension for [Tilt](https://github.com/tilt-dev/tilt-extensions/tree/master/ko)
 - `ko` support for [goreleaser](https://github.com/goreleaser/goreleaser/pull/2564) (proposed)
 
-## Does `ko` work with [OpenShift Internal Registry](https://docs.openshift.com/container-platform/latest/registry/registry-options.html#registry-integrated-openshift-registry_registry-options)?
+## Does `ko` work with [OpenShift Internal Registry](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.11/html/registry/registry-overview#registry-integrated-openshift-registry_registry-overview)?
 
 Yes! Follow these steps:
 

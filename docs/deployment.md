@@ -1,6 +1,6 @@
 # Deployment
 
-_See [Kubernetes Integration](./features/k8s) for information about deploying to Kubernetes._
+_See [Kubernetes Integration](../features/k8s) for information about deploying to Kubernetes._
 
 Because the output of `ko build` is an image reference, you can easily pass it to other tools that expect to take an image reference.
 

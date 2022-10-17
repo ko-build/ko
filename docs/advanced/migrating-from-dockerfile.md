@@ -53,11 +53,11 @@ After running `docker build` on this `Dockerfile`, don't forget to push that ima
 
 ## Migrating to `ko`
 
-If your Go source is laid out as described in the tutorial, and you've [installed](./../install) and [set up your environment](./../get-started), you can simply run `ko build ./` to build and push the container image to your registry.
+If your Go source is laid out as described in the tutorial, and you've [installed](../../install) and [set up your environment](../../get-started), you can simply run `ko build ./` to build and push the container image to your registry.
 
 You're done. You can delete your `Dockerfile` and uninstall `docker`.
 
-`ko` takes advantage of your local [Go build cache](./../features/build-cache) without needing to be told to, and it sets the `ENTRYPOINT` and uses a nonroot distroless base image by default.
+`ko` takes advantage of your local [Go build cache](../../features/build-cache) without needing to be told to, and it sets the `ENTRYPOINT` and uses a nonroot distroless base image by default.
 
 To build a multi-arch image, simply add `--platform=all`.
 Compare this to the [equivalent Docker instructions](https://docs.docker.com/desktop/multi-arch/).
