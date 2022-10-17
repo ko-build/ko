@@ -1,3 +1,189 @@
+# Release (2022-09-20)
+
+## General Highlights
+* **Dependency Update**: Updated to the latest SDK module versions
+
+## Module Highlights
+* `github.com/aws/aws-sdk-go-v2`: v1.16.16
+  * **Documentation**: added clafirfication on the Credential object to show usage of loadDefaultConfig to load credentials
+* `github.com/aws/aws-sdk-go-v2/service/ec2`: [v1.58.0](service/ec2/CHANGELOG.md#v1580-2022-09-20)
+  * **Feature**: This release adds support for blocked paths to Amazon VPC Reachability Analyzer.
+
+# Release (2022-09-19)
+
+## Module Highlights
+* `github.com/aws/aws-sdk-go-v2/service/cloudtrail`: [v1.18.0](service/cloudtrail/CHANGELOG.md#v1180-2022-09-19)
+  * **Feature**: This release includes support for importing existing trails into CloudTrail Lake.
+* `github.com/aws/aws-sdk-go-v2/service/ec2`: [v1.57.0](service/ec2/CHANGELOG.md#v1570-2022-09-19)
+  * **Feature**: This release adds CapacityAllocations field to DescribeCapacityReservations
+* `github.com/aws/aws-sdk-go-v2/service/mediaconnect`: [v1.17.0](service/mediaconnect/CHANGELOG.md#v1170-2022-09-19)
+  * **Feature**: This change allows the customer to use the SRT Caller protocol as part of their flows
+* `github.com/aws/aws-sdk-go-v2/service/rds`: [v1.26.0](service/rds/CHANGELOG.md#v1260-2022-09-19)
+  * **Feature**: This release adds support for Amazon RDS Proxy with SQL Server compatibility.
+
+# Release (2022-09-16)
+
+## Module Highlights
+* `github.com/aws/aws-sdk-go-v2/service/codestarnotifications`: [v1.13.0](service/codestarnotifications/CHANGELOG.md#v1130-2022-09-16)
+  * **Feature**: This release adds tag based access control for the UntagResource API.
+* `github.com/aws/aws-sdk-go-v2/service/ecs`: [v1.18.21](service/ecs/CHANGELOG.md#v11821-2022-09-16)
+  * **Documentation**: This release supports new task definition sizes.
+
+# Release (2022-09-15)
+
+## General Highlights
+* **Dependency Update**: Updated to the latest SDK module versions
+
+## Module Highlights
+* `github.com/aws/aws-sdk-go-v2/service/dynamodb`: [v1.17.0](service/dynamodb/CHANGELOG.md#v1170-2022-09-15)
+  * **Feature**: Increased DynamoDB transaction limit from 25 to 100.
+* `github.com/aws/aws-sdk-go-v2/service/ec2`: [v1.56.0](service/ec2/CHANGELOG.md#v1560-2022-09-15)
+  * **Feature**: This feature allows customers to create tags for vpc-endpoint-connections and vpc-endpoint-service-permissions.
+* `github.com/aws/aws-sdk-go-v2/service/sagemaker`: [v1.43.0](service/sagemaker/CHANGELOG.md#v1430-2022-09-15)
+  * **Feature**: Amazon SageMaker Automatic Model Tuning now supports specifying Hyperband strategy for tuning jobs, which uses a multi-fidelity based tuning strategy to stop underperforming hyperparameter configurations early.
+
+# Release (2022-09-14)
+
+## General Highlights
+* **Dependency Update**: Updated to the latest SDK module versions
+
+## Module Highlights
+* `github.com/aws/aws-sdk-go-v2/feature/rds/auth`: [v1.2.0](feature/rds/auth/CHANGELOG.md#v120-2022-09-14)
+  * **Feature**: Updated `BuildAuthToken` to validate the provided endpoint contains a port.
+* `github.com/aws/aws-sdk-go-v2/internal/v4a`: [v1.0.13](internal/v4a/CHANGELOG.md#v1013-2022-09-14)
+  * **Bug Fix**: Fixes an issues where an error from an underlying SigV4 credential provider would not be surfaced from the SigV4a credential provider. Contribution by [sakthipriyan-aqfer](https://github.com/sakthipriyan-aqfer).
+* `github.com/aws/aws-sdk-go-v2/service/acmpca`: [v1.18.0](service/acmpca/CHANGELOG.md#v1180-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/amplifyuibuilder`: [v1.7.0](service/amplifyuibuilder/CHANGELOG.md#v170-2022-09-14)
+  * **Feature**: Amplify Studio UIBuilder is introducing forms functionality. Forms can be configured from Data Store models, JSON, or from scratch. These forms can then be generated in your project and used like any other React components.
+* `github.com/aws/aws-sdk-go-v2/service/appconfig`: [v1.14.0](service/appconfig/CHANGELOG.md#v1140-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/appflow`: [v1.17.0](service/appflow/CHANGELOG.md#v1170-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/appmesh`: [v1.16.0](service/appmesh/CHANGELOG.md#v1160-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/cloudtrail`: [v1.17.0](service/cloudtrail/CHANGELOG.md#v1170-2022-09-14)
+  * **Feature**: This release adds CloudTrail getChannel and listChannels APIs to allow customer to view the ServiceLinkedChannel configurations.
+* `github.com/aws/aws-sdk-go-v2/service/codestar`: [v1.12.0](service/codestar/CHANGELOG.md#v1120-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/codestarnotifications`: [v1.12.0](service/codestarnotifications/CHANGELOG.md#v1120-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/cognitoidentity`: [v1.14.0](service/cognitoidentity/CHANGELOG.md#v1140-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/cognitoidentityprovider`: [v1.20.0](service/cognitoidentityprovider/CHANGELOG.md#v1200-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/configservice`: [v1.26.0](service/configservice/CHANGELOG.md#v1260-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/connect`: [v1.30.0](service/connect/CHANGELOG.md#v1300-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/connectparticipant`: [v1.12.0](service/connectparticipant/CHANGELOG.md#v1120-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/costexplorer`: [v1.20.0](service/costexplorer/CHANGELOG.md#v1200-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/customerprofiles`: [v1.19.0](service/customerprofiles/CHANGELOG.md#v1190-2022-09-14)
+  * **Feature**: Added isUnstructured in response for Customer Profiles Integration APIs
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/dataexchange`: [v1.16.0](service/dataexchange/CHANGELOG.md#v1160-2022-09-14)
+  * **Feature**: Documentation updates for AWS Data Exchange.
+* `github.com/aws/aws-sdk-go-v2/service/drs`: [v1.8.0](service/drs/CHANGELOG.md#v180-2022-09-14)
+  * **Feature**: Fixed the data type of lagDuration that is returned in Describe Source Server API
+* `github.com/aws/aws-sdk-go-v2/service/ec2`: [v1.55.0](service/ec2/CHANGELOG.md#v1550-2022-09-14)
+  * **Feature**: Documentation updates for Amazon EC2.
+  * **Feature**: This release adds support to send VPC Flow Logs to kinesis-data-firehose as new destination type
+  * **Feature**: This update introduces API operations to manage and create local gateway route tables, CoIP pools, and VIF group associations.
+  * **Feature**: Two new features for local gateway route tables: support for static routes targeting Elastic Network Interfaces and direct VPC routing.
+* `github.com/aws/aws-sdk-go-v2/service/eks`: [v1.22.0](service/eks/CHANGELOG.md#v1220-2022-09-14)
+  * **Feature**: Adding support for local Amazon EKS clusters on Outposts
+  * **Feature**: Adds support for EKS Addons ResolveConflicts "preserve" flag. Also adds new update failed status for EKS Addons.
+* `github.com/aws/aws-sdk-go-v2/service/emrcontainers`: [v1.14.0](service/emrcontainers/CHANGELOG.md#v1140-2022-09-14)
+  * **Feature**: EMR on EKS now allows running Spark SQL using the newly introduced Spark SQL Job Driver in the Start Job Run API
+* `github.com/aws/aws-sdk-go-v2/service/emrserverless`: [v1.2.0](service/emrserverless/CHANGELOG.md#v120-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/evidently`: [v1.9.0](service/evidently/CHANGELOG.md#v190-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+  * **Feature**: This release adds support for the client-side evaluation - powered by AWS AppConfig feature.
+* `github.com/aws/aws-sdk-go-v2/service/finspacedata`: [v1.13.0](service/finspacedata/CHANGELOG.md#v1130-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/fis`: [v1.13.0](service/fis/CHANGELOG.md#v1130-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/fsx`: [v1.24.12](service/fsx/CHANGELOG.md#v12412-2022-09-14)
+  * **Documentation**: Documentation update for Amazon FSx.
+* `github.com/aws/aws-sdk-go-v2/service/glue`: [v1.31.0](service/glue/CHANGELOG.md#v1310-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/greengrassv2`: [v1.18.0](service/greengrassv2/CHANGELOG.md#v1180-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/identitystore`: [v1.15.3](service/identitystore/CHANGELOG.md#v1153-2022-09-14)
+  * **Documentation**: Documentation updates for the Identity Store CLI Reference.
+* `github.com/aws/aws-sdk-go-v2/service/imagebuilder`: [v1.20.0](service/imagebuilder/CHANGELOG.md#v1200-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/inspector2`: [v1.8.0](service/inspector2/CHANGELOG.md#v180-2022-09-14)
+  * **Feature**: This release adds new fields like fixAvailable, fixedInVersion and remediation to the finding model. The requirement to have vulnerablePackages in the finding model has also been removed. The documentation has been updated to reflect these changes.
+* `github.com/aws/aws-sdk-go-v2/service/iot`: [v1.29.0](service/iot/CHANGELOG.md#v1290-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/iotanalytics`: [v1.13.0](service/iotanalytics/CHANGELOG.md#v1130-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/iotsecuretunneling`: [v1.14.0](service/iotsecuretunneling/CHANGELOG.md#v1140-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/iotsitewise`: [v1.25.0](service/iotsitewise/CHANGELOG.md#v1250-2022-09-14)
+  * **Feature**: Allow specifying units in Asset Properties
+* `github.com/aws/aws-sdk-go-v2/service/kendra`: [v1.34.0](service/kendra/CHANGELOG.md#v1340-2022-09-14)
+  * **Feature**: This release enables our customer to choose the option of Sharepoint 2019 for the on-premise Sharepoint connector.
+* `github.com/aws/aws-sdk-go-v2/service/lexmodelsv2`: [v1.24.0](service/lexmodelsv2/CHANGELOG.md#v1240-2022-09-14)
+  * **Feature**: This release is for supporting Composite Slot Type feature in AWS Lex V2. Composite Slot Type will help developer to logically group coherent slots and maintain their inter-relationships in runtime conversation.
+* `github.com/aws/aws-sdk-go-v2/service/lexruntimev2`: [v1.15.0](service/lexruntimev2/CHANGELOG.md#v1150-2022-09-14)
+  * **Feature**: This release is for supporting Composite Slot Type feature in AWS Lex V2. Composite Slot Type will help developer to logically group coherent slots and maintain their inter-relationships in runtime conversation.
+* `github.com/aws/aws-sdk-go-v2/service/lookoutmetrics`: [v1.18.0](service/lookoutmetrics/CHANGELOG.md#v1180-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+  * **Feature**: Release dimension value filtering feature to allow customers to define dimension filters for including only a subset of their dataset to be used by LookoutMetrics.
+* `github.com/aws/aws-sdk-go-v2/service/m2`: [v1.1.0](service/m2/CHANGELOG.md#v110-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/medialive`: [v1.23.0](service/medialive/CHANGELOG.md#v1230-2022-09-14)
+  * **Feature**: This change exposes API settings which allow Dolby Atmos and Dolby Vision to be used when running a channel using Elemental Media Live
+* `github.com/aws/aws-sdk-go-v2/service/networkfirewall`: [v1.19.0](service/networkfirewall/CHANGELOG.md#v1190-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/pi`: [v1.15.0](service/pi/CHANGELOG.md#v1150-2022-09-14)
+  * **Feature**: Increases the maximum values of two RDS Performance Insights APIs. The maximum value of the Limit parameter of DimensionGroup is 25. The MaxResult maximum is now 25 for the following APIs: DescribeDimensionKeys, GetResourceMetrics, ListAvailableResourceDimensions, and ListAvailableResourceMetrics.
+* `github.com/aws/aws-sdk-go-v2/service/pricing`: [v1.17.0](service/pricing/CHANGELOG.md#v1170-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/quicksight`: [v1.25.0](service/quicksight/CHANGELOG.md#v1250-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/redshift`: [v1.26.9](service/redshift/CHANGELOG.md#v1269-2022-09-14)
+  * **Documentation**: This release updates documentation for AQUA features and other description updates.
+* `github.com/aws/aws-sdk-go-v2/service/route53`: [v1.22.0](service/route53/CHANGELOG.md#v1220-2022-09-14)
+  * **Feature**: Amazon Route 53 now supports the Middle East (UAE) Region (me-central-1) for latency records, geoproximity records, and private DNS for Amazon VPCs in that region.
+* `github.com/aws/aws-sdk-go-v2/service/route53recoverycluster`: [v1.10.0](service/route53recoverycluster/CHANGELOG.md#v1100-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/s3control`: [v1.22.0](service/s3control/CHANGELOG.md#v1220-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/sagemaker`: [v1.42.0](service/sagemaker/CHANGELOG.md#v1420-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+  * **Feature**: SageMaker Hosting now allows customization on ML instance storage volume size, model data download timeout and inference container startup ping health check timeout for each ProductionVariant in CreateEndpointConfig API.
+  * **Feature**: This release adds HyperParameterTuningJob type in Search API.
+  * **Feature**: This release adds Mode to AutoMLJobConfig.
+* `github.com/aws/aws-sdk-go-v2/service/sagemakera2iruntime`: [v1.14.0](service/sagemakera2iruntime/CHANGELOG.md#v1140-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/secretsmanager`: [v1.16.0](service/secretsmanager/CHANGELOG.md#v1160-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/servicecatalogappregistry`: [v1.14.0](service/servicecatalogappregistry/CHANGELOG.md#v1140-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/sfn`: [v1.14.0](service/sfn/CHANGELOG.md#v1140-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/sns`: [v1.18.0](service/sns/CHANGELOG.md#v1180-2022-09-14)
+  * **Feature**: Amazon SNS introduces the Data Protection Policy APIs, which enable customers to attach a data protection policy to an SNS topic. This allows topic owners to enable the new message data protection feature to audit and block sensitive data that is exchanged through their topics.
+* `github.com/aws/aws-sdk-go-v2/service/ssm`: [v1.28.0](service/ssm/CHANGELOG.md#v1280-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+  * **Feature**: This release adds support for Systems Manager State Manager Association tagging.
+* `github.com/aws/aws-sdk-go-v2/service/timestreamwrite`: [v1.14.0](service/timestreamwrite/CHANGELOG.md#v1140-2022-09-14)
+  * **Feature**: Fixed a bug in the API client generation which caused some operation parameters to be incorrectly generated as value types instead of pointer types. The service API always required these affected parameters to be nilable. This fixes the SDK client to match the expectations of the the service API.
+* `github.com/aws/aws-sdk-go-v2/service/transfer`: [v1.22.0](service/transfer/CHANGELOG.md#v1220-2022-09-14)
+  * **Feature**: This release introduces the ability to have multiple server host keys for any of your Transfer Family servers that use the SFTP protocol.
+
+# Release (2022-09-02.2)
+
+## Module Highlights
+* `github.com/aws/aws-sdk-go-v2/service/identitystore`: [v1.15.2](service/identitystore/CHANGELOG.md#v1152-2022-09-022)
+  * **Bug Fix**: Reverts a change to the identitystore module so that MaxResults members of ListGroupMemberShips, ListGroupMembershipsForMembers, ListGroups, and ListUsers are correctly generated as pointer types instead of value types
+
 # Release (2022-09-02)
 
 ## General Highlights
