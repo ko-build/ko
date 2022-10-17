@@ -279,7 +279,7 @@ github.com/hashicorp/hcl/hcl/token
 github.com/hashicorp/hcl/json/parser
 github.com/hashicorp/hcl/json/scanner
 github.com/hashicorp/hcl/json/token
-# github.com/inconshreveable/mousetrap v1.0.0
+# github.com/inconshreveable/mousetrap v1.0.1
 github.com/inconshreveable/mousetrap
 # github.com/jmespath/go-jmespath v0.4.0
 github.com/jmespath/go-jmespath
@@ -357,7 +357,7 @@ github.com/spf13/afero
 github.com/spf13/afero/mem
 # github.com/spf13/cast v1.5.0
 github.com/spf13/cast
-# github.com/spf13/cobra v1.5.0
+# github.com/spf13/cobra v1.6.0
 ## explicit
 github.com/spf13/cobra
 github.com/spf13/cobra/doc
