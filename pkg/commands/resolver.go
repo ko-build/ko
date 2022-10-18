@@ -386,7 +386,7 @@ func ResolveFilesToWriter(
 	}
 
 	// Make sure we exit with an error.
-	// See https://github.com/google/ko/issues/84
+	// See https://github.com/ko-build/ko/issues/84
 	return errs.Wait()
 }
 

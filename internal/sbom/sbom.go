@@ -60,7 +60,7 @@ func massageGoVersionM(b []byte) ([]byte, error) {
 	if !scanner.Scan() {
 		// Input was malformed, and doesn't contain any newlines (it
 		// may even be empty). This seems to happen on Windows
-		// (https://github.com/google/ko/issues/535) and in unit tests.
+		// (https://github.com/ko-build/ko/issues/535) and in unit tests.
 		// Just proceed with an empty output for now, and SBOMs will be empty.
 		// TODO: This should be an error.
 		return nil, nil

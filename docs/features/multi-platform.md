@@ -8,5 +8,5 @@ This will instruct `ko` to look up all the supported platforms in the base image
 You can also select specific platforms, for example, `--platform=linux/amd64,linux/arm64`.
 
 `ko` also has experimental support for building for Windows images.
-See [FAQ](./../advanced/faq#can-i-build-windows-containers).
+See [FAQ](../../advanced/faq#can-i-build-windows-containers).
 

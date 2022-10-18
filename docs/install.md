@@ -1,13 +1,26 @@
 # Installation
 
-### Install from [GitHub Releases](https://github.com/google/ko/releases)
+### Install from [GitHub Releases](https://github.com/ko-build/ko/releases)
 
-```plaintext
-VERSION=TODO # choose the latest version
-OS=Linux     # or Darwin, Windows
-ARCH=x86_64  # or arm64, i386, s390x
-curl -L https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz | tar xzf - ko
-chmod +x ./ko
+```
+$ VERSION=TODO # choose the latest version
+$ OS=Linux     # or Darwin
+$ ARCH=x86_64  # or arm64, i386, s390x
+```
+
+We generate [SLSA3 provenance](slsa.dev) using the OpenSSF's [slsa-framework/slsa-github-generator](https://github.com/slsa-framework/slsa-github-generator). To verify our release, install the verification tool from [slsa-framework/slsa-verifier#installation](https://github.com/slsa-framework/slsa-verifier#installation) and verify as follows:
+
+
+```shell
+$ curl -sL "https://github.com/ko-build/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
+$ curl -sL https://github.com/ko-build/ko/releases/download/v${VERSION}/attestation.intoto.jsonl > provenance.intoto.jsonl
+$ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
+  PASSED: Verified SLSA provenance
+```
+
+```shell
+$ tar xzf ko.tar.gz ko
+$ chmod +x ./ko
 ```
 
 ### Install using [Homebrew](https://brew.sh)

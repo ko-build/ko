@@ -49,7 +49,7 @@ func main() {
 		// with the go build tag `timetzdata`. Since we want to test
 		// loading tzdata provided by the base image below, we'll just
 		// skip that for Windows here.
-		// See https://github.com/google/ko/issues/739
+		// See https://github.com/ko-build/ko/issues/739
 		log.Println("skipping timezone conversion on Windows")
 	} else {
 		// Exercise timezone conversions, which demonstrates tzdata is provided

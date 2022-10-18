@@ -28,8 +28,8 @@ import (
 type Interface interface {
 	// QualifyImport turns relative importpath references into complete importpaths.
 	// It also adds the ko scheme prefix if necessary.
-	// E.g., "github.com/google/ko/test" => "ko://github.com/google/ko/test"
-	// and "./test" => "ko://github.com/google/ko/test"
+	// E.g., "github.com/ko-build/ko/test" => "ko://github.com/ko-build/ko/test"
+	// and "./test" => "ko://github.com/ko-build/ko/test"
 	QualifyImport(string) (string, error)
 
 	// IsSupportedReference determines whether the given reference is to an
