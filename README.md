@@ -1,8 +1,8 @@
 # `ko`: Easy Go Containers
 
-[![GitHub Actions Build Status](https://github.com/google/ko/workflows/Build/badge.svg)](https://github.com/google/ko/actions?query=workflow%3ABuild)
+[![GitHub Actions Build Status](https://github.com/ko-build/ko/workflows/Build/badge.svg)](https://github.com/ko-build/ko/actions?query=workflow%3ABuild)
 [![GoDoc](https://godoc.org/github.com/google/ko?status.svg)](https://godoc.org/github.com/google/ko)
-[![Go Report Card](https://goreportcard.com/badge/google/ko)](https://goreportcard.com/report/google/ko)
+[![Go Report Card](https://goreportcard.com/badge/ko-build/ko)](https://goreportcard.com/report/ko-build/ko)
 [![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev/images/gh-badge-level3.svg)
 
 <img src="./logo/ko.png" width="300">
@@ -24,7 +24,7 @@ tool for Kubernetes applications ([See below](#Kubernetes-Integration)).
 
 ## Install
 
-### Install from [Releases](https://github.com/google/ko/releases)
+### Install from [GitHub Releases](https://github.com/ko-build/ko/releases)
 
 ```
 $ VERSION=TODO # choose the latest version
@@ -36,8 +36,8 @@ We generate [SLSA3 provenance](slsa.dev) using the OpenSSF's [slsa-framework/sls
 
 
 ```shell
-$ curl -sL "https://github.com/google/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
-$ curl -sL https://github.com/google/ko/releases/download/v${VERSION}/attestation.intoto.jsonl > provenance.intoto.jsonl
+$ curl -sL "https://github.com/ko-build/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
+$ curl -sL https://github.com/ko-build/ko/releases/download/v${VERSION}/attestation.intoto.jsonl > provenance.intoto.jsonl
 $ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
   PASSED: Verified SLSA provenance
 ```

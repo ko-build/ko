@@ -889,7 +889,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		updatePath(cfg, appDir)
 		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	}
-	cfg.Author = "github.com/google/ko"
+	cfg.Author = "github.com/ko-build/ko"
 
 	if cfg.Config.Labels == nil {
 		cfg.Config.Labels = map[string]string{}
