@@ -248,7 +248,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	}
 
 	if po.ImageRefsFile != "" {
-		f, err := os.OpenFile(po.ImageRefsFile, os.O_RDWR|os.O_CREATE, 0644)
+		f, err := os.OpenFile(po.ImageRefsFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			return nil, err
 		}
