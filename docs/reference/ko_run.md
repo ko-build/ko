@@ -45,6 +45,7 @@ ko run IMPORTPATH [flags]
       --push                     Push images to KO_DOCKER_REPO (default true)
       --sbom string              The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, cyclonedx, go.version-m). (default "spdx")
       --sbom-dir string          Path to file where the SBOM will be written.
+      --static-dir string        Path to static files dir. (default "kodata")
       --tag-only                 Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.
   -t, --tags strings             Which tags to use for the produced image instead of the default 'latest' tag (may not work properly with --base-import-paths or --bare). (default [latest])
       --tarball string           File to save images tarballs

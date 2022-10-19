@@ -361,6 +361,20 @@ You can simulate `ko`'s behavior outside of the container image by setting the
 KO_DATA_PATH=cmd/app/kodata/ go run ./cmd/app
 ```
 
+But you can overwrite kodata dir by giving `--static-dir` flag instead, for example
+`--static-dir=static`, then your contents look like:
+
+
+```
+cmd/
+  app/
+    main.go
+    static/
+      favicon.ico
+      index.html
+```
+
+
 **Tip:** Symlinks in `kodata` are followed and included as well. For example,
 you can include Git commit information in your image with:
 

@@ -42,7 +42,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/ko/internal/sbom"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
 	ocimutate "github.com/sigstore/cosign/pkg/oci/mutate"
@@ -52,10 +51,13 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/google/ko/internal/sbom"
 )
 
 const (
 	defaultAppFilename = "ko-app"
+	defaultStaticDir   = "kodata"
 )
 
 // GetBase takes an importpath and returns a base image reference and base image (or index).
@@ -85,6 +87,7 @@ type gobuild struct {
 	dir                  string
 	labels               map[string]string
 	semaphore            *semaphore.Weighted
+	staticDir            string
 
 	cache *layerCache
 }
@@ -107,6 +110,7 @@ type gobuildOpener struct {
 	labels               map[string]string
 	dir                  string
 	jobs                 int
+	staticDir            string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -120,6 +124,11 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	if gbo.jobs == 0 {
 		gbo.jobs = runtime.GOMAXPROCS(0)
 	}
+	staticDir := defaultStaticDir
+	if gbo.staticDir != "" {
+		staticDir = gbo.staticDir
+	}
+
 	return &gobuild{
 		ctx:                  gbo.ctx,
 		getBase:              gbo.getBase,
@@ -139,6 +148,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 			diffToDesc:  map[string]diffIDToDescriptor{},
 		},
 		semaphore: semaphore.NewWeighted(int64(gbo.jobs)),
+		staticDir: staticDir,
 	}, nil
 }
 
@@ -555,7 +565,8 @@ func (g *gobuild) kodataPath(ref reference) (string, error) {
 	if len(pkgs[0].GoFiles) == 0 {
 		return "", fmt.Errorf("package %s contains no Go files", pkgs[0])
 	}
-	return filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), "kodata"), nil
+
+	return filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), g.staticDir), nil
 }
 
 // Where kodata lives in the image.

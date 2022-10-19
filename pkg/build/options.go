@@ -177,3 +177,11 @@ func WithSBOMDir(dir string) Option {
 		return nil
 	}
 }
+
+// WithStaticDir is a functional option for overriding the static files directory
+func WithStaticDir(dir string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.staticDir = dir
+		return nil
+	}
+}

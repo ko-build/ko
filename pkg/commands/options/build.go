@@ -68,6 +68,10 @@ type BuildOptions struct {
 
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
+
+	// StaticDir allows for setting the directory for static files.
+	// kodata will be used as default directory.
+	StaticDir string
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -83,6 +87,8 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
+	cmd.Flags().StringVar(&bo.StaticDir, "static-dir", "kodata",
+		"Path to static files dir.")
 	bo.Trimpath = true
 }
 
