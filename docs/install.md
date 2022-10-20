@@ -53,6 +53,6 @@ You can use the [setup-ko](https://github.com/imjasonh/setup-ko) action to insta
 
 ```plaintext
 steps:
-- uses: imjasonh/setup-ko@v0.4
+- uses: imjasonh/setup-ko@v0.6
 ```
 
