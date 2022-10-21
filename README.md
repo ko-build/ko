@@ -33,5 +33,5 @@ That work was presented [here](https://www.youtube.com/watch?v=RS1aiQqgUTA).
 ### Discuss
 
 Questions? Comments? Ideas?
-Come discuss `ko` with us in the `#ko-project` channel on the [Kubernetes Slack](https://slack.k8s.io)!
+Come discuss `ko` with us in the `#ko-build` channel on the [Kubernetes Slack](https://slack.k8s.io)!
 See you there!
