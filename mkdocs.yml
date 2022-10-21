@@ -34,7 +34,6 @@ nav:
     - 'ko build': reference/ko_build.md
     - 'ko create': reference/ko_create.md
     - 'ko delete': reference/ko_delete.md
-    - 'ko deps': reference/ko_deps.md
     - 'ko login': reference/ko_login.md
     - 'ko resolve': reference/ko_resolve.md
     - 'ko run': reference/ko_run.md
