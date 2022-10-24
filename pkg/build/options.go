@@ -177,3 +177,14 @@ func WithSBOMDir(dir string) Option {
 		return nil
 	}
 }
+
+// WithStaticFilePaths is a functional option for adding files to built images.
+func WithStaticFilePaths(staticFilePaths ...string) Option {
+	return func(gbo *gobuildOpener) error {
+		if len(staticFilePaths) == 1 {
+			staticFilePaths = strings.Split(staticFilePaths[0], ",")
+		}
+		gbo.staticFilePaths = staticFilePaths
+		return nil
+	}
+}

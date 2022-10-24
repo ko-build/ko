@@ -42,7 +42,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/ko/internal/sbom"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/pkg/oci"
 	ocimutate "github.com/sigstore/cosign/pkg/oci/mutate"
@@ -52,6 +51,8 @@ import (
 	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/semaphore"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/google/ko/internal/sbom"
 )
 
 const (
@@ -85,6 +86,7 @@ type gobuild struct {
 	dir                  string
 	labels               map[string]string
 	semaphore            *semaphore.Weighted
+	staticFilePaths      []string
 
 	cache *layerCache
 }
@@ -107,6 +109,7 @@ type gobuildOpener struct {
 	labels               map[string]string
 	dir                  string
 	jobs                 int
+	staticFilePaths      []string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -138,7 +141,8 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 			buildToDiff: map[string]buildIDToDiffID{},
 			diffToDesc:  map[string]diffIDToDescriptor{},
 		},
-		semaphore: semaphore.NewWeighted(int64(gbo.jobs)),
+		semaphore:       semaphore.NewWeighted(int64(gbo.jobs)),
+		staticFilePaths: gbo.staticFilePaths,
 	}, nil
 }
 
@@ -541,6 +545,14 @@ func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error
 }
 
 func (g *gobuild) kodataPath(ref reference) (string, error) {
+	hostPath, err := g.getHostPath(ref)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(hostPath, "kodata"), nil
+}
+
+func (g *gobuild) getHostPath(ref reference) (string, error) {
 	dir := filepath.Clean(g.dir)
 	if dir == "." {
 		dir = ""
@@ -555,7 +567,8 @@ func (g *gobuild) kodataPath(ref reference) (string, error) {
 	if len(pkgs[0].GoFiles) == 0 {
 		return "", fmt.Errorf("package %s contains no Go files", pkgs[0])
 	}
-	return filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), "kodata"), nil
+
+	return filepath.Dir(pkgs[0].GoFiles[0]), nil
 }
 
 // Where kodata lives in the image.
@@ -601,38 +614,7 @@ func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, pl
 			return walkRecursive(tw, evalPath, newPath, creationTime, platform)
 		}
 
-		// Open the file to copy it into the tarball.
-		file, err := os.Open(evalPath)
-		if err != nil {
-			return fmt.Errorf("os.Open(%q): %w", evalPath, err)
-		}
-		defer file.Close()
-
-		// Copy the file into the image tarball.
-		header := &tar.Header{
-			Name:     newPath,
-			Size:     info.Size(),
-			Typeflag: tar.TypeReg,
-			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
-			// under which it was created. Additionally, windows can only set 0222,
-			// 0444, or 0666, none of which are executable.
-			Mode:    0555,
-			ModTime: creationTime.Time,
-		}
-		if platform.OS == "windows" {
-			// This magic value is for some reason needed for Windows to be
-			// able to execute the binary.
-			header.PAXRecords = map[string]string{
-				"MSWINDOWS.rawsd": userOwnerAndGroupSID,
-			}
-		}
-		if err := tw.WriteHeader(header); err != nil {
-			return fmt.Errorf("tar.Writer.WriteHeader(%q): %w", newPath, err)
-		}
-		if _, err := io.Copy(tw, file); err != nil {
-			return fmt.Errorf("io.Copy(%q, %q): %w", newPath, evalPath, err)
-		}
-		return nil
+		return copyFileToTar(tw, evalPath, newPath, info, creationTime, platform)
 	})
 }
 
@@ -682,7 +664,108 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 		}
 	}
 
-	return buf, walkRecursive(tw, root, chroot, creationTime, platform)
+	err = walkRecursive(tw, root, chroot, creationTime, platform)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(g.staticFilePaths) == 0 {
+		return buf, nil
+	}
+
+	// add static files to tar
+	err = g.tarStaticFiles(tw, ref, chroot, creationTime, platform)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf, nil
+}
+
+func (g *gobuild) tarStaticFiles(tw *tar.Writer, ref reference, chroot string, creationTime v1.Time, platform *v1.Platform) error {
+	hostPath, err := g.getHostPath(ref)
+	if err != nil {
+		return err
+	}
+
+	// handle static files separately
+	for _, staticFilePath := range g.staticFilePaths {
+		fullPath := filepath.Join(hostPath, staticFilePath)
+		paths, err := filepath.Glob(fullPath)
+		if err != nil {
+			return fmt.Errorf("filepath.Glob(%q): %w", fullPath, err)
+		}
+
+		for _, p := range paths {
+			evalPath, err := filepath.EvalSymlinks(p)
+			if err != nil {
+				return fmt.Errorf("filepath.EvalSymlinks(%q): %w", p, err)
+			}
+
+			// Chase symlinks.
+			info, err := os.Stat(evalPath)
+			if err != nil {
+				return fmt.Errorf("os.Stat(%q): %w", evalPath, err)
+			}
+
+			// Skip directories.
+			if info.Mode().IsDir() {
+				continue
+			}
+
+			// Don't chase symlinks on Windows, where cross-compiled symlink support is not possible.
+			if platform.OS == "windows" {
+				if info.Mode()&os.ModeSymlink != 0 {
+					log.Println("skipping symlink in kodata for windows:", info.Name())
+					continue
+				}
+			}
+
+			newPath := path.Join(chroot, filepath.ToSlash(p[len(hostPath):]))
+			err = copyFileToTar(tw, evalPath, newPath, info, creationTime, platform)
+			if err != nil {
+				return fmt.Errorf("writing static file %q: %w", staticFilePath, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+func copyFileToTar(tw *tar.Writer, evalPath, newPath string, info os.FileInfo, creationTime v1.Time, platform *v1.Platform) error {
+	// Open the file to copy it into the tarball.
+	file, err := os.Open(evalPath)
+	if err != nil {
+		return fmt.Errorf("os.Open(%q): %w", evalPath, err)
+	}
+	defer file.Close()
+
+	// Copy the file into the image tarball.
+	header := &tar.Header{
+		Name:     newPath,
+		Size:     info.Size(),
+		Typeflag: tar.TypeReg,
+		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
+		// under which it was created. Additionally, windows can only set 0222,
+		// 0444, or 0666, none of which are executable.
+		Mode:    0555,
+		ModTime: creationTime.Time,
+	}
+	if platform.OS == "windows" {
+		// This magic value is for some reason needed for Windows to be
+		// able to execute the binary.
+		header.PAXRecords = map[string]string{
+			"MSWINDOWS.rawsd": userOwnerAndGroupSID,
+		}
+	}
+	if err := tw.WriteHeader(header); err != nil {
+		return fmt.Errorf("tar.Writer.WriteHeader(%q): %w", newPath, err)
+	}
+	if _, err := io.Copy(tw, file); err != nil {
+		return fmt.Errorf("io.Copy(%q, %q): %w", newPath, evalPath, err)
+	}
+
+	return nil
 }
 
 func createTemplateData() map[string]interface{} {

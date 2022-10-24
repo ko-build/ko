@@ -124,6 +124,10 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithSBOMDir(bo.SBOMDir))
 	}
 
+	if len(bo.StaticFilePaths) > 0 {
+		opts = append(opts, build.WithStaticFilePaths(bo.StaticFilePaths...))
+	}
+
 	return opts, nil
 }
 

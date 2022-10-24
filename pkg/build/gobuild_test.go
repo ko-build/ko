@@ -516,7 +516,8 @@ func TestGoBuildNoKoData(t *testing.T) {
 	})
 }
 
-func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
+func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool,
+	expectSBOM bool, checkStaticFiles bool) {
 	t.Helper()
 
 	ls, err := img.Layers()
@@ -700,6 +701,43 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 			}
 		})
 	}
+
+	// Check that the kodata layer contains the expected static files (even though it was a symlink
+	// outside kodata).
+	if checkStaticFiles {
+		t.Run("check static files", func(t *testing.T) {
+			dataLayer := ls[baseLayers]
+			r, err := dataLayer.Uncompressed()
+			if err != nil {
+				t.Errorf("Uncompressed() = %v", err)
+			}
+			defer r.Close()
+			found := false
+			tr := tar.NewReader(r)
+			for {
+				header, err := tr.Next()
+				if errors.Is(err, io.EOF) {
+					break
+				} else if err != nil {
+					t.Errorf("Next() = %v", err)
+					continue
+				}
+				if header.Name != path.Join(kodataRoot, "migrations/x") {
+					continue
+				}
+				found = true
+				body, err := ioutil.ReadAll(tr)
+				if err != nil {
+					t.Errorf("ReadAll() = %v", err)
+				} else if want, got := "New migration\n", string(body); got != want {
+					t.Errorf("ReadAll() = %v, wanted %v", got, want)
+				}
+			}
+			if !found {
+				t.Error("Didn't find expected file in tarball")
+			}
+		})
+	}
 }
 
 func TestGoBuild(t *testing.T) {
@@ -736,7 +774,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, true)
+	validateImage(t, img, baseLayers, creationTime, true, true, false)
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
@@ -850,7 +888,7 @@ func TestGoBuildWithoutSBOM(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, false)
+	validateImage(t, img, baseLayers, creationTime, true, false, false)
 }
 
 func TestGoBuildIndex(t *testing.T) {
@@ -896,7 +934,7 @@ func TestGoBuildIndex(t *testing.T) {
 		if err != nil {
 			t.Fatalf("idx.Image(%s) = %v", desc.Digest, err)
 		}
-		validateImage(t, img, baseLayers, creationTime, false, true)
+		validateImage(t, img, baseLayers, creationTime, false, true, false)
 	}
 
 	if want, got := images, int64(len(im.Manifests)); want != got {
@@ -1229,4 +1267,41 @@ func TestGoBuildConsistentMediaTypes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGoBuildWithStaticFilePaths(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
+		WithDisabledSBOM(),
+		WithPlatforms("all"),
+		WithStaticFilePaths("migrations/*"),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(oci.SignedImage)
+	if !ok {
+		t.Fatalf("Build() not a SignedImage: %T", result)
+	}
+
+	validateImage(t, img, baseLayers, creationTime, true, false, true)
 }

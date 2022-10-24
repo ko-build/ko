@@ -68,6 +68,9 @@ type BuildOptions struct {
 
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
+
+	// Paths to static files other than kodata
+	StaticFilePaths []string
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -83,6 +86,8 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
+	cmd.Flags().StringSliceVar(&bo.StaticFilePaths, "static-file-paths", []string{},
+		"Which static files (value1,value2...) to add to the image, also supports glob: somepath/*.")
 	bo.Trimpath = true
 }
 
@@ -159,6 +164,17 @@ func (bo *BuildOptions) LoadConfig() error {
 			return fmt.Errorf("could not create build config map: %w", err)
 		}
 		bo.BuildConfigs = buildConfigs
+	}
+
+	if len(bo.StaticFilePaths) == 0 {
+		sfp := v.GetStringSlice("staticFilePaths")
+		for _, v := range sfp {
+			_, err := filepath.Glob(v)
+			if err != nil {
+				return fmt.Errorf("'staticFilePaths': error parsing %q as glob: %w", v, err)
+			}
+		}
+		bo.StaticFilePaths = sfp
 	}
 
 	return nil
