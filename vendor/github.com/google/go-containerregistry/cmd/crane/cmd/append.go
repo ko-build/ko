@@ -23,6 +23,7 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/spf13/cobra"
 )
@@ -31,7 +32,7 @@ import (
 func NewCmdAppend(options *[]crane.Option) *cobra.Command {
 	var baseRef, newTag, outFile string
 	var newLayers []string
-	var annotate bool
+	var annotate, ociEmptyBase bool
 
 	appendCmd := &cobra.Command{
 		Use:   "append",
@@ -51,6 +52,10 @@ container image.`,
 			if baseRef == "" {
 				logs.Warn.Printf("base unspecified, using empty image")
 				base = empty.Image
+				if ociEmptyBase {
+					base = mutate.MediaType(base, types.OCIManifestSchema1)
+					base = mutate.ConfigMediaType(base, types.OCIConfigJSON)
+				}
 			} else {
 				base, err = crane.Pull(baseRef, *options...)
 				if err != nil {
@@ -108,7 +113,9 @@ container image.`,
 	appendCmd.Flags().StringSliceVarP(&newLayers, "new_layer", "f", []string{}, "Path to tarball to append to image")
 	appendCmd.Flags().StringVarP(&outFile, "output", "o", "", "Path to new tarball of resulting image")
 	appendCmd.Flags().BoolVar(&annotate, "set-base-image-annotations", false, "If true, annotate the resulting image as being based on the base image")
+	appendCmd.Flags().BoolVar(&ociEmptyBase, "oci-empty-base", false, "If true, empty base image will have OCI media types instead of Docker")
 
+	appendCmd.MarkFlagsMutuallyExclusive("oci-empty-base", "base")
 	appendCmd.MarkFlagRequired("new_tag")
 	appendCmd.MarkFlagRequired("new_layer")
 	return appendCmd
