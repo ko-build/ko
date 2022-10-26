@@ -25,25 +25,45 @@ import (
 )
 
 func TestLayout(t *testing.T) {
-	img, err := random.Image(1024, 1)
-	if err != nil {
-		t.Fatalf("random.Image() = %v", err)
+	cases := []struct {
+		name string
+		tags []string
+	}{
+		{
+			name: "no tags",
+			tags: nil,
+		}, {
+			name: "foo and bar",
+			tags: []string{"foo", "bar"},
+		}, {
+			name: "latest and foo",
+			tags: []string{"latest", "foo"},
+		},
 	}
-	importpath := "github.com/Google/go-containerregistry/cmd/crane"
 
-	tmp, err := ioutil.TempDir("/tmp", "ko")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.RemoveAll(tmp)
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			img, err := random.Image(1024, 1)
+			if err != nil {
+				t.Fatalf("random.Image() = %v", err)
+			}
+			importpath := "github.com/example/importpath"
 
-	lp, err := NewLayout(tmp)
-	if err != nil {
-		t.Errorf("NewLayout() = %v", err)
-	}
-	if d, err := lp.Publish(context.Background(), img, importpath); err != nil {
-		t.Errorf("Publish() = %v", err)
-	} else if !strings.HasPrefix(d.String(), tmp) {
-		t.Errorf("Publish() = %v, wanted prefix %v", d, tmp)
+			tmp, err := ioutil.TempDir("/tmp", "ko")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer os.RemoveAll(tmp)
+
+			lp, err := NewLayout(tmp, tt.tags...)
+			if err != nil {
+				t.Errorf("NewLayout() = %v", err)
+			}
+			if d, err := lp.Publish(context.Background(), img, importpath); err != nil {
+				t.Errorf("Publish() = %v", err)
+			} else if !strings.HasPrefix(d.String(), tmp) {
+				t.Errorf("Publish() = %v, wanted prefix %v", d, tmp)
+			}
+		})
 	}
 }

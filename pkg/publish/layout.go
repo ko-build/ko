@@ -25,14 +25,16 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/pkg/build"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type LayoutPublisher struct {
-	p layout.Path
+	p    layout.Path
+	tags []string
 }
 
 // NewLayout returns a new publish.Interface that saves images to an OCI Image Layout.
-func NewLayout(path string) (Interface, error) {
+func NewLayout(path string, tags ...string) (Interface, error) {
 	p, err := layout.FromPath(path)
 	if err != nil {
 		p, err = layout.Write(path, empty.Index)
@@ -40,7 +42,10 @@ func NewLayout(path string) (Interface, error) {
 			return nil, err
 		}
 	}
-	return &LayoutPublisher{p}, nil
+	if len(tags) == 0 {
+		tags = []string{latestTag}
+	}
+	return &LayoutPublisher{p, tags}, nil
 }
 
 func (l *LayoutPublisher) writeResult(br build.Result) error {
@@ -55,13 +60,31 @@ func (l *LayoutPublisher) writeResult(br build.Result) error {
 		if !ok {
 			return fmt.Errorf("failed to interpret result as index: %v", br)
 		}
-		return l.p.AppendIndex(idx)
+		for _, t := range l.tags {
+			if err := l.p.AppendIndex(idx,
+				layout.WithAnnotations(map[string]string{
+					specsv1.AnnotationRefName: t,
+				}),
+			); err != nil {
+				return err
+			}
+		}
+		return nil
 	case types.OCIManifestSchema1, types.DockerManifestSchema2:
 		img, ok := br.(v1.Image)
 		if !ok {
 			return fmt.Errorf("failed to interpret result as image: %v", br)
 		}
-		return l.p.AppendImage(img)
+		for _, t := range l.tags {
+			if err := l.p.AppendImage(img,
+				layout.WithAnnotations(map[string]string{
+					specsv1.AnnotationRefName: t,
+				}),
+			); err != nil {
+				return err
+			}
+		}
+		return nil
 	default:
 		return fmt.Errorf("result image media type: %s", mt)
 	}
