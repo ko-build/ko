@@ -40,3 +40,14 @@ nav:
     - 'ko version': reference/ko_version.md
   - Releases: "https://github.com/ko-build/ko/releases"
 
+plugins:
+  - search
+  - redirects:
+      redirect_maps:
+        'repo.md':      'https://github.com/ko-build/ko'
+        'issues.md':    'https://github.com/ko-build/ko/issues'
+        'prs.md':       'https://github.com/ko-build/ko/pulls'
+        'releases.md':  'https://github.com/ko-build/ko/releases'
+        'godoc.md':     'https://pkg.go.dev/github.com/google/ko'
+        'terraform.md': 'https://github.com/chainguard-dev/terraform-provider-ko'
+        'action.md':    'https://github.com/imjasonh/setup-ko'
