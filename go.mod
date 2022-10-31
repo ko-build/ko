@@ -20,7 +20,7 @@ require (
 	golang.org/x/tools v0.2.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.25.3
-	sigs.k8s.io/kind v0.16.0
+	sigs.k8s.io/kind v0.17.0
 )
 
 require (
@@ -75,6 +75,7 @@ require (
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/safetext v0.0.0-20220905092116-b49f7bc46da2 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
