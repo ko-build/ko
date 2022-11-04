@@ -3,7 +3,7 @@
 ### Install from [GitHub Releases](https://github.com/ko-build/ko/releases)
 
 ```
-$ VERSION=TODO # choose the latest version
+$ VERSION=TODO # choose the latest version (without v prefix)
 $ OS=Linux     # or Darwin
 $ ARCH=x86_64  # or arm64, i386, s390x
 ```
@@ -12,8 +12,8 @@ We generate [SLSA3 provenance](slsa.dev) using the OpenSSF's [slsa-framework/sls
 
 
 ```shell
-$ curl -sL "https://github.com/ko-build/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
-$ curl -sL https://github.com/ko-build/ko/releases/download/v${VERSION}/attestation.intoto.jsonl > provenance.intoto.jsonl
+$ curl -sSfL "https://github.com/ko-build/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
+$ curl -sSfL https://github.com/ko-build/ko/releases/download/v${VERSION}/attestation.intoto.jsonl > provenance.intoto.jsonl
 $ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
   PASSED: Verified SLSA provenance
 ```
@@ -55,4 +55,3 @@ You can use the [setup-ko](https://github.com/imjasonh/setup-ko) action to insta
 steps:
 - uses: imjasonh/setup-ko@v0.6
 ```
-
