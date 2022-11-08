@@ -79,7 +79,7 @@ func (t *tar) Publish(_ context.Context, br build.Result, s string) (name.Refere
 	}
 
 	ref := fmt.Sprintf("%s@%s", t.namer(t.base, s), h)
-	if len(t.tags) == 1 && t.tags[0] != defaultTags[0] {
+	if len(t.tags) == 1 && t.tags[0] != latestTag {
 		// If a single tag is explicitly set (not latest), then this
 		// is probably a release, so include the tag in the reference.
 		ref = fmt.Sprintf("%s:%s@%s", t.namer(t.base, s), t.tags[0], h)

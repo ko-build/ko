@@ -74,14 +74,14 @@ func identity(base, in string) string { return path.Join(base, in) }
 
 // As some registries do not support pushing an image by digest, the default tag for pushing
 // is the 'latest' tag.
-var defaultTags = []string{"latest"}
+const latestTag = "latest"
 
 func (do *defaultOpener) Open() (Interface, error) {
 	if do.tagOnly {
 		if len(do.tags) != 1 {
 			return nil, errors.New("must specify exactly one tag to resolve images into tag-only references")
 		}
-		if do.tags[0] == defaultTags[0] {
+		if do.tags[0] == latestTag {
 			return nil, errors.New("latest tag cannot be used in tag-only references")
 		}
 	}
@@ -107,7 +107,7 @@ func NewDefault(base string, options ...Option) (Interface, error) {
 		userAgent: "ko",
 		keychain:  authn.DefaultKeychain,
 		namer:     identity,
-		tags:      defaultTags,
+		tags:      []string{latestTag},
 	}
 
 	for _, option := range options {
@@ -244,7 +244,7 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 		return nil, err
 	}
 	ref := fmt.Sprintf("%s@%s", d.namer(d.base, s), h)
-	if len(d.tags) == 1 && d.tags[0] != defaultTags[0] {
+	if len(d.tags) == 1 && d.tags[0] != latestTag {
 		// If a single tag is explicitly set (not latest), then this
 		// is probably a release, so include the tag in the reference.
 		ref = fmt.Sprintf("%s:%s@%s", d.namer(d.base, s), d.tags[0], h)
