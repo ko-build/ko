@@ -70,12 +70,13 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 
 			options = append(options, crane.WithPlatform(platform.platform))
 
-			transport := remote.DefaultTransport.Clone()
+			transport := remote.DefaultTransport.(*http.Transport).Clone()
 			transport.TLSClientConfig = &tls.Config{
 				InsecureSkipVerify: insecure, //nolint: gosec
 			}
 
 			var rt http.RoundTripper = transport
+
 			// Add any http headers if they are set in the config file.
 			cf, err := config.Load(os.Getenv("DOCKER_CONFIG"))
 			if err != nil {
@@ -93,7 +94,7 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 
 	commands := []*cobra.Command{
 		NewCmdAppend(&options),
-		NewCmdAuth("crane", "auth"),
+		NewCmdAuth(options, "crane", "auth"),
 		NewCmdBlob(&options),
 		NewCmdCatalog(&options),
 		NewCmdConfig(&options),

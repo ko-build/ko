@@ -51,7 +51,7 @@ func New() *cobra.Command {
 
 	// Also add the auth group from crane to facilitate logging into a
 	// registry.
-	authCmd := cranecmd.NewCmdAuth("ko", "auth")
+	authCmd := cranecmd.NewCmdAuth(nil, "ko", "auth")
 	// That was a mistake, but just set it to Hidden so we don't break people.
 	authCmd.Hidden = true
 	root.AddCommand(authCmd)
