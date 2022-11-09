@@ -167,6 +167,8 @@ func NewPublisher(po *options.PublishOptions) (publish.Interface, error) {
 }
 
 func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
+	// use each tag only once
+	po.Tags = unique(po.Tags)
 	// Create the publish.Interface that we will use to publish image references
 	// to either a docker daemon or a container image registry.
 	innerPublisher, err := func() (publish.Interface, error) {
@@ -469,4 +471,20 @@ func resolveFile(
 	e.Close()
 
 	return buf.Bytes(), nil
+}
+
+// create a set from the input slice
+// preserving the order of unique elements
+func unique(ss []string) []string {
+	var (
+		seen = make(map[string]struct{}, len(ss))
+		uniq = make([]string, 0, len(ss))
+	)
+	for _, s := range ss {
+		if _, ok := seen[s]; !ok {
+			seen[s] = struct{}{}
+			uniq = append(uniq, s)
+		}
+	}
+	return uniq
 }
