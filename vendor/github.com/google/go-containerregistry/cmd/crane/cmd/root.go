@@ -96,7 +96,7 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 		NewCmdAppend(&options),
 		NewCmdAuth(options, "crane", "auth"),
 		NewCmdBlob(&options),
-		NewCmdCatalog(&options),
+		NewCmdCatalog(&options, "crane"),
 		NewCmdConfig(&options),
 		NewCmdCopy(&options),
 		NewCmdDelete(&options),
