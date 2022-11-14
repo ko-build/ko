@@ -59,11 +59,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          gh -R slsa-framework/slsa-verifier release download v1.2.0 -p "slsa-verifier-linux-amd64"
+          gh -R slsa-framework/slsa-verifier release download v1.3.2 -p "slsa-verifier-linux-amd64"
           chmod ug+x slsa-verifier-linux-amd64
           # Note: see https://github.com/slsa-framework/slsa-verifier/blob/main/SHA256SUM.md
           COMPUTED_HASH=$(sha256sum slsa-verifier-linux-amd64 | cut -d ' ' -f1)
-          EXPECTED_HASH="37db23392c7918bb4e243cdb097ed5f9d14b9b965dc1905b25bc2d1c0c91bf3d"
+          EXPECTED_HASH="b1d6c9bbce6274e253f0be33158cacd7fb894c5ebd643f14a911bfe55574f4c0"
           if [[ "$EXPECTED_HASH" != "$COMPUTED_HASH" ]];then
               echo "error: expected $EXPECTED_HASH, computed $COMPUTED_HASH"
               exit 1
