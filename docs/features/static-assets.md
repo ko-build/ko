@@ -37,5 +37,5 @@ Also note that `http.FileServer` will not serve the `Last-Modified` header
 timestamps by default.
 
 This can be supported by manually setting the `KO_DATA_DATE_EPOCH` environment
-variable during build ([See FAQ](./../advanced/faq#why-are-my-images-all-created-in-1970)).
+variable during build ([See FAQ](../../advanced/faq#why-are-my-images-all-created-in-1970)).
 
