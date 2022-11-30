@@ -20,6 +20,12 @@ You can override this base image in two ways:
 defaultBaseImage: registry.example.com/base/image
 ```
 
+You can also use the `KO_DEFAULTBASEIMAGE` environment variable to set the default base image, which overrides the YAML configuration:
+
+```shell
+KO_DEFAULTBASEIMAGE=registry.example.com/base/image ko build .
+```
+
 2. To override the base image for certain importpaths:
 
 ```yaml
