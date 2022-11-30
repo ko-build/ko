@@ -4,3 +4,6 @@
 ko
 
 .DS_Store
+=======
+# Ignore provenance and sbom files.
+*.json

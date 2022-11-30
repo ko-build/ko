@@ -153,6 +153,15 @@ func WithCycloneDX() Option {
 	}
 }
 
+// WithSLSA is a functional option for generating the provenance
+// file.
+func WithSLSA(koVersion string, parameters []string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.provenance = slsa(koVersion, parameters)
+		return nil
+	}
+}
+
 // withSBOMber is a functional option for overriding the way SBOMs
 // are generated.
 func withSBOMber(sbom sbomber) Option {

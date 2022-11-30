@@ -23,11 +23,11 @@ import (
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/ko/pkg/build"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 	"golang.org/x/tools/go/packages"
-
-	"github.com/google/ko/pkg/build"
 )
 
 const (
@@ -55,6 +55,7 @@ type BuildOptions struct {
 	DisableOptimizations bool
 	SBOM                 string
 	SBOMDir              string
+	Provenance           bool
 	Platforms            []string
 	Labels               []string
 	// UserAgent enables overriding the default value of the `User-Agent` HTTP
@@ -71,6 +72,9 @@ type BuildOptions struct {
 
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
+
+	// Parameters stores the parameters passed to the cobra command.
+	Parameters []string
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -82,11 +86,14 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, cyclonedx, go.version-m).")
 	cmd.Flags().StringVar(&bo.SBOMDir, "sbom-dir", "",
 		"Path to file where the SBOM will be written.")
+	cmd.Flags().BoolVar(&bo.Provenance, "provenance", true,
+		"Generate provenance metadata for the build artifacts.")
 	cmd.Flags().StringSliceVar(&bo.Platforms, "platform", []string{},
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
 	bo.Trimpath = true
+	bo.Parameters = populateFlags(cmd)
 }
 
 // LoadConfig reads build configuration from defaults, environment variables, and the `.ko.yaml` config file.
@@ -228,4 +235,13 @@ func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[
 	}
 
 	return buildConfigsByImportPath, nil
+}
+
+// populateFlags returns a slice of strings representing the flags set.
+func populateFlags(cmd *cobra.Command) []string {
+	var res []string
+	cmd.Flags().VisitAll(func(f *pflag.Flag) {
+		res = append(res, "--"+f.Name+"="+f.Value.String())
+	})
+	return res
 }

@@ -111,6 +111,9 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	default: // "spdx"
 		opts = append(opts, build.WithSPDX(version()))
 	}
+	if bo.Provenance {
+		opts = append(opts, build.WithSLSA(version(), bo.Parameters))
+	}
 	opts = append(opts, build.WithTrimpath(bo.Trimpath))
 	for _, lf := range bo.Labels {
 		parts := strings.SplitN(lf, "=", 2)

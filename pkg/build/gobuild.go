@@ -34,6 +34,9 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
+
+	"github.com/google/ko/internal/provenance"
 
 	"github.com/containerd/stargz-snapshotter/estargz"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -64,9 +67,11 @@ const (
 // GetBase takes an importpath and returns a base image reference and base image (or index).
 type GetBase func(context.Context, string) (name.Reference, Result, error)
 
-type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
+type builder func(context.Context, string, string, v1.Platform, Config) (gobuildInformation, error)
 
 type sbomber func(context.Context, string, string, string, oci.SignedEntity, string) ([]byte, types.MediaType, error)
+
+type provenancer func(context.Context, string, string, v1.Platform, string, []string, []string, string, time.Time, time.Time) ([]byte, error)
 
 type platformMatcher struct {
 	spec      []string
@@ -81,6 +86,7 @@ type gobuild struct {
 	build                builder
 	sbom                 sbomber
 	sbomDir              string
+	provenance           provenancer
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
@@ -90,6 +96,16 @@ type gobuild struct {
 	semaphore            *semaphore.Weighted
 
 	cache *layerCache
+}
+
+type gobuildInformation struct {
+	args             []string
+	env              []string
+	file             string
+	dir              string
+	platform         v1.Platform
+	buildStartedOne  time.Time
+	buildFinishedOne time.Time
 }
 
 // Option is a functional option for NewGo.
@@ -103,6 +119,7 @@ type gobuildOpener struct {
 	build                builder
 	sbom                 sbomber
 	sbomDir              string
+	provenance           provenancer
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
@@ -131,6 +148,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		build:                gbo.build,
 		sbom:                 gbo.sbom,
 		sbomDir:              gbo.sbomDir,
+		provenance:           gbo.provenance,
 		disableOptimizations: gbo.disableOptimizations,
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
@@ -254,10 +272,10 @@ func getGoBinary() string {
 	return defaultGoBin
 }
 
-func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
+func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (gobuildInformation, error) {
 	buildArgs, err := createBuildArgs(config)
 	if err != nil {
-		return "", err
+		return gobuildInformation{}, err
 	}
 
 	args := make([]string, 0, 4+len(buildArgs))
@@ -266,28 +284,28 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	env, err := buildEnv(platform, os.Environ(), config.Env)
 	if err != nil {
-		return "", fmt.Errorf("could not create env for %s: %w", ip, err)
+		return gobuildInformation{}, fmt.Errorf("could not create env for %s: %w", ip, err)
 	}
 
-	tmpDir, err := ioutil.TempDir("", "ko")
+	tmpDir, err := os.MkdirTemp("", "ko")
 	if err != nil {
-		return "", err
+		return gobuildInformation{}, err
 	}
 
 	if dir := os.Getenv("KOCACHE"); dir != "" {
 		dirInfo, err := os.Stat(dir)
 		if os.IsNotExist(err) {
 			if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
-				return "", fmt.Errorf("could not create KOCACHE dir %s: %w", dir, err)
+				return gobuildInformation{}, fmt.Errorf("could not create KOCACHE dir %s: %w", dir, err)
 			}
 		} else if !dirInfo.IsDir() {
-			return "", fmt.Errorf("KOCACHE should be a directory, %s is not a directory", dir)
+			return gobuildInformation{}, fmt.Errorf("KOCACHE should be a directory, %s is not a directory", dir)
 		}
 
 		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
 		tmpDir = filepath.Join(dir, "bin", ip, platform.String())
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
-			return "", err
+			return gobuildInformation{}, err
 		}
 	}
 
@@ -306,14 +324,22 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	cmd.Stdout = &output
 
 	log.Printf("Building %s for %s", ip, platform)
+	buildStartedOn := time.Now()
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)
 		}
 		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
-		return "", err
+		return gobuildInformation{}, err
 	}
-	return file, nil
+	return gobuildInformation{
+		args:             args,
+		env:              env,
+		file:             file,
+		dir:              dir,
+		buildStartedOne:  buildStartedOn,
+		buildFinishedOne: time.Now(),
+	}, nil
 }
 
 func goversionm(ctx context.Context, file string, appPath string, appFileName string, se oci.SignedEntity, dir string) ([]byte, types.MediaType, error) {
@@ -398,6 +424,20 @@ func writeSBOM(sbom []byte, appFileName, dir, ext string) error {
 	return nil
 }
 
+func writeProvenance(prov []byte, platform v1.Platform, appFileName, dir, ext string) error {
+	if dir != "" {
+		provDir := filepath.Clean(dir)
+		if err := os.MkdirAll(provDir, os.ModePerm); err != nil {
+			return err
+		}
+		fileName := fmt.Sprintf("%s_%s_%s", appFileName, platform.OS, platform.Architecture)
+		provPath := filepath.Join(provDir, fileName+"."+ext)
+		log.Printf("Writing provenance to %s", provPath)
+		return os.WriteFile(provPath, prov, 0644)
+	}
+	return nil
+}
+
 func cycloneDX() sbomber {
 	return func(ctx context.Context, file string, appPath string, appFileName string, se oci.SignedEntity, dir string) ([]byte, types.MediaType, error) {
 		switch obj := se.(type) {
@@ -433,6 +473,21 @@ func cycloneDX() sbomber {
 		default:
 			return nil, "", fmt.Errorf("unrecognized type: %T", se)
 		}
+	}
+}
+
+func slsa(koVersion string, parameters []string) provenancer {
+	return func(ctx context.Context, name, file string, platform v1.Platform, command string, args, env []string, workingDir string, buildStart, buildFinish time.Time) ([]byte, error) {
+		p, err := provenance.GenerateSLSA(ctx, koVersion, name, file, command, args, env, workingDir, buildStart, buildFinish, parameters)
+		if err != nil {
+			return nil, err
+		}
+
+		if err := writeProvenance(p, platform, name, workingDir, "slsa.json"); err != nil {
+			return nil, err
+		}
+
+		return p, nil
 	}
 }
 
@@ -826,12 +881,12 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, fmt.Errorf("base image platform %q does not match desired platforms %v", platform, g.platformMatcher.platforms)
 	}
 	// Do the build into a temporary file.
-	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.configForImportPath(ref.Path()))
+	gbi, err := g.build(ctx, ref.Path(), g.dir, *platform, g.configForImportPath(ref.Path()))
 	if err != nil {
 		return nil, err
 	}
 	if os.Getenv("KOCACHE") == "" {
-		defer os.RemoveAll(filepath.Dir(file))
+		defer os.RemoveAll(filepath.Dir(gbi.file))
 	}
 
 	var layers []mutate.Addendum
@@ -863,10 +918,10 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	appPath := path.Join(appDir, appFileName)
 
 	miss := func() (v1.Layer, error) {
-		return buildLayer(appPath, file, platform, layerMediaType)
+		return buildLayer(appPath, gbi.file, platform, layerMediaType)
 	}
 
-	binaryLayer, err := g.cache.get(ctx, file, miss)
+	binaryLayer, err := g.cache.get(ctx, gbi.file, miss)
 	if err != nil {
 		return nil, err
 	}
@@ -928,7 +983,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	si := signed.Image(image)
 
 	if g.sbom != nil {
-		sbom, mt, err := g.sbom(ctx, file, appPath, appFileName, si, g.sbomDir)
+		sbom, mt, err := g.sbom(ctx, gbi.file, appPath, appFileName, si, g.sbomDir)
 		if err != nil {
 			return nil, err
 		}
@@ -941,6 +996,14 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 			return nil, err
 		}
 	}
+
+	if g.provenance != nil {
+		_, err := g.provenance(ctx, appFileName, gbi.file, *platform, gbi.dir, gbi.args, gbi.env, gbi.dir, gbi.buildStartedOne, gbi.buildFinishedOne)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return si, nil
 }
 

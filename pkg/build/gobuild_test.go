@@ -404,21 +404,23 @@ func fauxSBOM(context.Context, string, string, string, oci.SignedEntity, string)
 }
 
 // A helper method we use to substitute for the default "build" method.
-func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ Config) (string, error) {
+func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ Config) (gobuildInformation, error) {
 	tmpDir, err := ioutil.TempDir("", "ko")
 	if err != nil {
-		return "", err
+		return gobuildInformation{}, err
 	}
 
 	file, err := ioutil.TempFile(tmpDir, "out")
 	if err != nil {
-		return "", err
+		return gobuildInformation{}, err
 	}
 	defer file.Close()
 	if _, err := file.WriteString(filepath.ToSlash(s)); err != nil {
-		return "", err
+		return gobuildInformation{}, err
 	}
-	return file.Name(), nil
+	return gobuildInformation{
+		file: file.Name(),
+	}, nil
 }
 
 func TestGoBuildNoKoData(t *testing.T) {

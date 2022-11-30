@@ -42,6 +42,7 @@ ko run IMPORTPATH [flags]
       --oci-layout-path string   Path to save the OCI image layout of the built images
       --platform strings         Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths    Whether to preserve the full import path after KO_DOCKER_REPO.
+      --provenance               Generate provenance metadata for the build artifacts. (default true)
       --push                     Push images to KO_DOCKER_REPO (default true)
       --sbom string              The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, cyclonedx, go.version-m). (default "spdx")
       --sbom-dir string          Path to file where the SBOM will be written.
