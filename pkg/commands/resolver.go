@@ -58,6 +58,10 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		return nil, err
 	}
 
+	if len(bo.Platforms) == 0 && len(bo.DefaultPlatforms) > 0 {
+		bo.Platforms = bo.DefaultPlatforms
+	}
+
 	if len(bo.Platforms) == 0 {
 		envPlatform := "linux/amd64"
 
@@ -78,7 +82,7 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		// Make sure these are all unset
 		for _, env := range []string{"GOOS", "GOARCH", "GOARM"} {
 			if s, ok := os.LookupEnv(env); ok {
-				return nil, fmt.Errorf("cannot use --platform with %s=%q", env, s)
+				return nil, fmt.Errorf("cannot use --platform or defaultPlatforms in .ko.yaml or env KO_DEFAULTPLATFORMS combined with %s=%q", env, s)
 			}
 		}
 	}

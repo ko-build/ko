@@ -83,6 +83,30 @@ The `ldflags` default value is `[]`.
 only the `env`, `flags` and `ldflags` fields are currently supported. Also, the
 templating support is currently limited to using environment variables only.
 
+
+### Setting default platforms
+
+By default, `ko` builds images based on the platform it runs on. If your target platform differs from your build platform you can specify the build platform:
+
+**As a parameter**
+See [Multi-Platform Images](./features/multi-platform.md).
+
+**In .ko.yaml**
+Add this to your `.ko.yaml` file:
+
+```yaml
+defaultPlatforms:
+- linux/arm64
+- linux/amd64
+```
+
+You can also use the `KO_DEFAULTPLATFORMS` environment variable to set the default platforms, which overrides the YAML configuration:
+
+```shell
+KO_DEFAULTPLATFORMS=linux/arm64,linux/amd64
+```
+
+
 ## Naming Images
 
 `ko` provides a few different strategies for naming the image it pushes, to

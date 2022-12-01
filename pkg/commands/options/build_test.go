@@ -16,6 +16,7 @@ package options
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -35,6 +36,34 @@ func TestDefaultBaseImage(t *testing.T) {
 	wantDefaultBaseImage := "alpine" // matches value in ./testdata/config/.ko.yaml
 	if bo.BaseImage != wantDefaultBaseImage {
 		t.Fatalf("wanted BaseImage %s, got %s", wantDefaultBaseImage, bo.BaseImage)
+	}
+}
+
+func TestDefaultPlatformsAll(t *testing.T) {
+	allBo := &BuildOptions{
+		WorkingDirectory: "testdata/config",
+	}
+	err := allBo.LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantDefaultPlatformsAll := []string{"all"} // matches value in ./testdata/config/.ko.yaml
+	if !reflect.DeepEqual(allBo.DefaultPlatforms, wantDefaultPlatformsAll) {
+		t.Fatalf("wanted DefaultPlatforms %s, got %s", wantDefaultPlatformsAll, allBo.DefaultPlatforms)
+	}
+
+	multipleBo := &BuildOptions{
+		WorkingDirectory: "testdata/multiple-platforms",
+	}
+	err = multipleBo.LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantDefaultPlatformsMultiple := []string{"linux/arm64", "linux/amd64"} // matches value in ./testdata/multiple-platforms/.ko.yaml
+	if !reflect.DeepEqual(multipleBo.DefaultPlatforms, wantDefaultPlatformsMultiple) {
+		t.Fatalf("wanted DefaultPlatforms %s, got %s", wantDefaultPlatformsMultiple, multipleBo.DefaultPlatforms)
 	}
 }
 
