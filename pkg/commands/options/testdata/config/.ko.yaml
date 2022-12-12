@@ -1,1 +1,2 @@
 defaultBaseImage: alpine
+defaultPlatforms: all

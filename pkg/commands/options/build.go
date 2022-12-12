@@ -44,6 +44,9 @@ type BuildOptions struct {
 	// BaseImageOverrides stores base image overrides for import paths.
 	BaseImageOverrides map[string]string
 
+	// DefaultPlatforms defines the default platforms when Platforms is not explicitly defined
+	DefaultPlatforms []string
+
 	// WorkingDirectory allows for setting the working directory for invocations of the `go` tool.
 	// Empty string means the current working directory.
 	WorkingDirectory string
@@ -127,6 +130,11 @@ func (bo *BuildOptions) LoadConfig() error {
 		if !errors.As(err, &viper.ConfigFileNotFoundError{}) {
 			return fmt.Errorf("error reading config file: %w", err)
 		}
+	}
+
+	dp := v.GetStringSlice("defaultPlatforms")
+	if len(dp) > 0 {
+		bo.DefaultPlatforms = dp
 	}
 
 	if bo.BaseImage == "" {
