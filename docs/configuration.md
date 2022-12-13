@@ -8,7 +8,7 @@ Aside from `KO_DOCKER_REPO`, you can configure `ko`'s behavior using a
 
 ### Overriding Base Images
 
-By default, `ko` bases images on `gcr.io/distroless/static:nonroot`. This is a
+By default, `ko` bases images on `cgr.dev/chainguard/static`. This is a
 small image that provides the bare necessities to run your Go binary.
 
 You can override this base image in two ways:
