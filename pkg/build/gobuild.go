@@ -35,6 +35,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/spf13/viper"
+
 	"github.com/containerd/stargz-snapshotter/estargz"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -57,6 +59,14 @@ import (
 const (
 	defaultAppFilename = "ko-app"
 )
+
+// DefaultBaseImage returns the default base image to use
+func DefaultBaseImage() (ref string, err error) {
+	if !viper.IsSet("defaultBaseImage") {
+		return "", errors.New("'defaultBaseImage' is not set")
+	}
+	return viper.GetString("defaultBaseImage"), nil
+}
 
 // GetBase takes an importpath and returns a base image reference and base image (or index).
 type GetBase func(context.Context, string) (name.Reference, Result, error)

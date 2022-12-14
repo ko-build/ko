@@ -31,7 +31,6 @@ import (
 )
 
 const (
-	// configDefaultBaseImage is the default base image if not specified in .ko.yaml.
 	configDefaultBaseImage = "cgr.dev/chainguard/static:latest"
 )
 
@@ -97,6 +96,8 @@ func (bo *BuildOptions) LoadConfig() error {
 	}
 	// If omitted, use this base image.
 	v.SetDefault("defaultBaseImage", configDefaultBaseImage)
+	// to make defaultbaseImage consumable by viper instead of carrying the v variable around
+	viper.SetDefault("defaultBaseImage", configDefaultBaseImage)
 	const configName = ".ko"
 
 	v.SetConfigName(configName) // .yaml is implicit
@@ -115,14 +116,24 @@ func (bo *BuildOptions) LoadConfig() error {
 			if err != nil {
 				return fmt.Errorf("error looking for config file: %w", err)
 			}
+			v.AddConfigPath(override)
 		} else {
-			path = override
+			//path = override
+			v.SetConfigFile(override)
+			file, err = os.Stat(override)
+			if err != nil {
+				return fmt.Errorf("error looking for config file: %w", err)
+			}
+			if err := v.ReadInConfig(); err != nil {
+				if !errors.As(err, &viper.ConfigFileNotFoundError{}) {
+					return fmt.Errorf("error reading config file: %w", err)
+				}
+			}
 		}
 
 		if !file.Mode().IsRegular() {
 			return fmt.Errorf("config file %s is not a regular file", path)
 		}
-		v.AddConfigPath(override)
 	}
 	v.AddConfigPath(bo.WorkingDirectory)
 
@@ -130,6 +141,12 @@ func (bo *BuildOptions) LoadConfig() error {
 		if !errors.As(err, &viper.ConfigFileNotFoundError{}) {
 			return fmt.Errorf("error reading config file: %w", err)
 		}
+	}
+
+	// If the base image is set in the config, use that.
+	if baseImage := v.GetString("defaultBaseImage"); baseImage != configDefaultBaseImage {
+		// to ensure to set the base image from the config file if it differs from the default
+		viper.SetDefault("defaultBaseImage", baseImage)
 	}
 
 	dp := v.GetStringSlice("defaultPlatforms")

@@ -18,6 +18,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
@@ -72,6 +73,16 @@ func TestPublishImages(t *testing.T) {
 		if err != nil {
 			t.Fatalf("%s: MakeBuilder(): %v", test.description, err)
 		}
+
+		defaultBaseImageRef, err := build.DefaultBaseImage()
+		if err != nil {
+			t.Fatalf("DefaultBaseImage() = %v", err)
+		}
+
+		if defaultBaseImageRef == "" {
+			t.Fatalf("DefaultBaseImage() = %v", errors.New("empty default base image"))
+		}
+
 		po := &options.PublishOptions{
 			DockerRepo:          repo,
 			PreserveImportPaths: true,

@@ -15,6 +15,7 @@
 package options
 
 import (
+	"errors"
 	"os"
 	"reflect"
 	"strings"
@@ -35,6 +36,19 @@ func TestDefaultBaseImage(t *testing.T) {
 
 	wantDefaultBaseImage := "alpine" // matches value in ./testdata/config/.ko.yaml
 	if bo.BaseImage != wantDefaultBaseImage {
+		t.Fatalf("wanted BaseImage %s, got %s", wantDefaultBaseImage, bo.BaseImage)
+	}
+
+	defaultBaseImageRef, err := build.DefaultBaseImage()
+	if err != nil {
+		t.Fatalf("DefaultBaseImage() = %v", err)
+	}
+
+	if defaultBaseImageRef == "" {
+		t.Fatalf("DefaultBaseImage() = %v", errors.New("empty default base image"))
+	}
+
+	if defaultBaseImageRef != wantDefaultBaseImage {
 		t.Fatalf("wanted BaseImage %s, got %s", wantDefaultBaseImage, bo.BaseImage)
 	}
 }
