@@ -69,6 +69,8 @@ type BuildOptions struct {
 	// `AddBuildOptions()` defaults this field to `true`.
 	Trimpath bool
 
+	BuildAll bool
+
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
 }
@@ -86,6 +88,8 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
+	cmd.Flags().BoolVar(&bo.BuildAll, "all", false,
+		"When given, build all configured targets.")
 	bo.Trimpath = true
 }
 

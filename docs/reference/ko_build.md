@@ -42,6 +42,7 @@ ko build IMPORTPATH... [flags]
 ### Options
 
 ```
+      --all                      When given, build all configured targets.
       --bare                     Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).
   -B, --base-import-paths        Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).
       --disable-optimizations    Disable optimizations when building Go code. Useful when you want to interactively debug the created container.

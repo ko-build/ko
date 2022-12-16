@@ -60,11 +60,6 @@ func addBuild(topLevel *cobra.Command) {
 				return fmt.Errorf("validating options: %w", err)
 			}
 
-			if len(args) == 0 {
-				// Build the current directory by default.
-				args = []string{"."}
-			}
-
 			ctx := cmd.Context()
 
 			bo.InsecureRegistry = po.InsecureRegistry
@@ -72,6 +67,23 @@ func addBuild(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating builder: %w", err)
 			}
+
+			if bo.BuildAll {
+				if len(args) != 0 {
+					return fmt.Errorf("no paths should be given when --all is set")
+				}
+				if len(bo.BuildConfigs) == 0 {
+					return fmt.Errorf("--all is set, but found no build configurations")
+				}
+
+				for _, cfg := range bo.BuildConfigs {
+					args = append(args, cfg.Main)
+				}
+			} else if len(args) == 0 {
+				// Build the current directory by default.
+				args = []string{"."}
+			}
+
 			publisher, err := makePublisher(po)
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
