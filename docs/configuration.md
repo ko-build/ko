@@ -4,7 +4,8 @@
 
 Aside from `KO_DOCKER_REPO`, you can configure `ko`'s behavior using a
 `.ko.yaml` file. The location of this file can be overridden with
-`KO_CONFIG_PATH`.
+`KO_CONFIG_PATH`, with the value set to the directory that contains the
+`.ko.yaml` file to be used.
 
 ### Overriding Base Images
 
