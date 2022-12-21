@@ -700,7 +700,7 @@ func createTemplateData() map[string]interface{} {
 }
 
 func applyTemplating(list []string, data map[string]interface{}) ([]string, error) {
-	result := make([]string, len(list), 0)
+	result := make([]string, 0, len(list))
 	for _, entry := range list {
 		tmpl, err := template.New("argsTmpl").Option("missingkey=error").Parse(entry)
 		if err != nil {
