@@ -699,22 +699,23 @@ func createTemplateData() map[string]interface{} {
 	}
 }
 
-func applyTemplating(list []string, data map[string]interface{}) error {
-	for i, entry := range list {
+func applyTemplating(list []string, data map[string]interface{}) ([]string, error) {
+	result := make([]string, len(list), 0)
+	for _, entry := range list {
 		tmpl, err := template.New("argsTmpl").Option("missingkey=error").Parse(entry)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		var buf bytes.Buffer
 		if err := tmpl.Execute(&buf, data); err != nil {
-			return err
+			return nil, err
 		}
 
-		list[i] = buf.String()
+		result = append(result, buf.String())
 	}
 
-	return nil
+	return result, nil
 }
 
 func createBuildArgs(buildCfg Config) ([]string, error) {
@@ -723,19 +724,21 @@ func createBuildArgs(buildCfg Config) ([]string, error) {
 	data := createTemplateData()
 
 	if len(buildCfg.Flags) > 0 {
-		if err := applyTemplating(buildCfg.Flags, data); err != nil {
+		flags, err := applyTemplating(buildCfg.Flags, data)
+		if err != nil {
 			return nil, err
 		}
 
-		args = append(args, buildCfg.Flags...)
+		args = append(args, flags...)
 	}
 
 	if len(buildCfg.Ldflags) > 0 {
-		if err := applyTemplating(buildCfg.Ldflags, data); err != nil {
+		ldflags, err := applyTemplating(buildCfg.Ldflags, data)
+		if err != nil {
 			return nil, err
 		}
 
-		args = append(args, fmt.Sprintf("-ldflags=%s", strings.Join(buildCfg.Ldflags, " ")))
+		args = append(args, fmt.Sprintf("-ldflags=%s", strings.Join(ldflags, " ")))
 	}
 
 	// Reject any flags that attempt to set --toolexec (with or
