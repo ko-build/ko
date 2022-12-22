@@ -32,7 +32,7 @@ import (
 
 const (
 	// configDefaultBaseImage is the default base image if not specified in .ko.yaml.
-	configDefaultBaseImage = "distroless.dev/static:latest"
+	configDefaultBaseImage = "cgr.dev/chainguard/static:latest"
 )
 
 // BuildOptions represents options for the ko builder.
