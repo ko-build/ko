@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/ko/pkg/publish"
+	"github.com/ko-build/ko/pkg/publish"
 )
 
 func TestMulti(t *testing.T) {

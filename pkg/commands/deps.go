@@ -29,7 +29,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/ko/internal/sbom"
+	"github.com/ko-build/ko/internal/sbom"
 	"github.com/sigstore/cosign/pkg/oci/signed"
 	"github.com/spf13/cobra"
 )

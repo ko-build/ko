@@ -22,12 +22,12 @@ import (
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	kotesting "github.com/google/ko/pkg/internal/testing"
-	"github.com/google/ko/pkg/publish"
+	kotesting "github.com/ko-build/ko/pkg/internal/testing"
+	"github.com/ko-build/ko/pkg/publish"
 )
 
 func TestDaemon(t *testing.T) {
-	importpath := "github.com/google/ko"
+	importpath := "github.com/ko-build/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -47,7 +47,7 @@ func TestDaemon(t *testing.T) {
 }
 
 func TestDaemonTags(t *testing.T) {
-	importpath := "github.com/google/ko"
+	importpath := "github.com/ko-build/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)
@@ -75,7 +75,7 @@ func TestDaemonTags(t *testing.T) {
 }
 
 func TestDaemonDomain(t *testing.T) {
-	importpath := "github.com/google/ko"
+	importpath := "github.com/ko-build/ko"
 	img, err := random.Image(1024, 1)
 	if err != nil {
 		t.Fatalf("random.Image() = %v", err)

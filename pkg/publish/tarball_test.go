@@ -24,7 +24,7 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/ko/pkg/publish"
+	"github.com/ko-build/ko/pkg/publish"
 )
 
 func TestTarball(t *testing.T) {

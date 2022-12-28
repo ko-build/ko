@@ -1,7 +1,7 @@
 # `ko`: Easy Go Containers
 
 [![GitHub Actions Build Status](https://github.com/ko-build/ko/workflows/Build/badge.svg)](https://github.com/ko-build/ko/actions?query=workflow%3ABuild)
-[![GoDoc](https://godoc.org/github.com/google/ko?status.svg)](https://godoc.org/github.com/google/ko)
+[![GoDoc](https://godoc.org/github.com/ko-build/ko?status.svg)](https://godoc.org/github.com/ko-build/ko)
 [![Go Report Card](https://goreportcard.com/badge/ko-build/ko)](https://goreportcard.com/report/ko-build/ko)
 [![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev/images/gh-badge-level3.svg)
 

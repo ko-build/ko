@@ -32,7 +32,7 @@ import (
 	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
 	"github.com/sigstore/cosign/pkg/oci/walk"
 
-	"github.com/google/ko/pkg/build"
+	"github.com/ko-build/ko/pkg/build"
 )
 
 // defalt is intentionally misspelled to avoid keyword collision (and drive Jon nuts).

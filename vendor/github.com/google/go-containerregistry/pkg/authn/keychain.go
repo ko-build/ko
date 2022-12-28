@@ -108,7 +108,7 @@ func (dk *defaultKeychain) Resolve(target Resource) (Authenticator, error) {
 	}
 
 	// See:
-	// https://github.com/google/ko/issues/90
+	// https://github.com/ko-build/ko/issues/90
 	// https://github.com/moby/moby/blob/fc01c2b481097a6057bec3cd1ab2d7b4488c50c4/registry/config.go#L397-L404
 	var cfg, empty types.AuthConfig
 	for _, key := range []string{

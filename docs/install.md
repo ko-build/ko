@@ -14,7 +14,7 @@ We generate [SLSA3 provenance](https://slsa.dev) using the OpenSSF's [slsa-frame
 ```shell
 $ curl -sSfL "https://github.com/ko-build/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
 $ curl -sSfL https://github.com/ko-build/ko/releases/download/v${VERSION}/attestation.intoto.jsonl > provenance.intoto.jsonl
-$ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
+$ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/ko-build/ko -tag "v${VERSION}"
   PASSED: Verified SLSA provenance
 ```
 
@@ -44,7 +44,7 @@ apk add ko
 With Go 1.16+, build and install the latest released version:
 
 ```plaintext
-go install github.com/google/ko@latest
+go install github.com/ko-build/ko@latest
 ```
 
 ### Setup on GitHub Actions
