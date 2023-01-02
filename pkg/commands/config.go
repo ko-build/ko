@@ -77,6 +77,13 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 		if err != nil {
 			return nil, err
 		}
+
+		if bo.Verifier != nil {
+			if err := bo.Verifier.Verify(ctx, ref.Context().Digest(desc.Digest.String()), keychain); err != nil {
+				return nil, err
+			}
+		}
+
 		if desc.MediaType.IsIndex() {
 			return desc.ImageIndex()
 		}

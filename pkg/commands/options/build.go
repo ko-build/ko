@@ -17,12 +17,15 @@ limitations under the License.
 package options
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/sigstore/policy-controller/pkg/policy"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/tools/go/packages"
@@ -33,6 +36,26 @@ import (
 const (
 	// configDefaultBaseImage is the default base image if not specified in .ko.yaml.
 	configDefaultBaseImage = "cgr.dev/chainguard/static:latest"
+
+	// configDefaultBaseImagePolicy is the default base image policy if not
+	// specified in .ko.yaml
+	configDefaultBaseImagePolicy = `
+apiVersion: policy.sigstore.dev/v1beta1
+kind: ClusterImagePolicy
+metadata:
+  name: ko-default-base-image-policy
+spec:
+  images:
+  - glob: cgr.dev/chainguard/static*
+  authorities:
+  - keyless:
+      url: https://fulcio.sigstore.dev
+      identities:
+      - issuer: https://token.actions.githubusercontent.com
+        subject: https://github.com/chainguard-images/images/.github/workflows/release.yaml@refs/heads/main
+    ctlog:
+      url: https://rekor.sigstore.dev
+`
 )
 
 // BuildOptions represents options for the ko builder.
@@ -71,6 +94,9 @@ type BuildOptions struct {
 
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
+
+	// Verifier is used to check that base images satisfy configured policies.
+	Verifier policy.Verifier
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -160,7 +186,7 @@ func (bo *BuildOptions) LoadConfig() error {
 	if len(bo.BuildConfigs) == 0 {
 		var builds []build.Config
 		if err := v.UnmarshalKey("builds", &builds); err != nil {
-			return fmt.Errorf("configuration section 'builds' cannot be parsed")
+			return fmt.Errorf("configuration section 'builds' cannot be parsed: %w", err)
 		}
 		buildConfigs, err := createBuildConfigMap(bo.WorkingDirectory, builds)
 		if err != nil {
@@ -169,7 +195,31 @@ func (bo *BuildOptions) LoadConfig() error {
 		bo.BuildConfigs = buildConfigs
 	}
 
+	vfy := policy.Verification{}
+	if err := v.UnmarshalKey("verification", &vfy); err != nil {
+		return fmt.Errorf("configuration section 'verification' cannot be parsed: %w", err)
+	}
+	verificationDefaults(&vfy)
+	vfr, err := policy.Compile(context.Background(), vfy, func(s string, i ...interface{}) {
+		log.Printf("WARNING: %s", fmt.Sprintf(s, i...))
+	})
+	if err != nil {
+		return fmt.Errorf("compiling verification: %w", err)
+	}
+	bo.Verifier = vfr
+
 	return nil
+}
+
+func verificationDefaults(vfy *policy.Verification) {
+	if vfy.NoMatchPolicy == "" {
+		vfy.NoMatchPolicy = "warn"
+	}
+	if vfy.Policies == nil {
+		vfy.Policies = &[]policy.Source{{
+			Data: configDefaultBaseImagePolicy,
+		}}
+	}
 }
 
 func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[string]build.Config, error) {

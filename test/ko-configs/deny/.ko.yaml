@@ -1,0 +1,5 @@
+baseImageOverrides:
+  github.com/google/ko: golang:1.19
+
+verification:
+  noMatchPolicy: deny
