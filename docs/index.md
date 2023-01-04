@@ -2,7 +2,7 @@
 ko_meta: true
 ---
 
-> 🎉 Google has applied for `ko` to join the Cloud Native Computing Foundation as a Sandbox project! Learn more [here](https://opensource.googleblog.com/2022/10/ko-applies-to-become-a-cncf-sandbox-project.html)!
+> 🎉 `ko` has joined the Cloud Native Computing Foundation as a Sandbox project!
 
 # Introduction
 
