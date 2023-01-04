@@ -2,8 +2,6 @@
 ko_meta: true
 ---
 
-> 🎉 Google has applied for `ko` to join the Cloud Native Computing Foundation as a Sandbox project! Learn more [here](https://opensource.googleblog.com/2022/10/ko-applies-to-become-a-cncf-sandbox-project.html)!
-
 # Introduction
 
 `ko` makes building Go container images easy, fast, and secure by default.
@@ -36,3 +34,8 @@ This can make it a good fit for lightweight CI/CD use cases.
 
 [_Add your project here!_](https://github.com/ko-build/ko/edit/main/docs/index.md)
 
+---
+
+`ko` is a Cloud Native Computing Foundation Sandbox project.
+
+<a href="https://cncf.io"><img width=300 src="./images/cncf.svg" alt="CNCF logo" /></a>
