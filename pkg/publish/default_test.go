@@ -32,9 +32,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish"
-	ocimutate "github.com/sigstore/cosign/pkg/oci/mutate"
-	"github.com/sigstore/cosign/pkg/oci/signed"
-	"github.com/sigstore/cosign/pkg/oci/static"
+	ocimutate "github.com/sigstore/cosign/v2/pkg/oci/mutate"
+	"github.com/sigstore/cosign/v2/pkg/oci/signed"
+	"github.com/sigstore/cosign/v2/pkg/oci/static"
 )
 
 var (

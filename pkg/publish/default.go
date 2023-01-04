@@ -28,9 +28,9 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/sigstore/cosign/pkg/oci"
-	ociremote "github.com/sigstore/cosign/pkg/oci/remote"
-	"github.com/sigstore/cosign/pkg/oci/walk"
+	"github.com/sigstore/cosign/v2/pkg/oci"
+	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
+	"github.com/sigstore/cosign/v2/pkg/oci/walk"
 
 	"github.com/google/ko/pkg/build"
 )

@@ -33,15 +33,24 @@ jobs:
         # cribbed from https://gist.github.com/Syeberman/39d81b1e17d091be5657ecd6fbff0753
         eval $(go env | sed -r 's/^(set )?(\w+)=("?)(.*)\3$/\2="\4"/gm')
 
+        # Check that we can build with the default base image fine with "noMatchPolicy: deny"
+        KO_CONFIG_PATH=test/ko-configs/deny go run ./ build --push=false ./test
+
+        # Check that we we fail to build with a base image that is NOT properly signed.
+        if KO_CONFIG_PATH=test/ko-configs/deny KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:ltsc2022 go run ./ build --push=false ./test ; then
+          echo The Microsoft base image should not be covered by the default policy.
+          exit 1
+        fi
+
         # Check that building without push prints the tag (and sha)
         KO_DOCKER_REPO="" go run ./ build --push=false ./test | grep ":latest@sha256:"
         KO_DOCKER_REPO="" go run ./ build --push=false -t test ./test | grep ":test@sha256:"
         KO_DOCKER_REPO="" go run ./ build --push=false -t test --tag-only ./test | grep ":test$"
-        
+
         # Check that using sbom-dir works.
         KO_DOCKER_REPO=""  go run ./ build -t test --push=false --sbom-dir ./sbom-data ./test
         jq . ./sbom-data/test.spdx.json
-        
+
         export PLATFORM=${GOOS}/${GOARCH}
 
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then

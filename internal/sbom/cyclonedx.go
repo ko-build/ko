@@ -22,7 +22,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/sigstore/cosign/pkg/oci"
+	"github.com/sigstore/cosign/v2/pkg/oci"
 )
 
 func h1ToSHA256(s string) string {
