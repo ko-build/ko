@@ -108,21 +108,13 @@ func (bo *BuildOptions) LoadConfig() error {
 		if err != nil {
 			return fmt.Errorf("error looking for config file: %w", err)
 		}
-		var path string
 		if file.IsDir() {
-			path = filepath.Join(override, configName+".yaml")
-			file, err = os.Stat(path)
-			if err != nil {
-				return fmt.Errorf("error looking for config file: %w", err)
-			}
+			v.AddConfigPath(override) // add this dir to the set of places we'll look for .ko.yaml
+		} else if file.Mode().IsRegular() {
+			v.SetConfigFile(override) // only look at exactly this file path
 		} else {
-			path = override
+			return fmt.Errorf("config file %s is not a regular file", override)
 		}
-
-		if !file.Mode().IsRegular() {
-			return fmt.Errorf("config file %s is not a regular file", path)
-		}
-		v.AddConfigPath(override)
 	}
 	v.AddConfigPath(bo.WorkingDirectory)
 
