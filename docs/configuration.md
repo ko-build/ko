@@ -2,9 +2,8 @@
 
 ## Basic Configuration
 
-Aside from `KO_DOCKER_REPO`, you can configure `ko`'s behavior using a
-`.ko.yaml` file. The location of this file can be overridden with
-`KO_CONFIG_PATH`.
+Aside from certain environment variables (see [below](#environment-variables-advanced)) like `KO_DOCKER_REPO`, you can
+configure `ko`'s behavior using a `.ko.yaml` file. The location of this file can be overridden with `KO_CONFIG_PATH`.
 
 ### Overriding Base Images
 
@@ -83,7 +82,6 @@ The `ldflags` default value is `[]`.
 only the `env`, `flags` and `ldflags` fields are currently supported. Also, the
 templating support is currently limited to using environment variables only.
 
-
 ### Setting default platforms
 
 By default, `ko` builds images based on the platform it runs on. If your target platform differs from your build platform you can specify the build platform:
@@ -106,6 +104,18 @@ You can also use the `KO_DEFAULTPLATFORMS` environment variable to set the defau
 KO_DEFAULTPLATFORMS=linux/arm64,linux/amd64
 ```
 
+### Environment Variables (advanced)
+
+For ease of use, backward compatibility and advanced use cases, `ko` supports the following environment variables to
+influence the build process.
+
+| Variable         | Default Value                              | Description                                                                                                                                                                                                                      |
+|------------------|--------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `KO_DOCKER_REPO` | (not set)                                  | Container repository where to push images built with `ko` (required)                                                                                                                                                             |
+| `KO_DATA_PATH`   | `/var/run/ko` (`C:\var\run\ko` on Windows) | By convention, any contents of a directory named `<importpath>/kodata/` will be bundled into the image, and the path where it's available in the image will be identified by the environment variable `KO_DATA_PATH` (optional). |
+| `KO_GO_PATH`     | `go`                                       | `go` binary to use for builds, relative or absolute path, otherwise looked up via $PATH (optional)                                                                                                                               |
+| `KO_CONFIG_PATH` | `./ko.yaml`                                | Path to `ko` configuration file (optional)                                                                                                                                                                                       |
+| `KOCACHE`        | (not set)                                  | This tells `ko` to store a local mapping between the `go build` inputs to the image layer that they produce, so `go build` can be skipped entirely if the layer is already present in the image registry (optional).             |
 
 ## Naming Images
 
