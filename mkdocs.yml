@@ -38,6 +38,7 @@ nav:
     - 'ko resolve': reference/ko_resolve.md
     - 'ko run': reference/ko_run.md
     - 'ko version': reference/ko_version.md
+  - github-action.md
   - Releases: "https://github.com/ko-build/ko/releases"
 
 plugins:
