@@ -5,6 +5,7 @@ on:
     branches: ['main']
   push:
     branches: ['main']
+
   workflow_dispatch:  # Allow manual runs.
 
 jobs:
@@ -43,3 +44,41 @@ jobs:
       run: |
         echo ${DOCKERHUB_PASSWORD} | go run ./ login --username=${DOCKERHUB_USERNAME} --password-stdin index.docker.io
         go run ./ build --platform=all ./test/ --bare
+
+  ecr:
+    name: Push to ECR
+    runs-on: ubuntu-latest
+    env:
+      # This is an AWS account that Chainguard provides to enable
+      # go-containerregistry and ko to test ECR support.
+      AWS_ACCOUNT: 479305788615
+      AWS_REGION: us-west-2
+      REPOSITORY: ko-ecr-e2e-testing
+
+    permissions:
+      # This lets us clone the repo
+      contents: read
+      # This lets us mint identity tokens for federation with AWS.
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.18
+          check-latest: true
+
+      - name: Install ko
+        run: go install .
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1.7.0
+        with:
+          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT }}:role/federated-ecr-readwrite
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Test ko build
+        run: |
+          export KO_DOCKER_REPO=${{ env.AWS_ACCOUNT }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com/${{ env.REPOSITORY }}
+
+          ko build --bare ./test
