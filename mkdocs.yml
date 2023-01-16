@@ -49,5 +49,5 @@ plugins:
         'prs.md':       'https://github.com/ko-build/ko/pulls'
         'releases.md':  'https://github.com/ko-build/ko/releases'
         'godoc.md':     'https://pkg.go.dev/github.com/google/ko'
-        'terraform.md': 'https://github.com/chainguard-dev/terraform-provider-ko'
-        'action.md':    'https://github.com/imjasonh/setup-ko'
+        'terraform.md': 'https://github.com/ko-build/terraform-provider-ko'
+        'action.md':    'https://github.com/ko-build/setup-ko'
