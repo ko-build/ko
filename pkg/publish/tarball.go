@@ -51,6 +51,12 @@ func (t *tar) Publish(_ context.Context, br build.Result, s string) (name.Refere
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
+	// safeguarding against the case where the user has specified an empty tag with publish.WithTags([]string{""}) or publish.WithTags([]string{})
+	if len(t.tags) == 0 || (len(t.tags) == 1 && t.tags[0] == "") {
+		log.Printf("No tags specified, using default tag: %s", latestTag)
+		t.tags = []string{latestTag}
+	}
+
 	// There's no way to write an index to a tarball, so attempt to downcast it to an image.
 	img, ok := br.(v1.Image)
 	if !ok {

@@ -59,7 +59,10 @@ func TestTarball(t *testing.T) {
 		// multiple tags
 		"latest",
 		"debug",
-	}}
+	}, {
+		"",
+	},
+	}
 	for _, tags := range tagss {
 		tp := publish.NewTarball(fp.Name(), repoName, md5Hash, tags)
 		if d, err := tp.Publish(context.Background(), img, importpath); err != nil {

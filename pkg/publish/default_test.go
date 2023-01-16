@@ -85,6 +85,49 @@ func TestDefault(t *testing.T) {
 	}
 }
 
+func TestDefaultWithEmptyTag(t *testing.T) {
+	f, err := static.NewFile([]byte("da bom"))
+	if err != nil {
+		t.Fatalf("static.NewFile() = %v", err)
+	}
+	si, err := ocimutate.AttachFileToImage(signed.Image(img), "sbom", f)
+	if err != nil {
+		t.Fatalf("ocimutate.AttachFileToImage() = %v", err)
+	}
+	sii, err := ocimutate.AttachFileToImageIndex(signed.ImageIndex(idx), "sbom", f)
+	if err != nil {
+		t.Fatalf("ocimutate.AttachFileToImageIndex() = %v", err)
+	}
+
+	for _, br := range []build.Result{img, idx, si, sii} {
+		base := "blah"
+		importpath := "github.com/Google/go-containerregistry/cmd/crane"
+		expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
+
+		server := httptest.NewServer(registry.New())
+		defer server.Close()
+		u, err := url.Parse(server.URL)
+		if err != nil {
+			t.Fatalf("url.Parse(%v) = %v", server.URL, err)
+		}
+		tag, err := name.NewTag(fmt.Sprintf("%s/%s:latest", u.Host, expectedRepo))
+		if err != nil {
+			t.Fatalf("NewTag() = %v", err)
+		}
+
+		repoName := fmt.Sprintf("%s/%s", u.Host, base)
+		def, err := publish.NewDefault(repoName, publish.WithTags([]string{""}))
+		if err != nil {
+			t.Errorf("NewDefault() = %v", err)
+		}
+		if d, err := def.Publish(context.Background(), br, build.StrictScheme+importpath); err != nil {
+			t.Errorf("Publish() = %v", err)
+		} else if !strings.HasPrefix(d.String(), tag.Repository.String()) {
+			t.Errorf("Publish() = %v, wanted prefix %v", d, tag.Repository)
+		}
+	}
+}
+
 func md5Hash(base, s string) string {
 	// md5 as hex.
 	hasher := md5.New()

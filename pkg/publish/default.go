@@ -204,6 +204,12 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
+	// safeguarding against the case where the user has specified an empty tag with publish.WithTags([]string{""}) or publish.WithTags([]string{})
+	if len(d.tags) == 0 || (len(d.tags) == 1 && d.tags[0] == "") {
+		log.Printf("No tags specified, using default tag: %s", latestTag)
+		d.tags = []string{latestTag}
+	}
+
 	ro := []remote.Option{remote.WithAuthFromKeychain(d.keychain), remote.WithTransport(d.t), remote.WithContext(ctx), remote.WithUserAgent(d.userAgent)}
 
 	no := []name.Option{}
