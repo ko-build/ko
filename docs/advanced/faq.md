@@ -87,10 +87,10 @@ kustomize build config | ko resolve -f -
 
 Oh, you betcha. Here's a partial list:
 
-- `ko` support in [Carvel's `kbld`](https://carvel.dev/kbld/docs/latest/config/#ko)
 - `ko` support in [Skaffold](https://skaffold.dev/docs/pipeline-stages/builders/ko/)
+- `ko` support for [goreleaser](https://goreleaser.com/customization/ko/)
+- `ko` support in [Carvel's `kbld`](https://carvel.dev/kbld/docs/latest/config/#ko)
 - `ko` extension for [Tilt](https://github.com/tilt-dev/tilt-extensions/tree/master/ko)
-- `ko` support for [goreleaser](https://github.com/goreleaser/goreleaser/pull/2564) (proposed)
 
 ## Does `ko` work with [OpenShift Internal Registry](https://access.redhat.com/documentation/en-us/openshift_container_platform/4.11/html/registry/registry-overview#registry-integrated-openshift-registry_registry-overview)?
 
