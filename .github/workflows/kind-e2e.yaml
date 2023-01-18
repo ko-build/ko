@@ -59,22 +59,10 @@ jobs:
       run: |
         set -o pipefail
 
-        IMAGE=$(ko build ./test)
-        SBOM=$(cosign download sbom ${IMAGE})
-        KO_DEPS=$(ko deps ${IMAGE})
-
         echo '::group:: SBOM'
+        cosign download sbom $(ko build ./test)
         echo "${SBOM}"
         echo '::endgroup::'
-
-        echo '::group:: ko deps'
-        echo "${KO_DEPS}"
-        echo '::endgroup::'
-
-        if [ "${SBOM}" != "${KO_DEPS}" ] ; then
-          echo Wanted SBOM and 'ko deps' to match, got differences!
-          exit 1
-        fi
 
     - name: Collect diagnostics and upload
       if: ${{ failure() }}

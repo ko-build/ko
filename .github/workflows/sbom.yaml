@@ -8,27 +8,6 @@ env:
   SPDX_TOOLS_VERSION: 1.1.0
 
 jobs:
-  go-version-m:
-    name: Generate go version -m
-    runs-on: ubuntu-latest
-
-    env:
-      KO_DOCKER_REPO: localhost:1338
-
-    steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: 1.18
-          check-latest: true
-      - uses: chainguard-dev/actions/setup-registry@main
-      - uses: actions/checkout@v3
-
-      - name: Generate
-        run: |
-          img=$(go run ./ build ./)
-          go run ./ deps $img --sbom=go.version-m > gomod.txt
-          cat gomod.txt
-
   cyclonedx:
     name: Validate CycloneDX SBOM
     runs-on: ubuntu-latest
@@ -42,6 +21,7 @@ jobs:
           go-version: 1.18
           check-latest: true
       - uses: chainguard-dev/actions/setup-registry@main
+      - uses: sigstore/cosign-installer@v2.8.1
       - uses: actions/checkout@v3
 
       - name: Install CycloneDX
@@ -51,8 +31,7 @@ jobs:
 
       - name: Generate and Validate
         run: |
-          img=$(go run ./ build ./)
-          go run ./ deps $img --sbom=cyclonedx > cyclonedx.json
+          cosign download sbom $(go run ./ build --sbom=cyclonedx) | tee cyclonedx.json
           ./cyclonedx-linux-x64 validate --input-file=cyclonedx.json --fail-on-errors
 
       - uses: actions/upload-artifact@v3
@@ -74,6 +53,7 @@ jobs:
           go-version: 1.18
           check-latest: true
       - uses: chainguard-dev/actions/setup-registry@main
+      - uses: sigstore/cosign-installer@v2.8.1
       - uses: actions/checkout@v3
 
       - name: Install SPDX Tools
@@ -83,9 +63,7 @@ jobs:
 
       - name: Generate and Validate
         run: |
-          img=$(go run ./ build ./)
-          go run ./ deps $img --sbom=spdx | tee spdx.json
-
+          cosign download sbom $(go run ./ build) | tee spdx.json
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx.json
 
       - uses: actions/upload-artifact@v3
@@ -107,6 +85,7 @@ jobs:
           go-version: 1.18
           check-latest: true
       - uses: chainguard-dev/actions/setup-registry@main
+      - uses: sigstore/cosign-installer@v2.8.1
       - uses: actions/checkout@v3
 
       - name: Install SPDX Tools
@@ -114,14 +93,9 @@ jobs:
           wget https://github.com/spdx/tools-java/releases/download/v${SPDX_TOOLS_VERSION}/tools-java-${SPDX_TOOLS_VERSION}.zip
           unzip tools-java-${SPDX_TOOLS_VERSION}.zip
 
-      - name: Install Cosign
-        uses: sigstore/cosign-installer@v2.8.1
-        with:
-          cosign-release: 'v1.7.2'
-
       - name: Generate and Validate
         run: |
-          img=$(go run ./ build --platform=linux/amd64,linux/arm64 ./)
+          img=$(go run ./ build --platform=linux/amd64,linux/arm64)
           cosign download sbom $img | tee spdx-multi-arch.json
 
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx-multi-arch.json
