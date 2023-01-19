@@ -56,6 +56,9 @@ import (
 
 const (
 	defaultAppFilename = "ko-app"
+
+	defaultGoBin = "go"         // defaults to first go binary found in PATH
+	goBinPathEnv = "KO_GO_PATH" // env lookup for optional relative or full go binary path
 )
 
 // GetBase takes an importpath and returns a base image reference and base image (or index).
@@ -244,6 +247,13 @@ func getGoarm(platform v1.Platform) (string, error) {
 	return "", nil
 }
 
+func getGoBinary() string {
+	if env := os.Getenv(goBinPathEnv); env != "" {
+		return env
+	}
+	return defaultGoBin
+}
+
 func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
 	buildArgs, err := createBuildArgs(config)
 	if err != nil {
@@ -285,7 +295,9 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 
 	args = append(args, "-o", file)
 	args = append(args, ip)
-	cmd := exec.CommandContext(ctx, "go", args...)
+
+	gobin := getGoBinary()
+	cmd := exec.CommandContext(ctx, gobin, args...)
 	cmd.Dir = dir
 	cmd.Env = env
 
@@ -305,10 +317,12 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 }
 
 func goversionm(ctx context.Context, file string, appPath string, appFileName string, se oci.SignedEntity, dir string) ([]byte, types.MediaType, error) {
+	gobin := getGoBinary()
+
 	switch se.(type) {
 	case oci.SignedImage:
 		sbom := bytes.NewBuffer(nil)
-		cmd := exec.CommandContext(ctx, "go", "version", "-m", file)
+		cmd := exec.CommandContext(ctx, gobin, "version", "-m", file)
 		cmd.Stdout = sbom
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {

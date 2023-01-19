@@ -201,7 +201,9 @@ func (c *layerCache) readBuildToDiff(file string) (buildIDToDiffID, error) {
 }
 
 func getBuildID(ctx context.Context, file string) (string, error) {
-	cmd := exec.CommandContext(ctx, "go", "tool", "buildid", file)
+	gobin := getGoBinary()
+
+	cmd := exec.CommandContext(ctx, gobin, "tool", "buildid", file)
 	var output bytes.Buffer
 	cmd.Stderr = &output
 	cmd.Stdout = &output
