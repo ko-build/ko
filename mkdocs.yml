@@ -51,3 +51,4 @@ plugins:
         'godoc.md':     'https://pkg.go.dev/github.com/google/ko'
         'terraform.md': 'https://github.com/ko-build/terraform-provider-ko'
         'action.md':    'https://github.com/ko-build/setup-ko'
+        'slack.md':     'https://kubernetes.slack.com/archives/C01T7DTP65S'
