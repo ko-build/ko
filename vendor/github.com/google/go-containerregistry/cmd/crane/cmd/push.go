@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -72,7 +71,7 @@ func NewCmdPush(options *[]crane.Option) *cobra.Command {
 
 			digest := ref.Context().Digest(h.String())
 			if imageRefs != "" {
-				return ioutil.WriteFile(imageRefs, []byte(digest.String()), 0600)
+				return os.WriteFile(imageRefs, []byte(digest.String()), 0600)
 			}
 			// TODO(mattmoor): think about printing the digest to standard out
 			// to facilitate command composition similar to ko build.

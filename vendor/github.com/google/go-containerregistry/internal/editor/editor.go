@@ -19,7 +19,6 @@ package editor
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -31,7 +30,7 @@ import (
 //
 // The contents of the edited file are returned, and the temporary file removed.
 func Edit(input io.Reader, extension string) ([]byte, error) {
-	f, err := ioutil.TempFile("", fmt.Sprintf("%s-edit.*.%s", filepath.Base(os.Args[0]), extension))
+	f, err := os.CreateTemp("", fmt.Sprintf("%s-edit.*.%s", filepath.Base(os.Args[0]), extension))
 	if err != nil {
 		return nil, err
 	}
@@ -61,5 +60,5 @@ func Edit(input io.Reader, extension string) ([]byte, error) {
 		return nil, err
 	}
 
-	return ioutil.ReadFile(f.Name())
+	return os.ReadFile(f.Name())
 }

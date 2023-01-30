@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -86,7 +86,7 @@ func NewCmdAuthGet(options []crane.Option, argv ...string) *cobra.Command {
 			if len(args) == 1 {
 				registryAddr = args[0]
 			} else {
-				b, err := ioutil.ReadAll(os.Stdin)
+				b, err := io.ReadAll(os.Stdin)
 				if err != nil {
 					return err
 				}
@@ -170,7 +170,7 @@ type loginOptions struct {
 
 func login(opts loginOptions) error {
 	if opts.passwordStdin {
-		contents, err := ioutil.ReadAll(os.Stdin)
+		contents, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			return err
 		}

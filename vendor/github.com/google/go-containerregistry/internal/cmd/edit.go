@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -139,7 +138,7 @@ func interactive(in io.Reader, out io.Writer) bool {
 	return interactiveFile(in) && interactiveFile(out)
 }
 
-func interactiveFile(i interface{}) bool {
+func interactiveFile(i any) bool {
 	f, ok := i.(*os.File)
 	if !ok {
 		return false
@@ -170,7 +169,7 @@ func editConfig(in io.Reader, out io.Writer, src, dst string, options ...crane.O
 			return nil, err
 		}
 	} else {
-		b, err := ioutil.ReadAll(in)
+		b, err := io.ReadAll(in)
 		if err != nil {
 			return nil, err
 		}
@@ -235,7 +234,7 @@ func editManifest(in io.Reader, out io.Writer, src string, dst string, options .
 			return nil, err
 		}
 	} else {
-		b, err := ioutil.ReadAll(in)
+		b, err := io.ReadAll(in)
 		if err != nil {
 			return nil, err
 		}
@@ -299,7 +298,7 @@ func editFile(in io.Reader, out io.Writer, src, file, dst string, options ...cra
 		}
 		header = h
 	} else {
-		b, err := ioutil.ReadAll(in)
+		b, err := io.ReadAll(in)
 		if err != nil {
 			return nil, err
 		}
@@ -324,7 +323,7 @@ func editFile(in io.Reader, out io.Writer, src, file, dst string, options ...cra
 
 	fileBytes := buf.Bytes()
 	fileLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewBuffer(fileBytes)), nil
+		return io.NopCloser(bytes.NewBuffer(fileBytes)), nil
 	})
 	if err != nil {
 		return nil, err

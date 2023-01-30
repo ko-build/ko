@@ -10,7 +10,7 @@ require (
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/google/go-cmp v0.5.9
-	github.com/google/go-containerregistry v0.12.1
+	github.com/google/go-containerregistry v0.13.0
 	github.com/opencontainers/image-spec v1.1.0-rc2
 	github.com/sigstore/cosign/v2 v2.0.0-rc.0
 	github.com/spf13/cobra v1.6.1

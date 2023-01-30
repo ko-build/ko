@@ -22,7 +22,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -154,7 +153,7 @@ func computeLayer(layer v1.Layer) (*computedLayer, error) {
 	}
 
 	// Discard any trailing padding that the tar.Reader doesn't consume.
-	if _, err := io.Copy(ioutil.Discard, hashUncompressed); err != nil {
+	if _, err := io.Copy(io.Discard, hashUncompressed); err != nil {
 		return nil, err
 	}
 
