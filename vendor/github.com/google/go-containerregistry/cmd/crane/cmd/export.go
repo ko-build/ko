@@ -17,7 +17,6 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -55,7 +54,7 @@ func NewCmdExport(options *[]crane.Option) *cobra.Command {
 
 			var img v1.Image
 			if src == "-" {
-				tmpfile, err := ioutil.TempFile("", "crane")
+				tmpfile, err := os.CreateTemp("", "crane")
 				if err != nil {
 					log.Fatal(err)
 				}

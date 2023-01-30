@@ -18,12 +18,14 @@ import (
 	"fmt"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/spf13/cobra"
 )
 
 // NewCmdList creates a new cobra.Command for the ls subcommand.
 func NewCmdList(options *[]crane.Option) *cobra.Command {
-	return &cobra.Command{
+	var fullRef bool
+	cmd := &cobra.Command{
 		Use:   "ls REPO",
 		Short: "List the tags in a repo",
 		Args:  cobra.ExactArgs(1),
@@ -34,10 +36,21 @@ func NewCmdList(options *[]crane.Option) *cobra.Command {
 				return fmt.Errorf("reading tags for %s: %w", repo, err)
 			}
 
+			r, err := name.NewRepository(repo)
+			if err != nil {
+				return err
+			}
+
 			for _, tag := range tags {
-				fmt.Println(tag)
+				if fullRef {
+					fmt.Println(r.Tag(tag))
+				} else {
+					fmt.Println(tag)
+				}
 			}
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&fullRef, "full-ref", false, "(Optional) if true, print the full image reference")
+	return cmd
 }
