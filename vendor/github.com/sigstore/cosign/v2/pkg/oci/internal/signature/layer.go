@@ -17,6 +17,7 @@ package signature
 
 import (
 	"crypto/x509"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -67,6 +68,15 @@ func (s *sigLayer) Payload() ([]byte, error) {
 		return nil, err
 	}
 	return payload, nil
+}
+
+// Signature implements oci.Signature
+func (s *sigLayer) Signature() ([]byte, error) {
+	b64sig, err := s.Base64Signature()
+	if err != nil {
+		return nil, err
+	}
+	return base64.StdEncoding.DecodeString(b64sig)
 }
 
 // Base64Signature implements oci.Signature

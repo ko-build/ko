@@ -42,6 +42,11 @@ type Signature interface {
 	// This will always return data when there is no error.
 	Payload() ([]byte, error)
 
+	// Signature fetches the raw signature
+	// of the payload.  This will always return data when
+	// there is no error.
+	Signature() ([]byte, error)
+
 	// Base64Signature fetches the base64 encoded signature
 	// of the payload.  This will always return data when
 	// there is no error.
