@@ -182,11 +182,11 @@ func mustRegisterEnv(name Variable) {
 func Getenv(name Variable) string {
 	mustRegisterEnv(name)
 
-	return os.Getenv(name.String())
+	return os.Getenv(name.String()) //nolint:forbidigo
 }
 
 func LookupEnv(name Variable) (string, bool) {
 	mustRegisterEnv(name)
 
-	return os.LookupEnv(name.String())
+	return os.LookupEnv(name.String()) //nolint:forbidigo
 }

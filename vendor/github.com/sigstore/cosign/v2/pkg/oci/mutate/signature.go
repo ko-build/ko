@@ -64,6 +64,11 @@ func (sw *sigWrapper) Payload() ([]byte, error) {
 	return sw.wrapped.Payload()
 }
 
+// Signature implements oci.Signature
+func (sw *sigWrapper) Signature() ([]byte, error) {
+	return sw.wrapped.Signature()
+}
+
 // Base64Signature implements oci.Signature.
 func (sw *sigWrapper) Base64Signature() (string, error) {
 	return sw.wrapped.Base64Signature()
