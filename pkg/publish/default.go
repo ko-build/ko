@@ -217,6 +217,11 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 			return nil, err
 		}
 
+		err = remote.CheckPushPermission(tag, d.keychain, d.t)
+		if err != nil {
+			return nil, err
+		}
+
 		if i == 0 {
 			log.Printf("Publishing %v", tag)
 			if err := pushResult(ctx, tag, br, ro); err != nil {
