@@ -57,6 +57,7 @@ const (
 	VariableSigstoreRekorPublicKey     Variable = "SIGSTORE_REKOR_PUBLIC_KEY"
 
 	// Other external environment variables
+	VariableGitHubHost               Variable = "GITHUB_HOST"
 	VariableGitHubToken              Variable = "GITHUB_TOKEN" //nolint:gosec
 	VariableGitHubRequestToken       Variable = "ACTIONS_ID_TOKEN_REQUEST_TOKEN"
 	VariableGitHubRequestURL         Variable = "ACTIONS_ID_TOKEN_REQUEST_URL"
@@ -120,6 +121,12 @@ var (
 			External:    true,
 		},
 
+		VariableGitHubHost: {
+			Description: "is URL of the GitHub Enterprise instance",
+			Expects:     "string with the URL of GitHub Enterprise instance",
+			Sensitive:   false,
+			External:    true,
+		},
 		VariableGitHubToken: {
 			Description: "is a token used to authenticate with GitHub",
 			Expects:     "token generated on GitHub",
