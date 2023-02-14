@@ -17,8 +17,13 @@ limitations under the License.
 package commands
 
 import (
+	"bytes"
+	apkobuild "chainguard.dev/apko/pkg/build"
 	"context"
 	"fmt"
+	"github.com/google/go-containerregistry/pkg/v1/empty"
+	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"log"
 	"os"
@@ -26,6 +31,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"chainguard.dev/apko/pkg/build/types"
 
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
 	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
@@ -40,6 +47,8 @@ import (
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 	"github.com/google/ko/pkg/publish"
+
+	v1tar "github.com/google/go-containerregistry/pkg/v1/tarball"
 )
 
 var (
@@ -54,6 +63,98 @@ var (
 	)
 )
 
+func buildBaseImageFromApkoYAML(ref name.Reference, bo *options.BuildOptions) (build.Result, error) {
+	var ic types.ImageConfiguration
+	buf, err := os.ReadFile(strings.TrimPrefix(ref.String(), "apko://"))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := yaml.NewDecoder(bytes.NewBuffer(buf)).Decode(&ic); err != nil {
+		return nil, err
+	}
+
+	var any bool
+	for _, iarch := range ic.Archs { // amd64, arm64
+		for _, barch := range bo.Platforms { // linux/amd64
+			arch := strings.SplitN(barch, "/", 2)[1]
+			if iarch.String() == arch {
+				any = true
+				break
+			}
+		}
+	}
+
+	if !any {
+		return nil, fmt.Errorf("no matching archs found %q", ref.String())
+	}
+
+	wd, err := os.MkdirTemp("", "apko-*")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create working directory: %w", err)
+	}
+	defer os.RemoveAll(wd)
+	bc, err := apkobuild.New(wd,
+		apkobuild.WithImageConfiguration(ic),
+		apkobuild.WithProot(true),
+		// apkobuild.WithArch(types.ParseArchitecture("amd64")), // TODO: multiarch
+		apkobuild.WithBuildDate(time.Time{}.Format(time.RFC3339)),
+		apkobuild.WithAssertions(apkobuild.RequireGroupFile(true), apkobuild.RequirePasswdFile(true)))
+	if err != nil {
+		return nil, err
+	}
+
+	if err := bc.Refresh(); err != nil {
+		return nil, fmt.Errorf("failed to update build context for %q: %w", "amd64", err)
+	}
+
+	layerTarGZ, err := bc.BuildLayer()
+	if err != nil {
+		return nil, fmt.Errorf("failed to build layer image for %q: %w", "amd64", err)
+	}
+
+	defer os.Remove(layerTarGZ)
+
+	v1Layer, err := v1tar.LayerFromFile(layerTarGZ)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create OCI layer from tar.gz: %w", err)
+	}
+
+	adds := make([]mutate.Addendum, 0, 1)
+	adds = append(adds, mutate.Addendum{
+		Layer: v1Layer,
+		History: v1.History{
+			Author:    "apko",
+			Comment:   "This is an apko single-layer image",
+			CreatedBy: "apko",
+			Created:   v1.Time{Time: time.Time{}},
+		},
+	})
+
+	v1Image, err := mutate.Append(empty.Image, adds...)
+	if err != nil {
+		return empty.Image, fmt.Errorf("unable to append OCI layer to empty image: %w", err)
+	}
+
+	cfg, err := v1Image.ConfigFile()
+	if err != nil {
+		return empty.Image, fmt.Errorf("unable to get OCI config file: %w", err)
+	}
+
+	cfg = cfg.DeepCopy()
+	cfg.Author = "ko"
+	cfg.Architecture = "amd64" // TODO: multiarch
+	cfg.OS = "linux"
+	cfg.Config.Entrypoint = []string{"/bin/sh", "-l"}
+
+	img, err := mutate.ConfigFile(v1Image, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("unable to update OCI config file: %w", err)
+	}
+
+	return img, nil
+}
+
 // getBaseImage returns a function that determines the base image for a given import path.
 func getBaseImage(bo *options.BuildOptions) build.GetBase {
 	var cache sync.Map
@@ -61,6 +162,8 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 		// For ko.local, look in the daemon.
 		if ref.Context().RegistryStr() == publish.LocalDomain {
 			return daemon.Image(ref)
+		} else if ref.Context().RegistryStr() == publish.ApkoRegPrefix {
+			return buildBaseImageFromApkoYAML(ref, bo)
 		}
 
 		userAgent := ua()

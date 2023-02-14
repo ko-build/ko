@@ -1,0 +1,18 @@
+language: go
+
+go:
+  - "1.10"
+  - "1.11"
+  - "1.12"
+  - "1.13"
+  - "1.14"
+  - master
+
+before_script:
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+  - go get -t github.com/sirupsen/logrus
+
+after_success:
+  - make cover
+  - $GOPATH/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken "$COVERALLS_TOKEN"

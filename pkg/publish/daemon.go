@@ -32,6 +32,8 @@ import (
 const (
 	// LocalDomain is a sentinel "registry" that represents side-loading images into the daemon.
 	LocalDomain = "ko.local"
+
+	ApkoRegPrefix = "apko:"
 )
 
 // demon is intentionally misspelled to avoid name collision (and drive Jon nuts).
