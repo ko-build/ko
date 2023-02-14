@@ -11,7 +11,7 @@ require (
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/google/go-cmp v0.5.9
 	github.com/google/go-containerregistry v0.13.0
-	github.com/imjasonh/golicenses v0.0.0-20220721185151-89ffd46a4f15
+	github.com/imjasonh/golicenses v0.0.0-20230214195818-3e19760bc0c5
 	github.com/opencontainers/image-spec v1.1.0-rc2
 	github.com/sigstore/cosign/v2 v2.0.0-rc.1
 	github.com/spf13/cobra v1.6.1
