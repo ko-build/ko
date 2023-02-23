@@ -260,3 +260,25 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 func (d *defalt) Close() error {
 	return nil
 }
+
+// Prepare implements publish.Preparer
+func (d *defalt) Prepare(ctx context.Context, s string) error {
+	var no []name.Option
+	if d.insecure {
+		no = append(no, name.Insecure)
+	}
+
+	for _, tagName := range d.tags {
+		tag, err := name.NewTag(fmt.Sprintf("%s:%s", d.namer(d.base, s), tagName), no...)
+		if err != nil {
+			return err
+		}
+
+		if err := remote.CheckPushPermission(tag, d.keychain, d.t); err != nil {
+			return err
+		}
+	}
+
+	return nil
+
+}

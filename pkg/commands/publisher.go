@@ -41,6 +41,12 @@ func publishImages(ctx context.Context, importpaths []string, pub publish.Interf
 			return nil, fmt.Errorf("importpath %q is not supported: %w", importpath, err)
 		}
 
+		if ppub, ok := pub.(publish.Preparer); ok {
+			if err := ppub.Prepare(ctx, importpath); err != nil {
+				return nil, fmt.Errorf("error preparing publisher: %w", err)
+			}
+		}
+
 		img, err := b.Build(ctx, importpath)
 		if err != nil {
 			return nil, fmt.Errorf("error building %q: %w", importpath, err)

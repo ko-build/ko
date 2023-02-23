@@ -21,6 +21,10 @@ import (
 	"github.com/google/ko/pkg/build"
 )
 
+type Preparer interface {
+	Prepare(context.Context, string) error
+}
+
 // Interface abstracts different methods for publishing images.
 type Interface interface {
 	// Publish uploads the given build.Result to a registry incorporating the

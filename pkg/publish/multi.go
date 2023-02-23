@@ -58,3 +58,15 @@ func (p *multiPublisher) Close() (err error) {
 	}
 	return
 }
+
+// Prepare implements publish.Preparer.
+func (p *multiPublisher) Prepare(ctx context.Context, s string) (err error) {
+	for _, pub := range p.publishers {
+		if ppub, ok := pub.(Preparer); ok {
+			if perr := ppub.Prepare(ctx, s); perr != nil {
+				err = perr
+			}
+		}
+	}
+	return
+}
