@@ -17,6 +17,7 @@ nav:
   - get-started.md
   - configuration.md
   - deployment.md
+  - community.md
   - Features:
     - features/multi-platform.md
     - features/sboms.md
@@ -52,3 +53,5 @@ plugins:
         'terraform.md': 'https://github.com/ko-build/terraform-provider-ko'
         'action.md':    'https://github.com/ko-build/setup-ko'
         'slack.md':     'https://kubernetes.slack.com/archives/C01T7DTP65S'
+        'agenda.md':    'https://docs.google.com/document/d/1eQ67Qxwf1tkTv0yU_dw9bIRnlwJZz-5GXCRVOhqbgvU/edit'
+        'meet.md':      'meet.google.com/xvn-dzzk-wur'

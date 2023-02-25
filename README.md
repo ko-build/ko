@@ -35,3 +35,9 @@ That work was presented [here](https://www.youtube.com/watch?v=RS1aiQqgUTA).
 Questions? Comments? Ideas?
 Come discuss `ko` with us in the `#ko-build` channel on the [Kubernetes Slack](https://slack.k8s.io)!
 See you there!
+
+### Community Meetings
+
+You can find all the necessary details about the community meetings in this [page](https://ko.build/community).
+
+
