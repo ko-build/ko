@@ -26,6 +26,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	ociexperimental "github.com/sigstore/cosign/v2/internal/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 )
 
@@ -146,6 +147,11 @@ func attestations(digestable digestable, o *options) (oci.Signatures, error) {
 
 // attachment is a shared implementation of the oci.Signed* Attachment method.
 func attachment(digestable digestable, attName string, o *options) (oci.File, error) {
+	// Try using OCI 1.1 behavior
+	if file, err := attachmentExperimentalOCI(digestable, attName, o); err == nil {
+		return file, nil
+	}
+
 	h, err := digestable.Digest()
 	if err != nil {
 		return nil, err
@@ -192,4 +198,47 @@ func (f *attached) Payload() ([]byte, error) {
 	}
 	defer rc.Close()
 	return io.ReadAll(rc)
+}
+
+// attachmentExperimentalOCI is a shared implementation of the oci.Signed* Attachment method (for OCI 1.1+ behavior).
+func attachmentExperimentalOCI(digestable digestable, attName string, o *options) (oci.File, error) {
+	h, err := digestable.Digest()
+	if err != nil {
+		return nil, err
+	}
+	d := o.TargetRepository.Digest(h.String())
+
+	artifactType := ociexperimental.ArtifactType(attName)
+	index, err := Referrers(d, artifactType, o.OriginalOptions...)
+	if err != nil {
+		return nil, err
+	}
+	results := index.Manifests
+
+	numResults := len(results)
+	if numResults == 0 {
+		return nil, fmt.Errorf("unable to locate reference with artifactType %s", artifactType)
+	} else if numResults > 1 {
+		// TODO: if there is more than 1 result.. what does that even mean?
+		// TODO: use ui.Warn
+		fmt.Printf("WARNING: there were a total of %d references with artifactType %s\n", numResults, artifactType)
+	}
+	// TODO: do this smarter using "created" annotations
+	lastResult := results[numResults-1]
+
+	img, err := SignedImage(o.TargetRepository.Digest(lastResult.Digest.String()), o.OriginalOptions...)
+	if err != nil {
+		return nil, err
+	}
+	ls, err := img.Layers()
+	if err != nil {
+		return nil, err
+	}
+	if len(ls) != 1 {
+		return nil, fmt.Errorf("expected exactly one layer in attachment, got %d", len(ls))
+	}
+	return &attached{
+		SignedImage: img,
+		layer:       ls[0],
+	}, nil
 }

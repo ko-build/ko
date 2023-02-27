@@ -17,7 +17,7 @@ package validate
 import (
 	"archive/tar"
 	"compress/gzip"
-	"crypto/sha256"
+	"crypto"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -104,7 +104,7 @@ func computeLayer(layer v1.Layer) (*computedLayer, error) {
 	}
 
 	// Keep track of compressed digest.
-	digester := sha256.New()
+	digester := crypto.SHA256.New()
 	// Everything read from compressed is written to digester to compute digest.
 	hashCompressed := io.TeeReader(compressed, digester)
 
@@ -132,7 +132,7 @@ func computeLayer(layer v1.Layer) (*computedLayer, error) {
 	if err != nil {
 		return nil, err
 	}
-	diffider := sha256.New()
+	diffider := crypto.SHA256.New()
 	hashUncompressed := io.TeeReader(uncompressed, diffider)
 
 	// Ensure there aren't duplicate file paths.
