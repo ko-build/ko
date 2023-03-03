@@ -73,22 +73,9 @@ jobs:
     runs-on: ubuntu-latest
     permissions: read-all
     steps:
-      # Note: this will be replaced with the GHA in the future.
-      - name: Install the verifier
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
 
-          gh -R slsa-framework/slsa-verifier release download v1.3.2 -p "slsa-verifier-linux-amd64"
-          chmod ug+x slsa-verifier-linux-amd64
-          # Note: see https://github.com/slsa-framework/slsa-verifier/blob/main/SHA256SUM.md
-          COMPUTED_HASH=$(sha256sum slsa-verifier-linux-amd64 | cut -d ' ' -f1)
-          EXPECTED_HASH="b1d6c9bbce6274e253f0be33158cacd7fb894c5ebd643f14a911bfe55574f4c0"
-          if [[ "$EXPECTED_HASH" != "$COMPUTED_HASH" ]];then
-              echo "error: expected $EXPECTED_HASH, computed $COMPUTED_HASH"
-              exit 1
-          fi
+      - name: Install SLSA verifier
+        uses: slsa-framework/slsa-verifier/actions/installer@v2.0.1
 
       - name: Download assets
         env:
