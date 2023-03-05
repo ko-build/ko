@@ -98,9 +98,9 @@ jobs:
               fn=$(echo $line | cut -d ' ' -f2)
 
               echo "Verifying $fn"
-              ./slsa-verifier-linux-amd64 -artifact-path "$fn" \
-                                      -provenance "$PROVENANCE" \
-                                      -source "github.com/$GITHUB_REPOSITORY" \
-                                      -tag "$GITHUB_REF_NAME"
+              slsa-verifier -artifact-path "$fn" \
+                            -provenance "$PROVENANCE" \
+                            -source "github.com/$GITHUB_REPOSITORY" \
+                            -tag "$GITHUB_REF_NAME"
 
           done <<<"$checksums"
