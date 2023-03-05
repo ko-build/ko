@@ -71,6 +71,8 @@ jobs:
   verification:
     needs: [goreleaser, provenance]
     runs-on: ubuntu-latest
+    env:
+      ATT_FILE_NAME: "attestation.intoto.jsonl"
     permissions: read-all
     steps:
 
@@ -84,7 +86,7 @@ jobs:
           set -euo pipefail
 
           gh -R "$GITHUB_REPOSITORY" release download "$GITHUB_REF_NAME" -p "*.tar.gz"
-          gh -R "$GITHUB_REPOSITORY" release download "$GITHUB_REF_NAME" -p "attestation.intoto.jsonl"
+          gh -R "$GITHUB_REPOSITORY" release download "$GITHUB_REF_NAME" -p "$ATT_FILE_NAME"
 
       - name: Verify assets
         env:
@@ -95,12 +97,12 @@ jobs:
 
           checksums=$(echo "$CHECKSUMS" | base64 -d)
           while read -r line; do
-              fn=$(echo $line | cut -d ' ' -f2)
-
-              echo "Verifying $fn"
-              slsa-verifier -artifact-path "$fn" \
-                            -provenance "$PROVENANCE" \
-                            -source "github.com/$GITHUB_REPOSITORY" \
-                            -tag "$GITHUB_REF_NAME"
+              artifact=$(echo $line | cut -d ' ' -f2)
+              
+              echo "Verifying $fn using $ATT_FILE_NAME"
+              slsa-verifier verify-artifact --provenance-path "$ATT_FILE_NAME" \
+                                            --source-uri "github.com/$GITHUB_REPOSITORY" \
+                                            --source-tag "$GITHUB_REF_NAME" \
+                                            "$artifact"
 
           done <<<"$checksums"
