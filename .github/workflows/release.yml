@@ -45,7 +45,7 @@ jobs:
           go-version: 1.18
           check-latest: true
       - uses: imjasonh/setup-ko@v0.6 # This installs the current latest release.
-      - uses: sigstore/cosign-installer@v2.8.1
+      - uses: sigstore/cosign-installer@v3.0.1
       - run: |
           tag=$(echo ${{ github.ref }} | cut -c11-) # get tag name without tags/refs/ prefix.
           img=$(ko build --bare --platform=all -t latest -t ${{ github.sha }} -t ${tag} ./)
