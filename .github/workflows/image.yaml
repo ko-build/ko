@@ -32,7 +32,7 @@ jobs:
           echo "${{ github.token }}" | ./ko login ghcr.io --username "${{ github.actor }}" --password-stdin
           img=$(./ko build --bare --platform=all -t latest -t ${{ github.sha }} ./)
           echo "built ${img}"
-          cosign sign ${img} \
+          cosign sign ${img} --yes \
               -a sha=${{ github.sha }} \
               -a run_id=${{ github.run_id }} \
               -a run_attempt=${{ github.run_attempt }}
