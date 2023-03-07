@@ -412,7 +412,7 @@ func cycloneDX() sbomber {
 				return nil, "", err
 			}
 
-			if err := writeSBOM(b, appFileName, dir, "cyclone.json"); err != nil {
+			if err := writeSBOM(b, appFileName, dir, "cyclonedx.json"); err != nil {
 				return nil, "", err
 			}
 
