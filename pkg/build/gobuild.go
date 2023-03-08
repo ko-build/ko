@@ -1171,6 +1171,13 @@ func parseSpec(spec []string) (*platformMatcher, error) {
 }
 
 func (pm *platformMatcher) matches(base *v1.Platform) bool {
+	// Strip out manifests with "unknown/unknown" platform, which Docker uses
+	// to store provenance attestations.
+	if base != nil &&
+		(base.OS == "unknown" || base.Architecture == "unknown") {
+		return false
+	}
+
 	if len(pm.spec) > 0 && pm.spec[0] == "all" {
 		return true
 	}
