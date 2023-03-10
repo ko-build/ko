@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -24,7 +25,7 @@ import (
 
 // NewCmdList creates a new cobra.Command for the ls subcommand.
 func NewCmdList(options *[]crane.Option) *cobra.Command {
-	var fullRef bool
+	var fullRef, omitDigestTags bool
 	cmd := &cobra.Command{
 		Use:   "ls REPO",
 		Short: "List the tags in a repo",
@@ -42,6 +43,10 @@ func NewCmdList(options *[]crane.Option) *cobra.Command {
 			}
 
 			for _, tag := range tags {
+				if omitDigestTags && strings.HasPrefix(tag, "sha256-") {
+					continue
+				}
+
 				if fullRef {
 					fmt.Println(r.Tag(tag))
 				} else {
@@ -52,5 +57,6 @@ func NewCmdList(options *[]crane.Option) *cobra.Command {
 		},
 	}
 	cmd.Flags().BoolVar(&fullRef, "full-ref", false, "(Optional) if true, print the full image reference")
+	cmd.Flags().BoolVar(&omitDigestTags, "omit-digest-tags", false, "(Optional), if true, omit digest tags (e.g., ':sha256-...')")
 	return cmd
 }
