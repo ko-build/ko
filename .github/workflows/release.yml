@@ -36,6 +36,7 @@ jobs:
           echo "::set-output name=hashes::$(cat $checksum_file | base64 -w0)"
 
   publish:
+    needs: [goreleaser]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
