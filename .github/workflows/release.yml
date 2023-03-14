@@ -9,6 +9,7 @@ jobs:
   goreleaser:
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
+      tag_name: ${{ steps.tag.outputs.tag_name }}
 
     runs-on: ubuntu-latest
     steps:
@@ -18,6 +19,9 @@ jobs:
         with:
           go-version: '1.20'
           check-latest: true
+      - name: Set tag output
+        id: tag
+        run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
       - uses: goreleaser/goreleaser-action@v4.2.0
         id: run-goreleaser
         with:
@@ -67,6 +71,7 @@ jobs:
     with:
       base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
       upload-assets: true
+      upload-tag-name: "${{ needs.release.outputs.tag_name }}"
 
   verification:
     needs: [goreleaser, provenance]
