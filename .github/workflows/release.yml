@@ -93,7 +93,7 @@ jobs:
       - name: Download assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PROVENANCE: "${{ needs.provenance.outputs.attestation-name }}"
+          PROVENANCE: "${{ needs.provenance.outputs.provenance-name }}"
         run: |
           set -euo pipefail
 
@@ -103,7 +103,7 @@ jobs:
       - name: Verify assets
         env:
           CHECKSUMS: ${{ needs.goreleaser.outputs.hashes }}
-          PROVENANCE: "${{ needs.provenance.outputs.attestation-name }}"
+          PROVENANCE: "${{ needs.provenance.outputs.provenance-name }}"
         run: |
           set -euo pipefail
 
