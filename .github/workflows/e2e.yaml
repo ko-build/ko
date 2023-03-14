@@ -19,7 +19,7 @@ jobs:
     - uses: actions/checkout@v3
     - uses: actions/setup-go@v3
       with:
-        go-version: 1.18
+        go-version: '1.20'
         check-latest: true
 
     - name: Build and run ko container
@@ -37,11 +37,11 @@ jobs:
         KO_DOCKER_REPO="" go run ./ build --push=false ./test | grep ":latest@sha256:"
         KO_DOCKER_REPO="" go run ./ build --push=false -t test ./test | grep ":test@sha256:"
         KO_DOCKER_REPO="" go run ./ build --push=false -t test --tag-only ./test | grep ":test$"
-        
+
         # Check that using sbom-dir works.
         KO_DOCKER_REPO=""  go run ./ build -t test --push=false --sbom-dir ./sbom-data ./test
         jq . ./sbom-data/test.spdx.json
-        
+
         export PLATFORM=${GOOS}/${GOARCH}
 
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
