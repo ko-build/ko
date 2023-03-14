@@ -51,6 +51,7 @@ jobs:
           img=$(ko build --bare --platform=all -t latest -t ${{ github.sha }} -t ${tag} ./)
           echo "built ${img}"
           cosign sign ${img} \
+              --yes \
               -a sha=${{ github.sha }} \
               -a run_id=${{ github.run_id }} \
               -a run_attempt=${{ github.run_attempt }} \
