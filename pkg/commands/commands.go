@@ -22,7 +22,8 @@ import (
 
 // AddKubeCommands augments our CLI surface with a passthru delete command, and an apply
 // command that realizes the promise of ko, as outlined here:
-//    https://github.com/google/go-containerregistry/issues/80
+//
+//	https://github.com/google/go-containerregistry/issues/80
 func AddKubeCommands(topLevel *cobra.Command) {
 	addDelete(topLevel)
 	addVersion(topLevel)
