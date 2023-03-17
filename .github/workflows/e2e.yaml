@@ -16,8 +16,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v3
+    - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
       with:
         go-version: '1.20'
         check-latest: true
@@ -76,4 +76,3 @@ jobs:
           - "-X main.version=${{ github.sha }}"
         EOF
         docker run $(go run ./ build ./test/ --platform=${PLATFORM}) --wait=false 2>&1 | grep "${{ github.sha }}"
-

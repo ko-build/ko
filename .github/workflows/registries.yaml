@@ -14,8 +14,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v3
+    - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
       with:
         go-version: '1.20'
         check-latest: true
@@ -32,8 +32,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v3
+    - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
       with:
         go-version: '1.20'
         check-latest: true
@@ -62,8 +62,8 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-go@v3
+      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true
@@ -72,7 +72,7 @@ jobs:
         run: go install .
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2.0.0
+        uses: aws-actions/configure-aws-credentials@e1e17a757e536f70e52b5a12b2e8d1d1c60e04ef # v2.0.0
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT }}:role/federated-ecr-readwrite
           aws-region: ${{ env.AWS_REGION }}

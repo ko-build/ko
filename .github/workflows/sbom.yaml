@@ -16,13 +16,13 @@ jobs:
       KO_DOCKER_REPO: localhost:1338
 
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true
       - uses: chainguard-dev/actions/setup-registry@main
-      - uses: sigstore/cosign-installer@v3.0.1
-      - uses: actions/checkout@v3
+      - uses: sigstore/cosign-installer@c3667d99424e7e6047999fb6246c0da843953c65 # v3.0.1
+      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
 
       - name: Install CycloneDX
         run: |
@@ -34,7 +34,7 @@ jobs:
           cosign download sbom $(go run ./ build --sbom=cyclonedx) | tee cyclonedx.json
           ./cyclonedx-linux-x64 validate --input-file=cyclonedx.json --fail-on-errors
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         if: ${{ always() }}
         with:
           name: cyclonedx.json
@@ -48,13 +48,13 @@ jobs:
       KO_DOCKER_REPO: localhost:1338
 
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true
       - uses: chainguard-dev/actions/setup-registry@main
-      - uses: sigstore/cosign-installer@v3.0.1
-      - uses: actions/checkout@v3
+      - uses: sigstore/cosign-installer@c3667d99424e7e6047999fb6246c0da843953c65 # v3.0.1
+      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
 
       - name: Install SPDX Tools
         run: |
@@ -66,7 +66,7 @@ jobs:
           cosign download sbom $(go run ./ build) | tee spdx.json
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx.json
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         if: ${{ always() }}
         with:
           name: spdx.json
@@ -80,13 +80,13 @@ jobs:
       KO_DOCKER_REPO: localhost:1338
 
     steps:
-      - uses: actions/setup-go@v3
+      - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
         with:
           go-version: '1.20'
           check-latest: true
       - uses: chainguard-dev/actions/setup-registry@main
-      - uses: sigstore/cosign-installer@v3.0.1
-      - uses: actions/checkout@v3
+      - uses: sigstore/cosign-installer@c3667d99424e7e6047999fb6246c0da843953c65 # v3.0.1
+      - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
 
       - name: Install SPDX Tools
         run: |
@@ -100,7 +100,7 @@ jobs:
 
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx-multi-arch.json
 
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
         if: ${{ always() }}
         with:
           name: spdx-multi-arch.json
