@@ -9,22 +9,59 @@ jobs:
   goreleaser:
     outputs:
       hashes: ${{ steps.hash.outputs.hashes }}
+      tag_name: ${{ steps.tag.outputs.tag_name }}
+
+    permissions:
+      packages: write
+      id-token: write
+      contents: write
 
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
       - run: git fetch --prune --unshallow
+
       - uses: actions/setup-go@v3
         with:
           go-version: '1.20'
           check-latest: true
+
+      - uses: ko-build/setup-ko@v0.6 # This installs the current latest release.
+
+      - uses: imjasonh/setup-crane@v0.3
+
+      - uses: sigstore/cosign-installer@v3.0.1
+
+      - name: Set tag output
+        id: tag
+        run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
+
       - uses: goreleaser/goreleaser-action@v4.2.0
         id: run-goreleaser
         with:
           version: latest
-          args: release --rm-dist
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: sign ko-image
+        run: |
+          digest=$(crane digest "${REGISTRY}":"${GIT_TAG}")
+          cosign sign --yes \
+              -a GIT_HASH="${GIT_HASH}" \
+              -a GIT_TAG="${GIT_TAG}" \
+              -a RUN_ID="${RUN_ID}" \
+              -a RUN_ATTEMPT="${RUN_ATTEMPT}" \
+              "${REGISTRY}@${digest}"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GIT_HASH: ${{ github.sha }}
+          GIT_TAG: ${{ steps.tag.outputs.tag_name }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+          RUN_ID: ${{ github.run_id }}
+          REGISTRY: "ghcr.io/${{ github.repository }}"
+
       - name: Generate subject
         id: hash
         env:
@@ -33,45 +70,31 @@ jobs:
           set -euo pipefail
 
           checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type=="Checksum") | .path')
-          echo "::set-output name=hashes::$(cat $checksum_file | base64 -w0)"
-
-  publish:
-    needs: [goreleaser]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: git fetch --prune --unshallow
-      - uses: actions/setup-go@v3
-        with:
-          go-version: '1.20'
-          check-latest: true
-      - uses: imjasonh/setup-ko@v0.6 # This installs the current latest release.
-      - uses: sigstore/cosign-installer@v3.0.1
-      - run: |
-          tag=$(echo ${{ github.ref }} | cut -c11-) # get tag name without tags/refs/ prefix.
-          img=$(ko build --bare --platform=all -t latest -t ${{ github.sha }} -t ${tag} ./)
-          echo "built ${img}"
-          cosign sign ${img} --yes \
-              -a sha=${{ github.sha }} \
-              -a run_id=${{ github.run_id }} \
-              -a run_attempt=${{ github.run_attempt }} \
-              -a tag=${tag}
+          echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
 
   provenance:
-    needs: [goreleaser]
+    needs:
+      - goreleaser
+
     permissions:
       actions: read   # To read the workflow path.
       id-token: write # To sign the provenance.
       contents: write # To add assets to a release.
+
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v1.5.0
     with:
       base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
       upload-assets: true
+      upload-tag-name: "${{ needs.release.outputs.tag_name }}"
 
   verification:
-    needs: [goreleaser, provenance]
+    needs:
+      - goreleaser
+      - provenance
+
     runs-on: ubuntu-latest
     permissions: read-all
+
     steps:
       # Note: this will be replaced with the GHA in the future.
       - name: Install the verifier

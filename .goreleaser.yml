@@ -1,45 +1,75 @@
-# This is an example goreleaser.yaml file with some sane defaults.
 # Make sure to check the documentation at http://goreleaser.com
 before:
   hooks:
-    # you may remove this if you don't use vgo
     - go mod tidy
-    # you may remove this if you don't need go generate
-    - go generate ./...
+    - /bin/bash -c 'if [ -n "$(git --no-pager diff --exit-code go.mod go.sum)" ]; then exit 1; fi'
+
 builds:
-- main: ./main.go
-  env:
-  - CGO_ENABLED=0
-  flags:
-  - -trimpath
-  ldflags:
-  - "-s -w -X github.com/google/ko/pkg/commands.Version={{.Version}}"
-  goos:
-  - windows
-  - linux
-  - darwin
-  goarch:
-  - amd64
-  - arm64
-  - s390x
-  - 386
-  - mips64le
-  - ppc64le
+  - id: binary
+    main: ./main.go
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - "-s -w -X github.com/google/ko/pkg/commands.Version={{.Version}}"
+    goos:
+      - windows
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+      - s390x
+      - 386
+      - mips64le
+      - ppc64le
+
+kos:
+  - id: ko-image
+    build: binary
+    main: .
+    base_image: golang:1.20
+    ldflags:
+      - "-s -w -X github.com/google/ko/pkg/commands.Version={{.Version}}"
+    platforms:
+      - all
+    tags:
+      - '{{ .Tag }}'
+      - '{{ .FullCommit }}'
+      - latest
+    sbom: spdx
+    bare: true
+    preserve_import_paths: false
+    base_import_paths: false
+
 archives:
-- replacements:
-    darwin: Darwin
-    linux: Linux
-    windows: Windows
-    386: i386
-    amd64: x86_64
+  - id: with-version
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+  - id: without-version
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+
 checksum:
   name_template: 'checksums.txt'
+
 snapshot:
   name_template: "{{ .Tag }}-next"
+
 changelog:
   sort: asc
   use: github
   filters:
     exclude:
-    - '^docs:'
-    - '^test:'
+      - '^docs:'
+      - '^test:'
