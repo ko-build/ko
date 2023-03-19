@@ -12,14 +12,14 @@ jobs:
     name: Analyze
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
       with:
         # We must fetch at least the immediate parents so that if this is
         # a pull request then we can checkout the head.
         fetch-depth: 2
 
-    - uses: github/codeql-action/init@v2
+    - uses: github/codeql-action/init@a589d4087ea22a0a48fc153d1b461886e262e0f2 # v2.2.7
       with:
         languages: go
-    - uses: github/codeql-action/autobuild@v2
-    - uses: github/codeql-action/analyze@v2
+    - uses: github/codeql-action/autobuild@a589d4087ea22a0a48fc153d1b461886e262e0f2 # v2.2.7
+    - uses: github/codeql-action/analyze@a589d4087ea22a0a48fc153d1b461886e262e0f2 # v2.2.7

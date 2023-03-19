@@ -1139,6 +1139,11 @@ func TestMatchesPlatformSpec(t *testing.T) {
 			OSVersion:    "10.0.17763.1234.5678", // this won't happen in the wild, but it shouldn't match.
 		},
 		result: false,
+	}, {
+		// Even --platform=all does not match unknown/unknown.
+		platform: &v1.Platform{Architecture: "unknown", OS: "unknown"},
+		spec:     []string{"all"},
+		result:   false,
 	}} {
 		pm, err := parseSpec(tc.spec)
 		if tc.err {

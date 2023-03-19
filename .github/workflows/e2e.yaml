@@ -16,10 +16,10 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v3
+    - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
+    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
       with:
-        go-version: 1.18
+        go-version: '1.20'
         check-latest: true
 
     - name: Build and run ko container
@@ -37,11 +37,11 @@ jobs:
         KO_DOCKER_REPO="" go run ./ build --push=false ./test | grep ":latest@sha256:"
         KO_DOCKER_REPO="" go run ./ build --push=false -t test ./test | grep ":test@sha256:"
         KO_DOCKER_REPO="" go run ./ build --push=false -t test --tag-only ./test | grep ":test$"
-        
+
         # Check that using sbom-dir works.
         KO_DOCKER_REPO=""  go run ./ build -t test --push=false --sbom-dir ./sbom-data ./test
         jq . ./sbom-data/test.spdx.json
-        
+
         export PLATFORM=${GOOS}/${GOARCH}
 
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
@@ -76,4 +76,3 @@ jobs:
           - "-X main.version=${{ github.sha }}"
         EOF
         docker run $(go run ./ build ./test/ --platform=${PLATFORM}) --wait=false 2>&1 | grep "${{ github.sha }}"
-

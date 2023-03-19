@@ -94,7 +94,7 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 		},
 	}
 
-	commands := []*cobra.Command{
+	root.AddCommand(
 		NewCmdAppend(&options),
 		NewCmdAuth(options, "crane", "auth"),
 		NewCmdBlob(&options),
@@ -106,6 +106,7 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 		cmd.NewCmdEdit(&options),
 		NewCmdExport(&options),
 		NewCmdFlatten(&options),
+		NewCmdIndex(&options),
 		NewCmdList(&options),
 		NewCmdManifest(&options),
 		NewCmdMutate(&options),
@@ -116,9 +117,8 @@ func New(use, short string, options []crane.Option) *cobra.Command {
 		NewCmdTag(&options),
 		NewCmdValidate(&options),
 		NewCmdVersion(),
-	}
-
-	root.AddCommand(commands...)
+		newCmdRegistry(),
+	)
 
 	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable debug logs")
 	root.PersistentFlags().BoolVar(&insecure, "insecure", false, "Allow image references to be fetched without TLS")

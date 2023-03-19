@@ -62,8 +62,7 @@ func (a *FlagArray) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // the original GoReleaser name to match better with the ko naming.
 //
 // TODO: Introduce support for more fields where possible and where it makes
-///      sense for `ko`, for example ModTimestamp or GoBinary.
-//
+// /      sense for `ko`, for example ModTimestamp or GoBinary.
 type Config struct {
 	// ID only serves as an identifier internally
 	ID string `yaml:",omitempty"`

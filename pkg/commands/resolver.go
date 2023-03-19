@@ -394,7 +394,7 @@ func ResolveFilesToWriter(
 			futures = futures[1:]
 			if ok {
 				// Write the next body and a trailing delimiter.
-				// We write the delimeter LAST so that when streamed to
+				// We write the delimiter LAST so that when streamed to
 				// kubectl it knows that the resource is complete and may
 				// be applied.
 				out.Write(append(b, []byte("\n---\n")...))

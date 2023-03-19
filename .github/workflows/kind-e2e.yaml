@@ -18,12 +18,12 @@ jobs:
       KO_DOCKER_REPO: registry.local:5000/ko
 
     steps:
-    - uses: actions/setup-go@v3
+    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
       with:
-        go-version: 1.18
+        go-version: '1.20'
         check-latest: true
 
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@24cb9080177205b6e8c946b17badbe402adc938f # v3.4.0
 
     - name: Install ko
       run: go install ./
@@ -35,9 +35,7 @@ jobs:
         registry-authority: ${{ env.REGISTRY_NAME }}:${{ env.REGISTRY_PORT }}
 
     - name: Install Cosign
-      uses: sigstore/cosign-installer@v2.8.1
-      with:
-        cosign-release: 'v1.7.2'
+      uses: sigstore/cosign-installer@c3667d99424e7e6047999fb6246c0da843953c65 # v3.0.1
 
     - name: Run Smoke Test
       run: |
