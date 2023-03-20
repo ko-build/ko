@@ -94,8 +94,6 @@ jobs:
       - provenance
 
     runs-on: ubuntu-latest
-    env:
-      ATT_FILE_NAME: "attestation.intoto.jsonl"
     permissions: read-all
 
     steps:
