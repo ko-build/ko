@@ -41,12 +41,11 @@ func ListWithContext(ctx context.Context, repo name.Repository, options ...Optio
 // List calls /tags/list for the given repository, returning the list of tags
 // in the "tags" property.
 func List(repo name.Repository, options ...Option) ([]string, error) {
-	o, err := makeOptions(repo, options...)
+	o, err := makeOptions(options...)
 	if err != nil {
 		return nil, err
 	}
-	scopes := []string{repo.Scope(transport.PullScope)}
-	tr, err := transport.NewWithContext(o.context, repo.Registry, o.auth, o.transport, scopes)
+	f, err := makeFetcher(o.context, repo, o)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +60,6 @@ func List(repo name.Repository, options ...Option) ([]string, error) {
 		uri.RawQuery = fmt.Sprintf("n=%d", o.pageSize)
 	}
 
-	client := http.Client{Transport: tr}
 	tagList := []string{}
 	parsed := tags{}
 
@@ -78,7 +76,7 @@ func List(repo name.Repository, options ...Option) ([]string, error) {
 			return nil, err
 		}
 
-		resp, err := client.Do(req)
+		resp, err := f.client.Do(req)
 		if err != nil {
 			return nil, err
 		}

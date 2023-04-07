@@ -68,11 +68,11 @@ func (rl *remoteLayer) Exists() (bool, error) {
 // digest of the blob to be read and the repository portion is the repo where
 // that blob lives.
 func Layer(ref name.Digest, options ...Option) (v1.Layer, error) {
-	o, err := makeOptions(ref.Context(), options...)
+	o, err := makeOptions(options...)
 	if err != nil {
 		return nil, err
 	}
-	f, err := makeFetcher(ref, o)
+	f, err := makeFetcher(o.context, ref.Context(), o)
 	if err != nil {
 		return nil, err
 	}

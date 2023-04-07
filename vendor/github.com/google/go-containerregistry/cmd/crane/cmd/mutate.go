@@ -37,6 +37,7 @@ func NewCmdMutate(options *[]crane.Option) *cobra.Command {
 	var newRef string
 	var newRepo string
 	var user string
+	var workdir string
 
 	mutateCmd := &cobra.Command{
 		Use:   "mutate",
@@ -114,6 +115,11 @@ func NewCmdMutate(options *[]crane.Option) *cobra.Command {
 				cfg.Config.User = user
 			}
 
+			// Set workdir.
+			if len(workdir) > 0 {
+				cfg.Config.WorkingDir = workdir
+			}
+
 			// Mutate and write image.
 			img, err = mutate.Config(img, cfg.Config)
 			if err != nil {
@@ -165,6 +171,7 @@ func NewCmdMutate(options *[]crane.Option) *cobra.Command {
 	mutateCmd.Flags().StringVarP(&outFile, "output", "o", "", "Path to new tarball of resulting image")
 	mutateCmd.Flags().StringSliceVar(&newLayers, "append", []string{}, "Path to tarball to append to image")
 	mutateCmd.Flags().StringVarP(&user, "user", "u", "", "New user to set")
+	mutateCmd.Flags().StringVarP(&workdir, "workdir", "w", "", "New working dir to set")
 	return mutateCmd
 }
 

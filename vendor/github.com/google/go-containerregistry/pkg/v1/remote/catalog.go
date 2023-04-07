@@ -31,32 +31,27 @@ type catalog struct {
 
 // CatalogPage calls /_catalog, returning the list of repositories on the registry.
 func CatalogPage(target name.Registry, last string, n int, options ...Option) ([]string, error) {
-	o, err := makeOptions(target, options...)
+	o, err := makeOptions(options...)
 	if err != nil {
 		return nil, err
 	}
-
-	scopes := []string{target.Scope(transport.PullScope)}
-	tr, err := transport.NewWithContext(o.context, target, o.auth, o.transport, scopes)
+	f, err := makeFetcher(o.context, target, o)
 	if err != nil {
 		return nil, err
 	}
-
-	query := fmt.Sprintf("last=%s&n=%d", url.QueryEscape(last), n)
 
 	uri := url.URL{
 		Scheme:   target.Scheme(),
 		Host:     target.RegistryStr(),
 		Path:     "/v2/_catalog",
-		RawQuery: query,
+		RawQuery: fmt.Sprintf("last=%s&n=%d", url.QueryEscape(last), n),
 	}
 
-	client := http.Client{Transport: tr}
 	req, err := http.NewRequest(http.MethodGet, uri.String(), nil)
 	if err != nil {
 		return nil, err
 	}
-	resp, err := client.Do(req.WithContext(o.context))
+	resp, err := f.client.Do(req.WithContext(o.context))
 	if err != nil {
 		return nil, err
 	}
@@ -76,13 +71,11 @@ func CatalogPage(target name.Registry, last string, n int, options ...Option) ([
 
 // Catalog calls /_catalog, returning the list of repositories on the registry.
 func Catalog(ctx context.Context, target name.Registry, options ...Option) ([]string, error) {
-	o, err := makeOptions(target, options...)
+	o, err := makeOptions(options...)
 	if err != nil {
 		return nil, err
 	}
-
-	scopes := []string{target.Scope(transport.PullScope)}
-	tr, err := transport.NewWithContext(o.context, target, o.auth, o.transport, scopes)
+	f, err := makeFetcher(o.context, target, o)
 	if err != nil {
 		return nil, err
 	}
@@ -92,12 +85,9 @@ func Catalog(ctx context.Context, target name.Registry, options ...Option) ([]st
 		Host:   target.RegistryStr(),
 		Path:   "/v2/_catalog",
 	}
-
 	if o.pageSize > 0 {
 		uri.RawQuery = fmt.Sprintf("n=%d", o.pageSize)
 	}
-
-	client := http.Client{Transport: tr}
 
 	// WithContext overrides the ctx passed directly.
 	if o.context != context.Background() {
@@ -123,7 +113,7 @@ func Catalog(ctx context.Context, target name.Registry, options ...Option) ([]st
 		}
 		req = req.WithContext(ctx)
 
-		resp, err := client.Do(req)
+		resp, err := f.client.Do(req)
 		if err != nil {
 			return nil, err
 		}
