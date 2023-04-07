@@ -70,6 +70,8 @@ type PublishOptions struct {
 	// ImageNamer can be used to pass a custom image name function. When given
 	// PreserveImportPaths, BaseImportPaths, Bare has no effect.
 	ImageNamer publish.Namer
+
+	Jobs int
 }
 
 func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
