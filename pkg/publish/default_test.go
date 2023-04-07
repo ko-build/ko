@@ -19,7 +19,6 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
-	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
@@ -30,6 +29,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish"
 	ocimutate "github.com/sigstore/cosign/v2/pkg/oci/mutate"
@@ -182,38 +182,10 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 	releaseTag := "v1.2.3"
 	importpath := "github.com/Google/go-containerregistry/cmd/crane"
 	expectedRepo := fmt.Sprintf("%s/%s", base, strings.ToLower(importpath))
-	headPathPrefix := fmt.Sprintf("/v2/%s/blobs/", expectedRepo)
-	initiatePath := fmt.Sprintf("/v2/%s/blobs/uploads/", expectedRepo)
-	manifestPath := fmt.Sprintf("/v2/%s/manifests/", expectedRepo)
 
-	createdTags := make(map[string]struct{})
-
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodHead && strings.HasPrefix(r.URL.Path, headPathPrefix) && r.URL.Path != initiatePath {
-			http.Error(w, "NotFound", http.StatusNotFound)
-			return
-		}
-		switch {
-		case r.URL.Path == "/v2/":
-			w.WriteHeader(http.StatusOK)
-		case r.URL.Path == initiatePath:
-			if r.Method != http.MethodPost {
-				t.Errorf("Method; got %v, want %v", r.Method, http.MethodPost)
-			}
-			http.Error(w, "Mounted", http.StatusCreated)
-		case strings.HasPrefix(r.URL.Path, manifestPath):
-			if r.Method != http.MethodPut {
-				t.Errorf("Method; got %v, want %v", r.Method, http.MethodPut)
-			}
-
-			createdTags[strings.TrimPrefix(r.URL.Path, manifestPath)] = struct{}{}
-
-			http.Error(w, "Created", http.StatusCreated)
-		default:
-			t.Fatalf("Unexpected path: %v", r.URL.Path)
-		}
-	}))
+	server := httptest.NewServer(registry.New())
 	defer server.Close()
+
 	u, err := url.Parse(server.URL)
 	if err != nil {
 		t.Fatalf("url.Parse(%v) = %v", server.URL, err)
@@ -239,6 +211,14 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 		t.Errorf("Publish() = %v, wanted tag included: %v", d.String(), releaseTag)
 	}
 
+	tags, err := remote.List(tag.Context())
+	if err != nil {
+		t.Fatalf("remote.List(): %v", err)
+	}
+	createdTags := make(map[string]struct{})
+	for _, got := range tags {
+		createdTags[got] = struct{}{}
+	}
 	if _, ok := createdTags["v1.2.3"]; !ok {
 		t.Errorf("Tag v1.2.3 was not created.")
 	}

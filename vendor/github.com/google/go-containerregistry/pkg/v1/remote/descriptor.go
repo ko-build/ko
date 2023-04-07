@@ -27,6 +27,7 @@ import (
 
 	"github.com/google/go-containerregistry/internal/redact"
 	"github.com/google/go-containerregistry/internal/verify"
+	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -34,6 +35,11 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
+
+var allManifestMediaTypes = append(append([]types.MediaType{
+	types.DockerManifestSchema1,
+	types.DockerManifestSchema1Signed,
+}, acceptableImageMediaTypes...), acceptableIndexMediaTypes...)
 
 // ErrSchema1 indicates that we received a schema1 manifest from the registry.
 // This library doesn't have plans to support this legacy image format:
@@ -59,10 +65,16 @@ func (e *ErrSchema1) Error() string {
 type Descriptor struct {
 	fetcher
 	v1.Descriptor
+
+	ref      name.Reference
 	Manifest []byte
 
 	// So we can share this implementation with Image.
 	platform v1.Platform
+}
+
+func (d *Descriptor) toDesc() v1.Descriptor {
+	return d.Descriptor
 }
 
 // RawManifest exists to satisfy the Taggable interface.
@@ -76,14 +88,7 @@ func (d *Descriptor) RawManifest() ([]byte, error) {
 //
 // See Head if you don't need the response body.
 func Get(ref name.Reference, options ...Option) (*Descriptor, error) {
-	acceptable := []types.MediaType{
-		// Just to look at them.
-		types.DockerManifestSchema1,
-		types.DockerManifestSchema1Signed,
-	}
-	acceptable = append(acceptable, acceptableImageMediaTypes...)
-	acceptable = append(acceptable, acceptableIndexMediaTypes...)
-	return get(ref, acceptable, options...)
+	return get(ref, allManifestMediaTypes, options...)
 }
 
 // Head returns a v1.Descriptor for the given reference by issuing a HEAD
@@ -92,47 +97,44 @@ func Get(ref name.Reference, options ...Option) (*Descriptor, error) {
 // Note that the server response will not have a body, so any errors encountered
 // should be retried with Get to get more details.
 func Head(ref name.Reference, options ...Option) (*v1.Descriptor, error) {
-	acceptable := []types.MediaType{
-		// Just to look at them.
-		types.DockerManifestSchema1,
-		types.DockerManifestSchema1Signed,
-	}
-	acceptable = append(acceptable, acceptableImageMediaTypes...)
-	acceptable = append(acceptable, acceptableIndexMediaTypes...)
-
-	o, err := makeOptions(ref.Context(), options...)
+	o, err := makeOptions(options...)
 	if err != nil {
 		return nil, err
 	}
 
-	f, err := makeFetcher(ref, o)
+	f, err := makeFetcher(o.context, ref.Context(), o)
 	if err != nil {
 		return nil, err
 	}
 
-	return f.headManifest(ref, acceptable)
+	return f.headManifest(o.context, ref, allManifestMediaTypes)
 }
 
 // Handle options and fetch the manifest with the acceptable MediaTypes in the
 // Accept header.
 func get(ref name.Reference, acceptable []types.MediaType, options ...Option) (*Descriptor, error) {
-	o, err := makeOptions(ref.Context(), options...)
+	o, err := makeOptions(options...)
 	if err != nil {
 		return nil, err
 	}
-	f, err := makeFetcher(ref, o)
+	f, err := makeFetcher(o.context, ref.Context(), o)
 	if err != nil {
 		return nil, err
 	}
-	b, desc, err := f.fetchManifest(ref, acceptable)
+	return f.get(o.context, ref, acceptable)
+}
+
+func (f *fetcher) get(ctx context.Context, ref name.Reference, acceptable []types.MediaType) (*Descriptor, error) {
+	b, desc, err := f.fetchManifest(ctx, ref, acceptable)
 	if err != nil {
 		return nil, err
 	}
 	return &Descriptor{
 		fetcher:    *f,
+		ref:        ref,
 		Manifest:   b,
 		Descriptor: *desc,
-		platform:   o.platform,
+		platform:   f.platform,
 	}, nil
 }
 
@@ -169,7 +171,27 @@ func (d *Descriptor) Image() (v1.Image, error) {
 	}
 	return &mountableImage{
 		Image:     imgCore,
-		Reference: d.Ref,
+		Reference: d.ref,
+	}, nil
+}
+
+// Schema1 converts the Descriptor into a v1.Image for v2 schema 1 media types.
+//
+// The v1.Image returned by this method does not implement the entire interface because it would be inefficient.
+// This exists mostly to make it easier to copy schema 1 images around or look at their filesystems.
+// This is separate from Image() to avoid a backward incompatible change for callers expecting ErrSchema1.
+func (d *Descriptor) Schema1() (v1.Image, error) {
+	i := &schema1{
+		fetcher:    d.fetcher,
+		ref:        d.ref,
+		manifest:   d.Manifest,
+		mediaType:  d.MediaType,
+		descriptor: &d.Descriptor,
+	}
+
+	return &mountableImage{
+		Image:     i,
+		Reference: d.ref,
 	}, nil
 }
 
@@ -196,6 +218,7 @@ func (d *Descriptor) ImageIndex() (v1.ImageIndex, error) {
 func (d *Descriptor) remoteImage() *remoteImage {
 	return &remoteImage{
 		fetcher:    d.fetcher,
+		ref:        d.ref,
 		manifest:   d.Manifest,
 		mediaType:  d.MediaType,
 		descriptor: &d.Descriptor,
@@ -205,38 +228,72 @@ func (d *Descriptor) remoteImage() *remoteImage {
 func (d *Descriptor) remoteIndex() *remoteIndex {
 	return &remoteIndex{
 		fetcher:    d.fetcher,
+		ref:        d.ref,
 		manifest:   d.Manifest,
 		mediaType:  d.MediaType,
 		descriptor: &d.Descriptor,
 	}
 }
 
-// fetcher implements methods for reading from a registry.
-type fetcher struct {
-	Ref     name.Reference
-	Client  *http.Client
-	context context.Context
+type resource interface {
+	Scheme() string
+	RegistryStr() string
+	Scope(string) string
+
+	authn.Resource
 }
 
-func makeFetcher(ref name.Reference, o *options) (*fetcher, error) {
-	tr, err := transport.NewWithContext(o.context, ref.Context().Registry, o.auth, o.transport, []string{ref.Scope(transport.PullScope)})
+// fetcher implements methods for reading from a registry.
+type fetcher struct {
+	target   resource
+	client   *http.Client
+	context  context.Context
+	platform v1.Platform
+}
+
+func makeFetcher(ctx context.Context, target resource, o *options) (*fetcher, error) {
+	auth := o.auth
+	if o.keychain != nil {
+		kauth, err := o.keychain.Resolve(target)
+		if err != nil {
+			return nil, err
+		}
+		auth = kauth
+	}
+
+	reg, ok := target.(name.Registry)
+	if !ok {
+		repo, ok := target.(name.Repository)
+		if !ok {
+			return nil, fmt.Errorf("unexpected resource: %T", target)
+		}
+		reg = repo.Registry
+	}
+
+	tr, err := transport.NewWithContext(ctx, reg, auth, o.transport, []string{target.Scope(transport.PullScope)})
 	if err != nil {
 		return nil, err
 	}
 	return &fetcher{
-		Ref:     ref,
-		Client:  &http.Client{Transport: tr},
-		context: o.context,
+		target:   target,
+		client:   &http.Client{Transport: tr},
+		context:  ctx,
+		platform: o.platform,
 	}, nil
 }
 
 // url returns a url.Url for the specified path in the context of this remote image reference.
 func (f *fetcher) url(resource, identifier string) url.URL {
-	return url.URL{
-		Scheme: f.Ref.Context().Registry.Scheme(),
-		Host:   f.Ref.Context().RegistryStr(),
-		Path:   fmt.Sprintf("/v2/%s/%s/%s", f.Ref.Context().RepositoryStr(), resource, identifier),
+	u := url.URL{
+		Scheme: f.target.Scheme(),
+		Host:   f.target.RegistryStr(),
+		// Default path if this is not a repository.
+		Path: "/v2/_catalog",
 	}
+	if repo, ok := f.target.(name.Repository); ok {
+		u.Path = fmt.Sprintf("/v2/%s/%s/%s", repo.RepositoryStr(), resource, identifier)
+	}
+	return u
 }
 
 // https://github.com/opencontainers/distribution-spec/blob/main/spec.md#referrers-tag-schema
@@ -253,7 +310,7 @@ func (f *fetcher) fetchReferrers(ctx context.Context, filter map[string]string, 
 	}
 	req.Header.Set("Accept", string(types.OCIImageIndex))
 
-	resp, err := f.Client.Do(req)
+	resp, err := f.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +328,7 @@ func (f *fetcher) fetchReferrers(ctx context.Context, filter map[string]string, 
 	}
 
 	// The registry doesn't support the Referrers API endpoint, so we'll use the fallback tag scheme.
-	b, _, err := f.fetchManifest(fallbackTag(d), []types.MediaType{types.OCIImageIndex})
+	b, _, err := f.fetchManifest(ctx, fallbackTag(d), []types.MediaType{types.OCIImageIndex})
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +346,7 @@ func (f *fetcher) fetchReferrers(ctx context.Context, filter map[string]string, 
 	return filterReferrersResponse(filter, &im), nil
 }
 
-func (f *fetcher) fetchManifest(ref name.Reference, acceptable []types.MediaType) ([]byte, *v1.Descriptor, error) {
+func (f *fetcher) fetchManifest(ctx context.Context, ref name.Reference, acceptable []types.MediaType) ([]byte, *v1.Descriptor, error) {
 	u := f.url("manifests", ref.Identifier())
 	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
@@ -301,7 +358,7 @@ func (f *fetcher) fetchManifest(ref name.Reference, acceptable []types.MediaType
 	}
 	req.Header.Set("Accept", strings.Join(accept, ","))
 
-	resp, err := f.Client.Do(req.WithContext(f.context))
+	resp, err := f.client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -332,7 +389,7 @@ func (f *fetcher) fetchManifest(ref name.Reference, acceptable []types.MediaType
 	// Validate the digest matches what we asked for, if pulling by digest.
 	if dgst, ok := ref.(name.Digest); ok {
 		if digest.String() != dgst.DigestStr() {
-			return nil, nil, fmt.Errorf("manifest digest: %q does not match requested digest: %q for %q", digest, dgst.DigestStr(), f.Ref)
+			return nil, nil, fmt.Errorf("manifest digest: %q does not match requested digest: %q for %q", digest, dgst.DigestStr(), ref)
 		}
 	}
 
@@ -363,7 +420,7 @@ func (f *fetcher) fetchManifest(ref name.Reference, acceptable []types.MediaType
 	return manifest, &desc, nil
 }
 
-func (f *fetcher) headManifest(ref name.Reference, acceptable []types.MediaType) (*v1.Descriptor, error) {
+func (f *fetcher) headManifest(ctx context.Context, ref name.Reference, acceptable []types.MediaType) (*v1.Descriptor, error) {
 	u := f.url("manifests", ref.Identifier())
 	req, err := http.NewRequest(http.MethodHead, u.String(), nil)
 	if err != nil {
@@ -375,7 +432,7 @@ func (f *fetcher) headManifest(ref name.Reference, acceptable []types.MediaType)
 	}
 	req.Header.Set("Accept", strings.Join(accept, ","))
 
-	resp, err := f.Client.Do(req.WithContext(f.context))
+	resp, err := f.client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, err
 	}
@@ -408,7 +465,7 @@ func (f *fetcher) headManifest(ref name.Reference, acceptable []types.MediaType)
 	// Validate the digest matches what we asked for, if pulling by digest.
 	if dgst, ok := ref.(name.Digest); ok {
 		if digest.String() != dgst.DigestStr() {
-			return nil, fmt.Errorf("manifest digest: %q does not match requested digest: %q for %q", digest, dgst.DigestStr(), f.Ref)
+			return nil, fmt.Errorf("manifest digest: %q does not match requested digest: %q for %q", digest, dgst.DigestStr(), ref)
 		}
 	}
 
@@ -427,7 +484,7 @@ func (f *fetcher) fetchBlob(ctx context.Context, size int64, h v1.Hash) (io.Read
 		return nil, err
 	}
 
-	resp, err := f.Client.Do(req.WithContext(ctx))
+	resp, err := f.client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, redact.Error(err)
 	}
@@ -458,7 +515,7 @@ func (f *fetcher) headBlob(h v1.Hash) (*http.Response, error) {
 		return nil, err
 	}
 
-	resp, err := f.Client.Do(req.WithContext(f.context))
+	resp, err := f.client.Do(req.WithContext(f.context))
 	if err != nil {
 		return nil, redact.Error(err)
 	}
@@ -478,7 +535,7 @@ func (f *fetcher) blobExists(h v1.Hash) (bool, error) {
 		return false, err
 	}
 
-	resp, err := f.Client.Do(req.WithContext(f.context))
+	resp, err := f.client.Do(req.WithContext(f.context))
 	if err != nil {
 		return false, redact.Error(err)
 	}

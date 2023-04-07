@@ -235,6 +235,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 				publish.WithTags(po.Tags),
 				publish.WithTagOnly(po.TagOnly),
 				publish.Insecure(po.InsecureRegistry),
+				publish.WithJobs(po.Jobs),
 			)
 			if err != nil {
 				return nil, err

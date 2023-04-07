@@ -23,11 +23,11 @@ import (
 //
 // The subject manifest doesn't have to exist in the registry for there to be descriptors that refer to it.
 func Referrers(d name.Digest, options ...Option) (*v1.IndexManifest, error) {
-	o, err := makeOptions(d.Context(), options...)
+	o, err := makeOptions(options...)
 	if err != nil {
 		return nil, err
 	}
-	f, err := makeFetcher(d, o)
+	f, err := makeFetcher(o.context, d.Context(), o)
 	if err != nil {
 		return nil, err
 	}

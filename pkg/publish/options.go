@@ -107,3 +107,11 @@ func Insecure(b bool) Option {
 		return nil
 	}
 }
+
+// WithJobs limits the number of concurrent pushes.
+func WithJobs(jobs int) Option {
+	return func(i *defaultOpener) error {
+		i.jobs = jobs
+		return nil
+	}
+}

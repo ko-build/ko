@@ -41,6 +41,7 @@ The --local flag might be deprecated in the future.
 `
 
 func Validate(po *PublishOptions, bo *BuildOptions) error {
+	po.Jobs = bo.ConcurrentBuilds
 	if po.Bare && po.BaseImportPaths {
 		log.Print(bareBaseFlagsWarning)
 		// TODO: return error when we decided to make this an error, for now it is a warning

@@ -42,7 +42,7 @@ type options struct {
 	jobs                           int
 	userAgent                      string
 	allowNondistributableArtifacts bool
-	updates                        chan<- v1.Update
+	progress                       *progress
 	pageSize                       int
 	retryBackoff                   Backoff
 	retryPredicate                 retry.Predicate
@@ -89,6 +89,7 @@ var retryableStatusCodes = []int{
 	http.StatusBadGateway,
 	http.StatusServiceUnavailable,
 	http.StatusGatewayTimeout,
+	499,
 }
 
 const (
@@ -112,9 +113,11 @@ var DefaultTransport http.RoundTripper = &http.Transport{
 	IdleConnTimeout:       90 * time.Second,
 	TLSHandshakeTimeout:   10 * time.Second,
 	ExpectContinueTimeout: 1 * time.Second,
+	// We usually are dealing with 2 hosts (at most), split MaxIdleConns between them.
+	MaxIdleConnsPerHost: 50,
 }
 
-func makeOptions(target authn.Resource, opts ...Option) (*options, error) {
+func makeOptions(opts ...Option) (*options, error) {
 	o := &options{
 		transport:      DefaultTransport,
 		platform:       defaultPlatform,
@@ -136,12 +139,6 @@ func makeOptions(target authn.Resource, opts ...Option) (*options, error) {
 		// It is a better experience to explicitly tell a caller their auth is misconfigured
 		// than potentially fail silently when the correct auth is overridden by option misuse.
 		return nil, errors.New("provide an option for either authn.Authenticator or authn.Keychain, not both")
-	case o.keychain != nil:
-		auth, err := o.keychain.Resolve(target)
-		if err != nil {
-			return nil, err
-		}
-		o.auth = auth
 	case o.auth == nil:
 		o.auth = authn.Anonymous
 	}
@@ -273,7 +270,8 @@ func WithNondistributable(o *options) error {
 // should provide a buffered channel to avoid potential deadlocks.
 func WithProgress(updates chan<- v1.Update) Option {
 	return func(o *options) error {
-		o.updates = updates
+		o.progress = &progress{updates: updates}
+		o.progress.lastUpdate = &v1.Update{}
 		return nil
 	}
 }
