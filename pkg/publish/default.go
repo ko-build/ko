@@ -246,12 +246,12 @@ func (d *defalt) Publish(ctx context.Context, br build.Result, s string) (name.R
 			g.Go(func() error {
 				return d.pushResult(ctx, tag, br)
 			})
+		} else {
+			g.Go(func() error {
+				log.Printf("Tagging %v", tag)
+				return d.pusher.Push(ctx, tag, br)
+			})
 		}
-
-		g.Go(func() error {
-			log.Printf("Tagging %v", tag)
-			return d.pusher.Push(ctx, tag, br)
-		})
 	}
 	if err := g.Wait(); err != nil {
 		return nil, err
