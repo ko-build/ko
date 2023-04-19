@@ -35,7 +35,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/containerd/stargz-snapshotter/estargz"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -953,10 +952,7 @@ func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType type
 	binaryLayerBytes := binaryLayerBuf.Bytes()
 	return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 		return ioutil.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
-	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
-		// When using estargz, prioritize downloading the binary entrypoint.
-		appPath,
-	})), tarball.WithMediaType(layerMediaType))
+	}, tarball.WithCompressedCaching, tarball.WithMediaType(layerMediaType))
 }
 
 // Append appPath to the PATH environment variable, if it exists. Otherwise,
