@@ -187,7 +187,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			repoName = po.LocalDomain
 		}
 		// When in doubt, if repoName is under the local domain, default to --local.
-		po.Local = strings.HasPrefix(repoName, po.LocalDomain)
+		po.Local = po.Local || strings.HasPrefix(repoName, po.LocalDomain)
 		if po.Local {
 			// TODO(jonjohnsonjr): I'm assuming that nobody will
 			// use local with other publishers, but that might
