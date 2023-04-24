@@ -906,7 +906,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
 	// add optional args
-	if len(g.entrypointArgs) > 0 {
+	if len(g.entrypointArgs) > 0 && g.entrypointArgs[0] != "" {
 		cfg.Config.Entrypoint = append(cfg.Config.Entrypoint, g.entrypointArgs...)
 	}
 
