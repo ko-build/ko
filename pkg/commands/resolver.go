@@ -91,6 +91,7 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		build.WithBaseImages(getBaseImage(bo)),
 		build.WithPlatforms(bo.Platforms...),
 		build.WithJobs(bo.ConcurrentBuilds),
+		build.WithEntrypointArgs(bo.EntrypointArgs),
 	}
 	if creationTime != nil {
 		opts = append(opts, build.WithCreationTime(*creationTime))

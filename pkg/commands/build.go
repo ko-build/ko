@@ -68,6 +68,7 @@ func addBuild(topLevel *cobra.Command) {
 			ctx := cmd.Context()
 
 			bo.InsecureRegistry = po.InsecureRegistry
+			bo.EntrypointArgs = po.EntrypointArgs
 			builder, err := makeBuilder(ctx, bo)
 			if err != nil {
 				return fmt.Errorf("error creating builder: %w", err)

@@ -72,6 +72,9 @@ type PublishOptions struct {
 	ImageNamer publish.Namer
 
 	Jobs int
+
+	// EntrypointArgs (optional) entrypoint arguments
+	EntrypointArgs string
 }
 
 func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
@@ -106,6 +109,8 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 		"Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).")
 	cmd.Flags().BoolVar(&po.Bare, "bare", po.Bare,
 		"Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).")
+	cmd.Flags().StringVar(&po.EntrypointArgs, "args", "",
+		"Executable command arguments added to entrypoint.")
 }
 
 func packageWithMD5(base, importpath string) string {

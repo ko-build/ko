@@ -71,6 +71,9 @@ type BuildOptions struct {
 
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
+
+	// EntyrpointArgs
+	EntrypointArgs string
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {

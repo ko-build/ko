@@ -177,3 +177,11 @@ func WithSBOMDir(dir string) Option {
 		return nil
 	}
 }
+
+// WithEntrypointArgs to be appended to entrypoint
+func WithEntrypointArgs(epa string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.entrypointArgs = strings.Split(epa, " ")
+		return nil
+	}
+}

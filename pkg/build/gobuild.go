@@ -88,6 +88,7 @@ type gobuild struct {
 	dir                  string
 	labels               map[string]string
 	semaphore            *semaphore.Weighted
+	entrypointArgs       []string
 
 	cache *layerCache
 }
@@ -110,6 +111,7 @@ type gobuildOpener struct {
 	labels               map[string]string
 	dir                  string
 	jobs                 int
+	entrypointArgs       []string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -141,7 +143,8 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 			buildToDiff: map[string]buildIDToDiffID{},
 			diffToDesc:  map[string]diffIDToDescriptor{},
 		},
-		semaphore: semaphore.NewWeighted(int64(gbo.jobs)),
+		semaphore:      semaphore.NewWeighted(int64(gbo.jobs)),
+		entrypointArgs: gbo.entrypointArgs,
 	}, nil
 }
 
@@ -902,6 +905,11 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	cfg = cfg.DeepCopy()
 	cfg.Config.Entrypoint = []string{appPath}
+	// add optional args
+	if len(g.entrypointArgs) > 0 {
+		cfg.Config.Entrypoint = append(cfg.Config.Entrypoint, g.entrypointArgs...)
+	}
+
 	cfg.Config.Cmd = nil
 	if platform.OS == "windows" {
 		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFileName}
