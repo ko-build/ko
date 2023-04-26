@@ -81,6 +81,9 @@ type Config struct {
 	// Env allows setting environment variables for `go build`
 	Env []string `yaml:",omitempty"`
 
+	// Binary allows setting the name of the binary
+	Binary string `yaml:",omitempty"`
+
 	// Other GoReleaser fields that are not supported or do not make sense
 	// in the context of ko, for reference or for future use:
 	// Goos         []string    `yaml:",omitempty"`
@@ -88,7 +91,6 @@ type Config struct {
 	// Goarm        []string    `yaml:",omitempty"`
 	// Gomips       []string    `yaml:",omitempty"`
 	// Targets      []string    `yaml:",omitempty"`
-	// Binary       string      `yaml:",omitempty"`
 	// Lang         string      `yaml:",omitempty"`
 	// Asmflags     StringArray `yaml:",omitempty"`
 	// Gcflags      StringArray `yaml:",omitempty"`

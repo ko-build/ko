@@ -347,6 +347,21 @@ func TestBuildConfig(t *testing.T) {
 			},
 		},
 		{
+			description: "build config with binary",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithConfig(map[string]Config{
+					"example.com/foo": {
+						Binary: "bar",
+					},
+				}),
+			},
+			importpath: "example.com/foo",
+			expectConfig: Config{
+				Binary: "bar",
+			},
+		},
+		{
 			description: "no trimpath overridden by build config flag",
 			options: []Option{
 				WithBaseImages(nilGetBase),
@@ -516,7 +531,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 	})
 }
 
-func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
+func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool, buildConfig *Config) {
 	t.Helper()
 
 	ls, err := img.Layers()
@@ -598,7 +613,15 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 			t.Errorf("len(entrypoint) = %v, want %v", got, want)
 		}
 
-		if got, want := entrypoint[0], "/ko-app/test"; got != want {
+		exp := "/ko-app/test"
+		if buildConfig != nil && buildConfig.Binary != "" {
+			if path.IsAbs(buildConfig.Binary) {
+				exp = buildConfig.Binary
+			} else {
+				exp = path.Join("/ko-app", buildConfig.Binary)
+			}
+		}
+		if got, want := entrypoint[0], exp; got != want {
 			t.Errorf("entrypoint = %v, want %v", got, want)
 		}
 	})
@@ -626,13 +649,19 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		if err != nil {
 			t.Errorf("ConfigFile() = %v", err)
 		}
+		exp := "/ko-app"
+		if buildConfig != nil && buildConfig.Binary != "" {
+			if path.IsAbs(buildConfig.Binary) {
+				exp = path.Dir(buildConfig.Binary)
+			}
+		}
 		found := false
 		for _, envVar := range cfg.Config.Env {
 			if strings.HasPrefix(envVar, "PATH=") {
 				pathValue := strings.TrimPrefix(envVar, "PATH=")
 				pathEntries := strings.Split(pathValue, ":")
 				for _, pathEntry := range pathEntries {
-					if pathEntry == "/ko-app" {
+					if pathEntry == exp {
 						found = true
 					}
 				}
@@ -736,7 +765,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, true)
+	validateImage(t, img, baseLayers, creationTime, true, true, nil)
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
@@ -774,6 +803,58 @@ func TestGoBuild(t *testing.T) {
 			t.Fatalf("Labels diff (-got,+want): %s", d)
 		}
 	})
+}
+
+func TestGoBuildWithBinaryName(t *testing.T) {
+	tests := map[string]string{
+		"override binary name": "bar",
+		"override path":        "/usr/bin/bar",
+		"relative path":        "foo/bar",
+	}
+	for description, filename := range tests {
+		t.Run(description, func(t *testing.T) {
+			baseLayers := int64(3)
+			base, err := random.Image(1024, baseLayers)
+			if err != nil {
+				t.Fatalf("random.Image() = %v", err)
+			}
+			importpath := "github.com/google/ko"
+
+			creationTime := v1.Time{Time: time.Unix(5000, 0)}
+			buildConfig := Config{
+				Binary: filename,
+			}
+			ng, err := NewGo(
+				context.Background(),
+				"",
+				WithCreationTime(creationTime),
+				WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+				withBuilder(writeTempFile),
+				withSBOMber(fauxSBOM),
+				WithLabel("foo", "bar"),
+				WithLabel("hello", "world"),
+				WithPlatforms("all"),
+				WithConfig(map[string]Config{
+					"github.com/google/ko/test": buildConfig,
+				}),
+			)
+			if err != nil {
+				t.Fatalf("NewGo() = %v", err)
+			}
+
+			result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+			if err != nil {
+				t.Fatalf("Build() = %v", err)
+			}
+
+			img, ok := result.(oci.SignedImage)
+			if !ok {
+				t.Fatalf("Build() not a SignedImage: %T", result)
+			}
+
+			validateImage(t, img, baseLayers, creationTime, true, true, &buildConfig)
+		})
+	}
 }
 
 func TestGoBuildWithKOCACHE(t *testing.T) {
@@ -850,7 +931,7 @@ func TestGoBuildWithoutSBOM(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, false)
+	validateImage(t, img, baseLayers, creationTime, true, false, nil)
 }
 
 func TestGoBuildIndex(t *testing.T) {
@@ -896,7 +977,7 @@ func TestGoBuildIndex(t *testing.T) {
 		if err != nil {
 			t.Fatalf("idx.Image(%s) = %v", desc.Digest, err)
 		}
-		validateImage(t, img, baseLayers, creationTime, false, true)
+		validateImage(t, img, baseLayers, creationTime, false, true, nil)
 	}
 
 	if want, got := images, int64(len(im.Manifests)); want != got {

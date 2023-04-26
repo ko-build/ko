@@ -830,8 +830,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	if !g.platformMatcher.matches(platform) {
 		return nil, fmt.Errorf("base image platform %q does not match desired platforms %v", platform, g.platformMatcher.platforms)
 	}
+	conf := g.configForImportPath(ref.Path())
 	// Do the build into a temporary file.
-	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.configForImportPath(ref.Path()))
+	file, err := g.build(ctx, ref.Path(), g.dir, *platform, conf)
 	if err != nil {
 		return nil, fmt.Errorf("build: %w", err)
 	}
@@ -865,6 +866,14 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	appDir := "/ko-app"
 	appFileName := appFilename(ref.Path())
+	if conf.Binary != "" {
+		if path.IsAbs(conf.Binary) {
+			appDir = path.Dir(conf.Binary)
+			appFileName = path.Base(conf.Binary)
+		} else {
+			appFileName = conf.Binary
+		}
+	}
 	appPath := path.Join(appDir, appFileName)
 
 	miss := func() (v1.Layer, error) {
