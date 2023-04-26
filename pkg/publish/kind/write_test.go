@@ -58,7 +58,7 @@ func TestWrite(t *testing.T) {
 		}
 		c := n.cmds[0]
 
-		if got, want := c.cmd, "ctr --namespace=k8s.io images import -"; got != want {
+		if got, want := c.cmd, "ctr --namespace=k8s.io images import --all-platforms -"; got != want {
 			t.Fatalf("c.cmd = %s, want %s", got, want)
 		}
 	}
