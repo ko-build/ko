@@ -199,7 +199,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			)
 		}
 		if strings.HasPrefix(repoName, publish.KindDomain) {
-			return publish.NewKindPublisher(namer, po.Tags), nil
+			return publish.NewKindPublisher(repoName, namer, po.Tags), nil
 		}
 
 		if repoName == "" && po.Push {
