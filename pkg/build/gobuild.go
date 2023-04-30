@@ -356,7 +356,7 @@ func spdx(version string) sbomber {
 	return func(ctx context.Context, file string, appPath string, appFileName string, se oci.SignedEntity, dir string) ([]byte, types.MediaType, error) {
 		switch obj := se.(type) {
 		case oci.SignedImage:
-			b, _, err := goversionm(ctx, file, appPath, appFileName, obj, "")
+			b, _, err := goversionm(ctx, file, appPath, "", obj, "")
 			if err != nil {
 				return nil, "", err
 			}
@@ -933,7 +933,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	si := signed.Image(image)
 
 	if g.sbom != nil {
-		sbom, mt, err := g.sbom(ctx, file, appPath, appFileName, si, g.sbomDir)
+		// Construct a path-safe encoding of platform.
+		pf := strings.ReplaceAll(strings.ReplaceAll(platform.String(), "/", "-"), ":", "-")
+		sbom, mt, err := g.sbom(ctx, file, appPath, fmt.Sprintf("%s-%s", appFileName, pf), si, g.sbomDir)
 		if err != nil {
 			return nil, err
 		}
@@ -1138,7 +1140,9 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		adds...)
 
 	if g.sbom != nil {
-		sbom, mt, err := g.sbom(ctx, "", "", "", idx, g.sbomDir)
+		ref := newRef(ref)
+		appFileName := appFilename(ref.Path())
+		sbom, mt, err := g.sbom(ctx, "", "", fmt.Sprintf("%s-index", appFileName), idx, g.sbomDir)
 		if err != nil {
 			return nil, err
 		}
