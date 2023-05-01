@@ -40,7 +40,13 @@ jobs:
 
         # Check that using sbom-dir works.
         KO_DOCKER_REPO=""  go run ./ build -t test --push=false --sbom-dir ./sbom-data ./test
-        jq . ./sbom-data/test.spdx.json
+        jq . ./sbom-data/test-linux-amd64.spdx.json
+
+        # Check that using sbom-dir works for multi-arch
+        KO_DOCKER_REPO=""  go run ./ build --platform=linux/amd64,linux/arm64 -t test --push=false --sbom-dir ./sbom-data2 ./test
+        jq . ./sbom-data2/test-index.spdx.json
+        jq . ./sbom-data2/test-linux-amd64.spdx.json
+        jq . ./sbom-data2/test-linux-arm64.spdx.json
 
         export PLATFORM=${GOOS}/${GOARCH}
 
