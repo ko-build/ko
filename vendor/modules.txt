@@ -247,7 +247,7 @@ github.com/go-openapi/loads
 # github.com/go-openapi/runtime v0.26.0
 ## explicit; go 1.18
 github.com/go-openapi/runtime
-# github.com/go-openapi/spec v0.20.8
+# github.com/go-openapi/spec v0.20.9
 ## explicit; go 1.13
 github.com/go-openapi/spec
 # github.com/go-openapi/strfmt v0.21.7
@@ -430,7 +430,7 @@ github.com/sigstore/cosign/v2/pkg/oci/signed
 github.com/sigstore/cosign/v2/pkg/oci/static
 github.com/sigstore/cosign/v2/pkg/oci/walk
 github.com/sigstore/cosign/v2/pkg/types
-# github.com/sigstore/rekor v1.1.0
+# github.com/sigstore/rekor v1.1.1
 ## explicit; go 1.19
 github.com/sigstore/rekor/pkg/generated/models
 # github.com/sigstore/sigstore v1.6.3
