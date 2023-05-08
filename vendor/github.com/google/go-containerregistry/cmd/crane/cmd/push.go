@@ -73,8 +73,9 @@ func NewCmdPush(options *[]crane.Option) *cobra.Command {
 			if imageRefs != "" {
 				return os.WriteFile(imageRefs, []byte(digest.String()), 0600)
 			}
-			// TODO(mattmoor): think about printing the digest to standard out
-			// to facilitate command composition similar to ko build.
+
+			// Print the digest of the pushed image to stdout to facilitate command composition.
+			fmt.Println(digest)
 
 			return nil
 		},

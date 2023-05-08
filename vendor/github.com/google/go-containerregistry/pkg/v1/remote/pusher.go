@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/logs"
@@ -107,6 +108,9 @@ func NewPusher(options ...Option) (*Pusher, error) {
 }
 
 func newPusher(o *options) *Pusher {
+	if o.pusher != nil {
+		return o.pusher
+	}
 	return &Pusher{
 		o: o,
 	}
@@ -135,6 +139,36 @@ func (p *Pusher) Upload(ctx context.Context, repo name.Repository, l v1.Layer) e
 		return err
 	}
 	return w.writeLayer(ctx, l)
+}
+
+func (p *Pusher) Delete(ctx context.Context, ref name.Reference) error {
+	w, err := p.writer(ctx, ref.Context(), p.o)
+	if err != nil {
+		return err
+	}
+
+	u := url.URL{
+		Scheme: ref.Context().Registry.Scheme(),
+		Host:   ref.Context().RegistryStr(),
+		Path:   fmt.Sprintf("/v2/%s/manifests/%s", ref.Context().RepositoryStr(), ref.Identifier()),
+	}
+
+	req, err := http.NewRequest(http.MethodDelete, u.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := w.w.client.Do(req.WithContext(ctx))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	return transport.CheckError(resp, http.StatusOK, http.StatusAccepted)
+
+	// TODO(jason): If the manifest had a `subject`, and if the registry
+	// doesn't support Referrers, update the index pointed to by the
+	// subject's fallback tag to remove the descriptor for this manifest.
 }
 
 type repoWriter struct {
@@ -354,9 +388,8 @@ func (rw *repoWriter) writeChild(ctx context.Context, child partial.Describable,
 
 func (rw *repoWriter) manifestExists(ctx context.Context, ref name.Reference, t Taggable) (bool, error) {
 	f := &fetcher{
-		target:  ref.Context(),
-		client:  rw.w.client,
-		context: ctx,
+		target: ref.Context(),
+		client: rw.w.client,
 	}
 
 	m, err := taggableToManifest(t)
