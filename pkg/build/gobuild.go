@@ -757,7 +757,13 @@ func createBuildArgs(buildCfg Config) ([]string, error) {
 			return nil, err
 		}
 
-		args = append(args, fmt.Sprintf("-ldflags=%s", strings.Join(ldflags, " ")))
+		// Reject any flags that attempt to include a double-quote in the existing
+		for _, a := range buildCfg.Ldflags {
+			if strings.Contains(a, "\"") {
+				return nil, fmt.Errorf("cannot use %s as ldflags (remove double-quotes)", a)
+			}
+		}
+		args = append(args, fmt.Sprintf("-ldflags=\"%s\"", strings.Join(ldflags, " ")))
 	}
 
 	// Reject any flags that attempt to set --toolexec (with or
