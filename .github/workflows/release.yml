@@ -99,7 +99,7 @@ jobs:
     steps:
 
       - name: Install SLSA verifier
-        uses: slsa-framework/slsa-verifier/actions/installer@v2.0.1
+        uses: slsa-framework/slsa-verifier/actions/installer@v2.3.0
 
       - name: Download assets
         env:
