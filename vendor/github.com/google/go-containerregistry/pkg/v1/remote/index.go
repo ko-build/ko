@@ -16,6 +16,7 @@ package remote
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"sync"
 
@@ -33,8 +34,9 @@ var acceptableIndexMediaTypes = []types.MediaType{
 
 // remoteIndex accesses an index from a remote registry
 type remoteIndex struct {
-	fetcher
+	fetcher      fetcher
 	ref          name.Reference
+	ctx          context.Context
 	manifestLock sync.Mutex // Protects manifest
 	manifest     []byte
 	mediaType    types.MediaType
@@ -76,7 +78,7 @@ func (r *remoteIndex) RawManifest() ([]byte, error) {
 	// NOTE(jonjohnsonjr): We should never get here because the public entrypoints
 	// do type-checking via remote.Descriptor. I've left this here for tests that
 	// directly instantiate a remoteIndex.
-	manifest, desc, err := r.fetchManifest(r.context, r.ref, acceptableIndexMediaTypes)
+	manifest, desc, err := r.fetcher.fetchManifest(r.ctx, r.ref, acceptableIndexMediaTypes)
 	if err != nil {
 		return nil, err
 	}
@@ -134,6 +136,7 @@ func (r *remoteIndex) Layer(h v1.Hash) (v1.Layer, error) {
 		if h == childDesc.Digest {
 			l, err := partial.CompressedToLayer(&remoteLayer{
 				fetcher: r.fetcher,
+				ctx:     r.ctx,
 				digest:  h,
 			})
 			if err != nil {
@@ -212,7 +215,7 @@ func (r *remoteIndex) childDescriptor(child v1.Descriptor, platform v1.Platform)
 		}
 		manifest = child.Data
 	} else {
-		manifest, _, err = r.fetchManifest(r.context, ref, []types.MediaType{child.MediaType})
+		manifest, _, err = r.fetcher.fetchManifest(r.ctx, ref, []types.MediaType{child.MediaType})
 		if err != nil {
 			return nil, err
 		}
@@ -228,8 +231,9 @@ func (r *remoteIndex) childDescriptor(child v1.Descriptor, platform v1.Platform)
 	}
 
 	return &Descriptor{
-		fetcher:    r.fetcher,
 		ref:        ref,
+		ctx:        r.ctx,
+		fetcher:    r.fetcher,
 		Manifest:   manifest,
 		Descriptor: child,
 		platform:   platform,
