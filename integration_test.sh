@@ -22,10 +22,10 @@ GOARCH="${GOARCH:-$(go env GOARCH)}"
 pushd "$GOPATH" || exit 1
 
 echo "Copying ko to temp gopath."
-mkdir -p "$GOPATH/src/github.com/google/ko"
-cp -r "$ROOT_DIR/"* "$GOPATH/src/github.com/google/ko/"
+mkdir -p "$GOPATH/src/github.com/ko-build/ko"
+cp -r "$ROOT_DIR/"* "$GOPATH/src/github.com/ko-build/ko/"
 
-pushd "$GOPATH/src/github.com/google/ko" || exit 1
+pushd "$GOPATH/src/github.com/ko-build/ko" || exit 1
 
 echo "Building ko"
 
@@ -36,7 +36,7 @@ echo "Beginning scenarios."
 FILTER="[^ ]local[^ ]*"
 
 echo "1. Test should create an image that outputs 'Hello World'."
-RESULT="$(./ko build --local --platform="linux/$GOARCH" "$GOPATH/src/github.com/google/ko/test" | grep "$FILTER" | xargs -I% docker run %)"
+RESULT="$(./ko build --local --platform="linux/$GOARCH" "$GOPATH/src/github.com/ko-build/ko/test" | grep "$FILTER" | xargs -I% docker run %)"
 if [[ "$RESULT" != *"Hello there"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else
@@ -45,7 +45,7 @@ fi
 
 echo "2. Test knative 'KO_FLAGS' variable is ignored."
 # https://github.com/ko-build/ko/issues/1317
-RESULT="$(KO_FLAGS="--platform=badvalue" ./ko build --local --platform="linux/$GOARCH" "$GOPATH/src/github.com/google/ko/test" | grep "$FILTER" | xargs -I% docker run %)"
+RESULT="$(KO_FLAGS="--platform=badvalue" ./ko build --local --platform="linux/$GOARCH" "$GOPATH/src/github.com/ko-build/ko/test" | grep "$FILTER" | xargs -I% docker run %)"
 if [[ "$RESULT" != *"Hello there"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
 else

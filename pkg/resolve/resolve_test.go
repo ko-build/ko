@@ -24,8 +24,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
-	"github.com/google/ko/pkg/build"
-	kotesting "github.com/google/ko/pkg/internal/testing"
+	"github.com/ko-build/ko/pkg/build"
+	kotesting "github.com/ko-build/ko/pkg/internal/testing"
 	"gopkg.in/yaml.v3"
 )
 

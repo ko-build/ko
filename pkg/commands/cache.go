@@ -32,7 +32,8 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/ko/pkg/build"
+
+	"github.com/ko-build/ko/pkg/build"
 )
 
 type imageCache struct {
