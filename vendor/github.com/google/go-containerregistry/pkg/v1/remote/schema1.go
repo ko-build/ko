@@ -16,6 +16,7 @@ package remote
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -25,8 +26,9 @@ import (
 )
 
 type schema1 struct {
-	fetcher
 	ref        name.Reference
+	ctx        context.Context
+	fetcher    fetcher
 	manifest   []byte
 	mediaType  types.MediaType
 	descriptor *v1.Descriptor
@@ -91,6 +93,7 @@ func (s *schema1) RawManifest() ([]byte, error) {
 func (s *schema1) LayerByDigest(h v1.Hash) (v1.Layer, error) {
 	l, err := partial.CompressedToLayer(&remoteLayer{
 		fetcher: s.fetcher,
+		ctx:     s.ctx,
 		digest:  h,
 	})
 	if err != nil {

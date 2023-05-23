@@ -39,7 +39,7 @@ func NewCmdAuth(options []crane.Option, argv ...string) *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE:  func(cmd *cobra.Command, _ []string) error { return cmd.Usage() },
 	}
-	cmd.AddCommand(NewCmdAuthGet(options, argv...), NewCmdAuthLogin(argv...))
+	cmd.AddCommand(NewCmdAuthGet(options, argv...), NewCmdAuthLogin(argv...), NewCmdAuthLogout(argv...))
 	return cmd
 }
 
@@ -202,4 +202,43 @@ func login(opts loginOptions) error {
 	}
 	log.Printf("logged in via %s", cf.Filename)
 	return nil
+}
+
+// NewCmdAuthLogout creates a new `crane auth logout` command.
+func NewCmdAuthLogout(argv ...string) *cobra.Command {
+	eg := fmt.Sprintf(`  # Log out of reg.example.com
+  %s logout reg.example.com`, strings.Join(argv, " "))
+
+	cmd := &cobra.Command{
+		Use:     "logout [SERVER]",
+		Short:   "Log out of a registry",
+		Example: eg,
+		Args:    cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			reg, err := name.NewRegistry(args[0])
+			if err != nil {
+				return err
+			}
+			serverAddress := reg.Name()
+
+			cf, err := config.Load(os.Getenv("DOCKER_CONFIG"))
+			if err != nil {
+				return err
+			}
+			creds := cf.GetCredentialsStore(serverAddress)
+			if serverAddress == name.DefaultRegistry {
+				serverAddress = authn.DefaultAuthKey
+			}
+			if err := creds.Erase(serverAddress); err != nil {
+				return err
+			}
+
+			if err := cf.Save(); err != nil {
+				return err
+			}
+			log.Printf("logged out via %s", cf.Filename)
+			return nil
+		},
+	}
+	return cmd
 }
