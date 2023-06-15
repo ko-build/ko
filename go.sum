@@ -439,8 +439,8 @@ github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/sigstore/cosign/v2 v2.0.3-0.20230523133326-0544abd8fc8a h1:4j4hrwYblDkNouA2fZ/hKvtJhV/N+jJGhLoRXUNLYmE=
 github.com/sigstore/cosign/v2 v2.0.3-0.20230523133326-0544abd8fc8a/go.mod h1:em8IHAamkOMXzXHjHx5NdLO1d8erWDMlGRlx0XE5TtI=
-github.com/sigstore/rekor v1.1.1 h1:JCeSss+qUHnCATmwAZh4zT9k0Frdyq0BjmRwewSfEy4=
-github.com/sigstore/rekor v1.1.1/go.mod h1:x/xK+HK08MiuJv+v4OxY/Oo3bhuz1DtJXNJrV7hrzvs=
+github.com/sigstore/rekor v1.2.0 h1:ahlnoEY3zo8Vc+eZLPobamw6YfBTAbI0lthzUQd6qe4=
+github.com/sigstore/rekor v1.2.0/go.mod h1:zcFO54qIg2G1/i0sE/nvmELUOng/n0MPjTszRYByVPo=
 github.com/sigstore/sigstore v1.6.4 h1:jH4AzR7qlEH/EWzm+opSpxCfuUcjHL+LJPuQE7h40WE=
 github.com/sigstore/sigstore v1.6.4/go.mod h1:pjR64lBxnjoSrAr+Ydye/FV73IfrgtoYlAI11a8xMfA=
 github.com/sirupsen/logrus v1.4.0/go.mod h1:LxeOpSwHxABJmUn/MG1IvRgCAasNZTLOkJPxbbu5VWo=
