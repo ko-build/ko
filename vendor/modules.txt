@@ -431,7 +431,7 @@ github.com/sigstore/cosign/v2/pkg/oci/signed
 github.com/sigstore/cosign/v2/pkg/oci/static
 github.com/sigstore/cosign/v2/pkg/oci/walk
 github.com/sigstore/cosign/v2/pkg/types
-# github.com/sigstore/rekor v1.1.1
+# github.com/sigstore/rekor v1.2.0
 ## explicit; go 1.19
 github.com/sigstore/rekor/pkg/generated/models
 # github.com/sigstore/sigstore v1.6.4
