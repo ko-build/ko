@@ -29,6 +29,8 @@ jobs:
 
       # This installs the current latest release.
       - uses: ko-build/setup-ko@ace48d793556083a76f1e3e6068850c1f4a369aa # v0.6
+        with:
+          version: v0.13.0
 
       - uses: imjasonh/setup-crane@00c9e93efa4e1138c9a7a5c594acd6c75a2fbf0c # v0.3
 
