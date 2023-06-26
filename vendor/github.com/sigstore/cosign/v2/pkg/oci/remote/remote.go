@@ -36,6 +36,10 @@ var (
 	remoteIndex = remote.Index
 	remoteGet   = remote.Get
 	remoteWrite = remote.Write
+
+	// ErrEntityNotFound is the error that SignedEntity returns when the
+	// provided ref does not exist.
+	ErrEntityNotFound = errors.New("entity not found in registry")
 )
 
 // SignedEntity provides access to a remote reference, and its signatures.
@@ -46,7 +50,7 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	got, err := remoteGet(ref, o.ROpt...)
 	var te *transport.Error
 	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
-		return nil, errors.New("entity not found in registry")
+		return nil, ErrEntityNotFound
 	} else if err != nil {
 		return nil, err
 	}
