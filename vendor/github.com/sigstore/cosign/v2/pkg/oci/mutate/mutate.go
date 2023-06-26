@@ -135,7 +135,7 @@ func AttachSignatureToEntity(se oci.SignedEntity, sig oci.Signature, opts ...Sig
 	case oci.SignedImageIndex:
 		return AttachSignatureToImageIndex(obj, sig, opts...)
 	default:
-		return nil, fmt.Errorf("unsupported type: %T", se)
+		return AttachSignatureToUnknown(obj, sig, opts...)
 	}
 }
 
@@ -147,7 +147,7 @@ func AttachAttestationToEntity(se oci.SignedEntity, att oci.Signature, opts ...S
 	case oci.SignedImageIndex:
 		return AttachAttestationToImageIndex(obj, att, opts...)
 	default:
-		return nil, fmt.Errorf("unsupported type: %T", se)
+		return AttachAttestationToUnknown(obj, att, opts...)
 	}
 }
 
@@ -159,7 +159,7 @@ func AttachFileToEntity(se oci.SignedEntity, name string, f oci.File, opts ...Si
 	case oci.SignedImageIndex:
 		return AttachFileToImageIndex(obj, name, f, opts...)
 	default:
-		return nil, fmt.Errorf("unsupported type: %T", se)
+		return AttachFileToUnknown(obj, name, f, opts...)
 	}
 }
 
@@ -344,6 +344,111 @@ func (sii *signedImageIndex) Attestations() (oci.Signatures, error) {
 // Attachment implements oci.SignedImageIndex
 func (sii *signedImageIndex) Attachment(attName string) (oci.File, error) {
 	if f, ok := sii.attachments[attName]; ok {
+		return f, nil
+	}
+	return nil, fmt.Errorf("attachment %q not found", attName)
+}
+
+// AttachSignatureToUnknown attaches the provided signature to the provided image.
+func AttachSignatureToUnknown(se oci.SignedEntity, sig oci.Signature, opts ...SignOption) (oci.SignedEntity, error) {
+	return &signedUnknown{
+		SignedEntity: se,
+		sig:          sig,
+		attachments:  make(map[string]oci.File),
+		so:           makeSignOpts(opts...),
+	}, nil
+}
+
+// AttachAttestationToUnknown attaches the provided attestation to the provided image.
+func AttachAttestationToUnknown(se oci.SignedEntity, att oci.Signature, opts ...SignOption) (oci.SignedEntity, error) {
+	return &signedUnknown{
+		SignedEntity: se,
+		att:          att,
+		attachments:  make(map[string]oci.File),
+		so:           makeSignOpts(opts...),
+	}, nil
+}
+
+// AttachFileToUnknown attaches the provided file to the provided image.
+func AttachFileToUnknown(se oci.SignedEntity, name string, f oci.File, opts ...SignOption) (oci.SignedEntity, error) {
+	return &signedUnknown{
+		SignedEntity: se,
+		attachments: map[string]oci.File{
+			name: f,
+		},
+		so: makeSignOpts(opts...),
+	}, nil
+}
+
+type signedUnknown struct {
+	oci.SignedEntity
+	sig         oci.Signature
+	att         oci.Signature
+	so          *signOpts
+	attachments map[string]oci.File
+}
+
+type digestable interface {
+	Digest() (v1.Hash, error)
+}
+
+// Digest is generally implemented by oci.SignedEntity implementations.
+func (si *signedUnknown) Digest() (v1.Hash, error) {
+	d, ok := si.SignedEntity.(digestable)
+	if !ok {
+		return v1.Hash{}, fmt.Errorf("underlying signed entity not digestable: %T", si.SignedEntity)
+	}
+	return d.Digest()
+}
+
+// Signatures implements oci.SignedEntity
+func (si *signedUnknown) Signatures() (oci.Signatures, error) {
+	base, err := si.SignedEntity.Signatures()
+	if err != nil {
+		return nil, err
+	} else if si.sig == nil {
+		return base, nil
+	}
+	if si.so.dd != nil {
+		if existing, err := si.so.dd.Find(base, si.sig); err != nil {
+			return nil, err
+		} else if existing != nil {
+			// Just return base if the signature is redundant
+			return base, nil
+		}
+	}
+	return AppendSignatures(base, si.sig)
+}
+
+// Attestations implements oci.SignedEntity
+func (si *signedUnknown) Attestations() (oci.Signatures, error) {
+	base, err := si.SignedEntity.Attestations()
+	if err != nil {
+		return nil, err
+	} else if si.att == nil {
+		return base, nil
+	}
+	if si.so.dd != nil {
+		if existing, err := si.so.dd.Find(base, si.att); err != nil {
+			return nil, err
+		} else if existing != nil {
+			// Just return base if the signature is redundant
+			return base, nil
+		}
+	}
+	if si.so.ro != nil {
+		replace, err := si.so.ro.Replace(base, si.att)
+		if err != nil {
+			return nil, err
+		}
+		return ReplaceSignatures(replace)
+	}
+	return AppendSignatures(base, si.att)
+}
+
+// Attachment implements oci.SignedEntity
+func (si *signedUnknown) Attachment(attName string) (oci.File, error) {
+	if f, ok := si.attachments[attName]; ok {
 		return f, nil
 	}
 	return nil, fmt.Errorf("attachment %q not found", attName)
