@@ -17,7 +17,6 @@ package publish_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -35,7 +34,7 @@ func TestTarball(t *testing.T) {
 	base := "blah"
 	importpath := "github.com/Google/go-containerregistry/cmd/crane"
 
-	fp, err := ioutil.TempFile("", "")
+	fp, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}

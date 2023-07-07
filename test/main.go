@@ -17,7 +17,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -63,7 +62,7 @@ func main() {
 
 	dp := os.Getenv("KO_DATA_PATH")
 	file := filepath.Join(dp, *f)
-	bytes, err := ioutil.ReadFile(file)
+	bytes, err := os.ReadFile(file)
 	if err != nil {
 		log.Fatalf("Error reading %q: %v", file, err)
 	}

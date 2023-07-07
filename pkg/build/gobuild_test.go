@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -403,12 +402,12 @@ func fauxSBOM(context.Context, string, string, string, oci.SignedEntity, string)
 
 // A helper method we use to substitute for the default "build" method.
 func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ Config) (string, error) {
-	tmpDir, err := ioutil.TempDir("", "ko")
+	tmpDir, err := os.MkdirTemp("", "ko")
 	if err != nil {
 		return "", err
 	}
 
-	file, err := ioutil.TempFile(tmpDir, "out")
+	file, err := os.CreateTemp(tmpDir, "out")
 	if err != nil {
 		return "", err
 	}
@@ -573,7 +572,7 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 				continue
 			}
 			found = true
-			body, err := ioutil.ReadAll(tr)
+			body, err := io.ReadAll(tr)
 			if err != nil {
 				t.Errorf("ReadAll() = %v", err)
 			} else if want, got := "Hello there\n", string(body); got != want {

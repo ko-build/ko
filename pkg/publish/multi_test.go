@@ -17,7 +17,6 @@ package publish_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -34,7 +33,7 @@ func TestMulti(t *testing.T) {
 	repoName := fmt.Sprintf("%s/%s", "example.com", base)
 	importpath := "github.com/Google/go-containerregistry/cmd/crane"
 
-	fp, err := ioutil.TempFile("", "")
+	fp, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +42,7 @@ func TestMulti(t *testing.T) {
 
 	tp := publish.NewTarball(fp.Name(), repoName, md5Hash, []string{})
 
-	tmp, err := ioutil.TempDir("/tmp", "ko")
+	tmp, err := os.MkdirTemp("/tmp", "ko")
 	if err != nil {
 		t.Fatal(err)
 	}
