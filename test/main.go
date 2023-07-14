@@ -17,11 +17,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"runtime"
 	"syscall"
 	"time"
@@ -43,16 +41,15 @@ func main() {
 
 	log.Println("version =", version)
 
-	if runtime.GOOS == "windows" {
-		// Go seems to not load location data from Windows, so timezone
+	if runtime.GOOS != "windows" && runtime.GOARCH != "wasm" {
+		// Go seems to not load location data from Windows (or wasm), so timezone
 		// conversion fails unless tzdata is embedded in the Go program
 		// with the go build tag `timetzdata`. Since we want to test
 		// loading tzdata provided by the base image below, we'll just
 		// skip that for Windows here.
 		// See https://github.com/ko-build/ko/issues/739
-		log.Println("skipping timezone conversion on Windows")
-	} else {
-		// Exercise timezone conversions, which demonstrates tzdata is provided
+
+		// If we can, exercise timezone conversions, which demonstrates tzdata is provided
 		// by the base image.
 		now := time.Now()
 		loc, _ := time.LoadLocation("UTC")
@@ -61,13 +58,7 @@ func main() {
 		fmt.Printf("New York Time: %s\n", now.In(loc))
 	}
 
-	dp := os.Getenv("KO_DATA_PATH")
-	file := filepath.Join(dp, *f)
-	bytes, err := ioutil.ReadFile(file)
-	if err != nil {
-		log.Fatalf("Error reading %q: %v", file, err)
-	}
-	log.Print(string(bytes))
+	test()
 
 	// Cause the pod to "hang" to allow us to check for a readiness state.
 	if *wait {

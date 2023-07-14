@@ -19,7 +19,7 @@ jobs:
     - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
     - uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
       with:
-        go-version: '1.20'
+        go-version: '1.21.x'
         check-latest: true
 
     - name: Build and run ko container
@@ -48,15 +48,15 @@ jobs:
         jq . ./sbom-data2/test-linux-amd64.spdx.json
         jq . ./sbom-data2/test-linux-arm64.spdx.json
 
-        export PLATFORM=${GOOS}/${GOARCH}
+        export PLATFORM=linux/amd64
 
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
           OSVERSION="10.0.20348"
-          PLATFORM=${PLATFORM}:${OSVERSION}
+          PLATFORM=windows/amd64:${OSVERSION}
           export KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:ltsc2022
         else
           # Explicitly test multiple platform builds (a subset of what's in the base!)
-          export PLATFORM=${PLATFORM},linux/arm64
+          PLATFORM=${PLATFORM},linux/arm64
         fi
 
         echo platform is ${PLATFORM}
@@ -82,3 +82,9 @@ jobs:
           - "-X main.version=${{ github.sha }}"
         EOF
         docker run $(go run ./ build ./test/ --platform=${PLATFORM}) --wait=false 2>&1 | grep "${{ github.sha }}"
+
+        if [[ "${{ matrix.platform }}" != "windows-latest" ]]; then
+          # Check that we can build for wasm (from linux)
+          # TODO: Run the image.
+          go run ./ build ./test/ --platform=wasip1/wasm
+        fi

@@ -1053,22 +1053,35 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		}
 	}
 	if len(matches) == 0 {
-		return nil, errors.New("no matching platforms in base image index")
+		if g.platformMatcher.isWasm() {
+			matches = append(matches, v1.Descriptor{
+				Platform: &g.platformMatcher.platforms[0],
+				Digest:   v1.Hash{},
+			})
+		} else {
+			return nil, errors.New("no matching platforms in base image index")
+		}
 	}
 	if len(matches) == 1 {
-		// Filters resulted in a single matching platform; just produce
-		// a single-platform image.
-		img, err := baseIndex.Image(matches[0].Digest)
-		if err != nil {
-			return nil, fmt.Errorf("error getting matching image from index: %w", err)
+		var base v1.Image
+		if g.platformMatcher.isWasm() {
+			// Build for wasm on an empty base image.
+			base = mutate.MediaType(empty.Image, types.OCIManifestSchema1).(v1.Image)
+		} else {
+			// Filters resulted in a single matching platform; just produce
+			// a single-platform image.
+			base, err = baseIndex.Image(matches[0].Digest)
+			if err != nil {
+				return nil, fmt.Errorf("error getting matching image from index: %w", err)
+			}
+			// Decorate the image with the ref of the index, and the matching
+			// platform's digest.
+			base = mutate.Annotations(base, map[string]string{
+				specsv1.AnnotationBaseImageDigest: matches[0].Digest.String(),
+				specsv1.AnnotationBaseImageName:   baseRef.Name(),
+			}).(v1.Image)
 		}
-		// Decorate the image with the ref of the index, and the matching
-		// platform's digest.
-		img = mutate.Annotations(img, map[string]string{
-			specsv1.AnnotationBaseImageDigest: matches[0].Digest.String(),
-			specsv1.AnnotationBaseImageName:   baseRef.Name(),
-		}).(v1.Image)
-		return g.buildOne(ctx, ref, img, matches[0].Platform)
+		return g.buildOne(ctx, ref, base, matches[0].Platform)
 	}
 
 	// Build an image for each matching platform from the base and append
@@ -1177,6 +1190,13 @@ func parseSpec(spec []string) (*platformMatcher, error) {
 	return &platformMatcher{spec: spec, platforms: platforms}, nil
 }
 
+func (pm *platformMatcher) isWasm() bool {
+	if len(pm.platforms) == 1 && strings.HasPrefix(pm.platforms[0].OS, "wasi") && pm.platforms[0].Architecture == "wasm" {
+		return true
+	}
+	return false
+}
+
 func (pm *platformMatcher) matches(base *v1.Platform) bool {
 	// Strip out manifests with "unknown/unknown" platform, which Docker uses
 	// to store provenance attestations.
@@ -1203,6 +1223,12 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 		}
 		if p.Variant != "" && base.Variant != p.Variant {
 			continue
+		}
+
+		// If wasi*/wasm was a requested platform, we'll allow it,
+		// and we'll end up building for it on an empty base.
+		if strings.HasPrefix(base.OS, "wasi") && base.Architecture == "wasm" {
+			return true
 		}
 
 		// Windows is... weird. Windows base images use osversion to
