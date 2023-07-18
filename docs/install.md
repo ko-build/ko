@@ -8,8 +8,23 @@ $ OS=Linux     # or Darwin
 $ ARCH=x86_64  # or arm64, i386, s390x
 ```
 
-We generate [SLSA3 provenance](https://slsa.dev) using the OpenSSF's [slsa-framework/slsa-github-generator](https://github.com/slsa-framework/slsa-github-generator). To verify our release, install the verification tool from [slsa-framework/slsa-verifier#installation](https://github.com/slsa-framework/slsa-verifier#installation) and verify as follows:
+We generate [SLSA3 provenance](https://slsa.dev) using the OpenSSF's [slsa-framework/slsa-github-generator](https://github.com/slsa-framework/slsa-github-generator). To verify our release, install the verification tool from [slsa-framework/slsa-verifier#installation](https://github.com/slsa-framework/slsa-verifier#installation) and, depending on which version of `ko` you're installing, verify as follows:
 
+#### v0.13.0+
+
+In the `v0.13.0` release, the `attestation.intoto.jsonl` file was renamed to `multiple.intoto.jsonl` so if you're trying to install `v0.13.0` or later, you'll need to use the `multiple.intoto.jsonl` file:
+
+
+```shell
+$ curl -sSfL "https://github.com/ko-build/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
+$ curl -sSfL https://github.com/ko-build/ko/releases/download/v${VERSION}/multiple.intoto.jsonl > provenance.intoto.jsonl
+$ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
+  PASSED: Verified SLSA provenance
+```
+
+### v0.12.0 and earlier
+
+For any version of `ko` before `v0.13.0`, you'll need to use the `attestation.intoto.jsonl` file:
 
 ```shell
 $ curl -sSfL "https://github.com/ko-build/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
@@ -17,6 +32,8 @@ $ curl -sSfL https://github.com/ko-build/ko/releases/download/v${VERSION}/attest
 $ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
   PASSED: Verified SLSA provenance
 ```
+
+And finally, after verifying the release, you can unpack the binary and make it executable:
 
 ```shell
 $ tar xzf ko.tar.gz ko
