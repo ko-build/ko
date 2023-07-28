@@ -66,6 +66,7 @@ ko apply -f FILENAME [flags]
       --tag-only                 Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.
   -t, --tags strings             Which tags to use for the produced image instead of the default 'latest' tag (may not work properly with --base-import-paths or --bare). (default [latest])
       --tarball string           File to save images tarballs
+      --test                     Use go test -c instead of go build when building Go code.
 ```
 
 ### Options inherited from parent commands

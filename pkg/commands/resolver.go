@@ -126,6 +126,9 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithSBOMDir(bo.SBOMDir))
 	}
 
+	if bo.CreateTestBinary {
+		opts = append(opts, build.WithCreateTestBinary(bo.CreateTestBinary))
+	}
 	return opts, nil
 }
 

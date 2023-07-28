@@ -177,3 +177,11 @@ func WithSBOMDir(dir string) Option {
 		return nil
 	}
 }
+
+// WithCreateTestBinary is a functional option for overriding the go option
+func WithCreateTestBinary(createTestBinary bool) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.createTestBinary = createTestBinary
+		return nil
+	}
+}

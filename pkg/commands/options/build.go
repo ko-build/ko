@@ -69,6 +69,9 @@ type BuildOptions struct {
 
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
+
+	// compile the test binary
+	CreateTestBinary bool
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -84,6 +87,9 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
+	cmd.Flags().BoolVar(&bo.CreateTestBinary, "test", bo.CreateTestBinary,
+		"Use go test -c instead of go build when building Go code.")
+
 	bo.Trimpath = true
 }
 

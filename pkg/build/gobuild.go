@@ -86,6 +86,7 @@ type gobuild struct {
 	dir                  string
 	labels               map[string]string
 	semaphore            *semaphore.Weighted
+	createTestBinary     bool
 
 	cache *layerCache
 }
@@ -108,6 +109,7 @@ type gobuildOpener struct {
 	labels               map[string]string
 	dir                  string
 	jobs                 int
+	createTestBinary     bool
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -134,6 +136,8 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		buildConfigs:         gbo.buildConfigs,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
+		createTestBinary:     gbo.createTestBinary,
+
 		platformMatcher:      matcher,
 		cache: &layerCache{
 			buildToDiff: map[string]buildIDToDiffID{},
@@ -156,11 +160,13 @@ func NewGo(ctx context.Context, dir string, options ...Option) (Interface, error
 		dir:   dir,
 		sbom:  spdx("(none)"),
 	}
-
 	for _, option := range options {
 		if err := option(gbo); err != nil {
 			return nil, err
 		}
+	}
+	if gbo.createTestBinary {
+		gbo.build = buildTest
 	}
 	return gbo.Open()
 }
@@ -219,6 +225,9 @@ func (g *gobuild) IsSupportedReference(s string) error {
 	if len(pkgs) != 1 {
 		return fmt.Errorf("found %d local packages, expected 1", len(pkgs))
 	}
+	if g.createTestBinary {
+		return nil
+	}
 	if pkgs[0].Name != "main" {
 		return errors.New("importpath is not `package main`")
 	}
@@ -251,15 +260,26 @@ func getGoBinary() string {
 	}
 	return defaultGoBin
 }
+func buildTest(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
+	return buildCommon(ctx, ip, dir, platform, config, false)
+}
 
 func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
+	return buildCommon(ctx, ip, dir, platform, config, true)
+}
+
+func buildCommon(ctx context.Context, ip string, dir string, platform v1.Platform, config Config, createTestBinary bool) (string, error) {
 	buildArgs, err := createBuildArgs(config)
 	if err != nil {
 		return "", err
 	}
 
 	args := make([]string, 0, 4+len(buildArgs))
-	args = append(args, "build")
+	if createTestBinary {
+		args = append(args, "test", "-c")
+	} else {
+		args = append(args, "build")
+	}
 	args = append(args, buildArgs...)
 
 	env, err := buildEnv(platform, os.Environ(), config.Env)

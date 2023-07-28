@@ -32,6 +32,9 @@ type gobuilds struct {
 
 	// workingDirectory is typically ".", but it may be a different value if ko is embedded as a library.
 	workingDirectory string
+
+	// ignore supported reference
+	ignoreSupportedReference bool
 }
 
 // builderWithConfig is not an imaginative name.
