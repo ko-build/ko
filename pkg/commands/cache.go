@@ -124,15 +124,18 @@ func (i *imageCache) get(ctx context.Context, ref name.Reference, missFunc baseF
 					return nil, err
 				}
 				br, err = i.newLazyIndex(ref, idx, missFunc)
+				if err != nil {
+					return nil, err
+				}
 			} else {
 				img, err := ii.Image(h)
 				if err != nil {
 					return nil, err
 				}
 				br, err = i.newLazyImage(ref, img, missFunc)
-			}
-			if err != nil {
-				return nil, err
+				if err != nil {
+					return nil, err
+				}
 			}
 			i.cache.Store(ref.String(), br)
 			return br, nil
