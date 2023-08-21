@@ -18,6 +18,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	gb "go/build"
@@ -81,6 +82,7 @@ type gobuild struct {
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
+	capabilities         []Cap
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
@@ -103,6 +105,7 @@ type gobuildOpener struct {
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
+	capabilities         []Cap
 	platforms            []string
 	labels               map[string]string
 	dir                  string
@@ -131,6 +134,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		disableOptimizations: gbo.disableOptimizations,
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
+		capabilities:         gbo.capabilities,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
 		platformMatcher:      matcher,
@@ -488,7 +492,7 @@ func appFilename(importpath string) string {
 // owner: BUILTIN/Users group: BUILTIN/Users ($sddlValue="O:BUG:BU")
 const userOwnerAndGroupSID = "AQAAgBQAAAAkAAAAAAAAAAAAAAABAgAAAAAABSAAAAAhAgAAAQIAAAAAAAUgAAAAIQIAAA=="
 
-func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error) {
+func tarBinary(name, binary string, platform *v1.Platform, caps []Cap) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
@@ -543,6 +547,12 @@ func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error
 		header.PAXRecords = map[string]string{
 			"MSWINDOWS.rawsd": userOwnerAndGroupSID,
 		}
+	} else if len(caps) > 0 {
+		// see: https://github.com/testwill/moby/blob/master/pkg/archive/archive.go#L503-L504
+		header.PAXRecords = map[string]string{
+			"SCHILY.xattr.security.capability": string(capabilityValue(caps)),
+		}
+		header.Format = tar.FormatPAX
 	}
 	// write the header to the tarball archive
 	if err := tw.WriteHeader(header); err != nil {
@@ -554,6 +564,40 @@ func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error
 	}
 
 	return buf, nil
+}
+
+func capabilityValue(caps []Cap) []byte {
+	vfsCapVer2 := uint32(0x02000000)
+	vfsCapFlageffective := uint32(0x000001)
+
+	// This is the full encoded capbility set for CAP_IPC_LOCK
+	// 02 00 00 01 (version 2, effective)
+	// XX XX XX XX (permitted_v1)
+	// 00 00 00 00 (inheritable_v1: 0)
+	// XX XX XX XX (permitted_v2)
+	// 00 00 00 00 (inheritable_v2: 0)
+
+	permitted_v1 := uint32(0)
+	inheritable_v1 := uint32(0)
+	permitted_v2 := uint32(0)
+	inheritable_v2 := uint32(0)
+
+	for _, cap := range caps {
+		if cap > 32 {
+			permitted_v2 |= 1 << (cap - 32)
+		} else {
+			permitted_v1 |= 1 << cap
+		}
+	}
+
+	capability := make([]byte, 0, 20)
+	capability = binary.LittleEndian.AppendUint32(capability, vfsCapVer2|vfsCapFlageffective)
+	capability = binary.LittleEndian.AppendUint32(capability, permitted_v1)
+	capability = binary.LittleEndian.AppendUint32(capability, inheritable_v1)
+	capability = binary.LittleEndian.AppendUint32(capability, permitted_v2)
+	capability = binary.LittleEndian.AppendUint32(capability, inheritable_v2)
+
+	return capability
 }
 
 func (g *gobuild) kodataPath(ref reference) (string, error) {
@@ -865,7 +909,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	appPath := path.Join(appDir, appFileName)
 
 	miss := func() (v1.Layer, error) {
-		return buildLayer(appPath, file, platform, layerMediaType)
+		return buildLayer(appPath, file, platform, layerMediaType, g.capabilities)
 	}
 
 	binaryLayer, err := g.cache.get(ctx, file, miss)
@@ -948,9 +992,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	return si, nil
 }
 
-func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType types.MediaType) (v1.Layer, error) {
+func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType types.MediaType, caps []Cap) (v1.Layer, error) {
 	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(appPath, file, platform)
+	binaryLayerBuf, err := tarBinary(appPath, file, platform, caps)
 	if err != nil {
 		return nil, fmt.Errorf("tarring binary: %w", err)
 	}

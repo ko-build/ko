@@ -177,3 +177,11 @@ func WithSBOMDir(dir string) Option {
 		return nil
 	}
 }
+
+// WithPOSIXCapabilities is a functional option for overriding the POSIX capabilities encoded in the binary file.
+func WithPOSIXCapabilities(capabilities []Cap) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.capabilities = capabilities
+		return nil
+	}
+}

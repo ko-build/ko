@@ -125,6 +125,18 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithSBOMDir(bo.SBOMDir))
 	}
 
+	if bo.POSIXCapabilities != nil {
+		caps := make([]build.Cap, len(bo.POSIXCapabilities))
+		for i, c := range bo.POSIXCapabilities {
+			v := build.CapFromString(c)
+			if v < 0 {
+				return nil, fmt.Errorf("invalid POSIX capability: %q", c)
+			}
+			caps[i] = v
+		}
+		opts = append(opts, build.WithPOSIXCapabilities(caps))
+	}
+
 	return opts, nil
 }
 
