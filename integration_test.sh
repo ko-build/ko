@@ -92,6 +92,7 @@ fi
 echo "7. On outside the module should fail."
 pushd .. || exit 1
 GO111MODULE=on ./ko/ko build --local github.com/go-training/helloworld && exit 1
+echo "Test PASSED"
 popd || exit 1
 
 echo "8. On outside with build config specifying the test module builds."
@@ -109,6 +110,18 @@ for app in foo bar ; do
   done
 done
 popd || exit 1
+
+echo "9. Auto inside the module without vendoring & run with requesteed capabilities should output TEST"
+RESULT="$(GO111MODULE=auto GOFLAGS="" ./ko build --posix-capabilities CAP_IPC_LOCK --local github.com/go-training/helloworld | grep "$FILTER" | xargs -I% docker run --cap-add CAP_IPC_LOCK %)"
+if [[ "$RESULT" != *"TEST"* ]]; then
+  echo "Test FAILED. Saw $RESULT" && exit 1
+else
+  echo "Test PASSED"
+fi
+
+echo "10. Auto inside the module without vendoring & run with too little capabilities should fail"
+(GO111MODULE=auto GOFLAGS="" ./ko build --posix-capabilities CAP_CHOWN --local github.com/go-training/helloworld | grep "$FILTER" | xargs -I% docker run --cap-drop CAP_CHOWN %) && exit 1
+echo "Test PASSED"
 
 popd || exit 1
 popd || exit 1
