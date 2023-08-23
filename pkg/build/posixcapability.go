@@ -224,7 +224,7 @@ const (
 	// capability it should use to do so.
 	CAP_MAC_ADMIN = Cap(33)
 
-	// Allow configuring the kernel's syslog (printk behaviour)
+	// Allow configuring the kernel's syslog (printk behavior)
 	CAP_SYSLOG = Cap(34)
 
 	// Allow triggering something that will wake the system
