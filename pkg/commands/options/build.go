@@ -85,7 +85,7 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
-	cmd.Flags().StringSliceVar(&bo.POSIXCapabilities, "posix-capabilities", []string{},
+	cmd.Flags().StringSliceVar(&bo.POSIXCapabilities, "cap-add", []string{},
 		"Which POSIX capabilities to set on the binary. Eg. CAP_CHOWN,CAP_DAC_OVERRIDE,CAP_FOWNER")
 	bo.Trimpath = true
 }
