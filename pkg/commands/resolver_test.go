@@ -20,9 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http/httptest"
+	"os"
 	"path"
 	"strings"
 	"testing"
@@ -317,7 +317,7 @@ func TestNewPublisherCanPublish(t *testing.T) {
 // The registry uses a NOP logger to avoid spamming test logs.
 // Remember to call `defer Close()` on the returned `httptest.Server`.
 func registryServerWithImage(namespace string) (*httptest.Server, error) {
-	nopLog := log.New(ioutil.Discard, "", 0)
+	nopLog := log.New(io.Discard, "", 0)
 	r := registry.New(registry.Logger(nopLog))
 	s := httptest.NewServer(r)
 	imageName := fmt.Sprintf("%s/%s", s.Listener.Addr().String(), namespace)
@@ -356,7 +356,7 @@ func mustRandom() v1.Image {
 func yamlToTmpFile(t *testing.T, yaml []byte) string {
 	t.Helper()
 
-	tmpfile, err := ioutil.TempFile("", "doc")
+	tmpfile, err := os.CreateTemp("", "doc")
 	if err != nil {
 		t.Fatalf("error creating temp file: %v", err)
 	}

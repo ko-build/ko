@@ -22,7 +22,6 @@ import (
 	"fmt"
 	gb "go/build"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -288,7 +287,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 			return "", fmt.Errorf("creating KOCACHE bin dir: %w", err)
 		}
 	} else {
-		tmpDir, err = ioutil.TempDir("", "ko")
+		tmpDir, err = os.MkdirTemp("", "ko")
 		if err != nil {
 			return "", err
 		}
@@ -846,7 +845,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 	dataLayerBytes := dataLayerBuf.Bytes()
 	dataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewBuffer(dataLayerBytes)), nil
+		return io.NopCloser(bytes.NewBuffer(dataLayerBytes)), nil
 	}, tarball.WithCompressedCaching, tarball.WithMediaType(layerMediaType))
 	if err != nil {
 		return nil, err
@@ -957,7 +956,7 @@ func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType type
 	}
 	binaryLayerBytes := binaryLayerBuf.Bytes()
 	return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
+		return io.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
 	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
 		// When using estargz, prioritize downloading the binary entrypoint.
 		appPath,

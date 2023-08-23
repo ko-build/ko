@@ -17,7 +17,6 @@ package testing
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -32,7 +31,7 @@ type MockDaemon struct {
 func (m *MockDaemon) NegotiateAPIVersion(context.Context) {}
 func (m *MockDaemon) ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error) {
 	return types.ImageLoadResponse{
-		Body: ioutil.NopCloser(strings.NewReader("Loaded")),
+		Body: io.NopCloser(strings.NewReader("Loaded")),
 	}, nil
 }
 

@@ -20,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -423,9 +422,9 @@ func resolveFile(
 	}
 
 	if f == "-" {
-		b, err = ioutil.ReadAll(os.Stdin)
+		b, err = io.ReadAll(os.Stdin)
 	} else {
-		b, err = ioutil.ReadFile(f)
+		b, err = os.ReadFile(f)
 	}
 	if err != nil {
 		return nil, err

@@ -16,7 +16,6 @@ package publish
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -31,7 +30,7 @@ func TestLayout(t *testing.T) {
 	}
 	importpath := "github.com/Google/go-containerregistry/cmd/crane"
 
-	tmp, err := ioutil.TempDir("/tmp", "ko")
+	tmp, err := os.MkdirTemp("/tmp", "ko")
 	if err != nil {
 		t.Fatal(err)
 	}
