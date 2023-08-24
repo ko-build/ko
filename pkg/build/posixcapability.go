@@ -19,6 +19,8 @@ import "strings"
 type Cap int
 
 // POSIX-draft defined capabilities.
+// Must be kept in sync with the definitions in https://github.com/containerd/containerd/blob/v1.7.3/pkg/cap/cap_linux.go#L133-L187
+// The values are defined in https://github.com/torvalds/linux/blob/master/include/uapi/linux/capability.h
 const (
 	// In a system with the [_POSIX_CHOWN_RESTRICTED] option defined, this
 	// overrides the restriction of changing file ownership and group
@@ -235,6 +237,45 @@ const (
 
 	// Allow reading audit messages from the kernel
 	CAP_AUDIT_READ = Cap(37)
+
+	// Allow system performance and observability privileged operations
+	// using perf_events, i915_perf and other kernel subsystems
+	CAP_PERFMON = Cap(38)
+
+	// CAP_BPF allows the following BPF operations:
+	// - Creating all types of BPF maps
+	// - Advanced verifier features
+	//   - Indirect variable access
+	//   - Bounded loops
+	//   - BPF to BPF function calls
+	//   - Scalar precision tracking
+	//   - Larger complexity limits
+	//   - Dead code elimination
+	//   - And potentially other features
+	//
+	// - Loading BPF Type Format (BTF) data
+	// - Retrieve xlated and JITed code of BPF programs
+	// - Use bpf_spin_lock() helper
+	//
+	// CAP_PERFMON relaxes the verifier checks further:
+	// - BPF progs can use of pointer-to-integer conversions
+	// - speculation attack hardening measures are bypassed
+	// - bpf_probe_read to read arbitrary kernel memory is allowed
+	// - bpf_trace_printk to print kernel memory is allowed
+	//
+	// CAP_SYS_ADMIN is required to use bpf_probe_write_user.
+	//
+	// CAP_SYS_ADMIN is required to iterate system wide loaded
+	// programs, maps, links, BTFs and convert their IDs to file descriptors.
+	//
+	// CAP_PERFMON and CAP_BPF are required to load tracing programs.
+	// CAP_NET_ADMIN and CAP_BPF are required to load networking programs.
+	CAP_BPF = Cap(39)
+
+	// Allow checkpoint/restore related operations
+	// Allow PID selection during clone3()
+	// Allow writing to ns_last_pid
+	CAP_CHECKPOINT_RESTORE = Cap(40)
 )
 
 func CapFromString(value string) Cap {
@@ -315,6 +356,12 @@ func CapFromString(value string) Cap {
 		return CAP_BLOCK_SUSPEND // 36
 	case "CAP_AUDIT_READ":
 		return CAP_AUDIT_READ // 37
+	case "CAP_PERFMON":
+		return CAP_PERFMON // 38
+	case "CAP_BPF":
+		return CAP_BPF // 39
+	case "CAP_CHECKPOINT_RESTORE":
+		return CAP_CHECKPOINT_RESTORE // 40
 	default:
 		return -1
 	}
