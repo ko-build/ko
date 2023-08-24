@@ -548,7 +548,7 @@ func tarBinary(name, binary string, platform *v1.Platform, caps []Cap) (*bytes.B
 			"MSWINDOWS.rawsd": userOwnerAndGroupSID,
 		}
 	} else if len(caps) > 0 {
-		// see: https://github.com/testwill/moby/blob/master/pkg/archive/archive.go#L503-L504
+		// see: https://github.com/moby/moby/blob/9b9348ce86fc85798e67319f2b78439408074746/pkg/archive/archive.go#L503-L504
 		header.PAXRecords = map[string]string{
 			"SCHILY.xattr.security.capability": string(capabilityValue(caps)),
 		}
