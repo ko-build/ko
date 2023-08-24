@@ -151,3 +151,16 @@ cluster, if available, by setting `KO_DOCKER_REPO=kind.local`. By default this
 loads into the default KinD cluster name (`kind`). To load into another KinD
 cluster, set `KIND_CLUSTER_NAME=my-other-cluster`.
 
+## Setting POSIX capabilities on the binary executable in the container image
+
+For a binary to perform certain privileged operations, it needs to be run with
+the appropriate POSIX capabilities. `ko` supports setting the capability attribute
+on the binary executable in the container image. This indicates to the operating
+system that the binary should be run with the specified capabilities. In docker,
+for example, this means that the binary has to be run with the appropriate
+`--cap-add` flags. In Kubernetes, this means that the binary has to be run with
+the appropriate `securityContext` settings.
+
+```console
+ko build --cap-add CAP_IPC_LOCK ./cmd/app
+```
