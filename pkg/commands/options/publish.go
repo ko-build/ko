@@ -88,7 +88,7 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 	cmd.Flags().BoolVar(&po.Push, "push", true, "Push images to KO_DOCKER_REPO")
 
 	cmd.Flags().BoolVarP(&po.Local, "local", "L", po.Local,
-		"Load images into a local docker daemon.")
+		"Push images into a local docker daemon.")
 	cmd.Flags().BoolVar(&po.InsecureRegistry, "insecure-registry", po.InsecureRegistry,
 		"Whether to skip TLS verification on the registry")
 

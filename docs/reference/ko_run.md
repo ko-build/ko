@@ -38,7 +38,7 @@ ko run IMPORTPATH [flags]
       --image-refs string        Path to file where a list of the published image references will be written.
       --insecure-registry        Whether to skip TLS verification on the registry
   -j, --jobs int                 The maximum number of concurrent builds (default GOMAXPROCS)
-  -L, --local                    Load images into a local docker daemon.
+  -L, --local                    Push images into a local docker daemon.
       --oci-layout-path string   Path to save the OCI image layout of the built images
       --platform strings         Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths    Whether to preserve the full import path after KO_DOCKER_REPO.
