@@ -29,6 +29,12 @@ $ chmod +x ./ko
 brew install ko
 ```
 
+### Install on Windows using [Scoop](https://scoop.sh)
+
+```plaintext
+scoop install ko
+```
+
 ### Install on [Alpine Linux](https://www.alpinelinux.org)
 
 Installation on Alpine requires using the [`testing` repository](https://wiki.alpinelinux.org/wiki/Enable_Community_Repository#Using_testing_repositories)
