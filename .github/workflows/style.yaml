@@ -14,7 +14,7 @@ jobs:
         with:
           go-version: '1.20'
           check-latest: true
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
       - uses: chainguard-dev/actions/gofmt@d886686603afb809f7ef9b734b333e20b7ce5cda
         with:
           args: -s
@@ -27,7 +27,7 @@ jobs:
         with:
           go-version: '1.20'
           check-latest: true
-      - uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
       - uses: chainguard-dev/actions/goimports@d886686603afb809f7ef9b734b333e20b7ce5cda
 
   lint:
@@ -42,7 +42,7 @@ jobs:
           check-latest: true
 
       - name: Check out code
-        uses: actions/checkout@c85c95e3d7251135ab7dc9ce3241c5835cc595a9 # v3.5.3
+        uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
 
       - uses: chainguard-dev/actions/trailing-space@d886686603afb809f7ef9b734b333e20b7ce5cda
         if: ${{ always() }}
