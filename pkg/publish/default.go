@@ -34,7 +34,7 @@ import (
 	"github.com/sigstore/cosign/v2/pkg/oci/walk"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/google/ko/pkg/build"
+	"github.com/ko-build/ko/pkg/build"
 )
 
 // defalt is intentionally misspelled to avoid keyword collision (and drive Jon nuts).

@@ -12,7 +12,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - "-s -w -X github.com/google/ko/pkg/commands.Version={{.Version}}"
+      - "-s -w -X github.com/ko-build/ko/pkg/commands.Version={{.Version}}"
     goos:
       - windows
       - linux
@@ -32,7 +32,7 @@ kos:
     main: .
     base_image: golang:1.20
     ldflags:
-      - "-s -w -X github.com/google/ko/pkg/commands.Version={{.Version}}"
+      - "-s -w -X github.com/ko-build/ko/pkg/commands.Version={{.Version}}"
     platforms:
       - all
     tags:

@@ -1,5 +1,5 @@
 baseImageOverrides:
-  github.com/google/ko: golang:1.20
+  github.com/ko-build/ko: golang:1.20
 
 builds:
 - id: ko

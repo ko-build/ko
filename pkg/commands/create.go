@@ -21,7 +21,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/google/ko/pkg/commands/options"
+	"github.com/ko-build/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )

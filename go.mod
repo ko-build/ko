@@ -1,4 +1,4 @@
-module github.com/google/ko
+module github.com/ko-build/ko
 
 go 1.19
 
