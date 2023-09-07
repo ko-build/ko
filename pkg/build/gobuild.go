@@ -587,25 +587,39 @@ func tarBinary(name, binary string, platform *v1.Platform, opts *layerOptions) (
 	// For Windows, the layer must contain a Hives/ directory, and the root
 	// of the actual filesystem goes in a Files/ directory.
 	// For Linux, the binary goes into /ko-app/
-	dirs := []string{"ko-app"}
+	appDir := filepath.Dir(name)
+	dirs := []string{appDir}
 	if platform.OS == "windows" {
 		dirs = []string{
 			"Hives",
-			"Files",
-			"Files/ko-app",
+			"Files/" + appDir,
 		}
 		name = "Files" + name
 	}
 	for _, dir := range dirs {
-		if err := tw.WriteHeader(&tar.Header{
-			Name:     dir,
-			Typeflag: tar.TypeDir,
-			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
-			// under which it was created. Additionally, windows can only set 0222,
-			// 0444, or 0666, none of which are executable.
-			Mode: 0555,
-		}); err != nil {
-			return nil, fmt.Errorf("writing dir %q to tar: %w", dir, err)
+		// Create all parent directories also
+		var parents []string
+		current := dir
+		for {
+			parents = append(parents, current)
+			current = filepath.Dir(current)
+			if current == "/" {
+				break
+			}
+		}
+
+		for i := len(parents) - 1; i >= 0; i-- {
+			parent := parents[i]
+			if err := tw.WriteHeader(&tar.Header{
+				Name:     parent,
+				Typeflag: tar.TypeDir,
+				// Use a fixed Mode, so that this isn't sensitive to the directory and umask
+				// under which it was created. Additionally, windows can only set 0222,
+				// 0444, or 0666, none of which are executable.
+				Mode: 0555,
+			}); err != nil {
+				return nil, fmt.Errorf("writing dir %q to tar: %w", parent, err)
+			}
 		}
 	}
 
@@ -927,6 +941,14 @@ func (g gobuild) useDebugging(platform v1.Platform) bool {
 	return g.debug && doesPlatformSupportDebugging(platform)
 }
 
+// pathToWindows converts a unix-style path to a windows-style path.
+// For example, /apps/foo => C:\apps\foo
+func pathToWindows(s string) string {
+	pathComponents := []string{"C:"}
+	pathComponents = append(pathComponents, strings.Split(s, "/")...)
+	return strings.Join(pathComponents, `\`)
+}
+
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
 	if err := g.semaphore.Acquire(ctx, 1); err != nil {
 		return nil, err
@@ -1043,9 +1065,12 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		},
 	})
 
-	appDir := "/ko-app"
-	appFileName := appFilename(ref.Path())
-	appPath := path.Join(appDir, appFileName)
+	appPath := config.Binary
+	if appPath == "" {
+		appPath = path.Join("/ko-app", appFilename(ref.Path()))
+	}
+	appDir := path.Dir(appPath)
+	appFileName := path.Base(appPath)
 
 	var lo layerOptions
 	lo.linuxCapabilities, err = caps.NewFileCaps(config.LinuxCapabilities...)
@@ -1136,16 +1161,15 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	cfg.Config.Entrypoint = []string{appPath}
 	cfg.Config.Cmd = nil
 	if platform.OS == "windows" {
-		appPath := `C:\ko-app\` + appFileName
 		if g.debug {
-			cfg.Config.Entrypoint = append([]string{"C:\\" + delvePath}, delveArgs...)
-			cfg.Config.Entrypoint = append(cfg.Config.Entrypoint, appPath)
+			cfg.Config.Entrypoint = append([]string{pathToWindows(delvePath)}, delveArgs...)
+			cfg.Config.Entrypoint = append(cfg.Config.Entrypoint, pathToWindows(appPath))
 		} else {
-			cfg.Config.Entrypoint = []string{appPath}
+			cfg.Config.Entrypoint = []string{pathToWindows(appPath)}
 		}
 
-		updatePath(cfg, `C:\ko-app`)
-		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
+		updatePath(cfg, pathToWindows(filepath.Dir(appPath)))
+		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=`+pathToWindows(kodataRoot))
 	} else {
 		if g.useDebugging(*platform) {
 			cfg.Config.Entrypoint = append([]string{delvePath}, delveArgs...)
