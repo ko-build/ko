@@ -312,8 +312,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)
 		}
-		log.Printf("Unexpected error running \"go build\": %v\n%v", err, output.String())
-		return "", fmt.Errorf("go build: %w", err)
+		return "", fmt.Errorf("go build: %w: %s", err, output.String())
 	}
 	return file, nil
 }
