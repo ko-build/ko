@@ -32,10 +32,7 @@ jobs:
         set -o errexit
         set -o nounset
         set -o pipefail
-
-        # eval `go env`, compatible with Windows and Linux
-        # cribbed from https://gist.github.com/Syeberman/39d81b1e17d091be5657ecd6fbff0753
-        eval $(go env | sed -r 's/^(set )?(\w+)=("?)(.*)\3$/\2="\4"/gm')
+        set -x
 
         # Check that building without push prints the tag (and sha)
         KO_DOCKER_REPO="" go run ./ build --push=false ./test | grep ":latest@sha256:"
@@ -52,7 +49,7 @@ jobs:
         jq . ./sbom-data2/test-linux-amd64.spdx.json
         jq . ./sbom-data2/test-linux-arm64.spdx.json
 
-        export PLATFORM=${GOOS}/${GOARCH}
+        export PLATFORM=$(go env GOOS)/$(go env GOARCH)
 
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
           OSVERSION="10.0.20348"
