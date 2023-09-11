@@ -10,8 +10,6 @@ issues:
 linters:
   enable:
   - asciicheck
-  - deadcode
-  - depguard
   - errorlint
   - gofmt
   - gosec
@@ -28,3 +26,5 @@ linters:
 
   disable:
   - errcheck
+  - depguard
+  - deadcode

@@ -32,7 +32,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/containerd/stargz-snapshotter/estargz"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
@@ -394,7 +393,7 @@ func writeSBOM(sbom []byte, appFileName, dir, ext string) error {
 		}
 		sbomPath := filepath.Join(sbomDir, appFileName+"."+ext)
 		log.Printf("Writing SBOM to %s", sbomPath)
-		return os.WriteFile(sbomPath, sbom, 0644)
+		return os.WriteFile(sbomPath, sbom, 0644) //nolint:gosec
 	}
 	return nil
 }
@@ -956,10 +955,7 @@ func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType type
 	binaryLayerBytes := binaryLayerBuf.Bytes()
 	return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
 		return io.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
-	}, tarball.WithCompressedCaching, tarball.WithEstargzOptions(estargz.WithPrioritizedFiles([]string{
-		// When using estargz, prioritize downloading the binary entrypoint.
-		appPath,
-	})), tarball.WithMediaType(layerMediaType))
+	}, tarball.WithCompressedCaching, tarball.WithMediaType(layerMediaType))
 }
 
 // Append appPath to the PATH environment variable, if it exists. Otherwise,
@@ -1226,18 +1222,15 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 			if p.OS != "windows" {
 				// osversion mismatch is only possibly allowed when os == windows.
 				continue
-			} else {
-				if pcount, bcount := strings.Count(p.OSVersion, "."), strings.Count(base.OSVersion, "."); pcount == 2 && bcount == 3 {
-					if p.OSVersion != base.OSVersion[:strings.LastIndex(base.OSVersion, ".")] {
-						// If requested osversion is X.Y.Z and potential match is X.Y.Z.A, all of X.Y.Z must match.
-						// Any other form of these osversions are not a match.
-						continue
-					}
-				} else {
-					// Partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
+			}
+			if pcount, bcount := strings.Count(p.OSVersion, "."), strings.Count(base.OSVersion, "."); pcount == 2 && bcount == 3 {
+				if p.OSVersion != base.OSVersion[:strings.LastIndex(base.OSVersion, ".")] {
+					// If requested osversion is X.Y.Z and potential match is X.Y.Z.A, all of X.Y.Z must match.
+					// Any other form of these osversions are not a match.
 					continue
 				}
 			}
+			// Otherwise, partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
 		}
 		return true
 	}

@@ -27,17 +27,17 @@ type sleeper struct{}
 var _ Interface = (*sleeper)(nil)
 
 // QualifyImport implements Interface
-func (r *sleeper) QualifyImport(ip string) (string, error) {
+func (*sleeper) QualifyImport(ip string) (string, error) {
 	return ip, nil
 }
 
 // IsSupportedReference implements Interface
-func (r *sleeper) IsSupportedReference(ip string) error {
+func (*sleeper) IsSupportedReference(_ string) error {
 	return nil
 }
 
 // Build implements Interface
-func (r *sleeper) Build(_ context.Context, ip string) (Result, error) {
+func (*sleeper) Build(_ context.Context, _ string) (Result, error) {
 	time.Sleep(50 * time.Millisecond)
 	return nil, nil
 }
