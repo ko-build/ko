@@ -29,7 +29,9 @@ jobs:
         KO_DOCKER_REPO: ko.local
       shell: bash
       run: |
-        set -euxo pipefail
+        set -o errexit
+        set -o nounset
+        set -o pipefail
 
         # eval `go env`, compatible with Windows and Linux
         # cribbed from https://gist.github.com/Syeberman/39d81b1e17d091be5657ecd6fbff0753
