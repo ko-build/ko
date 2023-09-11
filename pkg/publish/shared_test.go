@@ -31,7 +31,7 @@ type slowpublish struct {
 // slowpublish implements Interface
 var _ Interface = (*slowpublish)(nil)
 
-func (sp *slowpublish) Publish(_ context.Context, br build.Result, ref string) (name.Reference, error) {
+func (sp *slowpublish) Publish(context.Context, build.Result, string) (name.Reference, error) {
 	time.Sleep(sp.sleep)
 	return makeRef()
 }
