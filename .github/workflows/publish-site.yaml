@@ -2,7 +2,8 @@ name: publish
 on:
   workflow_dispatch:
   push:
-    branches: ['main']
+    branches:
+      - 'main'
 
 jobs:
   publish:
