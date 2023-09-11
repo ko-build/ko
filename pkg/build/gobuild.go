@@ -1229,8 +1229,10 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 					// Any other form of these osversions are not a match.
 					continue
 				}
+			} else {
+				// Partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
+				continue
 			}
-			// Otherwise, partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
 		}
 		return true
 	}
