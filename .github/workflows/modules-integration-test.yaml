@@ -2,14 +2,17 @@ name: Integration Test
 
 on:
   pull_request:
-    branches: ['main']
+    branches:
+      - 'main'
 
 jobs:
   test:
     name: Module Tests
     strategy:
       matrix:
-        go-version: ['1.19', '1.20']
+        go-version:
+          - '1.20'
+          - '1.21'
 
     runs-on: 'ubuntu-latest'
     steps:
