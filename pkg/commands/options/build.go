@@ -49,12 +49,13 @@ type BuildOptions struct {
 	// Empty string means the current working directory.
 	WorkingDirectory string
 
-	ConcurrentBuilds     int
-	DisableOptimizations bool
-	SBOM                 string
-	SBOMDir              string
-	Platforms            []string
-	Labels               []string
+	ConcurrentBuilds           int
+	DisableOptimizations       bool
+	SBOM                       string
+	SBOMDir                    string
+	Platforms                  []string
+	Labels                     []string
+	DisableEntrypointOverwrite bool
 	// UserAgent enables overriding the default value of the `User-Agent` HTTP
 	// request header used when retrieving the base image.
 	UserAgent string
@@ -84,6 +85,8 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
+	cmd.Flags().BoolVar(&bo.DisableEntrypointOverwrite, "disable-entrypoint-overwrite", bo.DisableEntrypointOverwrite,
+		"Disable overwriting the images ENTRYPOINT and keep it from the base image.")
 	bo.Trimpath = true
 }
 

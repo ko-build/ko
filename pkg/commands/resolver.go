@@ -125,6 +125,10 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithSBOMDir(bo.SBOMDir))
 	}
 
+	if bo.DisableEntrypointOverwrite {
+		opts = append(opts, build.WithDisabledEntrypointOverwrite())
+	}
+
 	return opts, nil
 }
 

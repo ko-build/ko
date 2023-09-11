@@ -177,3 +177,10 @@ func WithSBOMDir(dir string) Option {
 		return nil
 	}
 }
+
+func WithDisabledEntrypointOverwrite() Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.disableEntrypointOverwrite = true
+		return nil
+	}
+}

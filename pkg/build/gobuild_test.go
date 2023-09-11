@@ -513,6 +513,58 @@ func TestGoBuildNoKoData(t *testing.T) {
 	})
 }
 
+func TestDisableEntrypointOverwrite(t *testing.T) {
+	baseImageEntrypoint := "/my/custom/entrypoint.sh"
+
+	base, err := random.Image(1024, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	baseWithEntrypoint, err := mutate.Config(base, v1.Config{
+		Entrypoint: []string{baseImageEntrypoint},
+	})
+	if err != nil {
+		t.Errorf("mutate.Config() = %v", err)
+	}
+
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, baseWithEntrypoint, nil }),
+		WithPlatforms("all"),
+		WithDisabledEntrypointOverwrite(),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), StrictScheme+importpath)
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(v1.Image)
+	if !ok {
+		t.Fatalf("Build() not an Image: %T", result)
+	}
+
+	// Check that the entrypoint of the image is not overwritten
+	cfg, err := img.ConfigFile()
+	if err != nil {
+		t.Errorf("ConfigFile() = %v", err)
+	}
+	entrypoint := cfg.Config.Entrypoint
+	if got, want := len(entrypoint), 1; got != want {
+		t.Errorf("len(entrypoint) = %v, want %v", got, want)
+	}
+
+	if got, want := entrypoint[0], baseImageEntrypoint; got != want {
+		t.Errorf("entrypoint = %v, want %v", got, want)
+	}
+}
+
 func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
 	t.Helper()
 

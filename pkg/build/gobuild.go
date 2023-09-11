@@ -71,20 +71,21 @@ type platformMatcher struct {
 }
 
 type gobuild struct {
-	ctx                  context.Context
-	getBase              GetBase
-	creationTime         v1.Time
-	kodataCreationTime   v1.Time
-	build                builder
-	sbom                 sbomber
-	sbomDir              string
-	disableOptimizations bool
-	trimpath             bool
-	buildConfigs         map[string]Config
-	platformMatcher      *platformMatcher
-	dir                  string
-	labels               map[string]string
-	semaphore            *semaphore.Weighted
+	ctx                        context.Context
+	getBase                    GetBase
+	creationTime               v1.Time
+	kodataCreationTime         v1.Time
+	build                      builder
+	sbom                       sbomber
+	sbomDir                    string
+	disableOptimizations       bool
+	trimpath                   bool
+	buildConfigs               map[string]Config
+	platformMatcher            *platformMatcher
+	dir                        string
+	labels                     map[string]string
+	disableEntrypointOverwrite bool
+	semaphore                  *semaphore.Weighted
 
 	cache *layerCache
 }
@@ -93,20 +94,21 @@ type gobuild struct {
 type Option func(*gobuildOpener) error
 
 type gobuildOpener struct {
-	ctx                  context.Context
-	getBase              GetBase
-	creationTime         v1.Time
-	kodataCreationTime   v1.Time
-	build                builder
-	sbom                 sbomber
-	sbomDir              string
-	disableOptimizations bool
-	trimpath             bool
-	buildConfigs         map[string]Config
-	platforms            []string
-	labels               map[string]string
-	dir                  string
-	jobs                 int
+	ctx                        context.Context
+	getBase                    GetBase
+	creationTime               v1.Time
+	kodataCreationTime         v1.Time
+	build                      builder
+	sbom                       sbomber
+	sbomDir                    string
+	disableOptimizations       bool
+	trimpath                   bool
+	buildConfigs               map[string]Config
+	platforms                  []string
+	labels                     map[string]string
+	dir                        string
+	jobs                       int
+	disableEntrypointOverwrite bool
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -121,19 +123,20 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		gbo.jobs = runtime.GOMAXPROCS(0)
 	}
 	return &gobuild{
-		ctx:                  gbo.ctx,
-		getBase:              gbo.getBase,
-		creationTime:         gbo.creationTime,
-		kodataCreationTime:   gbo.kodataCreationTime,
-		build:                gbo.build,
-		sbom:                 gbo.sbom,
-		sbomDir:              gbo.sbomDir,
-		disableOptimizations: gbo.disableOptimizations,
-		trimpath:             gbo.trimpath,
-		buildConfigs:         gbo.buildConfigs,
-		labels:               gbo.labels,
-		dir:                  gbo.dir,
-		platformMatcher:      matcher,
+		ctx:                        gbo.ctx,
+		getBase:                    gbo.getBase,
+		creationTime:               gbo.creationTime,
+		kodataCreationTime:         gbo.kodataCreationTime,
+		build:                      gbo.build,
+		sbom:                       gbo.sbom,
+		sbomDir:                    gbo.sbomDir,
+		disableOptimizations:       gbo.disableOptimizations,
+		trimpath:                   gbo.trimpath,
+		buildConfigs:               gbo.buildConfigs,
+		labels:                     gbo.labels,
+		dir:                        gbo.dir,
+		disableEntrypointOverwrite: gbo.disableEntrypointOverwrite,
+		platformMatcher:            matcher,
 		cache: &layerCache{
 			buildToDiff: map[string]buildIDToDiffID{},
 			diffToDesc:  map[string]diffIDToDescriptor{},
@@ -897,13 +900,19 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 
 	cfg = cfg.DeepCopy()
-	cfg.Config.Entrypoint = []string{appPath}
 	cfg.Config.Cmd = nil
 	if platform.OS == "windows" {
-		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFileName}
+		if !g.disableEntrypointOverwrite {
+			cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFileName}
+		}
+
 		updatePath(cfg, `C:\ko-app`)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
 	} else {
+		if !g.disableEntrypointOverwrite {
+			cfg.Config.Entrypoint = []string{appPath}
+		}
+
 		updatePath(cfg, appDir)
 		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	}
