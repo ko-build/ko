@@ -1,8 +1,6 @@
 name: Push to registries
 
 on:
-  pull_request_target:
-    branches: ['main']
   push:
     branches: ['main']
 
