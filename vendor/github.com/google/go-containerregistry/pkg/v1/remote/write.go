@@ -33,11 +33,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/stream"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"golang.org/x/sync/errgroup"
 )
 
 // Taggable is an interface that enables a manifest PUT (e.g. for tagging).
@@ -51,112 +49,10 @@ func Write(ref name.Reference, img v1.Image, options ...Option) (rerr error) {
 	if err != nil {
 		return err
 	}
-
 	if o.progress != nil {
 		defer func() { o.progress.Close(rerr) }()
-		o.progress.lastUpdate.Total, err = countImage(img, o.allowNondistributableArtifacts)
-		if err != nil {
-			return err
-		}
 	}
-	return writeImage(o.context, ref, img, o)
-}
-
-func writeImage(ctx context.Context, ref name.Reference, img v1.Image, o *options) error {
-	ls, err := img.Layers()
-	if err != nil {
-		return err
-	}
-
-	w, err := makeWriter(ctx, ref.Context(), ls, o)
-	if err != nil {
-		return err
-	}
-
-	// Upload individual blobs and collect any errors.
-	blobChan := make(chan v1.Layer, 2*o.jobs)
-	g, gctx := errgroup.WithContext(ctx)
-	for i := 0; i < o.jobs; i++ {
-		// Start N workers consuming blobs to upload.
-		g.Go(func() error {
-			for b := range blobChan {
-				if err := w.uploadOne(gctx, b); err != nil {
-					return err
-				}
-			}
-			return nil
-		})
-	}
-
-	// Upload individual layers in goroutines and collect any errors.
-	// If we can dedupe by the layer digest, try to do so. If we can't determine
-	// the digest for whatever reason, we can't dedupe and might re-upload.
-	g.Go(func() error {
-		defer close(blobChan)
-		uploaded := map[v1.Hash]bool{}
-		for _, l := range ls {
-			l := l
-
-			// Handle foreign layers.
-			mt, err := l.MediaType()
-			if err != nil {
-				return err
-			}
-			if !mt.IsDistributable() && !o.allowNondistributableArtifacts {
-				continue
-			}
-
-			// Streaming layers calculate their digests while uploading them. Assume
-			// an error here indicates we need to upload the layer.
-			h, err := l.Digest()
-			if err == nil {
-				// If we can determine the layer's digest ahead of
-				// time, use it to dedupe uploads.
-				if uploaded[h] {
-					continue // Already uploading.
-				}
-				uploaded[h] = true
-			}
-			select {
-			case blobChan <- l:
-			case <-gctx.Done():
-				return gctx.Err()
-			}
-		}
-		return nil
-	})
-
-	if l, err := partial.ConfigLayer(img); err != nil {
-		// We can't read the ConfigLayer, possibly because of streaming layers,
-		// since the layer DiffIDs haven't been calculated yet. Attempt to wait
-		// for the other layers to be uploaded, then try the config again.
-		if err := g.Wait(); err != nil {
-			return err
-		}
-
-		// Now that all the layers are uploaded, try to upload the config file blob.
-		l, err := partial.ConfigLayer(img)
-		if err != nil {
-			return err
-		}
-		if err := w.uploadOne(ctx, l); err != nil {
-			return err
-		}
-	} else {
-		// We *can* read the ConfigLayer, so upload it concurrently with the layers.
-		g.Go(func() error {
-			return w.uploadOne(gctx, l)
-		})
-
-		// Wait for the layers + config.
-		if err := g.Wait(); err != nil {
-			return err
-		}
-	}
-
-	// With all of the constituent elements uploaded, upload the manifest
-	// to commit the image.
-	return w.commitManifest(ctx, img, ref)
+	return newPusher(o).Push(o.context, ref, img)
 }
 
 // writer writes the elements of an image to a remote image reference.
@@ -164,7 +60,8 @@ type writer struct {
 	repo      name.Repository
 	auth      authn.Authenticator
 	transport http.RoundTripper
-	client    *http.Client
+
+	client *http.Client
 
 	progress  *progress
 	backoff   Backoff
@@ -286,30 +183,6 @@ func (w *writer) checkExistingBlob(ctx context.Context, h v1.Hash) (bool, error)
 	return resp.StatusCode == http.StatusOK, nil
 }
 
-// checkExistingManifest checks if a manifest exists already in the repository
-// by making a HEAD request to the manifest API.
-func (w *writer) checkExistingManifest(ctx context.Context, h v1.Hash, mt types.MediaType) (bool, error) {
-	u := w.url(fmt.Sprintf("/v2/%s/manifests/%s", w.repo.RepositoryStr(), h.String()))
-
-	req, err := http.NewRequest(http.MethodHead, u.String(), nil)
-	if err != nil {
-		return false, err
-	}
-	req.Header.Set("Accept", string(mt))
-
-	resp, err := w.client.Do(req.WithContext(ctx))
-	if err != nil {
-		return false, err
-	}
-	defer resp.Body.Close()
-
-	if err := transport.CheckError(resp, http.StatusOK, http.StatusNotFound); err != nil {
-		return false, err
-	}
-
-	return resp.StatusCode == http.StatusOK, nil
-}
-
 // initiateUpload initiates the blob upload, which starts with a POST that can
 // optionally include the hash of the layer and a list of repositories from
 // which that layer might be read. On failure, an error is returned.
@@ -337,6 +210,11 @@ func (w *writer) initiateUpload(ctx context.Context, from, mount, origin string)
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := w.client.Do(req.WithContext(ctx))
 	if err != nil {
+		if origin != "" && origin != w.repo.RegistryStr() {
+			// https://github.com/google/go-containerregistry/issues/1679
+			logs.Warn.Printf("retrying without mount: %v", err)
+			return w.initiateUpload(ctx, "", "", "")
+		}
 		return "", false, err
 	}
 	defer resp.Body.Close()
@@ -535,64 +413,6 @@ func (w *writer) uploadOne(ctx context.Context, l v1.Layer) error {
 	return retry.Retry(tryUpload, w.predicate, w.backoff)
 }
 
-type withLayer interface {
-	Layer(v1.Hash) (v1.Layer, error)
-}
-
-func (w *writer) writeIndex(ctx context.Context, ref name.Reference, ii v1.ImageIndex, o *options) error {
-	index, err := ii.IndexManifest()
-	if err != nil {
-		return err
-	}
-
-	// TODO(#803): Pipe through remote.WithJobs and upload these in parallel.
-	for _, desc := range index.Manifests {
-		ref := ref.Context().Digest(desc.Digest.String())
-		exists, err := w.checkExistingManifest(ctx, desc.Digest, desc.MediaType)
-		if err != nil {
-			return err
-		}
-		if exists {
-			logs.Progress.Print("existing manifest: ", desc.Digest)
-			continue
-		}
-
-		switch desc.MediaType {
-		case types.OCIImageIndex, types.DockerManifestList:
-			ii, err := ii.ImageIndex(desc.Digest)
-			if err != nil {
-				return err
-			}
-			if err := w.writeIndex(ctx, ref, ii, o); err != nil {
-				return err
-			}
-		case types.OCIManifestSchema1, types.DockerManifestSchema2:
-			img, err := ii.Image(desc.Digest)
-			if err != nil {
-				return err
-			}
-			if err := writeImage(ctx, ref, img, o); err != nil {
-				return err
-			}
-		default:
-			// Workaround for #819.
-			if wl, ok := ii.(withLayer); ok {
-				layer, err := wl.Layer(desc.Digest)
-				if err != nil {
-					return err
-				}
-				if err := w.uploadOne(ctx, layer); err != nil {
-					return err
-				}
-			}
-		}
-	}
-
-	// With all of the constituent elements uploaded, upload the manifest
-	// to commit the image.
-	return w.commitManifest(ctx, ii, ref)
-}
-
 type withMediaType interface {
 	MediaType() (types.MediaType, error)
 }
@@ -711,10 +531,7 @@ func (w *writer) commitSubjectReferrers(ctx context.Context, sub name.Digest, ad
 		return im.Manifests[i].Digest.String() < im.Manifests[j].Digest.String()
 	})
 	logs.Progress.Printf("updating fallback tag %s with new referrer", t.Identifier())
-	if err := w.commitManifest(ctx, fallbackTaggable{im}, t); err != nil {
-		return err
-	}
-	return nil
+	return w.commitManifest(ctx, fallbackTaggable{im}, t)
 }
 
 type fallbackTaggable struct {
@@ -830,129 +647,10 @@ func WriteIndex(ref name.Reference, ii v1.ImageIndex, options ...Option) (rerr e
 	if err != nil {
 		return err
 	}
-
-	w, err := makeWriter(o.context, ref.Context(), nil, o)
-	if err != nil {
-		return err
+	if o.progress != nil {
+		defer func() { o.progress.Close(rerr) }()
 	}
-	if w.progress != nil {
-		defer func() { w.progress.Close(rerr) }()
-
-		w.progress.lastUpdate.Total, err = countIndex(ii, o.allowNondistributableArtifacts)
-		if err != nil {
-			return err
-		}
-	}
-
-	return w.writeIndex(o.context, ref, ii, o)
-}
-
-// countImage counts the total size of all layers + config blob + manifest for
-// an image. It de-dupes duplicate layers.
-func countImage(img v1.Image, allowNondistributableArtifacts bool) (int64, error) {
-	var total int64
-	ls, err := img.Layers()
-	if err != nil {
-		return 0, err
-	}
-	seen := map[v1.Hash]bool{}
-	for _, l := range ls {
-		// Handle foreign layers.
-		mt, err := l.MediaType()
-		if err != nil {
-			return 0, err
-		}
-		if !mt.IsDistributable() && !allowNondistributableArtifacts {
-			continue
-		}
-
-		// TODO: support streaming layers which update the total count as they write.
-		if _, ok := l.(*stream.Layer); ok {
-			return 0, errors.New("cannot use stream.Layer and WithProgress")
-		}
-
-		// Dedupe layers.
-		d, err := l.Digest()
-		if err != nil {
-			return 0, err
-		}
-		if seen[d] {
-			continue
-		}
-		seen[d] = true
-
-		size, err := l.Size()
-		if err != nil {
-			return 0, err
-		}
-		total += size
-	}
-	b, err := img.RawConfigFile()
-	if err != nil {
-		return 0, err
-	}
-	total += int64(len(b))
-	size, err := img.Size()
-	if err != nil {
-		return 0, err
-	}
-	total += size
-	return total, nil
-}
-
-// countIndex counts the total size of all images + sub-indexes for an index.
-// It does not attempt to de-dupe duplicate images, etc.
-func countIndex(idx v1.ImageIndex, allowNondistributableArtifacts bool) (int64, error) {
-	var total int64
-	mf, err := idx.IndexManifest()
-	if err != nil {
-		return 0, err
-	}
-
-	for _, desc := range mf.Manifests {
-		switch desc.MediaType {
-		case types.OCIImageIndex, types.DockerManifestList:
-			sidx, err := idx.ImageIndex(desc.Digest)
-			if err != nil {
-				return 0, err
-			}
-			size, err := countIndex(sidx, allowNondistributableArtifacts)
-			if err != nil {
-				return 0, err
-			}
-			total += size
-		case types.OCIManifestSchema1, types.DockerManifestSchema2:
-			simg, err := idx.Image(desc.Digest)
-			if err != nil {
-				return 0, err
-			}
-			size, err := countImage(simg, allowNondistributableArtifacts)
-			if err != nil {
-				return 0, err
-			}
-			total += size
-		default:
-			// Workaround for #819.
-			if wl, ok := idx.(withLayer); ok {
-				layer, err := wl.Layer(desc.Digest)
-				if err != nil {
-					return 0, err
-				}
-				size, err := layer.Size()
-				if err != nil {
-					return 0, err
-				}
-				total += size
-			}
-		}
-	}
-
-	size, err := idx.Size()
-	if err != nil {
-		return 0, err
-	}
-	total += size
-	return total, nil
+	return newPusher(o).Push(o.context, ref, ii)
 }
 
 // WriteLayer uploads the provided Layer to the specified repo.
@@ -961,25 +659,10 @@ func WriteLayer(repo name.Repository, layer v1.Layer, options ...Option) (rerr e
 	if err != nil {
 		return err
 	}
-	w, err := makeWriter(o.context, repo, []v1.Layer{layer}, o)
-	if err != nil {
-		return err
+	if o.progress != nil {
+		defer func() { o.progress.Close(rerr) }()
 	}
-
-	if w.progress != nil {
-		defer func() { w.progress.Close(rerr) }()
-
-		// TODO: support streaming layers which update the total count as they write.
-		if _, ok := layer.(*stream.Layer); ok {
-			return errors.New("cannot use stream.Layer and WithProgress")
-		}
-		size, err := layer.Size()
-		if err != nil {
-			return err
-		}
-		w.progress.total(size)
-	}
-	return w.uploadOne(o.context, layer)
+	return newPusher(o).Upload(o.context, repo, layer)
 }
 
 // Tag adds a tag to the given Taggable via PUT /v2/.../manifests/<tag>
@@ -1009,15 +692,9 @@ func Tag(tag name.Tag, t Taggable, options ...Option) error {
 // should ensure that all blobs or manifests that are referenced by t exist
 // in the target registry.
 func Put(ref name.Reference, t Taggable, options ...Option) error {
-	repo := ref.Context()
 	o, err := makeOptions(options...)
 	if err != nil {
 		return err
 	}
-	w, err := makeWriter(o.context, repo, nil, o)
-	if err != nil {
-		return err
-	}
-
-	return w.commitManifest(o.context, t, ref)
+	return newPusher(o).Push(o.context, ref, t)
 }

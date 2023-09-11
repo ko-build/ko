@@ -1,30 +1,27 @@
-/*
-Copyright 2018 Google LLC All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2018 ko Build Authors All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package commands
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
@@ -43,7 +40,7 @@ import (
 )
 
 var (
-	amazonKeychain authn.Keychain = authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(ioutil.Discard)))
+	amazonKeychain authn.Keychain = authn.NewKeychainFromHelper(ecr.NewECRHelper(ecr.WithLogger(io.Discard)))
 	azureKeychain  authn.Keychain = authn.NewKeychainFromHelper(credhelper.NewACRCredentialsHelper())
 	keychain                      = authn.NewMultiKeychain(
 		amazonKeychain,
@@ -56,22 +53,34 @@ var (
 
 // getBaseImage returns a function that determines the base image for a given import path.
 func getBaseImage(bo *options.BuildOptions) build.GetBase {
-	var cache sync.Map
+	userAgent := ua()
+	if bo.UserAgent != "" {
+		userAgent = bo.UserAgent
+	}
+
+	ropt := []remote.Option{
+		remote.WithAuthFromKeychain(keychain),
+		remote.WithUserAgent(userAgent),
+	}
+	puller, err := remote.NewPuller(ropt...)
+	if err != nil {
+		// This can't really happen.
+		panic(err)
+	}
+	ropt = append(ropt, remote.Reuse(puller))
+
+	cache, err := newCache(puller)
+	if err != nil {
+		log.Printf("Image cache init failed: %v", err)
+	}
+
 	fetch := func(ctx context.Context, ref name.Reference) (build.Result, error) {
 		// For ko.local, look in the daemon.
 		if ref.Context().RegistryStr() == publish.LocalDomain {
 			return daemon.Image(ref)
 		}
 
-		userAgent := ua()
-		if bo.UserAgent != "" {
-			userAgent = bo.UserAgent
-		}
-		ropt := []remote.Option{
-			remote.WithAuthFromKeychain(keychain),
-			remote.WithUserAgent(userAgent),
-			remote.WithContext(ctx),
-		}
+		ropt = append(ropt, remote.WithContext(ctx))
 
 		desc, err := remote.Get(ref, ropt...)
 		if err != nil {
@@ -103,11 +112,7 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			return nil, nil, fmt.Errorf("parsing base image (%q): %w", baseImage, err)
 		}
 
-		if v, ok := cache.Load(ref.String()); ok {
-			return ref, v.(build.Result), nil
-		}
-
-		result, err := fetch(ctx, ref)
+		result, err := cache.get(ctx, ref, fetch)
 		if err != nil {
 			return ref, result, err
 		}
@@ -122,7 +127,6 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			log.Printf("Using base %s@%s for %s", ref, dig, s)
 		}
 
-		cache.Store(ref.String(), result)
 		return ref, result, nil
 	}
 }
@@ -147,3 +151,5 @@ func getCreationTime() (*v1.Time, error) {
 func getKoDataCreationTime() (*v1.Time, error) {
 	return getTimeFromEnv("KO_DATA_DATE_EPOCH")
 }
+
+type baseFactory func(context.Context, name.Reference) (build.Result, error)

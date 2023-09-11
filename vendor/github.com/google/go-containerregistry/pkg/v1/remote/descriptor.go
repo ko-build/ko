@@ -15,24 +15,13 @@
 package remote
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
-	"net/http"
-	"net/url"
-	"strings"
 
-	"github.com/google/go-containerregistry/internal/redact"
-	"github.com/google/go-containerregistry/internal/verify"
-	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/logs"
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/partial"
-	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 )
 
@@ -63,11 +52,12 @@ func (e *ErrSchema1) Error() string {
 // Descriptor provides access to metadata about remote artifact and accessors
 // for efficiently converting it into a v1.Image or v1.ImageIndex.
 type Descriptor struct {
-	fetcher
+	fetcher fetcher
 	v1.Descriptor
 
 	ref      name.Reference
 	Manifest []byte
+	ctx      context.Context
 
 	// So we can share this implementation with Image.
 	platform v1.Platform
@@ -102,12 +92,7 @@ func Head(ref name.Reference, options ...Option) (*v1.Descriptor, error) {
 		return nil, err
 	}
 
-	f, err := makeFetcher(o.context, ref.Context(), o)
-	if err != nil {
-		return nil, err
-	}
-
-	return f.headManifest(o.context, ref, allManifestMediaTypes)
+	return newPuller(o).Head(o.context, ref)
 }
 
 // Handle options and fetch the manifest with the acceptable MediaTypes in the
@@ -117,25 +102,7 @@ func get(ref name.Reference, acceptable []types.MediaType, options ...Option) (*
 	if err != nil {
 		return nil, err
 	}
-	f, err := makeFetcher(o.context, ref.Context(), o)
-	if err != nil {
-		return nil, err
-	}
-	return f.get(o.context, ref, acceptable)
-}
-
-func (f *fetcher) get(ctx context.Context, ref name.Reference, acceptable []types.MediaType) (*Descriptor, error) {
-	b, desc, err := f.fetchManifest(ctx, ref, acceptable)
-	if err != nil {
-		return nil, err
-	}
-	return &Descriptor{
-		fetcher:    *f,
-		ref:        ref,
-		Manifest:   b,
-		Descriptor: *desc,
-		platform:   f.platform,
-	}, nil
+	return newPuller(o).get(o.context, ref, acceptable, o.platform)
 }
 
 // Image converts the Descriptor into a v1.Image.
@@ -182,8 +149,9 @@ func (d *Descriptor) Image() (v1.Image, error) {
 // This is separate from Image() to avoid a backward incompatible change for callers expecting ErrSchema1.
 func (d *Descriptor) Schema1() (v1.Image, error) {
 	i := &schema1{
-		fetcher:    d.fetcher,
 		ref:        d.ref,
+		fetcher:    d.fetcher,
+		ctx:        d.ctx,
 		manifest:   d.Manifest,
 		mediaType:  d.MediaType,
 		descriptor: &d.Descriptor,
@@ -217,8 +185,9 @@ func (d *Descriptor) ImageIndex() (v1.ImageIndex, error) {
 
 func (d *Descriptor) remoteImage() *remoteImage {
 	return &remoteImage{
-		fetcher:    d.fetcher,
 		ref:        d.ref,
+		ctx:        d.ctx,
+		fetcher:    d.fetcher,
 		manifest:   d.Manifest,
 		mediaType:  d.MediaType,
 		descriptor: &d.Descriptor,
@@ -227,342 +196,11 @@ func (d *Descriptor) remoteImage() *remoteImage {
 
 func (d *Descriptor) remoteIndex() *remoteIndex {
 	return &remoteIndex{
-		fetcher:    d.fetcher,
 		ref:        d.ref,
+		ctx:        d.ctx,
+		fetcher:    d.fetcher,
 		manifest:   d.Manifest,
 		mediaType:  d.MediaType,
 		descriptor: &d.Descriptor,
 	}
-}
-
-type resource interface {
-	Scheme() string
-	RegistryStr() string
-	Scope(string) string
-
-	authn.Resource
-}
-
-// fetcher implements methods for reading from a registry.
-type fetcher struct {
-	target   resource
-	client   *http.Client
-	context  context.Context
-	platform v1.Platform
-}
-
-func makeFetcher(ctx context.Context, target resource, o *options) (*fetcher, error) {
-	auth := o.auth
-	if o.keychain != nil {
-		kauth, err := o.keychain.Resolve(target)
-		if err != nil {
-			return nil, err
-		}
-		auth = kauth
-	}
-
-	reg, ok := target.(name.Registry)
-	if !ok {
-		repo, ok := target.(name.Repository)
-		if !ok {
-			return nil, fmt.Errorf("unexpected resource: %T", target)
-		}
-		reg = repo.Registry
-	}
-
-	tr, err := transport.NewWithContext(ctx, reg, auth, o.transport, []string{target.Scope(transport.PullScope)})
-	if err != nil {
-		return nil, err
-	}
-	return &fetcher{
-		target:   target,
-		client:   &http.Client{Transport: tr},
-		context:  ctx,
-		platform: o.platform,
-	}, nil
-}
-
-// url returns a url.Url for the specified path in the context of this remote image reference.
-func (f *fetcher) url(resource, identifier string) url.URL {
-	u := url.URL{
-		Scheme: f.target.Scheme(),
-		Host:   f.target.RegistryStr(),
-		// Default path if this is not a repository.
-		Path: "/v2/_catalog",
-	}
-	if repo, ok := f.target.(name.Repository); ok {
-		u.Path = fmt.Sprintf("/v2/%s/%s/%s", repo.RepositoryStr(), resource, identifier)
-	}
-	return u
-}
-
-// https://github.com/opencontainers/distribution-spec/blob/main/spec.md#referrers-tag-schema
-func fallbackTag(d name.Digest) name.Tag {
-	return d.Context().Tag(strings.Replace(d.DigestStr(), ":", "-", 1))
-}
-
-func (f *fetcher) fetchReferrers(ctx context.Context, filter map[string]string, d name.Digest) (*v1.IndexManifest, error) {
-	// Check the Referrers API endpoint first.
-	u := f.url("referrers", d.DigestStr())
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", string(types.OCIImageIndex))
-
-	resp, err := f.client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if err := transport.CheckError(resp, http.StatusOK, http.StatusNotFound, http.StatusBadRequest); err != nil {
-		return nil, err
-	}
-	if resp.StatusCode == http.StatusOK {
-		var im v1.IndexManifest
-		if err := json.NewDecoder(resp.Body).Decode(&im); err != nil {
-			return nil, err
-		}
-		return filterReferrersResponse(filter, &im), nil
-	}
-
-	// The registry doesn't support the Referrers API endpoint, so we'll use the fallback tag scheme.
-	b, _, err := f.fetchManifest(ctx, fallbackTag(d), []types.MediaType{types.OCIImageIndex})
-	if err != nil {
-		return nil, err
-	}
-	var terr *transport.Error
-	if ok := errors.As(err, &terr); ok && terr.StatusCode == http.StatusNotFound {
-		// Not found just means there are no attachments yet. Start with an empty manifest.
-		return &v1.IndexManifest{MediaType: types.OCIImageIndex}, nil
-	}
-
-	var im v1.IndexManifest
-	if err := json.Unmarshal(b, &im); err != nil {
-		return nil, err
-	}
-
-	return filterReferrersResponse(filter, &im), nil
-}
-
-func (f *fetcher) fetchManifest(ctx context.Context, ref name.Reference, acceptable []types.MediaType) ([]byte, *v1.Descriptor, error) {
-	u := f.url("manifests", ref.Identifier())
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-	accept := []string{}
-	for _, mt := range acceptable {
-		accept = append(accept, string(mt))
-	}
-	req.Header.Set("Accept", strings.Join(accept, ","))
-
-	resp, err := f.client.Do(req.WithContext(ctx))
-	if err != nil {
-		return nil, nil, err
-	}
-	defer resp.Body.Close()
-
-	if err := transport.CheckError(resp, http.StatusOK); err != nil {
-		return nil, nil, err
-	}
-
-	manifest, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	digest, size, err := v1.SHA256(bytes.NewReader(manifest))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	mediaType := types.MediaType(resp.Header.Get("Content-Type"))
-	contentDigest, err := v1.NewHash(resp.Header.Get("Docker-Content-Digest"))
-	if err == nil && mediaType == types.DockerManifestSchema1Signed {
-		// If we can parse the digest from the header, and it's a signed schema 1
-		// manifest, let's use that for the digest to appease older registries.
-		digest = contentDigest
-	}
-
-	// Validate the digest matches what we asked for, if pulling by digest.
-	if dgst, ok := ref.(name.Digest); ok {
-		if digest.String() != dgst.DigestStr() {
-			return nil, nil, fmt.Errorf("manifest digest: %q does not match requested digest: %q for %q", digest, dgst.DigestStr(), ref)
-		}
-	}
-
-	var artifactType string
-	mf, _ := v1.ParseManifest(bytes.NewReader(manifest))
-	// Failing to parse as a manifest should just be ignored.
-	// The manifest might not be valid, and that's okay.
-	if mf != nil && !mf.Config.MediaType.IsConfig() {
-		artifactType = string(mf.Config.MediaType)
-	}
-
-	// Do nothing for tags; I give up.
-	//
-	// We'd like to validate that the "Docker-Content-Digest" header matches what is returned by the registry,
-	// but so many registries implement this incorrectly that it's not worth checking.
-	//
-	// For reference:
-	// https://github.com/GoogleContainerTools/kaniko/issues/298
-
-	// Return all this info since we have to calculate it anyway.
-	desc := v1.Descriptor{
-		Digest:       digest,
-		Size:         size,
-		MediaType:    mediaType,
-		ArtifactType: artifactType,
-	}
-
-	return manifest, &desc, nil
-}
-
-func (f *fetcher) headManifest(ctx context.Context, ref name.Reference, acceptable []types.MediaType) (*v1.Descriptor, error) {
-	u := f.url("manifests", ref.Identifier())
-	req, err := http.NewRequest(http.MethodHead, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-	accept := []string{}
-	for _, mt := range acceptable {
-		accept = append(accept, string(mt))
-	}
-	req.Header.Set("Accept", strings.Join(accept, ","))
-
-	resp, err := f.client.Do(req.WithContext(ctx))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if err := transport.CheckError(resp, http.StatusOK); err != nil {
-		return nil, err
-	}
-
-	mth := resp.Header.Get("Content-Type")
-	if mth == "" {
-		return nil, fmt.Errorf("HEAD %s: response did not include Content-Type header", u.String())
-	}
-	mediaType := types.MediaType(mth)
-
-	size := resp.ContentLength
-	if size == -1 {
-		return nil, fmt.Errorf("GET %s: response did not include Content-Length header", u.String())
-	}
-
-	dh := resp.Header.Get("Docker-Content-Digest")
-	if dh == "" {
-		return nil, fmt.Errorf("HEAD %s: response did not include Docker-Content-Digest header", u.String())
-	}
-	digest, err := v1.NewHash(dh)
-	if err != nil {
-		return nil, err
-	}
-
-	// Validate the digest matches what we asked for, if pulling by digest.
-	if dgst, ok := ref.(name.Digest); ok {
-		if digest.String() != dgst.DigestStr() {
-			return nil, fmt.Errorf("manifest digest: %q does not match requested digest: %q for %q", digest, dgst.DigestStr(), ref)
-		}
-	}
-
-	// Return all this info since we have to calculate it anyway.
-	return &v1.Descriptor{
-		Digest:    digest,
-		Size:      size,
-		MediaType: mediaType,
-	}, nil
-}
-
-func (f *fetcher) fetchBlob(ctx context.Context, size int64, h v1.Hash) (io.ReadCloser, error) {
-	u := f.url("blobs", h.String())
-	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := f.client.Do(req.WithContext(ctx))
-	if err != nil {
-		return nil, redact.Error(err)
-	}
-
-	if err := transport.CheckError(resp, http.StatusOK); err != nil {
-		resp.Body.Close()
-		return nil, err
-	}
-
-	// Do whatever we can.
-	// If we have an expected size and Content-Length doesn't match, return an error.
-	// If we don't have an expected size and we do have a Content-Length, use Content-Length.
-	if hsize := resp.ContentLength; hsize != -1 {
-		if size == verify.SizeUnknown {
-			size = hsize
-		} else if hsize != size {
-			return nil, fmt.Errorf("GET %s: Content-Length header %d does not match expected size %d", u.String(), hsize, size)
-		}
-	}
-
-	return verify.ReadCloser(resp.Body, size, h)
-}
-
-func (f *fetcher) headBlob(h v1.Hash) (*http.Response, error) {
-	u := f.url("blobs", h.String())
-	req, err := http.NewRequest(http.MethodHead, u.String(), nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := f.client.Do(req.WithContext(f.context))
-	if err != nil {
-		return nil, redact.Error(err)
-	}
-
-	if err := transport.CheckError(resp, http.StatusOK); err != nil {
-		resp.Body.Close()
-		return nil, err
-	}
-
-	return resp, nil
-}
-
-func (f *fetcher) blobExists(h v1.Hash) (bool, error) {
-	u := f.url("blobs", h.String())
-	req, err := http.NewRequest(http.MethodHead, u.String(), nil)
-	if err != nil {
-		return false, err
-	}
-
-	resp, err := f.client.Do(req.WithContext(f.context))
-	if err != nil {
-		return false, redact.Error(err)
-	}
-	defer resp.Body.Close()
-
-	if err := transport.CheckError(resp, http.StatusOK, http.StatusNotFound); err != nil {
-		return false, err
-	}
-
-	return resp.StatusCode == http.StatusOK, nil
-}
-
-// If filter applied, filter out by artifactType.
-// See https://github.com/opencontainers/distribution-spec/blob/main/spec.md#listing-referrers
-func filterReferrersResponse(filter map[string]string, origIndex *v1.IndexManifest) *v1.IndexManifest {
-	newIndex := origIndex
-	if filter == nil {
-		return newIndex
-	}
-	if v, ok := filter["artifactType"]; ok {
-		tmp := []v1.Descriptor{}
-		for _, desc := range newIndex.Manifests {
-			if desc.ArtifactType == v {
-				tmp = append(tmp, desc)
-			}
-		}
-		newIndex.Manifests = tmp
-	}
-	return newIndex
 }

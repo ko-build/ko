@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC All Rights Reserved.
+// Copyright 2020 ko Build Authors All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -203,7 +202,7 @@ type fakeCmd struct {
 func (f *fakeCmd) Run() error {
 	if f.stdin != nil {
 		// Consume the entire stdin to move the image publish forward.
-		ioutil.ReadAll(f.stdin)
+		io.ReadAll(f.stdin)
 	}
 	return f.err
 }

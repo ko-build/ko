@@ -16,8 +16,8 @@ jobs:
     runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
-    - uses: actions/setup-go@4d34df0c2316fe8122ab82dc22947d607c0c91f9 # v4.0.0
+    - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+    - uses: actions/setup-go@93397bea11091df50f3d7e59dc26a7711a8bcfbe # v4.1.0
       with:
         go-version: '1.20'
         check-latest: true
@@ -40,7 +40,13 @@ jobs:
 
         # Check that using sbom-dir works.
         KO_DOCKER_REPO=""  go run ./ build -t test --push=false --sbom-dir ./sbom-data ./test
-        jq . ./sbom-data/test.spdx.json
+        jq . ./sbom-data/test-linux-amd64.spdx.json
+
+        # Check that using sbom-dir works for multi-arch
+        KO_DOCKER_REPO=""  go run ./ build --platform=linux/amd64,linux/arm64 -t test --push=false --sbom-dir ./sbom-data2 ./test
+        jq . ./sbom-data2/test-index.spdx.json
+        jq . ./sbom-data2/test-linux-amd64.spdx.json
+        jq . ./sbom-data2/test-linux-arm64.spdx.json
 
         export PLATFORM=${GOOS}/${GOARCH}
 

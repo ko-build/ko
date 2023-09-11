@@ -56,10 +56,6 @@ ko build ./ --platform=windows/amd64
 
 - Symlinks in `kodata` are ignored when building Windows images; only regular files and directories will be included in the Windows image.
 
-## Can I optimize images for [eStargz support](https://github.com/containerd/stargz-snapshotter/blob/v0.7.0/docs/stargz-estargz.md)?
-
-Yes! Set the environment variable `GGCR_EXPERIMENT_ESTARGZ=1` to produce eStargz-optimized images.
-
 ## Does `ko` support autocompletion?
 
 Yes! `ko completion` generates a Bash/Zsh/Fish/PowerShell completion script.
@@ -89,6 +85,7 @@ Oh, you betcha. Here's a partial list:
 
 - `ko` support in [Skaffold](https://skaffold.dev/docs/pipeline-stages/builders/ko/)
 - `ko` support for [goreleaser](https://goreleaser.com/customization/ko/)
+- `ko` task in the [Tekton catalog](https://github.com/tektoncd/catalog/tree/main/task/ko/)
 - `ko` support in [Carvel's `kbld`](https://carvel.dev/kbld/docs/latest/config/#ko)
 - `ko` extension for [Tilt](https://github.com/tilt-dev/tilt-extensions/tree/master/ko)
 

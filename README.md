@@ -39,5 +39,3 @@ See you there!
 ### Community Meetings
 
 You can find all the necessary details about the community meetings in this [page](https://ko.build/community).
-
-

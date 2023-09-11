@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC All Rights Reserved.
+// Copyright 2020 ko Build Authors All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package publish_test
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -35,7 +34,7 @@ func TestTarball(t *testing.T) {
 	base := "blah"
 	importpath := "github.com/Google/go-containerregistry/cmd/crane"
 
-	fp, err := ioutil.TempFile("", "")
+	fp, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatal(err)
 	}

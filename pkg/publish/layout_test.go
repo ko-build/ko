@@ -1,4 +1,4 @@
-// Copyright 2020 Google LLC All Rights Reserved.
+// Copyright 2020 ko Build Authors All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@ package publish
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -31,7 +30,7 @@ func TestLayout(t *testing.T) {
 	}
 	importpath := "github.com/Google/go-containerregistry/cmd/crane"
 
-	tmp, err := ioutil.TempDir("/tmp", "ko")
+	tmp, err := os.MkdirTemp("/tmp", "ko")
 	if err != nil {
 		t.Fatal(err)
 	}

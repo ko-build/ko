@@ -1,4 +1,4 @@
-// Copyright 2021 Google LLC All Rights Reserved.
+// Copyright 2021 ko Build Authors All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package testing
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"strings"
 
 	"github.com/docker/docker/api/types"
@@ -32,7 +31,7 @@ type MockDaemon struct {
 func (m *MockDaemon) NegotiateAPIVersion(context.Context) {}
 func (m *MockDaemon) ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error) {
 	return types.ImageLoadResponse{
-		Body: ioutil.NopCloser(strings.NewReader("Loaded")),
+		Body: io.NopCloser(strings.NewReader("Loaded")),
 	}, nil
 }
 

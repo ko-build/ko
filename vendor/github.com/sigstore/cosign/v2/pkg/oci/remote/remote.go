@@ -36,6 +36,10 @@ var (
 	remoteIndex = remote.Index
 	remoteGet   = remote.Get
 	remoteWrite = remote.Write
+
+	// ErrEntityNotFound is the error that SignedEntity returns when the
+	// provided ref does not exist.
+	ErrEntityNotFound = errors.New("entity not found in registry")
 )
 
 // SignedEntity provides access to a remote reference, and its signatures.
@@ -46,7 +50,7 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	got, err := remoteGet(ref, o.ROpt...)
 	var te *transport.Error
 	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
-		return nil, errors.New("entity not found in registry")
+		return nil, ErrEntityNotFound
 	} else if err != nil {
 		return nil, err
 	}
@@ -123,12 +127,8 @@ func suffixTag(ref name.Reference, suffix string, o *options) (name.Tag, error) 
 	return o.TargetRepository.Tag(normalize(h, o.TagPrefix, suffix)), nil
 }
 
-type digestable interface {
-	Digest() (v1.Hash, error)
-}
-
 // signatures is a shared implementation of the oci.Signed* Signatures method.
-func signatures(digestable digestable, o *options) (oci.Signatures, error) {
+func signatures(digestable oci.SignedEntity, o *options) (oci.Signatures, error) {
 	h, err := digestable.Digest()
 	if err != nil {
 		return nil, err
@@ -137,7 +137,7 @@ func signatures(digestable digestable, o *options) (oci.Signatures, error) {
 }
 
 // attestations is a shared implementation of the oci.Signed* Attestations method.
-func attestations(digestable digestable, o *options) (oci.Signatures, error) {
+func attestations(digestable oci.SignedEntity, o *options) (oci.Signatures, error) {
 	h, err := digestable.Digest()
 	if err != nil {
 		return nil, err
@@ -146,7 +146,7 @@ func attestations(digestable digestable, o *options) (oci.Signatures, error) {
 }
 
 // attachment is a shared implementation of the oci.Signed* Attachment method.
-func attachment(digestable digestable, attName string, o *options) (oci.File, error) {
+func attachment(digestable oci.SignedEntity, attName string, o *options) (oci.File, error) {
 	// Try using OCI 1.1 behavior
 	if file, err := attachmentExperimentalOCI(digestable, attName, o); err == nil {
 		return file, nil
@@ -201,7 +201,7 @@ func (f *attached) Payload() ([]byte, error) {
 }
 
 // attachmentExperimentalOCI is a shared implementation of the oci.Signed* Attachment method (for OCI 1.1+ behavior).
-func attachmentExperimentalOCI(digestable digestable, attName string, o *options) (oci.File, error) {
+func attachmentExperimentalOCI(digestable oci.SignedEntity, attName string, o *options) (oci.File, error) {
 	h, err := digestable.Digest()
 	if err != nil {
 		return nil, err

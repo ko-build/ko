@@ -1,18 +1,16 @@
-/*
-Copyright 2018 Google LLC All Rights Reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+// Copyright 2018 ko Build Authors All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 package commands
 
@@ -22,7 +20,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -187,7 +184,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			repoName = po.LocalDomain
 		}
 		// When in doubt, if repoName is under the local domain, default to --local.
-		po.Local = strings.HasPrefix(repoName, po.LocalDomain)
+		po.Local = po.Local || strings.HasPrefix(repoName, po.LocalDomain)
 		if po.Local {
 			// TODO(jonjohnsonjr): I'm assuming that nobody will
 			// use local with other publishers, but that might
@@ -425,9 +422,9 @@ func resolveFile(
 	}
 
 	if f == "-" {
-		b, err = ioutil.ReadAll(os.Stdin)
+		b, err = io.ReadAll(os.Stdin)
 	} else {
-		b, err = ioutil.ReadFile(f)
+		b, err = os.ReadFile(f)
 	}
 	if err != nil {
 		return nil, err
