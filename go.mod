@@ -5,7 +5,6 @@ go 1.20
 require (
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20220517224237-e6f29200ae04
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20220327082430-c57b701bfc08
-	github.com/containerd/stargz-snapshotter/estargz v0.14.3
 	github.com/docker/docker v24.0.6+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20220510233725-9ba8df137936
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
@@ -19,7 +18,7 @@ require (
 	golang.org/x/sync v0.3.0
 	golang.org/x/tools v0.13.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.27.4
+	k8s.io/apimachinery v0.28.1
 	sigs.k8s.io/kind v0.20.0
 )
 
@@ -54,6 +53,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.14.12 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.19.2 // indirect
 	github.com/aws/smithy-go v1.13.5 // indirect
+	github.com/containerd/stargz-snapshotter/estargz v0.14.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/dimchansky/utfbom v1.1.1 // indirect
 	github.com/docker/cli v23.0.5+incompatible // indirect
@@ -67,7 +67,7 @@ require (
 	github.com/go-openapi/analysis v0.21.4 // indirect
 	github.com/go-openapi/errors v0.20.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
-	github.com/go-openapi/jsonreference v0.20.1 // indirect
+	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/loads v0.21.2 // indirect
 	github.com/go-openapi/runtime v0.26.0 // indirect
 	github.com/go-openapi/spec v0.20.9 // indirect
