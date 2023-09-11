@@ -954,7 +954,7 @@ func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType type
 	}
 	binaryLayerBytes := binaryLayerBuf.Bytes()
 	return tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return ioutil.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
+		return io.NopCloser(bytes.NewBuffer(binaryLayerBytes)), nil
 	}, tarball.WithCompressedCaching, tarball.WithMediaType(layerMediaType))
 }
 
