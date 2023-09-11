@@ -126,7 +126,7 @@ func GenerateImageCycloneDX(mod []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func GenerateIndexCycloneDX(sii oci.SignedImageIndex) ([]byte, error) {
+func GenerateIndexCycloneDX(oci.SignedImageIndex) ([]byte, error) {
 	return nil, nil
 }
 
