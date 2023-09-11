@@ -393,7 +393,7 @@ func writeSBOM(sbom []byte, appFileName, dir, ext string) error {
 		}
 		sbomPath := filepath.Join(sbomDir, appFileName+"."+ext)
 		log.Printf("Writing SBOM to %s", sbomPath)
-		return os.WriteFile(sbomPath, sbom, 0644)
+		return os.WriteFile(sbomPath, sbom, 0644) //nolint:gosec
 	}
 	return nil
 }
@@ -1222,17 +1222,16 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 			if p.OS != "windows" {
 				// osversion mismatch is only possibly allowed when os == windows.
 				continue
-			} else {
-				if pcount, bcount := strings.Count(p.OSVersion, "."), strings.Count(base.OSVersion, "."); pcount == 2 && bcount == 3 {
-					if p.OSVersion != base.OSVersion[:strings.LastIndex(base.OSVersion, ".")] {
-						// If requested osversion is X.Y.Z and potential match is X.Y.Z.A, all of X.Y.Z must match.
-						// Any other form of these osversions are not a match.
-						continue
-					}
-				} else {
-					// Partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
+			}
+			if pcount, bcount := strings.Count(p.OSVersion, "."), strings.Count(base.OSVersion, "."); pcount == 2 && bcount == 3 {
+				if p.OSVersion != base.OSVersion[:strings.LastIndex(base.OSVersion, ".")] {
+					// If requested osversion is X.Y.Z and potential match is X.Y.Z.A, all of X.Y.Z must match.
+					// Any other form of these osversions are not a match.
 					continue
 				}
+			} else {
+				// Partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
+				continue
 			}
 		}
 		return true

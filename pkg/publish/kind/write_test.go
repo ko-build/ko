@@ -165,7 +165,7 @@ type fakeProvider struct {
 	nodes []nodes.Node
 }
 
-func (f *fakeProvider) ListInternalNodes(name string) ([]nodes.Node, error) {
+func (f *fakeProvider) ListInternalNodes(string) ([]nodes.Node, error) {
 	return f.nodes, nil
 }
 
@@ -174,7 +174,7 @@ type fakeNode struct {
 	err  error
 }
 
-func (f *fakeNode) CommandContext(ctx context.Context, cmd string, args ...string) exec.Cmd {
+func (f *fakeNode) CommandContext(_ context.Context, cmd string, args ...string) exec.Cmd {
 	command := &fakeCmd{
 		cmd: strings.Join(append([]string{cmd}, args...), " "),
 		err: f.err,
@@ -188,10 +188,10 @@ func (f *fakeNode) String() string {
 }
 
 // The following functions are not used by our code at all.
-func (f *fakeNode) Command(string, ...string) exec.Cmd        { return nil }
-func (f *fakeNode) Role() (string, error)                     { return "", nil }
-func (f *fakeNode) IP() (ipv4 string, ipv6 string, err error) { return "", "", nil }
-func (f *fakeNode) SerialLogs(writer io.Writer) error         { return nil }
+func (f *fakeNode) Command(string, ...string) exec.Cmd { return nil }
+func (f *fakeNode) Role() (string, error)              { return "", nil }
+func (f *fakeNode) IP() (string, string, error)        { return "", "", nil }
+func (f *fakeNode) SerialLogs(io.Writer) error         { return nil }
 
 type fakeCmd struct {
 	cmd   string
