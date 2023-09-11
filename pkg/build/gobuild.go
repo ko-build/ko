@@ -908,6 +908,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 		updatePath(cfg, `C:\ko-app`)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
+		cfg.Config.Env = append(cfg.Config.Env, `KO_APP_PATH=C:\ko-app\`+appFileName)
 	} else {
 		if !g.disableEntrypointOverwrite {
 			cfg.Config.Entrypoint = []string{appPath}
@@ -915,6 +916,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 		updatePath(cfg, appDir)
 		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
+		cfg.Config.Env = append(cfg.Config.Env, "KO_APP_PATH="+appPath)
 	}
 	cfg.Author = "github.com/ko-build/ko"
 

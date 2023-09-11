@@ -669,6 +669,23 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		}
 	})
 
+	// Check that the environment contains the KO_APP_PATH environment variable.
+	t.Run("check KO_APP_PATH env var", func(t *testing.T) {
+		cfg, err := img.ConfigFile()
+		if err != nil {
+			t.Errorf("ConfigFile() = %v", err)
+		}
+		found := false
+		for _, entry := range cfg.Config.Env {
+			if entry == "KO_APP_PATH=/ko-app/test" {
+				found = true
+			}
+		}
+		if !found {
+			t.Error("Didn't find KO_APP_PATH.")
+		}
+	})
+
 	// Check that PATH contains the directory of the produced binary.
 	t.Run("check PATH env var", func(t *testing.T) {
 		cfg, err := img.ConfigFile()
