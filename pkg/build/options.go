@@ -177,3 +177,10 @@ func WithSBOMDir(dir string) Option {
 		return nil
 	}
 }
+
+func WithDebugger() Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.debug = true
+		return nil
+	}
+}
