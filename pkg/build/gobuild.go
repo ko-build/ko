@@ -23,6 +23,7 @@ import (
 	"fmt"
 	gb "go/build"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -101,6 +102,7 @@ type gobuild struct {
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
+	debug                bool
 	semaphore            *semaphore.Weighted
 
 	cache *layerCache
@@ -127,6 +129,7 @@ type gobuildOpener struct {
 	labels               map[string]string
 	dir                  string
 	jobs                 int
+	debug                bool
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -156,6 +159,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		defaultLdflags:       gbo.defaultLdflags,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
+		debug:                gbo.debug,
 		platformMatcher:      matcher,
 		cache: &layerCache{
 			buildToDiff: map[string]buildIDToDiffID{},
@@ -272,6 +276,63 @@ func getGoBinary() string {
 		return env
 	}
 	return defaultGoBin
+}
+
+func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
+	env, err := buildEnv(platform, os.Environ(), nil, nil)
+	if err != nil {
+		return "", fmt.Errorf("could not create env for Delve build: %w", err)
+	}
+
+	tmpInstallDir, err := os.MkdirTemp("", "delve")
+	if err != nil {
+		return "", fmt.Errorf("could not create tmp dir for Delve installation: %w", err)
+	}
+
+	// install delve to tmp directory
+	env = append(env, fmt.Sprintf("GOPATH=%s", tmpInstallDir))
+
+	args := []string{
+		"install",
+		"github.com/go-delve/delve/cmd/dlv@latest",
+	}
+
+	gobin := getGoBinary()
+	cmd := exec.CommandContext(ctx, gobin, args...)
+	cmd.Env = env
+
+	var output bytes.Buffer
+	cmd.Stderr = &output
+	cmd.Stdout = &output
+
+	log.Printf("Building Delve for %s", platform)
+	if err := cmd.Run(); err != nil {
+		os.RemoveAll(tmpInstallDir)
+		return "", fmt.Errorf("go build Delve: %w: %s", err, output.String())
+	}
+
+	// find the delve binary in tmpInstallDir/bin/
+	delveBinary := ""
+	err = filepath.WalkDir(filepath.Join(tmpInstallDir, "bin"), func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if !d.IsDir() && strings.Contains(d.Name(), "dlv") {
+			delveBinary = path
+		}
+
+		return nil
+	})
+	if err != nil {
+		return "", fmt.Errorf("could not search for Delve binary: %w", err)
+	}
+
+	if delveBinary == "" {
+		return "", fmt.Errorf("could not find Delve binary in %q", tmpInstallDir)
+	}
+
+	return delveBinary, nil
 }
 
 func build(ctx context.Context, buildCtx buildContext) (string, error) {
@@ -992,6 +1053,45 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		},
 	})
 
+	delvePath := "" // path for delve in image
+	if g.debug {
+		// get delve locally
+		delveBinary, err := getDelve(ctx, *platform)
+		if err != nil {
+			return nil, fmt.Errorf("building Delve: %w", err)
+		}
+		defer os.RemoveAll(filepath.Dir(delveBinary))
+
+		delvePath = "/usr/bin/" + filepath.Base(delveBinary)
+
+		// add layer with delve binary
+		delveLayer, err := g.cache.get(ctx, delveBinary, func() (v1.Layer, error) {
+			return buildLayer(delvePath, delveBinary, platform, layerMediaType, &lo)
+		})
+		if err != nil {
+			return nil, fmt.Errorf("cache.get(%q): %w", delveBinary, err)
+		}
+
+		layers = append(layers, mutate.Addendum{
+			Layer:     delveLayer,
+			MediaType: layerMediaType,
+			History: v1.History{
+				Author:    "ko",
+				Created:   g.creationTime,
+				CreatedBy: "ko build " + ref.String(),
+				Comment:   "Delve debugger, at " + delvePath,
+			},
+		})
+	}
+	delveArgs := []string{
+		"exec",
+		"--listen=:40000",
+		"--headless",
+		"--log",
+		"--accept-multiclient",
+		"--api-version=2",
+	}
+
 	// Augment the base image with our application layer.
 	withApp, err := mutate.Append(base, layers...)
 	if err != nil {
@@ -1009,10 +1109,22 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	cfg.Config.Entrypoint = []string{appPath}
 	cfg.Config.Cmd = nil
 	if platform.OS == "windows" {
-		cfg.Config.Entrypoint = []string{`C:\ko-app\` + appFileName}
+		appPath := `C:\ko-app\` + appFileName
+		if g.debug {
+			cfg.Config.Entrypoint = append([]string{"C:\\" + delvePath}, delveArgs...)
+			cfg.Config.Entrypoint = append(cfg.Config.Entrypoint, appPath)
+		} else {
+			cfg.Config.Entrypoint = []string{appPath}
+		}
+
 		updatePath(cfg, `C:\ko-app`)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
 	} else {
+		if g.debug {
+			cfg.Config.Entrypoint = append([]string{delvePath}, delveArgs...)
+			cfg.Config.Entrypoint = append(cfg.Config.Entrypoint, appPath)
+		}
+
 		updatePath(cfg, appDir)
 		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	}
