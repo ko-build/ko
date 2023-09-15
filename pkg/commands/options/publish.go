@@ -21,6 +21,7 @@ import (
 	"path"
 
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish"
 	"github.com/spf13/cobra"
 )
@@ -109,7 +110,7 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 func packageWithMD5(base, importpath string) string {
 	hasher := md5.New() // nolint: gosec // No strong cryptography needed.
 	hasher.Write([]byte(importpath))
-	return path.Join(base, path.Base(importpath)+"-"+hex.EncodeToString(hasher.Sum(nil)))
+	return path.Join(base, build.NonMajorBase(importpath)+"-"+hex.EncodeToString(hasher.Sum(nil)))
 }
 
 func preserveImportPath(base, importpath string) string {
@@ -117,7 +118,7 @@ func preserveImportPath(base, importpath string) string {
 }
 
 func baseImportPaths(base, importpath string) string {
-	return path.Join(base, path.Base(importpath))
+	return path.Join(base, build.NonMajorBase(importpath))
 }
 
 func bareDockerRepo(base, _ string) string {

@@ -469,14 +469,13 @@ func buildEnv(platform v1.Platform, userEnv, configEnv []string) ([]string, erro
 }
 
 func appFilename(importpath string) string {
-	base := filepath.Base(importpath)
+	base := NonMajorBase(importpath)
 
 	// If we fail to determine a good name from the importpath then use a
 	// safe default.
-	if base == "." || base == string(filepath.Separator) {
+	if base == "" || base == "." || base == string(filepath.Separator) {
 		return defaultAppFilename
 	}
-
 	return base
 }
 

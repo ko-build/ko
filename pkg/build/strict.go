@@ -14,11 +14,25 @@
 
 package build
 
-import "strings"
+import (
+	"path/filepath"
+	"regexp"
+	"strings"
+)
 
 // StrictScheme is a prefix that can be placed on import paths that users
 // think MUST be supported references.
 const StrictScheme = "ko://"
+
+var major = regexp.MustCompile(`v[[:digit:]]+`)
+
+func NonMajorBase(importpath string) string {
+	parent, base := filepath.Split(importpath)
+	if major.MatchString(base) {
+		base = filepath.Base(parent)
+	}
+	return base
+}
 
 type reference struct {
 	strict bool
