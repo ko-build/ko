@@ -13,9 +13,13 @@ We generate [SLSA3 provenance](https://slsa.dev) using the OpenSSF's [slsa-frame
 
 ```shell
 $ curl -sSfL "https://github.com/ko-build/ko/releases/download/v${VERSION}/ko_${VERSION}_${OS}_${ARCH}.tar.gz" > ko.tar.gz
-$ curl -sSfL https://github.com/ko-build/ko/releases/download/v${VERSION}/attestation.intoto.jsonl > provenance.intoto.jsonl
-$ slsa-verifier -artifact-path ko.tar.gz -provenance provenance.intoto.jsonl -source github.com/google/ko -tag "v${VERSION}"
-  PASSED: Verified SLSA provenance
+$ curl -sSfL https://github.com/ko-build/ko/releases/download/v${VERSION}/multiple.intoto.jsonl > multiple.intoto.jsonl
+$ slsa-verifier verify-artifact --provenance-path multiple.intoto.jsonl --source-uri github.com/ko-build/ko --source-tag "v${VERSION}" ko.tar.gz
+Verified signature against tlog entry index 24413745 at URL: https://rekor.sigstore.dev/api/v1/log/entries/24296fb24b8ad77ab97a5263b5fa8f35789618348a39358b1f9470b0c31045effbbe5e23e77a5836
+Verified build using builder "https://github.com/slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@refs/tags/v1.7.0" at commit 200db7243f02b5c0303e21d8ab8e3b4ad3a229d0
+Verifying artifact /Users/batuhanapaydin/workspace/ko/ko.tar.gz: PASSED
+
+PASSED: Verified SLSA provenance
 ```
 
 ```shell
