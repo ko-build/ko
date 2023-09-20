@@ -44,6 +44,7 @@ ko build IMPORTPATH... [flags]
 ```
       --bare                     Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).
   -B, --base-import-paths        Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).
+      --binary string            Set to override binary path in image.
       --disable-optimizations    Disable optimizations when building Go code. Useful when you want to interactively debug the created container.
   -h, --help                     help for build
       --image-label strings      Which labels (key=value) to add to the image.

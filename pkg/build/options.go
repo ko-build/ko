@@ -177,3 +177,12 @@ func WithSBOMDir(dir string) Option {
 		return nil
 	}
 }
+
+// WithBinaryPath is a functional option for overriding the path
+// to the executable in the output image.
+func WithBinaryPath(binaryPath string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.binaryPath = binaryPath
+		return nil
+	}
+}
