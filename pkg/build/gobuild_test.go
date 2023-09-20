@@ -640,8 +640,28 @@ func TestGoBuildNoKoData(t *testing.T) {
 	})
 }
 
-func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
+// validationOptions allows for passing additional options to validateImage.
+type validationOptions struct {
+	// Entrypoint contains the expected image entrypoint.
+	// If not set, defaults to /ko-app/test.
+	Entrypoint string
+	// AppLayerEntries is the expected names of the entries in the app layer.
+	AppLayerEntries []string
+	// DisableSBOM is true if we have turned off SBOM generation.
+	DisableSBOM bool
+	// IgnoreAnnotations can be set to true to ignore the annotations check.
+	IgnoreAnnotations bool
+}
+
+func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, opt validationOptions) {
 	t.Helper()
+
+	if opt.Entrypoint == "" {
+		opt.Entrypoint = "/ko-app/test"
+	}
+	if opt.AppLayerEntries == nil {
+		opt.AppLayerEntries = []string{"/ko-app,/ko-app/test"}
+	}
 
 	ls, err := img.Layers()
 	if err != nil {
@@ -657,22 +677,44 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 	})
 
 	t.Run("check app layer contents", func(t *testing.T) {
-		dataLayer := ls[baseLayers]
+		appLayer := ls[baseLayers+1]
 
-		if _, err := dataLayer.Digest(); err != nil {
+		if _, err := appLayer.Digest(); err != nil {
 			t.Errorf("Digest() = %v", err)
 		}
-		// We don't check the data layer here because it includes a symlink of refs and
+		// We don't check the app layer hash here because it includes a symlink of refs and
 		// will produce a distinct hash each time we commit something.
 
-		r, err := dataLayer.Uncompressed()
+		r, err := appLayer.Uncompressed()
 		if err != nil {
 			t.Errorf("Uncompressed() = %v", err)
 		}
 		defer r.Close()
+		var entries []tar.Header
 		tr := tar.NewReader(r)
-		if _, err := tr.Next(); errors.Is(err, io.EOF) {
-			t.Errorf("Layer contained no files")
+		for {
+			header, err := tr.Next()
+			if errors.Is(err, io.EOF) {
+				break
+			} else if err != nil {
+				t.Errorf("Next() = %v", err)
+				continue
+			}
+			entries = append(entries, *header)
+			if _, err := io.Copy(io.Discard, tr); err != nil {
+				t.Errorf("Copy() = %v", err)
+			}
+		}
+		if len(entries) == 0 {
+			t.Error("Didn't find expected file in tarball")
+		}
+		var names []string
+		for _, entry := range entries {
+			names = append(names, entry.Name)
+		}
+		wantNames := strings.Join(opt.AppLayerEntries, ",")
+		if got, want := wantNames, strings.Join(names, ","); got != want {
+			t.Errorf("entry names = %v, want %v", got, want)
 		}
 	})
 
@@ -722,7 +764,7 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 			t.Errorf("len(entrypoint) = %v, want %v", got, want)
 		}
 
-		if got, want := entrypoint[0], "/ko-app/test"; got != want {
+		if got, want := entrypoint[0], opt.Entrypoint; got != want {
 			t.Errorf("entrypoint = %v, want %v", got, want)
 		}
 	})
@@ -756,7 +798,7 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 				pathValue := strings.TrimPrefix(envVar, "PATH=")
 				pathEntries := strings.Split(pathValue, ":")
 				for _, pathEntry := range pathEntries {
-					if pathEntry == "/ko-app" {
+					if pathEntry == filepath.Dir(opt.Entrypoint) {
 						found = true
 					}
 				}
@@ -780,7 +822,7 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 	})
 
 	t.Run("check annotations", func(t *testing.T) {
-		if !checkAnnotations {
+		if opt.IgnoreAnnotations {
 			t.Skip("skipping annotations check")
 		}
 		mf, err := img.Manifest()
@@ -797,7 +839,7 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		}
 	})
 
-	if expectSBOM {
+	if !opt.DisableSBOM {
 		t.Run("checking for SBOM", func(t *testing.T) {
 			f, err := img.Attachment("sbom")
 			if err != nil {
@@ -860,7 +902,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, true)
+	validateImage(t, img, baseLayers, creationTime, validationOptions{})
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
@@ -1068,7 +1110,52 @@ func TestGoBuildWithoutSBOM(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, false)
+	validateImage(t, img, baseLayers, creationTime, validationOptions{DisableSBOM: true})
+}
+
+func TestGoBuildWithBinary(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
+		WithLabel("foo", "bar"),
+		WithLabel("hello", "world"),
+		WithPlatforms("all"),
+		WithConfig(map[string]Config{
+			"github.com/google/ko/test": {
+				Binary: "/custom/path/to/binary",
+			},
+		}),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(oci.SignedImage)
+	if !ok {
+		t.Fatalf("Build() not a SignedImage: %T", result)
+	}
+
+	validateImage(t, img, baseLayers, creationTime, validationOptions{
+		Entrypoint:      "/custom/path/to/binary",
+		AppLayerEntries: []string{"/custom", "/custom/path", "/custom/path/to", "/custom/path/to/binary"},
+	})
 }
 
 func TestGoBuildIndex(t *testing.T) {
@@ -1114,7 +1201,7 @@ func TestGoBuildIndex(t *testing.T) {
 		if err != nil {
 			t.Fatalf("idx.Image(%s) = %v", desc.Digest, err)
 		}
-		validateImage(t, img, baseLayers, creationTime, false, true)
+		validateImage(t, img, baseLayers, creationTime, validationOptions{IgnoreAnnotations: true})
 	}
 
 	if want, got := images, int64(len(im.Manifests)); want != got {
