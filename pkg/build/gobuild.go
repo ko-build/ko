@@ -92,6 +92,7 @@ type gobuild struct {
 	build                builder
 	sbom                 sbomber
 	sbomDir              string
+	binaryPath           string
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
@@ -118,6 +119,7 @@ type gobuildOpener struct {
 	build                builder
 	sbom                 sbomber
 	sbomDir              string
+	binaryPath           string
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
@@ -150,6 +152,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		build:                gbo.build,
 		sbom:                 gbo.sbom,
 		sbomDir:              gbo.sbomDir,
+		binaryPath:           gbo.binaryPath,
 		disableOptimizations: gbo.disableOptimizations,
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
@@ -928,6 +931,10 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	if g.disableOptimizations {
 		// Disable optimizations (-N) and inlining (-l).
 		config.Flags = append(config.Flags, "-gcflags", "all=-N -l")
+	}
+
+	if g.binaryPath != "" {
+		config.Binary = g.binaryPath
 	}
 
 	if config.ID != "" {

@@ -496,6 +496,16 @@ func TestBuildConfig(t *testing.T) {
 				Flags: FlagArray{"-gcflags", "all=-N -l"},
 			},
 		},
+		{
+			description: "override binary path",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithBinaryPath("/mydir/myprogram"),
+			},
+			expectConfig: Config{
+				Binary: "/mydir/myprogram",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
