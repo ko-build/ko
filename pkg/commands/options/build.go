@@ -96,7 +96,7 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
 	cmd.Flags().BoolVar(&bo.Debug, "debug", bo.Debug,
-		"Include Delve debugger into image and wrap arround ko-app. This debugger will listen to port 40000.")
+		"Include Delve debugger into image and wrap around ko-app. This debugger will listen to port 40000.")
 	bo.Trimpath = true
 }
 
