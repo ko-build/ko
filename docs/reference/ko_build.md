@@ -44,7 +44,7 @@ ko build IMPORTPATH... [flags]
 ```
       --bare                     Whether to just use KO_DOCKER_REPO without additional context (may not work properly with --tags).
   -B, --base-import-paths        Whether to use the base path without MD5 hash after KO_DOCKER_REPO (may not work properly with --tags).
-      --debug                    Include Delve debugger into image and wrap arround ko-app. This debugger will listen to port 40000.
+      --debug                    Include Delve debugger into image and wrap around ko-app. This debugger will listen to port 40000.
       --disable-optimizations    Disable optimizations when building Go code. Useful when you want to interactively debug the created container.
   -h, --help                     help for build
       --image-label strings      Which labels (key=value) to add to the image.
