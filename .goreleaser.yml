@@ -30,7 +30,7 @@ kos:
   - id: ko-image
     build: binary
     main: .
-    base_image: golang:1.20
+    base_image: golang:1.21
     ldflags:
       - "-s -w -X github.com/google/ko/pkg/commands.Version={{.Version}}"
     platforms:
