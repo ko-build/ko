@@ -38,8 +38,12 @@ import (
 type imageCache struct {
 	// In memory
 	cache sync.Map
-	p     *layout.Path
 
+	// On disk
+	mu sync.Mutex
+	p  *layout.Path
+
+	// Over the network
 	puller *remote.Puller
 }
 
@@ -101,10 +105,15 @@ func (i *imageCache) get(ctx context.Context, ref name.Reference, missFunc baseF
 			key = dig.String()
 		}
 
+		// Use a pretty broad lock on the on-disk cache to avoid races.
+		i.mu.Lock()
+		defer i.mu.Unlock()
+
 		ii, err := i.p.ImageIndex()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("loading cache index: %w", err)
 		}
+
 		h, err := v1.NewHash(key)
 		if err != nil {
 			return nil, err
