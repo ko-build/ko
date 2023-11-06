@@ -165,10 +165,6 @@ func (i *imageCache) get(ctx context.Context, ref name.Reference, missFunc baseF
 			return result, err
 		}
 
-		if err := i.p.AppendDescriptor(*desc); err != nil {
-			return result, err
-		}
-
 		if _, ok := result.(v1.ImageIndex); ok {
 			result = &lazyIndex{
 				ref:      ref,
@@ -201,6 +197,10 @@ func (i *imageCache) get(ctx context.Context, ref name.Reference, missFunc baseF
 				miss:     missFunc,
 				cache:    i,
 			}
+		}
+
+		if err := i.p.AppendDescriptor(*desc); err != nil {
+			return result, err
 		}
 	}
 
