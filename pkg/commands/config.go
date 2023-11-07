@@ -75,11 +75,6 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 	}
 
 	fetch := func(ctx context.Context, ref name.Reference) (build.Result, error) {
-		// For ko.local, look in the daemon.
-		if ref.Context().RegistryStr() == publish.LocalDomain {
-			return daemon.Image(ref)
-		}
-
 		ropt = append(ropt, remote.WithContext(ctx))
 
 		desc, err := remote.Get(ref, ropt...)
@@ -91,6 +86,7 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 		}
 		return desc.Image()
 	}
+
 	return func(ctx context.Context, s string) (name.Reference, build.Result, error) {
 		s = strings.TrimPrefix(s, build.StrictScheme)
 		// Viper configuration file keys are case insensitive, and are
@@ -112,9 +108,26 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			return nil, nil, fmt.Errorf("parsing base image (%q): %w", baseImage, err)
 		}
 
-		result, err := cache.get(ctx, ref, fetch)
-		if err != nil {
-			return ref, result, err
+		var result build.Result
+
+		// For ko.local, look in the daemon.
+		if ref.Context().RegistryStr() == publish.LocalDomain {
+			result, err = daemon.Image(ref)
+			if err != nil {
+				return nil, nil, fmt.Errorf("loading %s from daemon: %w", ref, err)
+			}
+		} else {
+			result, err = cache.get(ctx, ref, fetch)
+			if err != nil {
+				// We don't expect this to fail, usually, but the cache should also not be fatal.
+				// Log it so people can complain about it and we can fix the cache.
+				log.Printf("cache.get(%q) failed with %v", ref.String(), err)
+
+				result, err = fetch(ctx, ref)
+				if err != nil {
+					return nil, nil, fmt.Errorf("pulling %s: %w", ref, err)
+				}
+			}
 		}
 
 		if _, ok := ref.(name.Digest); ok {
