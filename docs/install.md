@@ -33,6 +33,14 @@ $ chmod +x ./ko
 brew install ko
 ```
 
+### Install using [MacPorts](https://www.macports.org)
+
+```plaintext
+sudo port install ko
+```
+
+More info [here](https://ports.macports.org/port/ko/)
+
 ### Install on Windows using [Scoop](https://scoop.sh)
 
 ```plaintext
