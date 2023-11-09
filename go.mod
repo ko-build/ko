@@ -16,7 +16,7 @@ require (
 	github.com/spf13/viper v1.17.0
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/sync v0.5.0
-	golang.org/x/tools v0.14.0
+	golang.org/x/tools v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.28.3
 	sigs.k8s.io/kind v0.20.0
@@ -110,14 +110,14 @@ require (
 	github.com/vbatts/tar-split v0.11.3 // indirect
 	go.mongodb.org/mongo-driver v1.11.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.14.0 // indirect
+	golang.org/x/crypto v0.15.0 // indirect
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/mod v0.13.0 // indirect
-	golang.org/x/net v0.17.0 // indirect
+	golang.org/x/mod v0.14.0 // indirect
+	golang.org/x/net v0.18.0 // indirect
 	golang.org/x/oauth2 v0.12.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/term v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
+	golang.org/x/term v0.14.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230920204549-e6e6cdab5c13 // indirect
 	google.golang.org/grpc v1.58.3 // indirect
