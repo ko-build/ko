@@ -44,7 +44,7 @@ func NewCmdMutate(options *[]crane.Option) *cobra.Command {
 		Use:   "mutate",
 		Short: "Modify image labels and annotations. The container must be pushed to a registry, and the manifest is updated there.",
 		Args:  cobra.ExactArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(c *cobra.Command, args []string) error {
 			// Pull image and get config.
 			ref := args[0]
 
@@ -166,7 +166,7 @@ func NewCmdMutate(options *[]crane.Option) *cobra.Command {
 				if err := crane.Push(img, newRef, *options...); err != nil {
 					return fmt.Errorf("pushing %s: %w", newRef, err)
 				}
-				fmt.Println(r.Context().Digest(digest.String()))
+				fmt.Fprintln(c.OutOrStdout(), r.Context().Digest(digest.String()))
 			}
 			return nil
 		},

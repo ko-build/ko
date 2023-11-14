@@ -17,6 +17,7 @@ package cmd
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -35,7 +36,7 @@ func NewCmdList(options *[]crane.Option) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			o := crane.GetOptions(*options...)
 
-			return list(cmd.Context(), args[0], fullRef, omitDigestTags, o)
+			return list(cmd.Context(), cmd.OutOrStdout(), args[0], fullRef, omitDigestTags, o)
 		},
 	}
 	cmd.Flags().BoolVar(&fullRef, "full-ref", false, "(Optional) if true, print the full image reference")
@@ -43,7 +44,7 @@ func NewCmdList(options *[]crane.Option) *cobra.Command {
 	return cmd
 }
 
-func list(ctx context.Context, src string, fullRef, omitDigestTags bool, o crane.Options) error {
+func list(ctx context.Context, w io.Writer, src string, fullRef, omitDigestTags bool, o crane.Options) error {
 	repo, err := name.NewRepository(src, o.Name...)
 	if err != nil {
 		return fmt.Errorf("parsing repo %q: %w", src, err)
@@ -70,9 +71,9 @@ func list(ctx context.Context, src string, fullRef, omitDigestTags bool, o crane
 			}
 
 			if fullRef {
-				fmt.Println(repo.Tag(tag))
+				fmt.Fprintln(w, repo.Tag(tag))
 			} else {
-				fmt.Println(tag)
+				fmt.Fprintln(w, tag)
 			}
 		}
 	}
