@@ -65,6 +65,10 @@ var (
 
 type erroringClient struct {
 	daemon.Client
+
+	inspectErr  error
+	inspectResp types.ImageInspect
+	inspectBody []byte
 }
 
 func (m *erroringClient) NegotiateAPIVersion(context.Context) {}
@@ -73,6 +77,10 @@ func (m *erroringClient) ImageLoad(context.Context, io.Reader, bool) (types.Imag
 }
 func (m *erroringClient) ImageTag(_ context.Context, _ string, _ string) error {
 	return errImageTag
+}
+
+func (m *erroringClient) ImageInspectWithRaw(_ context.Context, _ string) (types.ImageInspect, []byte, error) {
+	return m.inspectResp, m.inspectBody, m.inspectErr
 }
 
 func TestResolveMultiDocumentYAMLs(t *testing.T) {
@@ -275,7 +283,7 @@ func TestNewPublisherCanPublish(t *testing.T) {
 				Local:        true,
 			},
 			shouldError: true,
-			wantError:   errImageLoad,
+			wantError:   errImageTag,
 		},
 		{
 			description:   "bare with local domain and repo",

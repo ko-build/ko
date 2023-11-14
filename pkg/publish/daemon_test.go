@@ -16,6 +16,7 @@ package publish_test
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -63,7 +64,12 @@ func TestDaemonTags(t *testing.T) {
 		t.Errorf("Publish() = %v, wanted prefix %v", got, want)
 	}
 
-	expected := []string{"ko.local/98b8c7facdad74510a7cae0cd368eb4e:v2.0.0", "ko.local/98b8c7facdad74510a7cae0cd368eb4e:v1.2.3", "ko.local/98b8c7facdad74510a7cae0cd368eb4e:production"}
+	imgDigest, err := img.Digest()
+	if err != nil {
+		t.Fatalf("img.Digest() = %v", err)
+	}
+
+	expected := []string{fmt.Sprintf("ko.local/98b8c7facdad74510a7cae0cd368eb4e:%s", strings.Replace(imgDigest.String(), "sha256:", "", 1)), "ko.local/98b8c7facdad74510a7cae0cd368eb4e:v2.0.0", "ko.local/98b8c7facdad74510a7cae0cd368eb4e:v1.2.3", "ko.local/98b8c7facdad74510a7cae0cd368eb4e:production"}
 
 	for i, v := range expected {
 		if client.Tags[i] != v {

@@ -26,6 +26,10 @@ import (
 type MockDaemon struct {
 	daemon.Client
 	Tags []string
+
+	inspectErr  error
+	inspectResp types.ImageInspect
+	inspectBody []byte
 }
 
 func (m *MockDaemon) NegotiateAPIVersion(context.Context) {}
@@ -41,4 +45,8 @@ func (m *MockDaemon) ImageTag(_ context.Context, _ string, tag string) error {
 	}
 	m.Tags = append(m.Tags, tag)
 	return nil
+}
+
+func (m *MockDaemon) ImageInspectWithRaw(_ context.Context, _ string) (types.ImageInspect, []byte, error) {
+	return m.inspectResp, m.inspectBody, m.inspectErr
 }
