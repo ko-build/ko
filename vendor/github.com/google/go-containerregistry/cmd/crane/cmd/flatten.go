@@ -83,7 +83,7 @@ func NewCmdFlatten(options *[]crane.Option) *cobra.Command {
 			if err := push(flat, newRef, o); err != nil {
 				log.Fatalf("pushing %s: %v", newRef, err)
 			}
-			fmt.Println(repo.Digest(digest.String()))
+			fmt.Fprintln(cmd.OutOrStdout(), repo.Digest(digest.String()))
 		},
 	}
 	flattenCmd.Flags().StringVarP(&dst, "tag", "t", "", "New tag to apply to flattened image. If not provided, push by digest to the original image repository.")
