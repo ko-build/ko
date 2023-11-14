@@ -106,6 +106,17 @@ func resolveRegion(ctx context.Context, cfg *aws.Config, configs configs) error 
 	return nil
 }
 
+// resolveAppID extracts the sdk app ID from the configs slice's SharedConfig or env var
+func resolveAppID(ctx context.Context, cfg *aws.Config, configs configs) error {
+	ID, _, err := getAppID(ctx, configs)
+	if err != nil {
+		return err
+	}
+
+	cfg.AppID = ID
+	return nil
+}
+
 // resolveDefaultRegion extracts the first instance of a default region and sets `aws.Config.Region` to the default
 // region if region had not been resolved from other sources.
 func resolveDefaultRegion(ctx context.Context, cfg *aws.Config, configs configs) error {
