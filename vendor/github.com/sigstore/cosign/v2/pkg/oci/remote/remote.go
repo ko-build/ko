@@ -36,11 +36,23 @@ var (
 	remoteIndex = remote.Index
 	remoteGet   = remote.Get
 	remoteWrite = remote.Write
-
-	// ErrEntityNotFound is the error that SignedEntity returns when the
-	// provided ref does not exist.
-	ErrEntityNotFound = errors.New("entity not found in registry")
 )
+
+// EntityNotFoundError is the error that SignedEntity returns when the
+// provided ref does not exist.
+type EntityNotFoundError struct {
+	baseErr error
+}
+
+func (e *EntityNotFoundError) Error() string {
+	return fmt.Sprintf("entity not found in registry, error: %v", e.baseErr)
+}
+
+func NewEntityNotFoundError(err error) error {
+	return &EntityNotFoundError{
+		baseErr: err,
+	}
+}
 
 // SignedEntity provides access to a remote reference, and its signatures.
 // The SignedEntity will be one of SignedImage or SignedImageIndex.
@@ -50,7 +62,7 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 	got, err := remoteGet(ref, o.ROpt...)
 	var te *transport.Error
 	if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
-		return nil, ErrEntityNotFound
+		return nil, NewEntityNotFoundError(err)
 	} else if err != nil {
 		return nil, err
 	}
@@ -85,31 +97,43 @@ func SignedEntity(ref name.Reference, options ...Option) (oci.SignedEntity, erro
 // normalize turns image digests into tags with optional prefix & suffix:
 // sha256:d34db33f -> [prefix]sha256-d34db33f[.suffix]
 func normalize(h v1.Hash, prefix string, suffix string) string {
+	return normalizeWithSeparator(h, prefix, suffix, "-")
+}
+
+// normalizeWithSeparator turns image digests into tags with optional prefix & suffix:
+// sha256:d34db33f -> [prefix]sha256[algorithmSeparator]d34db33f[.suffix]
+func normalizeWithSeparator(h v1.Hash, prefix string, suffix string, algorithmSeparator string) string {
 	if suffix == "" {
-		return fmt.Sprint(prefix, h.Algorithm, "-", h.Hex)
+		return fmt.Sprint(prefix, h.Algorithm, algorithmSeparator, h.Hex)
 	}
-	return fmt.Sprint(prefix, h.Algorithm, "-", h.Hex, ".", suffix)
+	return fmt.Sprint(prefix, h.Algorithm, algorithmSeparator, h.Hex, ".", suffix)
 }
 
 // SignatureTag returns the name.Tag that associated signatures with a particular digest.
 func SignatureTag(ref name.Reference, opts ...Option) (name.Tag, error) {
 	o := makeOptions(ref.Context(), opts...)
-	return suffixTag(ref, o.SignatureSuffix, o)
+	return suffixTag(ref, o.SignatureSuffix, "-", o)
 }
 
 // AttestationTag returns the name.Tag that associated attestations with a particular digest.
 func AttestationTag(ref name.Reference, opts ...Option) (name.Tag, error) {
 	o := makeOptions(ref.Context(), opts...)
-	return suffixTag(ref, o.AttestationSuffix, o)
+	return suffixTag(ref, o.AttestationSuffix, "-", o)
 }
 
 // SBOMTag returns the name.Tag that associated SBOMs with a particular digest.
 func SBOMTag(ref name.Reference, opts ...Option) (name.Tag, error) {
 	o := makeOptions(ref.Context(), opts...)
-	return suffixTag(ref, o.SBOMSuffix, o)
+	return suffixTag(ref, o.SBOMSuffix, "-", o)
 }
 
-func suffixTag(ref name.Reference, suffix string, o *options) (name.Tag, error) {
+// DigestTag returns the name.Tag that associated SBOMs with a particular digest.
+func DigestTag(ref name.Reference, opts ...Option) (name.Tag, error) {
+	o := makeOptions(ref.Context(), opts...)
+	return suffixTag(ref, "", ":", o)
+}
+
+func suffixTag(ref name.Reference, suffix string, algorithmSeparator string, o *options) (name.Tag, error) {
 	var h v1.Hash
 	if digest, ok := ref.(name.Digest); ok {
 		var err error
@@ -124,7 +148,7 @@ func suffixTag(ref name.Reference, suffix string, o *options) (name.Tag, error) 
 		}
 		h = desc.Digest
 	}
-	return o.TargetRepository.Tag(normalize(h, o.TagPrefix, suffix)), nil
+	return o.TargetRepository.Tag(normalizeWithSeparator(h, o.TagPrefix, suffix, algorithmSeparator)), nil
 }
 
 // signatures is a shared implementation of the oci.Signed* Signatures method.

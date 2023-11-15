@@ -96,13 +96,16 @@ func (i *indexWrapper) SignedImage(h v1.Hash) (oci.SignedImage, error) {
 			return si, nil
 		}
 	}
+
 	if sb, ok := i.ogbase.(oci.SignedImageIndex); ok {
 		return sb.SignedImage(h)
-	} else if unsigned, err := i.Image(h); err != nil {
-		return nil, err
-	} else {
-		return signed.Image(unsigned), nil
 	}
+
+	unsigned, err := i.Image(h)
+	if err != nil {
+		return nil, err
+	}
+	return signed.Image(unsigned), nil
 }
 
 // SignedImageIndex implements oci.SignedImageIndex
@@ -118,13 +121,16 @@ func (i *indexWrapper) SignedImageIndex(h v1.Hash) (oci.SignedImageIndex, error)
 			return sii, nil
 		}
 	}
+
 	if sb, ok := i.ogbase.(oci.SignedImageIndex); ok {
 		return sb.SignedImageIndex(h)
-	} else if unsigned, err := i.ImageIndex(h); err != nil {
-		return nil, err
-	} else {
-		return signed.ImageIndex(unsigned), nil
 	}
+
+	unsigned, err := i.ImageIndex(h)
+	if err != nil {
+		return nil, err
+	}
+	return signed.ImageIndex(unsigned), nil
 }
 
 // AttachSignatureToEntity attaches the provided signature to the provided entity.
@@ -204,47 +210,12 @@ type signedImage struct {
 
 // Signatures implements oci.SignedImage
 func (si *signedImage) Signatures() (oci.Signatures, error) {
-	base, err := si.SignedImage.Signatures()
-	if err != nil {
-		return nil, err
-	} else if si.sig == nil {
-		return base, nil
-	}
-	if si.so.dd != nil {
-		if existing, err := si.so.dd.Find(base, si.sig); err != nil {
-			return nil, err
-		} else if existing != nil {
-			// Just return base if the signature is redundant
-			return base, nil
-		}
-	}
-	return AppendSignatures(base, si.sig)
+	return si.so.dedupeAndReplace(si.sig, si.SignedImage.Signatures)
 }
 
 // Attestations implements oci.SignedImage
 func (si *signedImage) Attestations() (oci.Signatures, error) {
-	base, err := si.SignedImage.Attestations()
-	if err != nil {
-		return nil, err
-	} else if si.att == nil {
-		return base, nil
-	}
-	if si.so.dd != nil {
-		if existing, err := si.so.dd.Find(base, si.att); err != nil {
-			return nil, err
-		} else if existing != nil {
-			// Just return base if the signature is redundant
-			return base, nil
-		}
-	}
-	if si.so.ro != nil {
-		replace, err := si.so.ro.Replace(base, si.att)
-		if err != nil {
-			return nil, err
-		}
-		return ReplaceSignatures(replace)
-	}
-	return AppendSignatures(base, si.att)
+	return si.so.dedupeAndReplace(si.att, si.SignedImage.Attestations)
 }
 
 // Attachment implements oci.SignedImage
@@ -298,47 +269,12 @@ type signedImageIndex struct {
 
 // Signatures implements oci.SignedImageIndex
 func (sii *signedImageIndex) Signatures() (oci.Signatures, error) {
-	base, err := sii.ociSignedImageIndex.Signatures()
-	if err != nil {
-		return nil, err
-	} else if sii.sig == nil {
-		return base, nil
-	}
-	if sii.so.dd != nil {
-		if existing, err := sii.so.dd.Find(base, sii.sig); err != nil {
-			return nil, err
-		} else if existing != nil {
-			// Just return base if the signature is redundant
-			return base, nil
-		}
-	}
-	return AppendSignatures(base, sii.sig)
+	return sii.so.dedupeAndReplace(sii.sig, sii.ociSignedImageIndex.Signatures)
 }
 
 // Attestations implements oci.SignedImageIndex
 func (sii *signedImageIndex) Attestations() (oci.Signatures, error) {
-	base, err := sii.ociSignedImageIndex.Attestations()
-	if err != nil {
-		return nil, err
-	} else if sii.att == nil {
-		return base, nil
-	}
-	if sii.so.dd != nil {
-		if existing, err := sii.so.dd.Find(base, sii.att); err != nil {
-			return nil, err
-		} else if existing != nil {
-			// Just return base if the signature is redundant
-			return base, nil
-		}
-	}
-	if sii.so.ro != nil {
-		replace, err := sii.so.ro.Replace(base, sii.att)
-		if err != nil {
-			return nil, err
-		}
-		return ReplaceSignatures(replace)
-	}
-	return AppendSignatures(base, sii.att)
+	return sii.so.dedupeAndReplace(sii.att, sii.ociSignedImageIndex.Attestations)
 }
 
 // Attachment implements oci.SignedImageIndex
@@ -403,47 +339,12 @@ func (si *signedUnknown) Digest() (v1.Hash, error) {
 
 // Signatures implements oci.SignedEntity
 func (si *signedUnknown) Signatures() (oci.Signatures, error) {
-	base, err := si.SignedEntity.Signatures()
-	if err != nil {
-		return nil, err
-	} else if si.sig == nil {
-		return base, nil
-	}
-	if si.so.dd != nil {
-		if existing, err := si.so.dd.Find(base, si.sig); err != nil {
-			return nil, err
-		} else if existing != nil {
-			// Just return base if the signature is redundant
-			return base, nil
-		}
-	}
-	return AppendSignatures(base, si.sig)
+	return si.so.dedupeAndReplace(si.sig, si.SignedEntity.Signatures)
 }
 
 // Attestations implements oci.SignedEntity
 func (si *signedUnknown) Attestations() (oci.Signatures, error) {
-	base, err := si.SignedEntity.Attestations()
-	if err != nil {
-		return nil, err
-	} else if si.att == nil {
-		return base, nil
-	}
-	if si.so.dd != nil {
-		if existing, err := si.so.dd.Find(base, si.att); err != nil {
-			return nil, err
-		} else if existing != nil {
-			// Just return base if the signature is redundant
-			return base, nil
-		}
-	}
-	if si.so.ro != nil {
-		replace, err := si.so.ro.Replace(base, si.att)
-		if err != nil {
-			return nil, err
-		}
-		return ReplaceSignatures(replace)
-	}
-	return AppendSignatures(base, si.att)
+	return si.so.dedupeAndReplace(si.att, si.SignedEntity.Attestations)
 }
 
 // Attachment implements oci.SignedEntity
@@ -452,4 +353,29 @@ func (si *signedUnknown) Attachment(attName string) (oci.File, error) {
 		return f, nil
 	}
 	return nil, fmt.Errorf("attachment %q not found", attName)
+}
+
+func (so *signOpts) dedupeAndReplace(sig oci.Signature, basefn func() (oci.Signatures, error)) (oci.Signatures, error) {
+	base, err := basefn()
+	if err != nil {
+		return nil, err
+	} else if sig == nil {
+		return base, nil
+	}
+	if so.dd != nil {
+		if existing, err := so.dd.Find(base, sig); err != nil {
+			return nil, err
+		} else if existing != nil {
+			// Just return base if the signature is redundant
+			return base, nil
+		}
+	}
+	if so.ro != nil {
+		replace, err := so.ro.Replace(base, sig)
+		if err != nil {
+			return nil, err
+		}
+		return ReplaceSignatures(replace)
+	}
+	return AppendSignatures(base, sig)
 }
