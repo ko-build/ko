@@ -18,7 +18,7 @@ require (
 	golang.org/x/sync v0.5.0
 	golang.org/x/tools v0.15.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.28.3
+	k8s.io/apimachinery v0.28.4
 	sigs.k8s.io/kind v0.20.0
 )
 
