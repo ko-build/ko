@@ -57,3 +57,12 @@ plugins:
         'slack.md':     'https://kubernetes.slack.com/archives/C01T7DTP65S'
         'agenda.md':    'https://docs.google.com/document/d/1eQ67Qxwf1tkTv0yU_dw9bIRnlwJZz-5GXCRVOhqbgvU/edit'
         'meet.md':      'meet.google.com/xvn-dzzk-wur'
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
