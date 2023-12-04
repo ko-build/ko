@@ -172,3 +172,65 @@ func TestOverrideConfigPath(t *testing.T) {
 		})
 	}
 }
+
+func TestImageLabels(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		flags       []string
+		buildLabels []string
+		err         string
+	}{
+		{
+			name: "no labels",
+		},
+		{
+			name:        "one label",
+			flags:       []string{"--image-label", "foo=bar"},
+			buildLabels: []string{"foo=bar"},
+		},
+		{
+			name:        "multiple labels",
+			flags:       []string{"--image-label", "foo=bar", "--image-label", "baz=qux"},
+			buildLabels: []string{"foo=bar", "baz=qux"},
+		},
+		{
+			name:        "label with comma in value",
+			flags:       []string{"--image-label", "foo=bar,baz"},
+			buildLabels: []string{"foo=bar,baz"},
+		},
+		{
+			name:        "multiple labels with comma in value",
+			flags:       []string{"--image-label", "foo=bar,baz", "--image-label", "qux=quux,abc"},
+			buildLabels: []string{"foo=bar,baz", "qux=quux,abc"},
+		},
+		{
+			name:        "two comma separated labels",
+			flags:       []string{"--image-label", "foo=bar,baz=qux"},
+			buildLabels: []string{"foo=bar,baz=qux"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := &cobra.Command{}
+			bo := &BuildOptions{}
+			AddBuildOptions(cmd, bo)
+			err := cmd.ParseFlags(tc.flags)
+			if err == nil {
+				if tc.err != "" {
+					t.Fatalf("expected error %q, saw nil", tc.err)
+				}
+				if tc.buildLabels != nil {
+					if !reflect.DeepEqual(bo.Labels, tc.buildLabels) {
+						t.Errorf("expected %+v, saw %+v", tc.buildLabels, bo.Labels)
+					}
+				}
+			} else {
+				if tc.err == "" {
+					t.Errorf("expected no error, saw: %v", err)
+				}
+				if !strings.Contains(err.Error(), tc.err) {
+					t.Errorf("expected error to contain %q, saw: %v", tc.err, err)
+				}
+			}
+		})
+	}
+}
