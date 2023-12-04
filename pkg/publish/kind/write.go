@@ -114,7 +114,7 @@ func getNodes() ([]nodes.Node, error) {
 		return nil, err
 	}
 	if len(nodeList) == 0 {
-		return nil, fmt.Errorf("no nodes found for cluster %q", cluster.DefaultName)
+		return nil, fmt.Errorf("no nodes found for cluster %q", clusterName)
 	}
 
 	return nodeList, nil
