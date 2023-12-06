@@ -31,6 +31,7 @@ This can make it a good fit for lightweight CI/CD use cases.
 - [Kyverno](https://kyverno.io)
 - [Sigstore](https://sigstore.dev)
 - [Shipwright](https://shipwright.io)
+- [Capsule](https://capsule.clastix.io/)
 
 [_Add your project here!_](https://github.com/ko-build/ko/edit/main/docs/index.md)
 
