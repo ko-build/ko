@@ -55,6 +55,7 @@ type BuildOptions struct {
 	SBOMDir              string
 	Platforms            []string
 	Labels               []string
+	Annotations          []string
 	// UserAgent enables overriding the default value of the `User-Agent` HTTP
 	// request header used when retrieving the base image.
 	UserAgent string
@@ -84,6 +85,8 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
+	cmd.Flags().StringSliceVar(&bo.Annotations, "image-annotation", []string{},
+		"Which annotations (key=value) to add to the image.")
 	bo.Trimpath = true
 }
 

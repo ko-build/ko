@@ -83,6 +83,7 @@ type gobuild struct {
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
+	annotations          map[string]string
 	semaphore            *semaphore.Weighted
 
 	cache *layerCache
@@ -104,6 +105,7 @@ type gobuildOpener struct {
 	buildConfigs         map[string]Config
 	platforms            []string
 	labels               map[string]string
+	annotations          map[string]string
 	dir                  string
 	jobs                 int
 }
@@ -131,6 +133,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
 		labels:               gbo.labels,
+		annotations:          gbo.annotations,
 		dir:                  gbo.dir,
 		platformMatcher:      matcher,
 		cache: &layerCache{
@@ -925,6 +928,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, err
 	}
 
+	image = mutate.Annotations(image, g.annotations).(v1.Image)
+
 	si := signed.Image(image)
 
 	if g.sbom != nil {
@@ -1127,8 +1132,11 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 
 	idx := ocimutate.AppendManifests(
 		mutate.Annotations(
-			mutate.IndexMediaType(empty.Index, baseType),
-			im.Annotations).(v1.ImageIndex),
+			mutate.Annotations(
+				mutate.IndexMediaType(empty.Index, baseType),
+				im.Annotations).(v1.ImageIndex),
+			g.annotations,
+		).(v1.ImageIndex),
 		adds...)
 
 	if g.sbom != nil {
