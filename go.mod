@@ -13,7 +13,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.0-rc5
 	github.com/sigstore/cosign/v2 v2.2.2
 	github.com/spf13/cobra v1.8.0
-	github.com/spf13/viper v1.18.0
+	github.com/spf13/viper v1.18.1
 	go.uber.org/automaxprocs v1.5.3
 	golang.org/x/sync v0.5.0
 	golang.org/x/tools v0.16.0
