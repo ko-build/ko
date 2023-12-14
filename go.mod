@@ -18,7 +18,7 @@ require (
 	golang.org/x/sync v0.5.0
 	golang.org/x/tools v0.16.1
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.28.4
+	k8s.io/apimachinery v0.29.0
 	sigs.k8s.io/kind v0.20.0
 )
 
@@ -123,7 +123,7 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 	gopkg.in/go-jose/go-jose.v2 v2.6.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	k8s.io/klog/v2 v2.100.1 // indirect
+	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
