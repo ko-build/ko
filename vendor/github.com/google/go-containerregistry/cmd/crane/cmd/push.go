@@ -71,9 +71,7 @@ func NewCmdPush(options *[]crane.Option) *cobra.Command {
 
 			digest := ref.Context().Digest(h.String())
 			if imageRefs != "" {
-				if err := os.WriteFile(imageRefs, []byte(digest.String()), 0600); err != nil {
-					return fmt.Errorf("failed to write image refs to %s: %w", imageRefs, err)
-				}
+				return os.WriteFile(imageRefs, []byte(digest.String()), 0600)
 			}
 
 			// Print the digest of the pushed image to stdout to facilitate command composition.
