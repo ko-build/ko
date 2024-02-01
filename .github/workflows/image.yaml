@@ -20,7 +20,7 @@ jobs:
         with:
           go-version-file: 'go.mod'
           check-latest: true
-      - uses: sigstore/cosign-installer@9614fae9e5c5eddabb09f90a270fcb487c9f7149 # v3.3.0
+      - uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 # v3.4.0
 
       # Build ko from HEAD, build and push an image tagged with the commit SHA,
       # then keylessly sign it with cosign.
