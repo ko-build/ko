@@ -1,3 +1,38 @@
+# v1.26.6 (2024-01-22)
+
+* **Bug Fix**: Remove invalid escaping of shared config values. All values in the shared config file will now be interpreted literally, save for fully-quoted strings which are unwrapped for legacy reasons.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.26.5 (2024-01-18)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.26.4 (2024-01-16)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.26.3 (2024-01-04)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.26.2 (2023-12-20)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.26.1 (2023-12-08)
+
+* **Bug Fix**: Correct loading of [services *] sections into shared config.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.26.0 (2023-12-07)
+
+* **Feature**: Support modeled request compression. The only algorithm supported at this time is `gzip`.
+* **Dependency Update**: Updated to the latest SDK module versions
+
+# v1.25.12 (2023-12-06)
+
+* **Dependency Update**: Updated to the latest SDK module versions
+
 # v1.25.11 (2023-12-01)
 
 * **Dependency Update**: Updated to the latest SDK module versions
