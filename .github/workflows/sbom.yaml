@@ -35,7 +35,7 @@ jobs:
           cosign download sbom $(go run ./ build --sbom=cyclonedx) | tee cyclonedx.json
           ./cyclonedx-linux-x64 validate --input-file=cyclonedx.json --fail-on-errors
 
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+      - uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
         if: ${{ always() }}
         with:
           name: cyclonedx.json
@@ -67,7 +67,7 @@ jobs:
           cosign download sbom $(go run ./ build) | tee spdx.json
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx.json
 
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+      - uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
         if: ${{ always() }}
         with:
           name: spdx.json
@@ -102,7 +102,7 @@ jobs:
 
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx-multi-arch.json
 
-      - uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+      - uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
         if: ${{ always() }}
         with:
           name: spdx-multi-arch.json
