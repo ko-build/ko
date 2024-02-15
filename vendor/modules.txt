@@ -684,7 +684,7 @@ gopkg.in/ini.v1
 # gopkg.in/yaml.v3 v3.0.1
 ## explicit
 gopkg.in/yaml.v3
-# k8s.io/apimachinery v0.29.1
+# k8s.io/apimachinery v0.29.2
 ## explicit; go 1.21
 k8s.io/apimachinery/pkg/labels
 k8s.io/apimachinery/pkg/selection
