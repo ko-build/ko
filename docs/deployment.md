@@ -30,7 +30,7 @@ gcloud run deploy --image=$(ko build ./cmd/app)
 flyctl launch --image=$(ko build ./cmd/app)
 ```
 
-> 💡 **Note:** The image must be publicly available.
+> 💡 **Note:** The image must be pushed to Fly.io's container registry at `registry.fly.io`, or if not, the image must be publicly available. When pushing to `registry.fly.io`, you must first log in with [`flyctl auth docker`](https://fly.io/docs/flyctl/auth-docker/).
 
 ---
 
