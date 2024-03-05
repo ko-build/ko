@@ -670,6 +670,26 @@ func (m *validateOpUntagResource) HandleInitialize(ctx context.Context, in middl
 	return next.HandleInitialize(ctx, in)
 }
 
+type validateOpUpdatePullThroughCacheRule struct {
+}
+
+func (*validateOpUpdatePullThroughCacheRule) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpUpdatePullThroughCacheRule) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*UpdatePullThroughCacheRuleInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpUpdatePullThroughCacheRuleInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
 type validateOpUploadLayerPart struct {
 }
 
@@ -685,6 +705,26 @@ func (m *validateOpUploadLayerPart) HandleInitialize(ctx context.Context, in mid
 		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
 	}
 	if err := validateOpUploadLayerPartInput(input); err != nil {
+		return out, metadata, err
+	}
+	return next.HandleInitialize(ctx, in)
+}
+
+type validateOpValidatePullThroughCacheRule struct {
+}
+
+func (*validateOpValidatePullThroughCacheRule) ID() string {
+	return "OperationInputValidation"
+}
+
+func (m *validateOpValidatePullThroughCacheRule) HandleInitialize(ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
+	out middleware.InitializeOutput, metadata middleware.Metadata, err error,
+) {
+	input, ok := in.Parameters.(*ValidatePullThroughCacheRuleInput)
+	if !ok {
+		return out, metadata, fmt.Errorf("unknown input parameters type %T", in.Parameters)
+	}
+	if err := validateOpValidatePullThroughCacheRuleInput(input); err != nil {
 		return out, metadata, err
 	}
 	return next.HandleInitialize(ctx, in)
@@ -822,8 +862,16 @@ func addOpUntagResourceValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpUntagResource{}, middleware.After)
 }
 
+func addOpUpdatePullThroughCacheRuleValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpUpdatePullThroughCacheRule{}, middleware.After)
+}
+
 func addOpUploadLayerPartValidationMiddleware(stack *middleware.Stack) error {
 	return stack.Initialize.Add(&validateOpUploadLayerPart{}, middleware.After)
+}
+
+func addOpValidatePullThroughCacheRuleValidationMiddleware(stack *middleware.Stack) error {
+	return stack.Initialize.Add(&validateOpValidatePullThroughCacheRule{}, middleware.After)
 }
 
 func validateEncryptionConfiguration(v *types.EncryptionConfiguration) error {
@@ -1646,6 +1694,24 @@ func validateOpUntagResourceInput(v *UntagResourceInput) error {
 	}
 }
 
+func validateOpUpdatePullThroughCacheRuleInput(v *UpdatePullThroughCacheRuleInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "UpdatePullThroughCacheRuleInput"}
+	if v.EcrRepositoryPrefix == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("EcrRepositoryPrefix"))
+	}
+	if v.CredentialArn == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("CredentialArn"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
 func validateOpUploadLayerPartInput(v *UploadLayerPartInput) error {
 	if v == nil {
 		return nil
@@ -1665,6 +1731,21 @@ func validateOpUploadLayerPartInput(v *UploadLayerPartInput) error {
 	}
 	if v.LayerPartBlob == nil {
 		invalidParams.Add(smithy.NewErrParamRequired("LayerPartBlob"))
+	}
+	if invalidParams.Len() > 0 {
+		return invalidParams
+	} else {
+		return nil
+	}
+}
+
+func validateOpValidatePullThroughCacheRuleInput(v *ValidatePullThroughCacheRuleInput) error {
+	if v == nil {
+		return nil
+	}
+	invalidParams := smithy.InvalidParamsError{Context: "ValidatePullThroughCacheRuleInput"}
+	if v.EcrRepositoryPrefix == nil {
+		invalidParams.Add(smithy.NewErrParamRequired("EcrRepositoryPrefix"))
 	}
 	if invalidParams.Len() > 0 {
 		return invalidParams
