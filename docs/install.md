@@ -67,9 +67,9 @@ go install github.com/google/ko@latest
 
 ### Setup on GitHub Actions
 
-You can use the [setup-ko](https://github.com/imjasonh/setup-ko) action to install ko and setup auth to [GitHub Container Registry](https://github.com/features/packages) in a GitHub Action workflow:
+You can use the [setup-ko](https://github.com/ko-build/setup-ko) action to install ko and setup auth to [GitHub Container Registry](https://github.com/features/packages) in a GitHub Action workflow:
 
 ```plaintext
 steps:
-- uses: imjasonh/setup-ko@v0.6
+- uses: ko-build/setup-ko@v0.6
 ```
