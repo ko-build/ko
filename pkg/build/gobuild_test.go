@@ -1232,3 +1232,59 @@ func TestGoBuildConsistentMediaTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestDebugger(t *testing.T) {
+	base, err := random.Image(1024, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		WithPlatforms("all"),
+		WithDebugger(),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), StrictScheme+importpath)
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(v1.Image)
+	if !ok {
+		t.Fatalf("Build() not an Image: %T", result)
+	}
+
+	// Check that the entrypoint of the image is not overwritten
+	cfg, err := img.ConfigFile()
+	if err != nil {
+		t.Errorf("ConfigFile() = %v", err)
+	}
+	gotEntrypoint := cfg.Config.Entrypoint
+	wantEntrypoint := []string{
+		"/usr/bin/dlv",
+		"exec",
+		"--listen=:40000",
+		"--headless",
+		"--log",
+		"--accept-multiclient",
+		"--api-version=2",
+		"/ko-app/ko",
+	}
+
+	if got, want := len(gotEntrypoint), len(wantEntrypoint); got != want {
+		t.Fatalf("len(entrypoint) = %v, want %v", got, want)
+	}
+
+	for i := range wantEntrypoint {
+		if got, want := gotEntrypoint[i], wantEntrypoint[i]; got != want {
+			t.Errorf("entrypoint[%d] = %v, want %v", i, got, want)
+		}
+	}
+}
