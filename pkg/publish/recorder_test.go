@@ -42,7 +42,7 @@ func (sp *cbPublish) Close() error {
 
 func TestRecorder(t *testing.T) {
 	repo := name.MustParseReference("docker.io/ubuntu:latest")
-	inner := &cbPublish{cb: func(c context.Context, b build.Result, s string) (name.Reference, error) {
+	inner := &cbPublish{cb: func(_ context.Context, b build.Result, _ string) (name.Reference, error) {
 		h, err := b.Digest()
 		if err != nil {
 			return nil, err

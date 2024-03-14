@@ -101,7 +101,7 @@ func TestBuildRecording(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			inner := &fake{
-				b: func(ip string) (Result, error) {
+				b: func(_ string) (Result, error) {
 					return nil, nil
 				},
 			}
