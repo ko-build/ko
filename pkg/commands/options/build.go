@@ -69,6 +69,9 @@ type BuildOptions struct {
 
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
+
+	// WorkingDir sets the working directory applied to the Docker image.
+	WorkingDir string
 }
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
@@ -93,6 +96,7 @@ func (bo *BuildOptions) LoadConfig() error {
 	if bo.WorkingDirectory == "" {
 		bo.WorkingDirectory = "."
 	}
+	v.SetDefault("workingDir", bo.WorkingDir)
 	// If omitted, use this base image.
 	v.SetDefault("defaultBaseImage", configDefaultBaseImage)
 	const configName = ".ko"

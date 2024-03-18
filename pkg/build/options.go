@@ -85,6 +85,15 @@ func WithConfig(buildConfigs map[string]Config) Option {
 	}
 }
 
+// WithWorkingDir is a functional option for overriding the working directory
+// given to images.
+func WithWorkingDir(dir string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.workingDir = dir
+		return nil
+	}
+}
+
 // WithPlatforms is a functional option for building certain platforms for
 // multi-platform base images. To build everything from the base, use "all",
 // otherwise use a list of platform specs, i.e.:

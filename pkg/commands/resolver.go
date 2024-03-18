@@ -125,6 +125,10 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithSBOMDir(bo.SBOMDir))
 	}
 
+	if bo.WorkingDir != "" {
+		opts = append(opts, build.WithWorkingDir(bo.WorkingDir))
+	}
+
 	return opts, nil
 }
 
