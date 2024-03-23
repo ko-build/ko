@@ -38,6 +38,7 @@ ko run IMPORTPATH [flags]
       --image-annotation strings   Which annotations (key=value[,key=value]) to add to the OCI manifest.
       --image-label strings        Which labels (key=value[,key=value]) to add to the image.
       --image-refs string          Path to file where a list of the published image references will be written.
+      --image-user string          The default user the image should be run as.
       --insecure-registry          Whether to skip TLS verification on the registry
   -j, --jobs int                   The maximum number of concurrent builds (default GOMAXPROCS)
   -L, --local                      Load into images to local docker daemon.
