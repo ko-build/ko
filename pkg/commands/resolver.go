@@ -120,6 +120,10 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithLabel(parts[0], parts[1]))
 	}
 
+	if bo.User != "" {
+		opts = append(opts, build.WithUser(bo.User))
+	}
+
 	if bo.BuildConfigs != nil {
 		opts = append(opts, build.WithConfig(bo.BuildConfigs))
 	}
