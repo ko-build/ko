@@ -82,7 +82,7 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"Path to file where the SBOM will be written.")
 	cmd.Flags().StringSliceVar(&bo.Platforms, "platform", []string{},
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
-	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
+	cmd.Flags().StringArrayVar(&bo.Labels, "image-label", []string{},
 		"Which labels (key=value) to add to the image.")
 	bo.Trimpath = true
 }
