@@ -717,6 +717,7 @@ func TestGoBuild(t *testing.T) {
 		withSBOMber(fauxSBOM),
 		WithLabel("foo", "bar"),
 		WithLabel("hello", "world"),
+		WithUser("1234:1234"),
 		WithPlatforms("all"),
 	)
 	if err != nil {
@@ -769,6 +770,19 @@ func TestGoBuild(t *testing.T) {
 		got := cfg.Config.Labels
 		if d := cmp.Diff(got, want); d != "" {
 			t.Fatalf("Labels diff (-got,+want): %s", d)
+		}
+	})
+
+	t.Run("check user", func(t *testing.T) {
+		cfg, err := img.ConfigFile()
+		if err != nil {
+			t.Fatalf("ConfigFile() = %v", err)
+		}
+
+		want := "1234:1234"
+		got := cfg.Config.User
+		if got != want {
+			t.Fatalf("User: %s != %s", want, got)
 		}
 	})
 }

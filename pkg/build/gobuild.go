@@ -83,6 +83,7 @@ type gobuild struct {
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
+	user                 string
 	semaphore            *semaphore.Weighted
 
 	cache *layerCache
@@ -104,6 +105,7 @@ type gobuildOpener struct {
 	buildConfigs         map[string]Config
 	platforms            []string
 	labels               map[string]string
+	user                 string
 	dir                  string
 	jobs                 int
 }
@@ -122,6 +124,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	return &gobuild{
 		ctx:                  gbo.ctx,
 		getBase:              gbo.getBase,
+		user:                 gbo.user,
 		creationTime:         gbo.creationTime,
 		kodataCreationTime:   gbo.kodataCreationTime,
 		build:                gbo.build,
@@ -913,6 +916,10 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 	for k, v := range g.labels {
 		cfg.Config.Labels[k] = v
+	}
+
+	if g.user != "" {
+		cfg.Config.User = g.user
 	}
 
 	empty := v1.Time{}
