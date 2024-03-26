@@ -563,12 +563,24 @@ type PullThroughCacheRule struct {
 	// The date and time the pull through cache was created.
 	CreatedAt *time.Time
 
+	// The ARN of the Secrets Manager secret associated with the pull through cache
+	// rule.
+	CredentialArn *string
+
 	// The Amazon ECR repository prefix associated with the pull through cache rule.
 	EcrRepositoryPrefix *string
 
 	// The Amazon Web Services account ID associated with the registry the pull
 	// through cache rule is associated with.
 	RegistryId *string
+
+	// The date and time, in JavaScript date format, when the pull through cache rule
+	// was last updated.
+	UpdatedAt *time.Time
+
+	// The name of the upstream source registry associated with the pull through cache
+	// rule.
+	UpstreamRegistry UpstreamRegistry
 
 	// The upstream registry URL associated with the pull through cache rule.
 	UpstreamRegistryUrl *string
