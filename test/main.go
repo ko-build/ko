@@ -31,7 +31,7 @@ import (
 
 var (
 	f    = flag.String("f", "kenobi", "File in kodata to print")
-	wait = flag.Bool("wait", true, "Whether to wait for SIGTERM")
+	wait = flag.Bool("wait", false, "Whether to wait for SIGTERM")
 )
 
 // This is defined so we can test build-time variable setting using ldflags.
@@ -66,7 +66,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error reading %q: %v", file, err)
 	}
-	log.Print(string(bytes))
+	fmt.Println(string(bytes))
 
 	// Cause the pod to "hang" to allow us to check for a readiness state.
 	if *wait {
