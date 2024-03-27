@@ -18,7 +18,7 @@ require (
 	golang.org/x/sync v0.6.0
 	golang.org/x/tools v0.19.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.29.2
+	k8s.io/apimachinery v0.29.3
 	sigs.k8s.io/kind v0.22.0
 )
 
@@ -80,7 +80,7 @@ require (
 	github.com/go-openapi/validate v0.22.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.0 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/safetext v0.0.0-20220905092116-b49f7bc46da2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
