@@ -435,6 +435,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 		withBuilder(writeTempFile),
 		withSBOMber(fauxSBOM),
 		WithPlatforms("all"),
+		WithWorkingDir("/app"),
 	)
 	if err != nil {
 		t.Fatalf("NewGo() = %v", err)
@@ -497,6 +498,16 @@ func TestGoBuildNoKoData(t *testing.T) {
 
 		if got, want := entrypoint[0], "/ko-app/ko"; got != want {
 			t.Errorf("entrypoint = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("check workingdir", func(t *testing.T) {
+		cfg, err := img.ConfigFile()
+		if err != nil {
+			t.Errorf("ConfigFile() = %v", err)
+		}
+		if got, want := cfg.Config.WorkingDir, "/app"; got != want {
+			t.Errorf("workingDir = %v, want %v", got, want)
 		}
 	})
 
