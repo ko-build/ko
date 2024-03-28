@@ -116,6 +116,13 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		}
 		opts = append(opts, build.WithLabel(parts[0], parts[1]))
 	}
+	for _, lf := range bo.Annotations {
+		parts := strings.SplitN(lf, "=", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid annotation flag: %s", lf)
+		}
+		opts = append(opts, build.WithAnnotations(parts[0], parts[1]))
+	}
 
 	if bo.BuildConfigs != nil {
 		opts = append(opts, build.WithConfig(bo.BuildConfigs))

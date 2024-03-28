@@ -717,6 +717,7 @@ func TestGoBuild(t *testing.T) {
 		withSBOMber(fauxSBOM),
 		WithLabel("foo", "bar"),
 		WithLabel("hello", "world"),
+		WithAnnotations("bar", "baz"),
 		WithPlatforms("all"),
 	)
 	if err != nil {
@@ -769,6 +770,23 @@ func TestGoBuild(t *testing.T) {
 		got := cfg.Config.Labels
 		if d := cmp.Diff(got, want); d != "" {
 			t.Fatalf("Labels diff (-got,+want): %s", d)
+		}
+	})
+
+	t.Run("check annotations", func(t *testing.T) {
+		manifest, err := img.Manifest()
+		if err != nil {
+			t.Fatalf("Manifest() = %v", err)
+		}
+
+		want := map[string]string{
+			"bar": "baz",
+		}
+		for k, v1 := range want {
+			v2 := manifest.Annotations[k]
+			if v1 != v2 {
+				t.Fatalf("Annotation %s: wanted %q, got %q", k, v1, v2)
+			}
 		}
 	})
 }
