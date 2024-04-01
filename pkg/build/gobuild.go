@@ -39,6 +39,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/internal/sbom"
+	"github.com/google/ko/pkg/caps"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	ocimutate "github.com/sigstore/cosign/v2/pkg/oci/mutate"
@@ -486,7 +487,7 @@ func appFilename(importpath string) string {
 // owner: BUILTIN/Users group: BUILTIN/Users ($sddlValue="O:BUG:BU")
 const userOwnerAndGroupSID = "AQAAgBQAAAAkAAAAAAAAAAAAAAABAgAAAAAABSAAAAAhAgAAAQIAAAAAAAUgAAAAIQIAAA=="
 
-func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error) {
+func tarBinary(name, binary string, platform *v1.Platform, opts *layerOptions) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
@@ -533,13 +534,21 @@ func tarBinary(name, binary string, platform *v1.Platform) (*bytes.Buffer, error
 		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
 		// under which it was created. Additionally, windows can only set 0222,
 		// 0444, or 0666, none of which are executable.
-		Mode: 0555,
+		Mode:       0555,
+		PAXRecords: map[string]string{},
 	}
-	if platform.OS == "windows" {
+	switch platform.OS {
+	case "windows":
 		// This magic value is for some reason needed for Windows to be
 		// able to execute the binary.
-		header.PAXRecords = map[string]string{
-			"MSWINDOWS.rawsd": userOwnerAndGroupSID,
+		header.PAXRecords["MSWINDOWS.rawsd"] = userOwnerAndGroupSID
+	case "linux":
+		if opts.linuxCapabilities != nil {
+			xattr, err := opts.linuxCapabilities.ToXattrBytes()
+			if err != nil {
+				return nil, fmt.Errorf("caps.FileCaps.ToXattrBytes: %w", err)
+			}
+			header.PAXRecords["SCHILY.xattr.security.capability"] = string(xattr)
 		}
 	}
 	// write the header to the tarball archive
@@ -826,7 +835,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, fmt.Errorf("base image platform %q does not match desired platforms %v", platform, g.platformMatcher.platforms)
 	}
 	// Do the build into a temporary file.
-	file, err := g.build(ctx, ref.Path(), g.dir, *platform, g.configForImportPath(ref.Path()))
+	config := g.configForImportPath(ref.Path())
+	file, err := g.build(ctx, ref.Path(), g.dir, *platform, config)
 	if err != nil {
 		return nil, fmt.Errorf("build: %w", err)
 	}
@@ -862,11 +872,24 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	appFileName := appFilename(ref.Path())
 	appPath := path.Join(appDir, appFileName)
 
-	miss := func() (v1.Layer, error) {
-		return buildLayer(appPath, file, platform, layerMediaType)
+	var lo layerOptions
+	lo.linuxCapabilities, err = caps.NewFileCaps(config.LinuxCapabilities...)
+	if err != nil {
+		return nil, fmt.Errorf("linux_capabilities: %w", err)
 	}
 
-	binaryLayer, err := g.cache.get(ctx, file, miss)
+	miss := func() (v1.Layer, error) {
+		return buildLayer(appPath, file, platform, layerMediaType, &lo)
+	}
+
+	var binaryLayer v1.Layer
+	switch {
+	case lo.linuxCapabilities != nil:
+		log.Printf("Some options prevent us from using layer cache")
+		binaryLayer, err = miss()
+	default:
+		binaryLayer, err = g.cache.get(ctx, file, miss)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("cache.get(%q): %w", file, err)
 	}
@@ -946,9 +969,14 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	return si, nil
 }
 
-func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType types.MediaType) (v1.Layer, error) {
+// layerOptions captures additional options to apply when authoring layer
+type layerOptions struct {
+	linuxCapabilities *caps.FileCaps
+}
+
+func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType types.MediaType, opts *layerOptions) (v1.Layer, error) {
 	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(appPath, file, platform)
+	binaryLayerBuf, err := tarBinary(appPath, file, platform, opts)
 	if err != nil {
 		return nil, fmt.Errorf("tarring binary: %w", err)
 	}

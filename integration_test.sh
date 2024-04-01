@@ -96,6 +96,23 @@ for app in foo bar ; do
 done
 popd || exit 1
 
+echo "9. Linux capabilities."
+pushd test/build-configs || exit 1
+# run as non-root user with net_bind_service cap granted
+docker_run_opts="--user 1 --cap-add=net_bind_service"
+RESULT="$(GO111MODULE=on GOFLAGS="" ../../ko build --local ./caps/cmd | grep "$FILTER" | xargs -I% docker run $docker_run_opts %)"
+if [[ "$RESULT" != "No capabilities" ]]; then
+  echo "Test FAILED. Saw '$RESULT' but expected 'No capabilities'. Docker 'cap-add' must have no effect unless matching capabilities are granted to the file." && exit 1
+fi
+# build with a different config requesting net_bind_service file capability
+RESULT_WITH_FILE_CAPS="$(KO_CONFIG_PATH=caps.ko.yaml GO111MODULE=on GOFLAGS="" ../../ko build --local ./caps/cmd | grep "$FILTER" | xargs -I% docker run $docker_run_opts %)"
+if [[ "$RESULT_WITH_FILE_CAPS" !=  "Has capabilities"* ]]; then
+  echo "Test FAILED. Saw '$RESULT_WITH_FILE_CAPS' but expected 'Has capabilities'. Docker 'cap-add' must work when matching capabilities are granted to the file." && exit 1
+else
+  echo "Test PASSED"
+fi
+popd || exit 1
+
 popd || exit 1
 popd || exit 1
 
