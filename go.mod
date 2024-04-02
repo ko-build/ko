@@ -10,6 +10,7 @@ require (
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/google/go-cmp v0.6.0
 	github.com/google/go-containerregistry v0.19.1
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/opencontainers/image-spec v1.1.0
 	github.com/sigstore/cosign/v2 v2.2.3
 	github.com/spf13/cobra v1.8.0
@@ -93,7 +94,6 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/oklog/ulid v1.3.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect

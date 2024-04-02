@@ -19,8 +19,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/tools/go/packages"
@@ -158,8 +160,12 @@ func (bo *BuildOptions) LoadConfig() error {
 
 	if len(bo.BuildConfigs) == 0 {
 		var builds []build.Config
-		if err := v.UnmarshalKey("builds", &builds); err != nil {
-			return fmt.Errorf("configuration section 'builds' cannot be parsed")
+		useYAMLTagsAndUnmarshallers := func(c *mapstructure.DecoderConfig) {
+			c.TagName = "yaml" // defaults to `mapstructure:""`
+			c.DecodeHook = yamlUnmarshallerHookFunc
+		}
+		if err := v.UnmarshalKey("builds", &builds, useYAMLTagsAndUnmarshallers); err != nil {
+			return fmt.Errorf("configuration section 'builds' cannot be parsed: %w", err)
 		}
 		buildConfigs, err := createBuildConfigMap(bo.WorkingDirectory, builds)
 		if err != nil {
@@ -169,6 +175,33 @@ func (bo *BuildOptions) LoadConfig() error {
 	}
 
 	return nil
+}
+
+func yamlUnmarshallerHookFunc(_ reflect.Type, to reflect.Type, data any) (any, error) {
+	type yamlUnmarshaller interface {
+		UnmarshalYAML(func(any) error) error
+	}
+	result := reflect.New(to).Interface()
+	unmarshaller, ok := result.(yamlUnmarshaller)
+	if !ok {
+		return data, nil
+	}
+	if err := unmarshaller.UnmarshalYAML(func(target any) error {
+		dest := reflect.Indirect(reflect.ValueOf(target))
+		src := reflect.ValueOf(data)
+		if dest.CanSet() && src.Type().AssignableTo(dest.Type()) {
+			dest.Set(src)
+			return nil
+		}
+		return fmt.Errorf("want %v, got %v", dest.Type(), src.Type())
+	}); err != nil {
+		// We do not implement []string <- []any above, therefore YAML
+		// unmarshaller could fail given perfectly valid input. Return
+		// data AS IS, allowing mapstructure's logic to perform the
+		// conversion.
+		return data, nil
+	}
+	return result, nil
 }
 
 func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[string]build.Config, error) {
