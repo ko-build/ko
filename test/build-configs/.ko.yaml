@@ -16,6 +16,7 @@ builds:
 - id: foo-app
   dir: ./foo
   main: ./cmd
+  flags: -v -v # build.Config parser must handle shorthand syntax
 - id: bar-app
   dir: ./bar
   main: ./cmd
