@@ -23,7 +23,7 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
       - uses: chainguard-dev/actions/setup-registry@main
-      - uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 # v3.4.0
+      - uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
 
       - name: Install CycloneDX
         run: |
@@ -55,7 +55,7 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
       - uses: chainguard-dev/actions/setup-registry@main
-      - uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 # v3.4.0
+      - uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
 
       - name: Install SPDX Tools
         run: |
@@ -88,7 +88,7 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
       - uses: chainguard-dev/actions/setup-registry@main
-      - uses: sigstore/cosign-installer@e1523de7571e31dbe865fd2e80c5c7c23ae71eb4 # v3.4.0
+      - uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
 
       - name: Install SPDX Tools
         run: |
