@@ -49,7 +49,7 @@ func goRef(mod *debug.Module) string {
 	return fmt.Sprintf("pkg:golang/%s@%s?type=module", path, mod.Version)
 }
 
-// massageGoModVersion massages the output of `go version -m` into a form that
+// massageGoVersionM massages the output of `go version -m` into a form that
 // can be consumed by ParseBuildInfo.
 //
 // `go version -m` adds a line at the beginning of its output, and tabs at the
