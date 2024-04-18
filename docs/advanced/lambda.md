@@ -10,20 +10,20 @@ For example:
 package main
 
 import (
-    "fmt"
-    "context"
-    "github.com/aws/aws-lambda-go/lambda"
+	"context"
+	"fmt"
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
 type Event struct {
-    Name string `json:"name"`
-    // TODO: add other request fields here.
+	Name string `json:"name"`
+	// TODO: add other request fields here.
 }
 
 func main() {
-    lambda.Start(func(ctx context.Context, event Event) (string, error) {
-        return fmt.Sprintf("Hello %s!", event.Name), nil
-    }
+	lambda.Start(func(ctx context.Context, event Event) (string, error) {
+		return fmt.Sprintf("Hello %s!", event.Name), nil
+	})
 }
 ```
 
