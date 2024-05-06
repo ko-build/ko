@@ -32,7 +32,7 @@ This can make it a good fit for lightweight CI/CD use cases.
 - [Sigstore](https://sigstore.dev)
 - [Shipwright](https://shipwright.io)
 - [Capsule](https://capsule.clastix.io/)
-- [ClousScript](https://cloudscript.com.br/)
+- [CloudScript](https://cloudscript.com.br/)
 
 [_Add your project here!_](https://github.com/ko-build/ko/edit/main/docs/index.md)
 
