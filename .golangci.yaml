@@ -9,22 +9,22 @@ issues:
 
 linters:
   enable:
-  - asciicheck
-  - errorlint
-  - gofmt
-  - gosec
-  - goimports
-  - importas
-  - prealloc
-  - revive
-  - misspell
-  - stylecheck
-  - tparallel
-  - unconvert
-  - unparam
-  - whitespace
+    - asciicheck
+    - errorlint
+    - gofmt
+    - gosec
+    - goimports
+    - importas
+    - prealloc
+    - revive
+    - misspell
+    - stylecheck
+    - tparallel
+    - unconvert
+    - unparam
+    - whitespace
 
   disable:
-  - errcheck
-  - depguard
-  - deadcode
+    - errcheck
+    - depguard
+    - deadcode
