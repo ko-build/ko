@@ -315,16 +315,19 @@ func TestBuildEnv(t *testing.T) {
 	}
 }
 
-func TestCreateTemplateData(t *testing.T) {
-	t.Run("env", func(t *testing.T) {
-		t.Setenv("FOO", "bar")
-		params := createTemplateData(context.TODO(), buildContext{dir: t.TempDir()})
-		vars := params["Env"].(map[string]string)
-		require.Equal(t, "bar", vars["FOO"])
-	})
+func TestGoEnv(t *testing.T) {
+	goVars, err := goenv(context.TODO())
+	require.NoError(t, err)
 
+	// Just check some basic values.
+	require.Equal(t, runtime.GOOS, goVars["GOOS"])
+	require.Equal(t, runtime.GOARCH, goVars["GOARCH"])
+}
+
+func TestCreateTemplateData(t *testing.T) {
 	t.Run("empty creation time", func(t *testing.T) {
-		params := createTemplateData(context.TODO(), buildContext{dir: t.TempDir()})
+		params, err := createTemplateData(context.TODO(), buildContext{dir: t.TempDir()})
+		require.NoError(t, err)
 
 		// Make sure the date was set to time.Now().
 		actualDateStr := params["Date"].(string)
@@ -346,10 +349,11 @@ func TestCreateTemplateData(t *testing.T) {
 		expectedTime, err := time.Parse(time.RFC3339, "2012-11-01T22:08:00Z")
 		require.NoError(t, err)
 
-		params := createTemplateData(context.TODO(), buildContext{
+		params, err := createTemplateData(context.TODO(), buildContext{
 			creationTime: v1.Time{Time: expectedTime},
 			dir:          t.TempDir(),
 		})
+		require.NoError(t, err)
 
 		// Check the date.
 		actualDateStr := params["Date"].(string)
@@ -365,9 +369,10 @@ func TestCreateTemplateData(t *testing.T) {
 
 	t.Run("no git available", func(t *testing.T) {
 		dir := t.TempDir()
-		params := createTemplateData(context.TODO(), buildContext{dir: dir})
-		gitParams := params["Git"].(map[string]interface{})
+		params, err := createTemplateData(context.TODO(), buildContext{dir: dir})
+		require.NoError(t, err)
 
+		gitParams := params["Git"].(map[string]interface{})
 		require.Equal(t, "", gitParams["Branch"])
 		require.Equal(t, "", gitParams["Tag"])
 		require.Equal(t, "", gitParams["ShortCommit"])
@@ -384,12 +389,53 @@ func TestCreateTemplateData(t *testing.T) {
 		gittesting.GitCommit(t, dir, "commit1")
 		gittesting.GitTag(t, dir, "v0.0.1")
 
-		params := createTemplateData(context.TODO(), buildContext{dir: dir})
-		gitParams := params["Git"].(map[string]interface{})
+		params, err := createTemplateData(context.TODO(), buildContext{dir: dir})
+		require.NoError(t, err)
 
+		gitParams := params["Git"].(map[string]interface{})
 		require.Equal(t, "main", gitParams["Branch"])
 		require.Equal(t, "v0.0.1", gitParams["Tag"])
 		require.Equal(t, "clean", gitParams["TreeState"])
+	})
+
+	t.Run("env", func(t *testing.T) {
+		params, err := createTemplateData(context.TODO(), buildContext{
+			dir:       t.TempDir(),
+			mergedEnv: []string{"FOO=bar"},
+		})
+		require.NoError(t, err)
+		vars := params["Env"].(map[string]string)
+		require.Equal(t, "bar", vars["FOO"])
+	})
+
+	t.Run("bad env", func(t *testing.T) {
+		_, err := createTemplateData(context.TODO(), buildContext{
+			dir:       t.TempDir(),
+			mergedEnv: []string{"bad var"},
+		})
+		require.Error(t, err)
+	})
+
+	t.Run("default go env", func(t *testing.T) {
+		params, err := createTemplateData(context.TODO(), buildContext{dir: t.TempDir()})
+		require.NoError(t, err)
+		vars := params["GoEnv"].(map[string]string)
+		require.Equal(t, runtime.GOOS, vars["GOOS"])
+		require.Equal(t, runtime.GOARCH, vars["GOARCH"])
+	})
+
+	t.Run("env overrides go env", func(t *testing.T) {
+		params, err := createTemplateData(context.TODO(), buildContext{
+			dir: t.TempDir(),
+			mergedEnv: []string{
+				"GOOS=testgoos",
+				"GOARCH=testgoarch",
+			},
+		})
+		require.NoError(t, err)
+		vars := params["GoEnv"].(map[string]string)
+		require.Equal(t, "testgoos", vars["GOOS"])
+		require.Equal(t, "testgoarch", vars["GOARCH"])
 	})
 }
 
