@@ -16,6 +16,7 @@ package build
 
 import (
 	"archive/tar"
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -68,7 +69,7 @@ type buildContext struct {
 	creationTime v1.Time
 	ip           string
 	dir          string
-	env          []string
+	mergedEnv    []string
 	platform     v1.Platform
 	config       Config
 }
@@ -267,6 +268,8 @@ func getGoBinary() string {
 }
 
 func build(ctx context.Context, buildCtx buildContext) (string, error) {
+	// Create the set of build arguments from the config flags/ldflags with any
+	// template parameters applied.
 	buildArgs, err := createBuildArgs(ctx, buildCtx)
 	if err != nil {
 		return "", err
@@ -275,12 +278,6 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 	args := make([]string, 0, 4+len(buildArgs))
 	args = append(args, "build")
 	args = append(args, buildArgs...)
-
-	env, err := buildEnv(buildCtx.platform, os.Environ(), buildCtx.env, buildCtx.config.Env)
-	if err != nil {
-		return "", fmt.Errorf("could not create env for %s: %w", buildCtx.ip, err)
-	}
-
 	tmpDir := ""
 
 	if dir := os.Getenv("KOCACHE"); dir != "" {
@@ -316,7 +313,7 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 	gobin := getGoBinary()
 	cmd := exec.CommandContext(ctx, gobin, args...)
 	cmd.Dir = buildCtx.dir
-	cmd.Env = env
+	cmd.Env = buildCtx.mergedEnv
 
 	var output bytes.Buffer
 	cmd.Stderr = &output
@@ -325,11 +322,47 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 	log.Printf("Building %s for %s", buildCtx.ip, buildCtx.platform)
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
-			os.RemoveAll(tmpDir)
+			_ = os.RemoveAll(tmpDir)
 		}
 		return "", fmt.Errorf("go build: %w: %s", err, output.String())
 	}
 	return file, nil
+}
+
+func goenv(ctx context.Context) (map[string]string, error) {
+	gobin := getGoBinary()
+	cmd := exec.CommandContext(ctx, gobin, "env")
+	var output bytes.Buffer
+	cmd.Stdout = &output
+	cmd.Stderr = &output
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("go env: %w: %s", err, output.String())
+	}
+
+	env := make(map[string]string)
+	scanner := bufio.NewScanner(bytes.NewReader(output.Bytes()))
+
+	line := 0
+	for scanner.Scan() {
+		line++
+		kv := strings.SplitN(scanner.Text(), "=", 2)
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("go env: failed parsing line: %d", line)
+		}
+		key := strings.TrimSpace(kv[0])
+		value := strings.TrimSpace(kv[1])
+
+		// Unquote the value. Handle single or double quoted strings.
+		if len(value) > 1 && ((value[0] == '\'' && value[len(value)-1] == '\'') ||
+			(value[0] == '"' && value[len(value)-1] == '"')) {
+			value = value[1 : len(value)-1]
+		}
+		env[key] = value
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("go env: failed parsing: %w", err)
+	}
+	return env, nil
 }
 
 func goversionm(ctx context.Context, file string, appPath string, appFileName string, se oci.SignedEntity, dir string) ([]byte, types.MediaType, error) {
@@ -724,13 +757,29 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 	return buf, walkRecursive(tw, root, chroot, creationTime, platform)
 }
 
-func createTemplateData(ctx context.Context, buildCtx buildContext) map[string]interface{} {
+func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]interface{}, error) {
 	envVars := map[string]string{
 		"LDFLAGS": "",
 	}
-	for _, entry := range os.Environ() {
+	for _, entry := range buildCtx.mergedEnv {
 		kv := strings.SplitN(entry, "=", 2)
+		if len(kv) != 2 {
+			return nil, fmt.Errorf("invalid environment variable entry: %q", entry)
+		}
 		envVars[kv[0]] = kv[1]
+	}
+
+	// Get the go environment.
+	goEnv, err := goenv(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Override go env with any matching values from the environment variables.
+	for k, v := range envVars {
+		if _, ok := goEnv[k]; ok {
+			goEnv[k] = v
+		}
 	}
 
 	// Get the git information, if available.
@@ -747,10 +796,11 @@ func createTemplateData(ctx context.Context, buildCtx buildContext) map[string]i
 
 	return map[string]interface{}{
 		"Env":       envVars,
+		"GoEnv":     goEnv,
 		"Git":       info.TemplateValue(),
 		"Date":      date.Format(time.RFC3339),
 		"Timestamp": date.UTC().Unix(),
-	}
+	}, nil
 }
 
 func applyTemplating(list []string, data map[string]interface{}) ([]string, error) {
@@ -775,7 +825,10 @@ func applyTemplating(list []string, data map[string]interface{}) ([]string, erro
 func createBuildArgs(ctx context.Context, buildCtx buildContext) ([]string, error) {
 	var args []string
 
-	data := createTemplateData(ctx, buildCtx)
+	data, err := createTemplateData(ctx, buildCtx)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(buildCtx.config.Flags) > 0 {
 		flags, err := applyTemplating(buildCtx.config.Flags, data)
@@ -865,13 +918,21 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	if !g.platformMatcher.matches(platform) {
 		return nil, fmt.Errorf("base image platform %q does not match desired platforms %v", platform, g.platformMatcher.platforms)
 	}
-	// Do the build into a temporary file.
+
 	config := g.configForImportPath(ref.Path())
+
+	// Merge the system, global, and build config environment variables.
+	mergedEnv, err := buildEnv(*platform, os.Environ(), g.env, config.Env)
+	if err != nil {
+		return nil, fmt.Errorf("could not create env for %s: %w", ref.Path(), err)
+	}
+
+	// Do the build into a temporary file.
 	file, err := g.build(ctx, buildContext{
 		creationTime: g.creationTime,
 		ip:           ref.Path(),
 		dir:          g.dir,
-		env:          g.env,
+		mergedEnv:    mergedEnv,
 		platform:     *platform,
 		config:       config,
 	})
@@ -1101,7 +1162,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		return nil, err
 	}
 
-	matches := []v1.Descriptor{}
+	matches := make([]v1.Descriptor, 0)
 	for _, desc := range im.Manifests {
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
@@ -1226,7 +1287,7 @@ func parseSpec(spec []string) (*platformMatcher, error) {
 		return &platformMatcher{spec: spec}, nil
 	}
 
-	platforms := []v1.Platform{}
+	platforms := make([]v1.Platform, 0)
 	for _, s := range spec {
 		p, err := v1.ParsePlatform(s)
 		if err != nil {
