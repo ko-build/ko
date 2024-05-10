@@ -85,6 +85,7 @@ type gobuild struct {
 	dir                  string
 	labels               map[string]string
 	semaphore            *semaphore.Weighted
+	workingDir           string
 
 	cache *layerCache
 }
@@ -107,6 +108,7 @@ type gobuildOpener struct {
 	labels               map[string]string
 	dir                  string
 	jobs                 int
+	workingDir           string
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -138,7 +140,8 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 			buildToDiff: map[string]buildIDToDiffID{},
 			diffToDesc:  map[string]diffIDToDescriptor{},
 		},
-		semaphore: semaphore.NewWeighted(int64(gbo.jobs)),
+		semaphore:  semaphore.NewWeighted(int64(gbo.jobs)),
+		workingDir: gbo.workingDir,
 	}, nil
 }
 
@@ -930,6 +933,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
 	}
 	cfg.Author = "github.com/ko-build/ko"
+	if g.workingDir != "" {
+		cfg.Config.WorkingDir = g.workingDir
+	}
 
 	if cfg.Config.Labels == nil {
 		cfg.Config.Labels = map[string]string{}
