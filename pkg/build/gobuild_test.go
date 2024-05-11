@@ -37,6 +37,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/google/ko/pkg/internal/gittesting"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 )
@@ -311,6 +312,98 @@ func TestBuildEnv(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCreateTemplateData(t *testing.T) {
+	t.Run("env", func(t *testing.T) {
+		t.Setenv("FOO", "bar")
+		params := createTemplateData(context.TODO(), buildContext{})
+		vars := params["Env"].(map[string]string)
+		if vars["FOO"] != "bar" {
+			t.Fatalf("vars[FOO]=%q, want %q", vars["FOO"], "bar")
+		}
+	})
+
+	t.Run("empty creation time", func(t *testing.T) {
+		params := createTemplateData(context.TODO(), buildContext{})
+
+		// Make sure the date was set to time.Now().
+		actualDateStr := params["Date"].(string)
+		actualDate, err := time.Parse(time.RFC3339, actualDateStr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if time.Since(actualDate) > time.Minute {
+			t.Fatalf("expected date to be now, but was %v", actualDate)
+		}
+
+		// Check the timestamp.
+		actualTimestampSec := params["Timestamp"].(int64)
+		actualTimestamp := time.Unix(actualTimestampSec, 0)
+		expectedTimestamp := actualDate.Truncate(time.Second)
+		if !actualTimestamp.Equal(expectedTimestamp) {
+			t.Fatalf("expected timestamp %v, but was %v",
+				expectedTimestamp, actualTimestamp)
+		}
+	})
+
+	t.Run("creation time", func(t *testing.T) {
+		// Create a reference time for use as a creation time.
+		expectedTime, err := time.Parse(time.RFC3339, "2012-11-01T22:08:41+00:00")
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		params := createTemplateData(context.TODO(), buildContext{
+			creationTime: v1.Time{Time: expectedTime},
+		})
+
+		// Check the date.
+		actualDateStr := params["Date"].(string)
+		actualDate, err := time.Parse(time.RFC3339, actualDateStr)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !actualDate.Equal(expectedTime) {
+			t.Fatalf("expected date to be %v, but was %v", expectedTime, actualDate)
+		}
+
+		// Check the timestamp.
+		actualTimestampSec := params["Timestamp"].(int64)
+		actualTimestamp := time.Unix(actualTimestampSec, 0)
+		if !actualTimestamp.Equal(expectedTime) {
+			t.Fatalf("expected timestamp to be %v, but was %v", expectedTime, actualTimestamp)
+		}
+	})
+
+	t.Run("no git available", func(t *testing.T) {
+		dir := t.TempDir()
+		params := createTemplateData(context.TODO(), buildContext{dir: dir})
+		gitParams := params["Git"].(map[string]interface{})
+
+		requireEqual(t, "", gitParams["Branch"])
+		requireEqual(t, "", gitParams["Tag"])
+		requireEqual(t, "", gitParams["ShortCommit"])
+		requireEqual(t, "", gitParams["FullCommit"])
+		requireEqual(t, "clean", gitParams["TreeState"])
+	})
+
+	t.Run("git", func(t *testing.T) {
+		// Create a fake git structure under the test temp dir.
+		const fakeGitURL = "git@github.com:foo/bar.git"
+		dir := t.TempDir()
+		gittesting.GitInit(t, dir)
+		gittesting.GitRemoteAdd(t, dir, fakeGitURL)
+		gittesting.GitCommit(t, dir, "commit1")
+		gittesting.GitTag(t, dir, "v0.0.1")
+
+		params := createTemplateData(context.TODO(), buildContext{dir: dir})
+		gitParams := params["Git"].(map[string]interface{})
+
+		requireEqual(t, "main", gitParams["Branch"])
+		requireEqual(t, "v0.0.1", gitParams["Tag"])
+		requireEqual(t, "clean", gitParams["TreeState"])
+	})
 }
 
 func TestBuildConfig(t *testing.T) {
@@ -1246,5 +1339,12 @@ func TestGoBuildConsistentMediaTypes(t *testing.T) {
 				t.Errorf("got image mediaType %q, want %q", gotMT, c.layerMediaType)
 			}
 		})
+	}
+}
+
+func requireEqual(t *testing.T, expected any, actual any) {
+	t.Helper()
+	if diff := cmp.Diff(expected, actual); diff != "" {
+		t.Fatalf("%T differ (-got, +want): %s", expected, diff)
 	}
 }
