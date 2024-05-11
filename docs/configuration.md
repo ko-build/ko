@@ -77,10 +77,27 @@ of the `ko` process.
 
 The `ldflags` default value is `[]`.
 
-> 💡 **Note:** Even though the configuration section is similar to the
-[GoReleaser `builds` section](https://goreleaser.com/customization/build/),
-only the `env`, `flags` and `ldflags` fields are currently supported. Also, the
-templating support is currently limited to using environment variables only.
+### Templating support
+
+The `ko` builds supports templating of `flags` and `ldflags`, similar to the
+[GoReleaser `builds` section](https://goreleaser.com/customization/build/).
+
+The table below lists the supported template parameters.
+
+| Template param        | Description                                           |
+|-----------------------|-------------------------------------------------------|
+| `Env`                 | Map of system environment variables from `os.Environ` |
+| `Date`                | The UTC build date in RFC 3339 format                 |
+| `Timestamp`           | The UTC build date as Unix epoc seconds               |
+| `Git.Branch`          | The current git branch                                |
+| `Git.Tag`             | The current git tag                                   |
+| `Git.ShortCommit`     | The git commit short hash                             |
+| `Git.FullCommit`      | The git commit full hash                              |
+| `Git.CommitDate`      | The UTC commit date in RFC 3339 format                |
+| `Git.CommitTimestamp` | The UTC commit date in Unix format                    |
+| `Git.IsDirty`         | Whether or not current git state is dirty             |
+| `Git.IsClean`         | Whether or not current git state is clean.            |
+| `Git.TreeState`       | Either `clean` or `dirty`                             |
 
 ### Setting default platforms
 

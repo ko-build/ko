@@ -31,6 +31,7 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -40,6 +41,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/internal/sbom"
 	"github.com/google/ko/pkg/caps"
+	"github.com/google/ko/pkg/internal/git"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/v2/pkg/oci"
 	ocimutate "github.com/sigstore/cosign/v2/pkg/oci/mutate"
@@ -63,11 +65,12 @@ type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 // buildContext provides parameters for a builder function.
 type buildContext struct {
-	ip       string
-	dir      string
-	env      []string
-	platform v1.Platform
-	config   Config
+	creationTime v1.Time
+	ip           string
+	dir          string
+	env          []string
+	platform     v1.Platform
+	config       Config
 }
 
 type builder func(context.Context, buildContext) (string, error)
@@ -264,7 +267,7 @@ func getGoBinary() string {
 }
 
 func build(ctx context.Context, buildCtx buildContext) (string, error) {
-	buildArgs, err := createBuildArgs(buildCtx.config)
+	buildArgs, err := createBuildArgs(ctx, buildCtx)
 	if err != nil {
 		return "", err
 	}
@@ -721,7 +724,7 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 	return buf, walkRecursive(tw, root, chroot, creationTime, platform)
 }
 
-func createTemplateData() map[string]interface{} {
+func createTemplateData(ctx context.Context, buildCtx buildContext) map[string]interface{} {
 	envVars := map[string]string{
 		"LDFLAGS": "",
 	}
@@ -730,8 +733,23 @@ func createTemplateData() map[string]interface{} {
 		envVars[kv[0]] = kv[1]
 	}
 
+	// Get the git information, if available.
+	info, err := git.GetInfo(ctx, buildCtx.dir)
+	if err != nil {
+		log.Printf("%v", err)
+	}
+
+	// Use the creation time as the build date, if provided.
+	date := buildCtx.creationTime.Time
+	if date.IsZero() {
+		date = time.Now()
+	}
+
 	return map[string]interface{}{
-		"Env": envVars,
+		"Env":       envVars,
+		"Git":       info.TemplateValue(),
+		"Date":      date.Format(time.RFC3339),
+		"Timestamp": date.UTC().Unix(),
 	}
 }
 
@@ -754,13 +772,13 @@ func applyTemplating(list []string, data map[string]interface{}) ([]string, erro
 	return result, nil
 }
 
-func createBuildArgs(buildCfg Config) ([]string, error) {
+func createBuildArgs(ctx context.Context, buildCtx buildContext) ([]string, error) {
 	var args []string
 
-	data := createTemplateData()
+	data := createTemplateData(ctx, buildCtx)
 
-	if len(buildCfg.Flags) > 0 {
-		flags, err := applyTemplating(buildCfg.Flags, data)
+	if len(buildCtx.config.Flags) > 0 {
+		flags, err := applyTemplating(buildCtx.config.Flags, data)
 		if err != nil {
 			return nil, err
 		}
@@ -768,8 +786,8 @@ func createBuildArgs(buildCfg Config) ([]string, error) {
 		args = append(args, flags...)
 	}
 
-	if len(buildCfg.Ldflags) > 0 {
-		ldflags, err := applyTemplating(buildCfg.Ldflags, data)
+	if len(buildCtx.config.Ldflags) > 0 {
+		ldflags, err := applyTemplating(buildCtx.config.Ldflags, data)
 		if err != nil {
 			return nil, err
 		}
@@ -850,11 +868,12 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	// Do the build into a temporary file.
 	config := g.configForImportPath(ref.Path())
 	file, err := g.build(ctx, buildContext{
-		ip:       ref.Path(),
-		dir:      g.dir,
-		env:      g.env,
-		platform: *platform,
-		config:   config,
+		creationTime: g.creationTime,
+		ip:           ref.Path(),
+		dir:          g.dir,
+		env:          g.env,
+		platform:     *platform,
+		config:       config,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build: %w", err)
