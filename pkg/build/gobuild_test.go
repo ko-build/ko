@@ -217,7 +217,8 @@ func TestBuildEnv(t *testing.T) {
 	tests := []struct {
 		description  string
 		platform     v1.Platform
-		userEnv      []string
+		osEnv        []string
+		globalEnv    []string
 		configEnv    []string
 		expectedEnvs map[string]string
 	}{{
@@ -233,13 +234,28 @@ func TestBuildEnv(t *testing.T) {
 		},
 	}, {
 		description: "override a default value",
+		osEnv:       []string{"CGO_ENABLED=0"},
+		configEnv:   []string{"CGO_ENABLED=1"},
+		expectedEnvs: map[string]string{
+			"CGO_ENABLED": "1",
+		},
+	}, {
+		description: "global override a default value",
+		osEnv:       []string{"CGO_ENABLED=0"},
+		globalEnv:   []string{"CGO_ENABLED=1"},
+		expectedEnvs: map[string]string{
+			"CGO_ENABLED": "1",
+		},
+	}, {
+		description: "override a global value",
+		globalEnv:   []string{"CGO_ENABLED=0"},
 		configEnv:   []string{"CGO_ENABLED=1"},
 		expectedEnvs: map[string]string{
 			"CGO_ENABLED": "1",
 		},
 	}, {
 		description: "override an envvar and add an envvar",
-		userEnv:     []string{"CGO_ENABLED=0"},
+		osEnv:       []string{"CGO_ENABLED=0"},
 		configEnv:   []string{"CGO_ENABLED=1", "GOPRIVATE=git.internal.example.com,source.developers.google.com"},
 		expectedEnvs: map[string]string{
 			"CGO_ENABLED": "1",
@@ -279,7 +295,7 @@ func TestBuildEnv(t *testing.T) {
 	}}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			env, err := buildEnv(test.platform, test.userEnv, test.configEnv)
+			env, err := buildEnv(test.platform, test.osEnv, test.globalEnv, test.configEnv)
 			if err != nil {
 				t.Fatalf("unexpected error running buildEnv(): %v", err)
 			}
@@ -401,7 +417,7 @@ func fauxSBOM(context.Context, string, string, string, oci.SignedEntity, string)
 }
 
 // A helper method we use to substitute for the default "build" method.
-func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ Config) (string, error) {
+func writeTempFile(_ context.Context, buildCtx buildContext) (string, error) {
 	tmpDir, err := os.MkdirTemp("", "ko")
 	if err != nil {
 		return "", err
@@ -412,7 +428,7 @@ func writeTempFile(_ context.Context, s string, _ string, _ v1.Platform, _ Confi
 		return "", err
 	}
 	defer file.Close()
-	if _, err := file.WriteString(filepath.ToSlash(s)); err != nil {
+	if _, err := file.WriteString(filepath.ToSlash(buildCtx.ip)); err != nil {
 		return "", err
 	}
 	return file.Name(), nil

@@ -61,7 +61,16 @@ const (
 // GetBase takes an importpath and returns a base image reference and base image (or index).
 type GetBase func(context.Context, string) (name.Reference, Result, error)
 
-type builder func(context.Context, string, string, v1.Platform, Config) (string, error)
+// buildContext provides parameters for a builder function.
+type buildContext struct {
+	ip       string
+	dir      string
+	env      []string
+	platform v1.Platform
+	config   Config
+}
+
+type builder func(context.Context, buildContext) (string, error)
 
 type sbomber func(context.Context, string, string, string, oci.SignedEntity, string) ([]byte, types.MediaType, error)
 
@@ -81,6 +90,7 @@ type gobuild struct {
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
+	env                  []string
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
@@ -103,6 +113,7 @@ type gobuildOpener struct {
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
+	env                  []string
 	platforms            []string
 	labels               map[string]string
 	dir                  string
@@ -131,6 +142,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		disableOptimizations: gbo.disableOptimizations,
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
+		env:                  gbo.env,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
 		platformMatcher:      matcher,
@@ -251,8 +263,8 @@ func getGoBinary() string {
 	return defaultGoBin
 }
 
-func build(ctx context.Context, ip string, dir string, platform v1.Platform, config Config) (string, error) {
-	buildArgs, err := createBuildArgs(config)
+func build(ctx context.Context, buildCtx buildContext) (string, error) {
+	buildArgs, err := createBuildArgs(buildCtx.config)
 	if err != nil {
 		return "", err
 	}
@@ -261,9 +273,9 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	args = append(args, "build")
 	args = append(args, buildArgs...)
 
-	env, err := buildEnv(platform, os.Environ(), config.Env)
+	env, err := buildEnv(buildCtx.platform, os.Environ(), buildCtx.env, buildCtx.config.Env)
 	if err != nil {
-		return "", fmt.Errorf("could not create env for %s: %w", ip, err)
+		return "", fmt.Errorf("could not create env for %s: %w", buildCtx.ip, err)
 	}
 
 	tmpDir := ""
@@ -282,7 +294,7 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 		}
 
 		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
-		tmpDir = filepath.Join(dir, "bin", ip, platform.String())
+		tmpDir = filepath.Join(dir, "bin", buildCtx.ip, buildCtx.platform.String())
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 			return "", fmt.Errorf("creating KOCACHE bin dir: %w", err)
 		}
@@ -296,18 +308,18 @@ func build(ctx context.Context, ip string, dir string, platform v1.Platform, con
 	file := filepath.Join(tmpDir, "out")
 
 	args = append(args, "-o", file)
-	args = append(args, ip)
+	args = append(args, buildCtx.ip)
 
 	gobin := getGoBinary()
 	cmd := exec.CommandContext(ctx, gobin, args...)
-	cmd.Dir = dir
+	cmd.Dir = buildCtx.dir
 	cmd.Env = env
 
 	var output bytes.Buffer
 	cmd.Stderr = &output
 	cmd.Stdout = &output
 
-	log.Printf("Building %s for %s", ip, platform)
+	log.Printf("Building %s for %s", buildCtx.ip, buildCtx.platform)
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
 			os.RemoveAll(tmpDir)
@@ -440,7 +452,7 @@ func cycloneDX() sbomber {
 // buildEnv creates the environment variables used by the `go build` command.
 // From `os/exec.Cmd`: If Env contains duplicate environment keys, only the last
 // value in the slice for each duplicate key is used.
-func buildEnv(platform v1.Platform, userEnv, configEnv []string) ([]string, error) {
+func buildEnv(platform v1.Platform, osEnv, globalEnv, configEnv []string) ([]string, error) {
 	// Default env
 	env := []string{
 		"CGO_ENABLED=0",
@@ -464,7 +476,8 @@ func buildEnv(platform v1.Platform, userEnv, configEnv []string) ([]string, erro
 		}
 	}
 
-	env = append(env, userEnv...)
+	env = append(env, osEnv...)
+	env = append(env, globalEnv...)
 	env = append(env, configEnv...)
 	return env, nil
 }
@@ -836,7 +849,13 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 	// Do the build into a temporary file.
 	config := g.configForImportPath(ref.Path())
-	file, err := g.build(ctx, ref.Path(), g.dir, *platform, config)
+	file, err := g.build(ctx, buildContext{
+		ip:       ref.Path(),
+		dir:      g.dir,
+		env:      g.env,
+		platform: *platform,
+		config:   config,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("build: %w", err)
 	}

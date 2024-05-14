@@ -67,6 +67,21 @@ func TestDefaultPlatformsAll(t *testing.T) {
 	}
 }
 
+func TestEnv(t *testing.T) {
+	bo := &BuildOptions{
+		WorkingDirectory: "testdata/config",
+	}
+	err := bo.LoadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	wantEnv := []string{"FOO=bar"} // matches value in ./testdata/config/.ko.yaml
+	if !reflect.DeepEqual(bo.Env, wantEnv) {
+		t.Fatalf("wanted Env %s, got %s", wantEnv, bo.Env)
+	}
+}
+
 func TestBuildConfigWithWorkingDirectoryAndDirAndMain(t *testing.T) {
 	bo := &BuildOptions{
 		WorkingDirectory: "testdata/paths",

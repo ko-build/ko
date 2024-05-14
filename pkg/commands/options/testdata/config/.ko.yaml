@@ -1,2 +1,3 @@
 defaultBaseImage: alpine
 defaultPlatforms: all
+env: FOO=bar
