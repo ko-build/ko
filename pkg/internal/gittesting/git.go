@@ -40,17 +40,18 @@ import (
 	"bytes"
 	"errors"
 	"os/exec"
-	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // GitInit inits a new git project.
 func GitInit(t *testing.T, dir string) {
 	t.Helper()
 	out, err := fakeGit(dir, "init")
-	requireNoError(t, err)
-	requireContains(t, out, "Initialized empty Git repository", "")
-	requireNoError(t, err)
+	require.NoError(t, err)
+	require.Contains(t, out, "Initialized empty Git repository", "")
+	require.NoError(t, err)
 	GitCheckoutBranch(t, dir, "main")
 	_, _ = fakeGit("branch", "-D", "master")
 }
@@ -59,40 +60,32 @@ func GitInit(t *testing.T, dir string) {
 func GitRemoteAdd(t *testing.T, dir, url string) {
 	t.Helper()
 	out, err := fakeGit(dir, "remote", "add", "origin", url)
-	requireNoError(t, err)
-	requireEmpty(t, out)
+	require.NoError(t, err)
+	require.Empty(t, out)
 }
 
 // GitCommit creates a git commits.
 func GitCommit(t *testing.T, dir, msg string) {
 	t.Helper()
 	out, err := fakeGit(dir, "commit", "--allow-empty", "-m", msg)
-	requireNoError(t, err)
-	requireContains(t, out, "main", msg)
+	require.NoError(t, err)
+	require.Contains(t, out, "main", msg)
 }
 
 // GitTag creates a git tag.
 func GitTag(t *testing.T, dir, tag string) {
 	t.Helper()
 	out, err := fakeGit(dir, "tag", tag)
-	requireNoError(t, err)
-	requireEmpty(t, out)
-}
-
-// GitAnnotatedTag creates an annotated tag.
-func GitAnnotatedTag(t *testing.T, dir, tag, message string) {
-	t.Helper()
-	out, err := fakeGit(dir, "tag", "-a", tag, "-m", message)
-	requireNoError(t, err)
-	requireEmpty(t, out)
+	require.NoError(t, err)
+	require.Empty(t, out)
 }
 
 // GitAdd adds all files to stage.
 func GitAdd(t *testing.T, dir string) {
 	t.Helper()
 	out, err := fakeGit(dir, "add", "-A")
-	requireNoError(t, err)
-	requireEmpty(t, out)
+	require.NoError(t, err)
+	require.Empty(t, out)
 }
 
 func fakeGit(dir string, args ...string) (string, error) {
@@ -111,8 +104,8 @@ func fakeGit(dir string, args ...string) (string, error) {
 func GitCheckoutBranch(t *testing.T, dir, name string) {
 	t.Helper()
 	out, err := fakeGit(dir, "checkout", "-b", name)
-	requireNoError(t, err)
-	requireEmpty(t, out)
+	require.NoError(t, err)
+	require.Empty(t, out)
 }
 
 func gitRun(dir string, args ...string) (string, error) {
@@ -132,29 +125,4 @@ func gitRun(dir string, args ...string) (string, error) {
 	}
 
 	return stdout.String(), nil
-}
-
-func requireNoError(t *testing.T, err error) {
-	t.Helper()
-	if err != nil {
-		t.Fatalf("unexpected error: %s", err)
-	}
-}
-
-func requireContains(t *testing.T, val, expected, msg string) {
-	t.Helper()
-	if !strings.Contains(val, expected) {
-		if len(msg) > 0 {
-			t.Fatalf("%s: expected value %s missing from value %s", msg, expected, val)
-		} else {
-			t.Fatalf("expected value %s missing from value %s", expected, val)
-		}
-	}
-}
-
-func requireEmpty(t *testing.T, val string) {
-	t.Helper()
-	if len(val) > 0 {
-		t.Fatalf("%s: expected empty string", val)
-	}
 }
