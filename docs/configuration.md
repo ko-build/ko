@@ -147,6 +147,31 @@ For a given build, the environment variables are merged in the following order:
 - Global `env`
 - Build `env` (highest precedence)
 
+### Setting build flags and ldflags
+
+You can specify both `flags` and `ldflags` globally as well as per-build.
+
+```yaml
+flags:
+- -v
+ldflags:
+- -s
+builds:
+- id: foo
+  dir: .
+  main: ./foobar/foo
+  flags:
+  - -trimpath # Build will use: -v -trimpath
+  ldflags:
+  - -w # Build will use: -s -w
+- id: bar
+  dir: ./bar
+  main: .
+```
+
+The values for each `build` will be appended to the global values when creating each build.
+Both global and per-build values may use [template parameters](#templating-support).
+
 ### Environment Variables (advanced)
 
 For ease of use, backward compatibility and advanced use cases, `ko` supports the following environment variables to

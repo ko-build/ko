@@ -22,6 +22,7 @@ import (
 
 	"github.com/google/ko/pkg/build"
 	"github.com/spf13/cobra"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDefaultBaseImage(t *testing.T) {
@@ -72,14 +73,26 @@ func TestEnv(t *testing.T) {
 		WorkingDirectory: "testdata/config",
 	}
 	err := bo.LoadConfig()
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
+	require.Equal(t, []string{"FOO=bar"}, bo.Env)
+}
 
-	wantEnv := []string{"FOO=bar"} // matches value in ./testdata/config/.ko.yaml
-	if !reflect.DeepEqual(bo.Env, wantEnv) {
-		t.Fatalf("wanted Env %s, got %s", wantEnv, bo.Env)
+func TestFlags(t *testing.T) {
+	bo := &BuildOptions{
+		WorkingDirectory: "testdata/config",
 	}
+	err := bo.LoadConfig()
+	require.NoError(t, err)
+	require.Equal(t, []string{"-tags", "netgo"}, bo.Flags)
+}
+
+func TestLDFlags(t *testing.T) {
+	bo := &BuildOptions{
+		WorkingDirectory: "testdata/config",
+	}
+	err := bo.LoadConfig()
+	require.NoError(t, err)
+	require.Equal(t, []string{"-s -w"}, bo.Ldflags)
 }
 
 func TestBuildConfigWithWorkingDirectoryAndDirAndMain(t *testing.T) {

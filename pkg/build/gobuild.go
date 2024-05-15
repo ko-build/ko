@@ -66,12 +66,13 @@ type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 // buildContext provides parameters for a builder function.
 type buildContext struct {
-	creationTime v1.Time
-	ip           string
-	dir          string
-	mergedEnv    []string
-	platform     v1.Platform
-	config       Config
+	creationTime  v1.Time
+	ip            string
+	dir           string
+	mergedEnv     []string
+	mergedFlags   []string
+	mergedLdflags []string
+	platform      v1.Platform
 }
 
 type builder func(context.Context, buildContext) (string, error)
@@ -95,6 +96,8 @@ type gobuild struct {
 	trimpath             bool
 	buildConfigs         map[string]Config
 	env                  []string
+	flags                []string
+	ldflags              []string
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
@@ -118,6 +121,8 @@ type gobuildOpener struct {
 	trimpath             bool
 	buildConfigs         map[string]Config
 	env                  []string
+	flags                []string
+	ldflags              []string
 	platforms            []string
 	labels               map[string]string
 	dir                  string
@@ -147,6 +152,8 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
 		env:                  gbo.env,
+		flags:                gbo.flags,
+		ldflags:              gbo.ldflags,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
 		platformMatcher:      matcher,
@@ -830,8 +837,8 @@ func createBuildArgs(ctx context.Context, buildCtx buildContext) ([]string, erro
 		return nil, err
 	}
 
-	if len(buildCtx.config.Flags) > 0 {
-		flags, err := applyTemplating(buildCtx.config.Flags, data)
+	if len(buildCtx.mergedFlags) > 0 {
+		flags, err := applyTemplating(buildCtx.mergedFlags, data)
 		if err != nil {
 			return nil, err
 		}
@@ -839,8 +846,8 @@ func createBuildArgs(ctx context.Context, buildCtx buildContext) ([]string, erro
 		args = append(args, flags...)
 	}
 
-	if len(buildCtx.config.Ldflags) > 0 {
-		ldflags, err := applyTemplating(buildCtx.config.Ldflags, data)
+	if len(buildCtx.mergedLdflags) > 0 {
+		ldflags, err := applyTemplating(buildCtx.mergedLdflags, data)
 		if err != nil {
 			return nil, err
 		}
@@ -927,14 +934,25 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, fmt.Errorf("could not create env for %s: %w", ref.Path(), err)
 	}
 
+	// Merge global and build config flags.
+	var mergedFlags []string
+	mergedFlags = append(mergedFlags, g.flags...)
+	mergedFlags = append(mergedFlags, config.Flags...)
+
+	// Merge global and build config ldflags.
+	var mergedLdflags []string
+	mergedLdflags = append(mergedLdflags, g.ldflags...)
+	mergedLdflags = append(mergedLdflags, config.Ldflags...)
+
 	// Do the build into a temporary file.
 	file, err := g.build(ctx, buildContext{
-		creationTime: g.creationTime,
-		ip:           ref.Path(),
-		dir:          g.dir,
-		mergedEnv:    mergedEnv,
-		platform:     *platform,
-		config:       config,
+		creationTime:  g.creationTime,
+		ip:            ref.Path(),
+		dir:           g.dir,
+		mergedEnv:     mergedEnv,
+		mergedFlags:   mergedFlags,
+		mergedLdflags: mergedLdflags,
+		platform:      *platform,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build: %w", err)

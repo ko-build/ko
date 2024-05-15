@@ -915,6 +915,55 @@ func TestGoBuild(t *testing.T) {
 	})
 }
 
+func TestGoBuildMergedValues(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	var buildCtx buildContext
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(func(_ context.Context, b buildContext) (string, error) {
+			buildCtx = b
+			return "", errors.New("fake build error")
+		}),
+		withSBOMber(fauxSBOM),
+		WithPlatforms("all"),
+		WithEnv([]string{"FOO=foo", "BAR=bar"}),
+		WithFlags([]string{"-v"}),
+		WithLdflags([]string{"-s"}),
+		WithConfig(map[string]Config{
+			"github.com/google/ko/test": {
+				Env:     StringArray{"FOO=baz"},
+				Flags:   FlagArray{"-trimpath"},
+				Ldflags: StringArray{"-w"},
+			},
+		}),
+	)
+	require.NoError(t, err)
+
+	// Build and capture the buildContext.
+	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	require.ErrorContains(t, err, "fake build error")
+	require.Equal(t, []string{"-v", "-trimpath"}, buildCtx.mergedFlags)
+	require.Equal(t, []string{"-s", "-w"}, buildCtx.mergedLdflags)
+
+	envVars := make(map[string]string)
+	for _, val := range buildCtx.mergedEnv {
+		kv := strings.SplitN(val, "=", 2)
+		envVars[kv[0]] = kv[1]
+	}
+	require.Equal(t, "baz", envVars["FOO"])
+	require.Equal(t, "bar", envVars["BAR"])
+}
+
 func TestGoBuildWithKOCACHE(t *testing.T) {
 	now := time.Now() // current local time
 	sec := now.Unix()
