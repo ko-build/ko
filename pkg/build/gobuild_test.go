@@ -40,6 +40,7 @@ import (
 	"github.com/google/ko/pkg/internal/gittesting"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/stretchr/testify/require"
 )
 
 func repoRootDir() (string, error) {
@@ -317,63 +318,49 @@ func TestBuildEnv(t *testing.T) {
 func TestCreateTemplateData(t *testing.T) {
 	t.Run("env", func(t *testing.T) {
 		t.Setenv("FOO", "bar")
-		params := createTemplateData(context.TODO(), buildContext{})
+		params := createTemplateData(context.TODO(), buildContext{dir: t.TempDir()})
 		vars := params["Env"].(map[string]string)
-		if vars["FOO"] != "bar" {
-			t.Fatalf("vars[FOO]=%q, want %q", vars["FOO"], "bar")
-		}
+		require.Equal(t, "bar", vars["FOO"])
 	})
 
 	t.Run("empty creation time", func(t *testing.T) {
-		params := createTemplateData(context.TODO(), buildContext{})
+		params := createTemplateData(context.TODO(), buildContext{dir: t.TempDir()})
 
 		// Make sure the date was set to time.Now().
 		actualDateStr := params["Date"].(string)
 		actualDate, err := time.Parse(time.RFC3339, actualDateStr)
-		if err != nil {
-			t.Fatal(err)
-		}
+		require.NoError(t, err)
 		if time.Since(actualDate) > time.Minute {
 			t.Fatalf("expected date to be now, but was %v", actualDate)
 		}
 
 		// Check the timestamp.
 		actualTimestampSec := params["Timestamp"].(int64)
-		actualTimestamp := time.Unix(actualTimestampSec, 0)
-		expectedTimestamp := actualDate.Truncate(time.Second)
-		if !actualTimestamp.Equal(expectedTimestamp) {
-			t.Fatalf("expected timestamp %v, but was %v",
-				expectedTimestamp, actualTimestamp)
-		}
+		actualTimestamp := time.Unix(actualTimestampSec, 0).UTC()
+		expectedTimestamp := actualDate.Truncate(time.Second).UTC()
+		require.Equal(t, expectedTimestamp, actualTimestamp)
 	})
 
 	t.Run("creation time", func(t *testing.T) {
 		// Create a reference time for use as a creation time.
-		expectedTime, err := time.Parse(time.RFC3339, "2012-11-01T22:08:41+00:00")
-		if err != nil {
-			t.Fatal(err)
-		}
+		expectedTime, err := time.Parse(time.RFC3339, "2012-11-01T22:08:00Z")
+		require.NoError(t, err)
 
 		params := createTemplateData(context.TODO(), buildContext{
 			creationTime: v1.Time{Time: expectedTime},
+			dir:          t.TempDir(),
 		})
 
 		// Check the date.
 		actualDateStr := params["Date"].(string)
 		actualDate, err := time.Parse(time.RFC3339, actualDateStr)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !actualDate.Equal(expectedTime) {
-			t.Fatalf("expected date to be %v, but was %v", expectedTime, actualDate)
-		}
+		require.NoError(t, err)
+		require.Equal(t, expectedTime, actualDate)
 
 		// Check the timestamp.
 		actualTimestampSec := params["Timestamp"].(int64)
-		actualTimestamp := time.Unix(actualTimestampSec, 0)
-		if !actualTimestamp.Equal(expectedTime) {
-			t.Fatalf("expected timestamp to be %v, but was %v", expectedTime, actualTimestamp)
-		}
+		actualTimestamp := time.Unix(actualTimestampSec, 0).UTC()
+		require.Equal(t, expectedTime, actualTimestamp)
 	})
 
 	t.Run("no git available", func(t *testing.T) {
@@ -381,11 +368,11 @@ func TestCreateTemplateData(t *testing.T) {
 		params := createTemplateData(context.TODO(), buildContext{dir: dir})
 		gitParams := params["Git"].(map[string]interface{})
 
-		requireEqual(t, "", gitParams["Branch"])
-		requireEqual(t, "", gitParams["Tag"])
-		requireEqual(t, "", gitParams["ShortCommit"])
-		requireEqual(t, "", gitParams["FullCommit"])
-		requireEqual(t, "clean", gitParams["TreeState"])
+		require.Equal(t, "", gitParams["Branch"])
+		require.Equal(t, "", gitParams["Tag"])
+		require.Equal(t, "", gitParams["ShortCommit"])
+		require.Equal(t, "", gitParams["FullCommit"])
+		require.Equal(t, "clean", gitParams["TreeState"])
 	})
 
 	t.Run("git", func(t *testing.T) {
@@ -400,9 +387,9 @@ func TestCreateTemplateData(t *testing.T) {
 		params := createTemplateData(context.TODO(), buildContext{dir: dir})
 		gitParams := params["Git"].(map[string]interface{})
 
-		requireEqual(t, "main", gitParams["Branch"])
-		requireEqual(t, "v0.0.1", gitParams["Tag"])
-		requireEqual(t, "clean", gitParams["TreeState"])
+		require.Equal(t, "main", gitParams["Branch"])
+		require.Equal(t, "v0.0.1", gitParams["Tag"])
+		require.Equal(t, "clean", gitParams["TreeState"])
 	})
 }
 
@@ -1339,12 +1326,5 @@ func TestGoBuildConsistentMediaTypes(t *testing.T) {
 				t.Errorf("got image mediaType %q, want %q", gotMT, c.layerMediaType)
 			}
 		})
-	}
-}
-
-func requireEqual(t *testing.T, expected any, actual any) {
-	t.Helper()
-	if diff := cmp.Diff(expected, actual); diff != "" {
-		t.Fatalf("%T differ (-got, +want): %s", expected, diff)
 	}
 }
