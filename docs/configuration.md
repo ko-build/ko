@@ -104,6 +104,31 @@ You can also use the `KO_DEFAULTPLATFORMS` environment variable to set the defau
 KO_DEFAULTPLATFORMS=linux/arm64,linux/amd64
 ```
 
+### Setting build environment variables
+
+By default, `ko` builds use the ambient environment from the system (i.e. `os.Environ()`).
+These values can be overridden globally or per-build (or both).
+
+```yaml
+env:
+- FOO=foo
+builds:
+- id: foo
+  dir: .
+  main: ./foobar/foo
+  env:
+  - FOO=bar # Overrides the global value.
+- id: bar
+  dir: ./bar
+  main: .
+```
+
+For a given build, the environment variables are merged in the following order:
+
+- System `os.Environ` (lowest precedence)
+- Global `env`
+- Build `env` (highest precedence)
+
 ### Environment Variables (advanced)
 
 For ease of use, backward compatibility and advanced use cases, `ko` supports the following environment variables to

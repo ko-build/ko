@@ -47,6 +47,9 @@ type BuildOptions struct {
 	// DefaultPlatforms defines the default platforms when Platforms is not explicitly defined
 	DefaultPlatforms []string
 
+	// Env allows setting environment variables globally and applying them to each build.
+	Env []string
+
 	// WorkingDirectory allows for setting the working directory for invocations of the `go` tool.
 	// Empty string means the current working directory.
 	WorkingDirectory string
@@ -136,6 +139,11 @@ func (bo *BuildOptions) LoadConfig() error {
 	dp := v.GetStringSlice("defaultPlatforms")
 	if len(dp) > 0 {
 		bo.DefaultPlatforms = dp
+	}
+
+	env := v.GetStringSlice("env")
+	if len(env) > 0 {
+		bo.Env = env
 	}
 
 	if bo.BaseImage == "" {
