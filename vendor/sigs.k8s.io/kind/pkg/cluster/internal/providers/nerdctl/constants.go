@@ -9,13 +9,16 @@ You may obtain a copy of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or impliep.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package defaults contains cross-api-version configuration defaults
-package defaults
+package nerdctl
 
-// Image is the default for the Config.Image field, aka the default node image.
-const Image = "kindest/node:v1.30.0@sha256:047357ac0cfea04663786a612ba1eaba9702bef25227a794b52890dd8bcd692e"
+// clusterLabelKey is applied to each "node" container for identification
+const clusterLabelKey = "io.x-k8s.kind.cluster"
+
+// nodeRoleLabelKey is applied to each "node" container for categorization
+// of nodes by role
+const nodeRoleLabelKey = "io.x-k8s.kind.role"
