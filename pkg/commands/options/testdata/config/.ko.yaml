@@ -1,3 +1,8 @@
 defaultBaseImage: alpine
 defaultPlatforms: all
 env: FOO=bar
+flags:
+  - -tags
+  - netgo
+ldflags:
+  - -s -w

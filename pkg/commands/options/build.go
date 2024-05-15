@@ -50,6 +50,12 @@ type BuildOptions struct {
 	// Env allows setting environment variables globally and applying them to each build.
 	Env []string
 
+	// Flags allows setting flags globally and applying them to each build.
+	Flags []string
+
+	// Ldflags allows setting ldflags globally and applying them to each build.
+	Ldflags []string
+
 	// WorkingDirectory allows for setting the working directory for invocations of the `go` tool.
 	// Empty string means the current working directory.
 	WorkingDirectory string
@@ -136,14 +142,20 @@ func (bo *BuildOptions) LoadConfig() error {
 		}
 	}
 
-	dp := v.GetStringSlice("defaultPlatforms")
-	if len(dp) > 0 {
+	if dp := v.GetStringSlice("defaultPlatforms"); len(dp) > 0 {
 		bo.DefaultPlatforms = dp
 	}
 
-	env := v.GetStringSlice("env")
-	if len(env) > 0 {
+	if env := v.GetStringSlice("env"); len(env) > 0 {
 		bo.Env = env
+	}
+
+	if flags := v.GetStringSlice("flags"); len(flags) > 0 {
+		bo.Flags = flags
+	}
+
+	if ldflags := v.GetStringSlice("ldflags"); len(ldflags) > 0 {
+		bo.Ldflags = ldflags
 	}
 
 	if bo.BaseImage == "" {
