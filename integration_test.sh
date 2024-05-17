@@ -43,7 +43,15 @@ else
   echo "Test PASSED"
 fi
 
-echo "2. Linux capabilities."
+echo "2. Test knative 'KO_FLAGS' variable is ignored."
+RESULT="$(KO_FLAGS="--platform=badvalue" ./ko build --local --platform="linux/$GOARCH" "$GOPATH/src/github.com/google/ko/test" | grep "$FILTER" | xargs -I% docker run %)"
+if [[ "$RESULT" != *"Hello there"* ]]; then
+  echo "Test FAILED. Saw $RESULT" && exit 1
+else
+  echo "Test PASSED"
+fi
+
+echo "3. Linux capabilities."
 pushd test/build-configs || exit 1
 # run as non-root user with net_bind_service cap granted
 docker_run_opts="--user 1 --cap-add=net_bind_service"

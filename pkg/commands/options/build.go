@@ -22,12 +22,11 @@ import (
 	"reflect"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/ko/pkg/build"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/tools/go/packages"
-
-	"github.com/google/ko/pkg/build"
 )
 
 const (
@@ -47,14 +46,14 @@ type BuildOptions struct {
 	// DefaultPlatforms defines the default platforms when Platforms is not explicitly defined
 	DefaultPlatforms []string
 
-	// Env allows setting environment variables globally and applying them to each build.
-	Env []string
+	// DefaultEnv defines the default environment when per-build value is not explicitly defined.
+	DefaultEnv []string
 
-	// Flags allows setting flags globally and applying them to each build.
-	Flags []string
+	// DefaultFlags defines the default flags when per-build value is not explicitly defined.
+	DefaultFlags []string
 
-	// Ldflags allows setting ldflags globally and applying them to each build.
-	Ldflags []string
+	// DefaultLdflags defines the default ldflags when per-build value is not explicitly defined.
+	DefaultLdflags []string
 
 	// WorkingDirectory allows for setting the working directory for invocations of the `go` tool.
 	// Empty string means the current working directory.
@@ -146,16 +145,16 @@ func (bo *BuildOptions) LoadConfig() error {
 		bo.DefaultPlatforms = dp
 	}
 
-	if env := v.GetStringSlice("env"); len(env) > 0 {
-		bo.Env = env
+	if env := v.GetStringSlice("defaultEnv"); len(env) > 0 {
+		bo.DefaultEnv = env
 	}
 
-	if flags := v.GetStringSlice("flags"); len(flags) > 0 {
-		bo.Flags = flags
+	if flags := v.GetStringSlice("defaultFlags"); len(flags) > 0 {
+		bo.DefaultFlags = flags
 	}
 
-	if ldflags := v.GetStringSlice("ldflags"); len(ldflags) > 0 {
-		bo.Ldflags = ldflags
+	if ldflags := v.GetStringSlice("defaultLdflags"); len(ldflags) > 0 {
+		bo.DefaultLdflags = ldflags
 	}
 
 	if bo.BaseImage == "" {

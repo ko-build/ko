@@ -68,31 +68,31 @@ func TestDefaultPlatformsAll(t *testing.T) {
 	}
 }
 
-func TestEnv(t *testing.T) {
+func TestDefaultEnv(t *testing.T) {
 	bo := &BuildOptions{
 		WorkingDirectory: "testdata/config",
 	}
 	err := bo.LoadConfig()
 	require.NoError(t, err)
-	require.Equal(t, []string{"FOO=bar"}, bo.Env)
+	require.Equal(t, []string{"FOO=bar"}, bo.DefaultEnv)
 }
 
-func TestFlags(t *testing.T) {
+func TestDefaultFlags(t *testing.T) {
 	bo := &BuildOptions{
 		WorkingDirectory: "testdata/config",
 	}
 	err := bo.LoadConfig()
 	require.NoError(t, err)
-	require.Equal(t, []string{"-tags", "netgo"}, bo.Flags)
+	require.Equal(t, []string{"-tags", "netgo"}, bo.DefaultFlags)
 }
 
-func TestLDFlags(t *testing.T) {
+func TestDefaultLdFlags(t *testing.T) {
 	bo := &BuildOptions{
 		WorkingDirectory: "testdata/config",
 	}
 	err := bo.LoadConfig()
 	require.NoError(t, err)
-	require.Equal(t, []string{"-s -w"}, bo.Ldflags)
+	require.Equal(t, []string{"-s -w"}, bo.DefaultLdflags)
 }
 
 func TestBuildConfigWithWorkingDirectoryAndDirAndMain(t *testing.T) {
