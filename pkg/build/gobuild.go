@@ -66,13 +66,13 @@ type GetBase func(context.Context, string) (name.Reference, Result, error)
 
 // buildContext provides parameters for a builder function.
 type buildContext struct {
-	creationTime  v1.Time
-	ip            string
-	dir           string
-	mergedEnv     []string
-	mergedFlags   []string
-	mergedLdflags []string
-	platform      v1.Platform
+	creationTime v1.Time
+	ip           string
+	dir          string
+	env          []string
+	flags        []string
+	ldflags      []string
+	platform     v1.Platform
 }
 
 type builder func(context.Context, buildContext) (string, error)
@@ -95,9 +95,9 @@ type gobuild struct {
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
-	env                  []string
-	flags                []string
-	ldflags              []string
+	defaultEnv           []string
+	defaultFlags         []string
+	defaultLdflags       []string
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
@@ -120,9 +120,9 @@ type gobuildOpener struct {
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
-	env                  []string
-	flags                []string
-	ldflags              []string
+	defaultEnv           []string
+	defaultFlags         []string
+	defaultLdflags       []string
 	platforms            []string
 	labels               map[string]string
 	dir                  string
@@ -151,9 +151,9 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		disableOptimizations: gbo.disableOptimizations,
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
-		env:                  gbo.env,
-		flags:                gbo.flags,
-		ldflags:              gbo.ldflags,
+		defaultEnv:           gbo.defaultEnv,
+		defaultFlags:         gbo.defaultFlags,
+		defaultLdflags:       gbo.defaultLdflags,
 		labels:               gbo.labels,
 		dir:                  gbo.dir,
 		platformMatcher:      matcher,
@@ -320,7 +320,7 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 	gobin := getGoBinary()
 	cmd := exec.CommandContext(ctx, gobin, args...)
 	cmd.Dir = buildCtx.dir
-	cmd.Env = buildCtx.mergedEnv
+	cmd.Env = buildCtx.env
 
 	var output bytes.Buffer
 	cmd.Stderr = &output
@@ -493,9 +493,9 @@ func cycloneDX() sbomber {
 }
 
 // buildEnv creates the environment variables used by the `go build` command.
-// From `os/exec.Cmd`: If Env contains duplicate environment keys, only the last
+// From `os/exec.Cmd`: If there are duplicate environment keys, only the last
 // value in the slice for each duplicate key is used.
-func buildEnv(platform v1.Platform, osEnv, globalEnv, configEnv []string) ([]string, error) {
+func buildEnv(platform v1.Platform, osEnv, buildEnv []string) ([]string, error) {
 	// Default env
 	env := []string{
 		"CGO_ENABLED=0",
@@ -520,8 +520,7 @@ func buildEnv(platform v1.Platform, osEnv, globalEnv, configEnv []string) ([]str
 	}
 
 	env = append(env, osEnv...)
-	env = append(env, globalEnv...)
-	env = append(env, configEnv...)
+	env = append(env, buildEnv...)
 	return env, nil
 }
 
@@ -768,7 +767,7 @@ func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]
 	envVars := map[string]string{
 		"LDFLAGS": "",
 	}
-	for _, entry := range buildCtx.mergedEnv {
+	for _, entry := range buildCtx.env {
 		kv := strings.SplitN(entry, "=", 2)
 		if len(kv) != 2 {
 			return nil, fmt.Errorf("invalid environment variable entry: %q", entry)
@@ -837,8 +836,8 @@ func createBuildArgs(ctx context.Context, buildCtx buildContext) ([]string, erro
 		return nil, err
 	}
 
-	if len(buildCtx.mergedFlags) > 0 {
-		flags, err := applyTemplating(buildCtx.mergedFlags, data)
+	if len(buildCtx.flags) > 0 {
+		flags, err := applyTemplating(buildCtx.flags, data)
 		if err != nil {
 			return nil, err
 		}
@@ -846,8 +845,8 @@ func createBuildArgs(ctx context.Context, buildCtx buildContext) ([]string, erro
 		args = append(args, flags...)
 	}
 
-	if len(buildCtx.mergedLdflags) > 0 {
-		ldflags, err := applyTemplating(buildCtx.mergedLdflags, data)
+	if len(buildCtx.ldflags) > 0 {
+		ldflags, err := applyTemplating(buildCtx.ldflags, data)
 		if err != nil {
 			return nil, err
 		}
@@ -928,31 +927,40 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	config := g.configForImportPath(ref.Path())
 
-	// Merge the system, global, and build config environment variables.
-	mergedEnv, err := buildEnv(*platform, os.Environ(), g.env, config.Env)
+	// Merge the system and build environment variables.
+	env := config.Env
+	if len(env) == 0 {
+		// Use the default, if any.
+		env = g.defaultEnv
+	}
+	env, err = buildEnv(*platform, os.Environ(), env)
 	if err != nil {
 		return nil, fmt.Errorf("could not create env for %s: %w", ref.Path(), err)
 	}
 
-	// Merge global and build config flags.
-	var mergedFlags []string
-	mergedFlags = append(mergedFlags, g.flags...)
-	mergedFlags = append(mergedFlags, config.Flags...)
+	// Get the build flags.
+	flags := config.Flags
+	if len(flags) == 0 {
+		// Use the default, if any.
+		flags = g.defaultFlags
+	}
 
-	// Merge global and build config ldflags.
-	var mergedLdflags []string
-	mergedLdflags = append(mergedLdflags, g.ldflags...)
-	mergedLdflags = append(mergedLdflags, config.Ldflags...)
+	// Get the build ldflags.
+	ldflags := config.Ldflags
+	if len(ldflags) == 0 {
+		// Use the default, if any
+		ldflags = g.defaultLdflags
+	}
 
 	// Do the build into a temporary file.
 	file, err := g.build(ctx, buildContext{
-		creationTime:  g.creationTime,
-		ip:            ref.Path(),
-		dir:           g.dir,
-		mergedEnv:     mergedEnv,
-		mergedFlags:   mergedFlags,
-		mergedLdflags: mergedLdflags,
-		platform:      *platform,
+		creationTime: g.creationTime,
+		ip:           ref.Path(),
+		dir:          g.dir,
+		env:          env,
+		flags:        flags,
+		ldflags:      ldflags,
+		platform:     *platform,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build: %w", err)

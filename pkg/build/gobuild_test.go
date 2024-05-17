@@ -220,8 +220,7 @@ func TestBuildEnv(t *testing.T) {
 		description  string
 		platform     v1.Platform
 		osEnv        []string
-		globalEnv    []string
-		configEnv    []string
+		buildEnv     []string
 		expectedEnvs map[string]string
 	}{{
 		description: "defaults",
@@ -235,30 +234,16 @@ func TestBuildEnv(t *testing.T) {
 			"CGO_ENABLED": "0",
 		},
 	}, {
-		description: "override a default value",
+		description: "build override a system value",
 		osEnv:       []string{"CGO_ENABLED=0"},
-		configEnv:   []string{"CGO_ENABLED=1"},
-		expectedEnvs: map[string]string{
-			"CGO_ENABLED": "1",
-		},
-	}, {
-		description: "global override a default value",
-		osEnv:       []string{"CGO_ENABLED=0"},
-		globalEnv:   []string{"CGO_ENABLED=1"},
-		expectedEnvs: map[string]string{
-			"CGO_ENABLED": "1",
-		},
-	}, {
-		description: "override a global value",
-		globalEnv:   []string{"CGO_ENABLED=0"},
-		configEnv:   []string{"CGO_ENABLED=1"},
+		buildEnv:    []string{"CGO_ENABLED=1"},
 		expectedEnvs: map[string]string{
 			"CGO_ENABLED": "1",
 		},
 	}, {
 		description: "override an envvar and add an envvar",
 		osEnv:       []string{"CGO_ENABLED=0"},
-		configEnv:   []string{"CGO_ENABLED=1", "GOPRIVATE=git.internal.example.com,source.developers.google.com"},
+		buildEnv:    []string{"CGO_ENABLED=1", "GOPRIVATE=git.internal.example.com,source.developers.google.com"},
 		expectedEnvs: map[string]string{
 			"CGO_ENABLED": "1",
 			"GOPRIVATE":   "git.internal.example.com,source.developers.google.com",
@@ -297,7 +282,7 @@ func TestBuildEnv(t *testing.T) {
 	}}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			env, err := buildEnv(test.platform, test.osEnv, test.globalEnv, test.configEnv)
+			env, err := buildEnv(test.platform, test.osEnv, test.buildEnv)
 			if err != nil {
 				t.Fatalf("unexpected error running buildEnv(): %v", err)
 			}
@@ -400,8 +385,8 @@ func TestCreateTemplateData(t *testing.T) {
 
 	t.Run("env", func(t *testing.T) {
 		params, err := createTemplateData(context.TODO(), buildContext{
-			dir:       t.TempDir(),
-			mergedEnv: []string{"FOO=bar"},
+			dir: t.TempDir(),
+			env: []string{"FOO=bar"},
 		})
 		require.NoError(t, err)
 		vars := params["Env"].(map[string]string)
@@ -410,8 +395,8 @@ func TestCreateTemplateData(t *testing.T) {
 
 	t.Run("bad env", func(t *testing.T) {
 		_, err := createTemplateData(context.TODO(), buildContext{
-			dir:       t.TempDir(),
-			mergedEnv: []string{"bad var"},
+			dir: t.TempDir(),
+			env: []string{"bad var"},
 		})
 		require.Error(t, err)
 	})
@@ -427,7 +412,7 @@ func TestCreateTemplateData(t *testing.T) {
 	t.Run("env overrides go env", func(t *testing.T) {
 		params, err := createTemplateData(context.TODO(), buildContext{
 			dir: t.TempDir(),
-			mergedEnv: []string{
+			env: []string{
 				"GOOS=testgoos",
 				"GOARCH=testgoarch",
 			},
@@ -915,7 +900,7 @@ func TestGoBuild(t *testing.T) {
 	})
 }
 
-func TestGoBuildMergedValues(t *testing.T) {
+func TestGoBuild_Defaults(t *testing.T) {
 	baseLayers := int64(3)
 	base, err := random.Image(1024, baseLayers)
 	if err != nil {
@@ -936,9 +921,54 @@ func TestGoBuildMergedValues(t *testing.T) {
 		}),
 		withSBOMber(fauxSBOM),
 		WithPlatforms("all"),
-		WithEnv([]string{"FOO=foo", "BAR=bar"}),
-		WithFlags([]string{"-v"}),
-		WithLdflags([]string{"-s"}),
+		WithDefaultEnv([]string{"FOO=foo", "BAR=bar"}),
+		WithDefaultFlags([]string{"-v"}),
+		WithDefaultLdflags([]string{"-s"}),
+		WithConfig(map[string]Config{
+			"github.com/google/ko/test": {},
+		}),
+	)
+	require.NoError(t, err)
+
+	// Build and capture the buildContext.
+	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	require.ErrorContains(t, err, "fake build error")
+	require.Equal(t, []string{"-v"}, buildCtx.flags)
+	require.Equal(t, []string{"-s"}, buildCtx.ldflags)
+
+	envVars := make(map[string]string)
+	for _, val := range buildCtx.env {
+		kv := strings.SplitN(val, "=", 2)
+		envVars[kv[0]] = kv[1]
+	}
+	require.Equal(t, "foo", envVars["FOO"])
+	require.Equal(t, "bar", envVars["BAR"])
+}
+
+func TestGoBuild_ConfigOverrideDefaults(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	var buildCtx buildContext
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(func(_ context.Context, b buildContext) (string, error) {
+			buildCtx = b
+			return "", errors.New("fake build error")
+		}),
+		withSBOMber(fauxSBOM),
+		WithPlatforms("all"),
+		WithDefaultEnv([]string{"FOO=foo", "BAR=bar"}),
+		WithDefaultFlags([]string{"-v"}),
+		WithDefaultLdflags([]string{"-s"}),
 		WithConfig(map[string]Config{
 			"github.com/google/ko/test": {
 				Env:     StringArray{"FOO=baz"},
@@ -952,16 +982,16 @@ func TestGoBuildMergedValues(t *testing.T) {
 	// Build and capture the buildContext.
 	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
 	require.ErrorContains(t, err, "fake build error")
-	require.Equal(t, []string{"-v", "-trimpath"}, buildCtx.mergedFlags)
-	require.Equal(t, []string{"-s", "-w"}, buildCtx.mergedLdflags)
+	require.Equal(t, []string{"-trimpath"}, buildCtx.flags)
+	require.Equal(t, []string{"-w"}, buildCtx.ldflags)
 
 	envVars := make(map[string]string)
-	for _, val := range buildCtx.mergedEnv {
+	for _, val := range buildCtx.env {
 		kv := strings.SplitN(val, "=", 2)
 		envVars[kv[0]] = kv[1]
 	}
 	require.Equal(t, "baz", envVars["FOO"])
-	require.Equal(t, "bar", envVars["BAR"])
+	require.Equal(t, "", envVars["BAR"])
 }
 
 func TestGoBuildWithKOCACHE(t *testing.T) {

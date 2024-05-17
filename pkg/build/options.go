@@ -85,27 +85,27 @@ func WithConfig(buildConfigs map[string]Config) Option {
 	}
 }
 
-// WithEnv is a functional option for providing a global set of environment
+// WithDefaultEnv is a functional option for providing a default set of environment
 // variables across all builds.
-func WithEnv(env []string) Option {
+func WithDefaultEnv(env []string) Option {
 	return func(gbo *gobuildOpener) error {
-		gbo.env = env
+		gbo.defaultEnv = env
 		return nil
 	}
 }
 
-// WithFlags is a functional option for providing a global set of flags across all builds.
-func WithFlags(flags []string) Option {
+// WithDefaultFlags is a functional option for providing a default set of flags across all builds.
+func WithDefaultFlags(flags []string) Option {
 	return func(gbo *gobuildOpener) error {
-		gbo.flags = flags
+		gbo.defaultFlags = flags
 		return nil
 	}
 }
 
-// WithLdflags is a functional option for providing a global set of ldflags across all builds.
-func WithLdflags(ldflags []string) Option {
+// WithDefaultLdflags is a functional option for providing a default set of ldflags across all builds.
+func WithDefaultLdflags(ldflags []string) Option {
 	return func(gbo *gobuildOpener) error {
-		gbo.ldflags = ldflags
+		gbo.defaultLdflags = ldflags
 		return nil
 	}
 }

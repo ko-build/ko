@@ -125,18 +125,18 @@ KO_DEFAULTPLATFORMS=linux/arm64,linux/amd64
 ### Setting build environment variables
 
 By default, `ko` builds use the ambient environment from the system (i.e. `os.Environ()`).
-These values can be overridden globally or per-build (or both).
+These values can be overridden for your build.
 
 ```yaml
-env:
+defaultEnv:
 - FOO=foo
 builds:
 - id: foo
   dir: .
   main: ./foobar/foo
   env:
-  - FOO=bar # Overrides the global value.
-- id: bar
+  - FOO=bar
+- id: bar     # Will use defaultEnv.
   dir: ./bar
   main: .
 ```
@@ -144,33 +144,32 @@ builds:
 For a given build, the environment variables are merged in the following order:
 
 - System `os.Environ` (lowest precedence)
-- Global `env`
-- Build `env` (highest precedence)
+- Build variables: `build.env` if specified, otherwise `defaultEnv` (highest precedence)
 
 ### Setting build flags and ldflags
 
 You can specify both `flags` and `ldflags` globally as well as per-build.
 
 ```yaml
-flags:
+defaultFlags:
 - -v
-ldflags:
+defaultLdflags:
 - -s
 builds:
 - id: foo
   dir: .
   main: ./foobar/foo
   flags:
-  - -trimpath # Build will use: -v -trimpath
+  - -trimpath
   ldflags:
-  - -w # Build will use: -s -w
-- id: bar
+  - -w
+- id: bar     # Will use defaultFlags and defaultLdflags.
   dir: ./bar
   main: .
 ```
 
-The values for each `build` will be appended to the global values when creating each build.
-Both global and per-build values may use [template parameters](#templating-support).
+The values for a `build` will be used if specified, otherwise their respective defaults will be used.
+Both default and per-build values may use [template parameters](#templating-support).
 
 ### Environment Variables (advanced)
 
