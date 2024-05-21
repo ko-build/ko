@@ -1489,7 +1489,7 @@ func TestDebugger(t *testing.T) {
 	}
 	gotEntrypoint := cfg.Config.Entrypoint
 	wantEntrypoint := []string{
-		"/usr/bin/dlv",
+		"/ko-app/dlv",
 		"exec",
 		"--listen=:40000",
 		"--headless",
