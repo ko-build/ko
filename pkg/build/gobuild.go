@@ -313,7 +313,7 @@ func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
 
 	// find the delve binary in tmpInstallDir/bin/
 	delveBinary := ""
-	err = filepath.WalkDir(filepath.Join(tmpInstallDir, "bin"), func(path string, d fs.DirEntry, err error) error {
+	if err := filepath.WalkDir(filepath.Join(tmpInstallDir, "bin"), func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -323,8 +323,7 @@ func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
 		}
 
 		return nil
-	})
-	if err != nil {
+	}); err != nil {
 		return "", fmt.Errorf("could not search for Delve binary: %w", err)
 	}
 
@@ -1062,7 +1061,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 		defer os.RemoveAll(filepath.Dir(delveBinary))
 
-		delvePath = "/usr/bin/" + filepath.Base(delveBinary)
+		delvePath = path.Join("/ko-app", filepath.Base(delveBinary))
 
 		// add layer with delve binary
 		delveLayer, err := g.cache.get(ctx, delveBinary, func() (v1.Layer, error) {
