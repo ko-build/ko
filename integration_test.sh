@@ -44,6 +44,7 @@ else
 fi
 
 echo "2. Test knative 'KO_FLAGS' variable is ignored."
+# https://github.com/ko-build/ko/issues/1317
 RESULT="$(KO_FLAGS="--platform=badvalue" ./ko build --local --platform="linux/$GOARCH" "$GOPATH/src/github.com/google/ko/test" | grep "$FILTER" | xargs -I% docker run %)"
 if [[ "$RESULT" != *"Hello there"* ]]; then
   echo "Test FAILED. Saw $RESULT" && exit 1
