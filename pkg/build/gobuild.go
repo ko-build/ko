@@ -23,7 +23,6 @@ import (
 	"fmt"
 	gb "go/build"
 	"io"
-	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -279,7 +278,7 @@ func getGoBinary() string {
 }
 
 func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
-	env, err := buildEnv(platform, os.Environ(), nil, nil)
+	env, err := buildEnv(platform, os.Environ(), nil)
 	if err != nil {
 		return "", fmt.Errorf("could not create env for Delve build: %w", err)
 	}
@@ -312,23 +311,13 @@ func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
 	}
 
 	// find the delve binary in tmpInstallDir/bin/
-	delveBinary := ""
-	if err := filepath.WalkDir(filepath.Join(tmpInstallDir, "bin"), func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !d.IsDir() && strings.Contains(d.Name(), "dlv") {
-			delveBinary = path
-		}
-
-		return nil
-	}); err != nil {
-		return "", fmt.Errorf("could not search for Delve binary: %w", err)
+	osArchDir := ""
+	if platform.OS != "" && platform.Architecture != "" {
+		osArchDir = fmt.Sprintf("%s_%s", platform.OS, platform.Architecture)
 	}
-
-	if delveBinary == "" {
-		return "", fmt.Errorf("could not find Delve binary in %q", tmpInstallDir)
+	delveBinary := filepath.Join(tmpInstallDir, "bin", osArchDir, "dlv")
+	if _, err := os.Stat(delveBinary); err != nil {
+		return "", fmt.Errorf("could not find Delve binary at %q: %w", delveBinary, err)
 	}
 
 	return delveBinary, nil
