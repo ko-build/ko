@@ -83,3 +83,6 @@ jobs:
           - "-X main.version=${{ github.sha }}"
         EOF
         docker run $(go run ./ build ./test/ --platform=${PLATFORM}) --wait=false 2>&1 | grep "${{ github.sha }}"
+
+        # Check that --debug adds dlv to the image, and that dlv is runnable.
+        docker run --entrypoint="dlv" $(go run ./ build ./test/ --platform=${PLATFORM} --debug) version | grep "Delve Debugger"
