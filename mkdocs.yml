@@ -24,6 +24,7 @@ nav:
     - features/k8s.md
     - features/static-assets.md
     - features/build-cache.md
+    - features/debugging.md
   - Advanced:
     - advanced/go-packages.md
     - advanced/limitations.md
