@@ -277,6 +277,16 @@ func getGoBinary() string {
 	return defaultGoBin
 }
 
+func doesPlatformSupportDebugging(platform v1.Platform) bool {
+	// Here's the list of supported platforms by Delve:
+	//
+	// https://github.com/go-delve/delve/blob/master/Documentation/faq.md#unsupportedplatforms
+	//
+	// For the time being, we'll support only linux/amd64 and linux/arm64.
+
+	return platform.OS == "linux" && (platform.Architecture == "amd64" || platform.Architecture == "arm64")
+}
+
 func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
 	env, err := buildEnv(platform, os.Environ(), nil)
 	if err != nil {
@@ -968,6 +978,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 			Architecture: cf.Architecture,
 			OSVersion:    cf.OSVersion,
 		}
+	}
+	if g.debug && !doesPlatformSupportDebugging(*platform) {
+		return nil, fmt.Errorf("debugging is not supported for %s", platform)
 	}
 
 	if !g.platformMatcher.matches(platform) {
