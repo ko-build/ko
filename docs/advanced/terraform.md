@@ -28,7 +28,7 @@ resource "ko_build" "app" {
 
 // Report the build image's digest.
 output "image" {
-  value = ko_build.app.image
+  value = ko_build.app.image_ref
 }
 ```
 
