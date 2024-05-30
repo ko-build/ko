@@ -1,6 +1,7 @@
 module github.com/google/ko
 
 go 1.21
+toolchain go1.22.2
 
 require (
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20240514230400-03fa26f5508f
@@ -20,7 +21,7 @@ require (
 	golang.org/x/sync v0.7.0
 	golang.org/x/tools v0.21.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.29.4
+	k8s.io/apimachinery v0.30.1
 	sigs.k8s.io/kind v0.23.0
 )
 
