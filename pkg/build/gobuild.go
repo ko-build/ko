@@ -288,6 +288,12 @@ func doesPlatformSupportDebugging(platform v1.Platform) bool {
 }
 
 func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
+	if platform.OS == "" || platform.Architecture == "" {
+		return "", fmt.Errorf("platform os (%q) or arch (%q) is empty",
+			platform.OS,
+			platform.Architecture,
+		)
+	}
 	env, err := buildEnv(platform, os.Environ(), nil)
 	if err != nil {
 		return "", fmt.Errorf("could not create env for Delve build: %w", err)
@@ -322,7 +328,7 @@ func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
 
 	// find the delve binary in tmpInstallDir/bin/
 	osArchDir := ""
-	if platform.OS != "" && platform.Architecture != "" {
+	if platform.OS != runtime.GOOS || platform.Architecture != runtime.GOARCH {
 		osArchDir = fmt.Sprintf("%s_%s", platform.OS, platform.Architecture)
 	}
 	delveBinary := filepath.Join(tmpInstallDir, "bin", osArchDir, "dlv")
