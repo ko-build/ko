@@ -454,44 +454,6 @@ func writeSBOM(sbom []byte, appFileName, dir, ext string) error {
 	return nil
 }
 
-func cycloneDX() sbomber {
-	return func(ctx context.Context, file string, appPath string, appFileName string, se oci.SignedEntity, dir string) ([]byte, types.MediaType, error) {
-		switch obj := se.(type) {
-		case oci.SignedImage:
-			b, _, err := goversionm(ctx, file, appPath, appFileName, obj, "")
-			if err != nil {
-				return nil, "", err
-			}
-
-			b, err = sbom.GenerateImageCycloneDX(b)
-			if err != nil {
-				return nil, "", err
-			}
-
-			if err := writeSBOM(b, appFileName, dir, "cyclonedx.json"); err != nil {
-				return nil, "", err
-			}
-
-			return b, ctypes.CycloneDXJSONMediaType, nil
-
-		case oci.SignedImageIndex:
-			b, err := sbom.GenerateIndexCycloneDX(obj)
-			if err != nil {
-				return nil, "", err
-			}
-
-			if err := writeSBOM(b, appFileName, dir, "cyclonedx.json"); err != nil {
-				return nil, "", err
-			}
-
-			return b, ctypes.SPDXJSONMediaType, err
-
-		default:
-			return nil, "", fmt.Errorf("unrecognized type: %T", se)
-		}
-	}
-}
-
 // buildEnv creates the environment variables used by the `go build` command.
 // From `os/exec.Cmd`: If there are duplicate environment keys, only the last
 // value in the slice for each duplicate key is used.

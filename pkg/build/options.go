@@ -151,29 +151,11 @@ func withBuilder(b builder) Option {
 	}
 }
 
-// WithGoVersionSBOM is a functional option to direct ko to use
-// go version -m for SBOM format.
-func WithGoVersionSBOM() Option {
-	return func(gbo *gobuildOpener) error {
-		gbo.sbom = goversionm
-		return nil
-	}
-}
-
 // WithSPDX is a functional option to direct ko to use
 // SPDX for SBOM format.
 func WithSPDX(version string) Option {
 	return func(gbo *gobuildOpener) error {
 		gbo.sbom = spdx(version)
-		return nil
-	}
-}
-
-// WithCycloneDX is a functional option to direct ko to use CycloneDX for SBOM
-// format.
-func WithCycloneDX() Option {
-	return func(gbo *gobuildOpener) error {
-		gbo.sbom = cycloneDX()
 		return nil
 	}
 }
