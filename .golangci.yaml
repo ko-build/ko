@@ -27,4 +27,3 @@ linters:
   disable:
     - errcheck
     - depguard
-    - deadcode
