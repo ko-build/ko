@@ -309,11 +309,11 @@ func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
 	cloneDir := filepath.Join(tmpInstallDir, "delve")
 	err = os.MkdirAll(cloneDir, 0755)
 	if err != nil {
-		return "", fmt.Errorf("making dir for delve clone: %v", err)
+		return "", fmt.Errorf("making dir for delve clone: %w", err)
 	}
 	err = git.Clone(ctx, cloneDir, delveCloneURL)
 	if err != nil {
-		return "", fmt.Errorf("cloning delve repo: %v", err)
+		return "", fmt.Errorf("cloning delve repo: %w", err)
 	}
 	osArchDir := fmt.Sprintf("%s_%s", platform.OS, platform.Architecture)
 	delveBinaryPath := filepath.Join(tmpInstallDir, "bin", osArchDir, "dlv")
@@ -321,16 +321,15 @@ func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
 	// install delve to tmp directory
 	args := []string{
 		"build",
-		"-C",
-		cloneDir,
-		"./cmd/dlv",
 		"-o",
 		delveBinaryPath,
+		"./cmd/dlv",
 	}
 
 	gobin := getGoBinary()
 	cmd := exec.CommandContext(ctx, gobin, args...)
 	cmd.Env = env
+	cmd.Dir = cloneDir
 
 	var output bytes.Buffer
 	cmd.Stderr = &output
@@ -962,6 +961,10 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	return config
 }
 
+func (g gobuild) useDebugging(platform v1.Platform) bool {
+	return g.debug && doesPlatformSupportDebugging(platform)
+}
+
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
 	if err := g.semaphore.Acquire(ctx, 1); err != nil {
 		return nil, err
@@ -1003,7 +1006,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 	}
 	if g.debug && !doesPlatformSupportDebugging(*platform) {
-		return nil, fmt.Errorf("debugging is not supported for %s", platform)
+		log.Printf("image for platform %q will be built without debugging enabled because debugging is not supported for that platform", *platform)
 	}
 
 	if !g.platformMatcher.matches(platform) {
@@ -1116,7 +1119,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	})
 
 	delvePath := "" // path for delve in image
-	if g.debug {
+	if g.useDebugging(*platform) {
 		// get delve locally
 		delveBinary, err := getDelve(ctx, *platform)
 		if err != nil {
@@ -1182,7 +1185,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		updatePath(cfg, `C:\ko-app`)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
 	} else {
-		if g.debug {
+		if g.useDebugging(*platform) {
 			cfg.Config.Entrypoint = append([]string{delvePath}, delveArgs...)
 			cfg.Config.Entrypoint = append(cfg.Config.Entrypoint, appPath)
 		}
