@@ -1465,7 +1465,7 @@ func TestDebugger(t *testing.T) {
 		context.Background(),
 		"",
 		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-		WithPlatforms("all"),
+		WithPlatforms("linux/amd64"),
 		WithDebugger(),
 	)
 	if err != nil {

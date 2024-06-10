@@ -288,12 +288,15 @@ func doesPlatformSupportDebugging(platform v1.Platform) bool {
 }
 
 func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
+	const delveCloneURL = "https://github.com/go-delve/delve.git"
+
 	if platform.OS == "" || platform.Architecture == "" {
 		return "", fmt.Errorf("platform os (%q) or arch (%q) is empty",
 			platform.OS,
 			platform.Architecture,
 		)
 	}
+
 	env, err := buildEnv(platform, os.Environ(), nil)
 	if err != nil {
 		return "", fmt.Errorf("could not create env for Delve build: %w", err)
@@ -303,13 +306,26 @@ func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not create tmp dir for Delve installation: %w", err)
 	}
+	cloneDir := filepath.Join(tmpInstallDir, "delve")
+	err = os.MkdirAll(cloneDir, 0755)
+	if err != nil {
+		return "", fmt.Errorf("making dir for delve clone: %v", err)
+	}
+	err = git.Clone(ctx, cloneDir, delveCloneURL)
+	if err != nil {
+		return "", fmt.Errorf("cloning delve repo: %v", err)
+	}
+	osArchDir := fmt.Sprintf("%s_%s", platform.OS, platform.Architecture)
+	delveBinaryPath := filepath.Join(tmpInstallDir, "bin", osArchDir, "dlv")
 
 	// install delve to tmp directory
-	env = append(env, fmt.Sprintf("GOPATH=%s", tmpInstallDir))
-
 	args := []string{
-		"install",
-		"github.com/go-delve/delve/cmd/dlv@latest",
+		"build",
+		"-C",
+		cloneDir,
+		"./cmd/dlv",
+		"-o",
+		delveBinaryPath,
 	}
 
 	gobin := getGoBinary()
@@ -326,17 +342,11 @@ func getDelve(ctx context.Context, platform v1.Platform) (string, error) {
 		return "", fmt.Errorf("go build Delve: %w: %s", err, output.String())
 	}
 
-	// find the delve binary in tmpInstallDir/bin/
-	osArchDir := ""
-	if platform.OS != runtime.GOOS || platform.Architecture != runtime.GOARCH {
-		osArchDir = fmt.Sprintf("%s_%s", platform.OS, platform.Architecture)
-	}
-	delveBinary := filepath.Join(tmpInstallDir, "bin", osArchDir, "dlv")
-	if _, err := os.Stat(delveBinary); err != nil {
-		return "", fmt.Errorf("could not find Delve binary at %q: %w", delveBinary, err)
+	if _, err := os.Stat(delveBinaryPath); err != nil {
+		return "", fmt.Errorf("could not find Delve binary at %q: %w", delveBinaryPath, err)
 	}
 
-	return delveBinary, nil
+	return delveBinaryPath, nil
 }
 
 func build(ctx context.Context, buildCtx buildContext) (string, error) {
@@ -941,6 +951,13 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, err
 	}
 	if platform == nil {
+		if cf.OS == "" {
+			cf.OS = "linux"
+		}
+		if cf.Architecture == "" {
+			cf.Architecture = "amd64"
+		}
+
 		platform = &v1.Platform{
 			OS:           cf.OS,
 			Architecture: cf.Architecture,
