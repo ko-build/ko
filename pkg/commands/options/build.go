@@ -87,7 +87,7 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,
 		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
 	cmd.Flags().StringVar(&bo.SBOM, "sbom", "spdx",
-		"The SBOM media type to use (none will disable SBOM synthesis and upload, also supports: spdx, cyclonedx, go.version-m).")
+		"The SBOM media type to use (none will disable SBOM synthesis and upload).")
 	cmd.Flags().StringVar(&bo.SBOMDir, "sbom-dir", "",
 		"Path to file where the SBOM will be written.")
 	cmd.Flags().StringSliceVar(&bo.Platforms, "platform", []string{},

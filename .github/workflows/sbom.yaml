@@ -9,38 +9,6 @@ env:
   SPDX_TOOLS_VERSION: 1.1.0
 
 jobs:
-  cyclonedx:
-    name: Validate CycloneDX SBOM
-    runs-on: ubuntu-latest
-
-    env:
-      KO_DOCKER_REPO: localhost:1338
-
-    steps:
-      - uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
-      - uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
-        with:
-          go-version-file: 'go.mod'
-          check-latest: true
-      - uses: chainguard-dev/actions/setup-registry@main
-      - uses: sigstore/cosign-installer@59acb6260d9c0ba8f4a2f9d9b48431a222b68e20 # v3.5.0
-
-      - name: Install CycloneDX
-        run: |
-          wget https://github.com/CycloneDX/cyclonedx-cli/releases/download/v0.22.0/cyclonedx-linux-x64
-          chmod +x cyclonedx-linux-x64
-
-      - name: Generate and Validate
-        run: |
-          cosign download sbom $(go run ./ build --sbom=cyclonedx) | tee cyclonedx.json
-          ./cyclonedx-linux-x64 validate --input-file=cyclonedx.json --fail-on-errors
-
-      - uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
-        if: ${{ always() }}
-        with:
-          name: cyclonedx.json
-          path: cyclonedx.json
-
   spdx:
     name: Validate SPDX SBOM
     runs-on: ubuntu-latest
