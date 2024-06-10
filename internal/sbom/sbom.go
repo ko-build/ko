@@ -29,10 +29,6 @@ func modulePackageName(mod *debug.Module) string {
 		mod.Version)
 }
 
-func bomRef(mod *debug.Module) string {
-	return fmt.Sprintf("pkg:golang/%s@%s?type=module", mod.Path, mod.Version)
-}
-
 func goRef(mod *debug.Module) string {
 	path := mod.Path
 	// Try to lowercase the first 2 path elements to comply with spec
