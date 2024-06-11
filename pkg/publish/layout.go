@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -80,7 +81,7 @@ func (l *LayoutPublisher) Publish(_ context.Context, br build.Result, s string) 
 		return nil, err
 	}
 
-	dig, err := name.NewDigest(fmt.Sprintf("%s@%s", l.p, h))
+	dig, err := name.NewDigest(fmt.Sprintf("%s@%s", strings.ToLower(string(l.p)), h))
 	if err != nil {
 		return nil, err
 	}
