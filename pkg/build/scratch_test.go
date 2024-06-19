@@ -1,4 +1,4 @@
-// Copyright 2023 ko Build Authors All Rights Reserved.
+// Copyright 2024 ko Build Authors All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,6 +41,9 @@ func TestScratchImage(t *testing.T) {
 	}
 
 	mf, err := imgIdx.IndexManifest()
+	if err != nil {
+		t.Errorf("expected no error when getting manifest, got %s", err)
+	}
 	if mt != expMT {
 		t.Errorf("expected a manifest, got %s", err)
 	}
@@ -53,6 +56,9 @@ func TestScratchImage(t *testing.T) {
 			t.Fatalf("expected no error when getting image for digest %s, got %s", m.Digest, err)
 		}
 		ls, err := img.Layers()
+		if err != nil {
+			t.Fatalf("expected no error when getting layers, got %s", err)
+		}
 		if len(ls) != 0 {
 			t.Errorf("expected no layers, found %d", len(ls))
 		}
@@ -70,5 +76,4 @@ func TestScratchImage(t *testing.T) {
 			t.Errorf("unexpected OS %s", m.Platform.OS)
 		}
 	}
-
 }
