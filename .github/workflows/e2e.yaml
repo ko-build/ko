@@ -63,6 +63,8 @@ jobs:
         echo platform is ${PLATFORM}
         # Build and run the ko binary, which should be runnable.
         docker run $(go run ./ build ./ --platform=${PLATFORM} --preserve-import-paths) version
+        # Build and run the ko binary with the scratch base image, which should be runnable.
+        docker run $(KO_DEFAULTBASEIMAGE=scratch go run ./ build ./ --platform=${PLATFORM}  --preserve-import-paths) version
 
         # Build and run the test/ binary, which should log "Hello there" served from KO_DATA_PATH
         testimg=$(go run ./ build ./test --platform=${PLATFORM} --preserve-import-paths)
