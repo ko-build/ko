@@ -30,9 +30,9 @@ jobs:
       run: go install ./
 
     - name: Setup Cluster
-      uses: chainguard-dev/actions/setup-kind@81dc0f9b6cd749004a9567afffef41ea84cf954c # main
+      uses: chainguard-dev/actions/setup-kind@f94883c3bd16936401291899070258f855b5d849 # main
       with:
-        k8s-version: v1.25.x
+        k8s-version: v1.28.x
         registry-authority: ${{ env.REGISTRY_NAME }}:${{ env.REGISTRY_PORT }}
 
     - name: Install Cosign
