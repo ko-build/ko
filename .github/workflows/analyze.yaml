@@ -21,8 +21,8 @@ jobs:
         # We must fetch at least the immediate parents so that if this is
         # a pull request then we can checkout the head.
         fetch-depth: 2
-    - uses: github/codeql-action/init@f079b8493333aace61c81488f8bd40919487bd9f # v3.25.7
+    - uses: github/codeql-action/init@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
       with:
         languages: go
-    - uses: github/codeql-action/autobuild@f079b8493333aace61c81488f8bd40919487bd9f # v3.25.7
-    - uses: github/codeql-action/analyze@f079b8493333aace61c81488f8bd40919487bd9f # v3.25.7
+    - uses: github/codeql-action/autobuild@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
+    - uses: github/codeql-action/analyze@2d790406f505036ef40ecba973cc774a50395aac # v3.25.13
