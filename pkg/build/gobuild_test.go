@@ -1496,6 +1496,7 @@ func TestDebugger(t *testing.T) {
 		"--log",
 		"--accept-multiclient",
 		"--api-version=2",
+		"--",
 		"/ko-app/ko",
 	}
 
