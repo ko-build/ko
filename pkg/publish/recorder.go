@@ -17,6 +17,7 @@ package publish
 import (
 	"context"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -29,8 +30,9 @@ import (
 // recorder wraps a publisher implementation in a layer that recordes the published
 // references to an io.Writer.
 type recorder struct {
-	inner Interface
-	wc    io.Writer
+	inner    Interface
+	fileName string
+	wc       io.Writer
 }
 
 // recorder implements Interface
@@ -38,10 +40,10 @@ var _ Interface = (*recorder)(nil)
 
 // NewRecorder wraps the provided publish.Interface in an implementation that
 // records publish results to an io.Writer.
-func NewRecorder(inner Interface, wc io.Writer) (Interface, error) {
+func NewRecorder(inner Interface, name string) (Interface, error) {
 	return &recorder{
-		inner: inner,
-		wc:    wc,
+		inner:    inner,
+		fileName: name,
 	}, nil
 }
 
@@ -68,6 +70,14 @@ func (r *recorder) Publish(ctx context.Context, br build.Result, ref string) (na
 		}
 	default:
 		references = append(references, result.String())
+	}
+
+	if r.wc == nil {
+		f, err := os.OpenFile(r.fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return nil, err
+		}
+		r.wc = f
 	}
 
 	if _, err := r.wc.Write([]byte(strings.Join(references, "\n") + "\n")); err != nil {

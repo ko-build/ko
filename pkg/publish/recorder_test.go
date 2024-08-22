@@ -15,8 +15,9 @@
 package publish
 
 import (
-	"bytes"
 	"context"
+	"os"
+	"path"
 	"strings"
 	"testing"
 
@@ -50,9 +51,10 @@ func TestRecorder(t *testing.T) {
 		return repo.Context().Digest(h.String()), nil
 	}}
 
-	buf := bytes.NewBuffer(nil)
+	dir := t.TempDir()
+	file := path.Join(dir, "testfile")
 
-	recorder, err := NewRecorder(inner, buf)
+	recorder, err := NewRecorder(inner, file)
 	if err != nil {
 		t.Fatalf("NewRecorder() = %v", err)
 	}
@@ -82,7 +84,11 @@ func TestRecorder(t *testing.T) {
 		t.Errorf("recorder.Close() = %v", err)
 	}
 
-	refs := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	buf, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatalf("os.ReadFile() = %v", err)
+	}
+	refs := strings.Split(strings.TrimSpace(string(buf)), "\n")
 
 	if want, got := len(refs), 5; got != want {
 		t.Errorf("len(refs) = %d, wanted %d", got, want)
