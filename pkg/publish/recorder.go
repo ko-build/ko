@@ -28,7 +28,7 @@ import (
 )
 
 // recorder wraps a publisher implementation in a layer that recordes the published
-// references to an io.Writer.
+// references to a file.
 type recorder struct {
 	inner    Interface
 	fileName string
@@ -39,7 +39,7 @@ type recorder struct {
 var _ Interface = (*recorder)(nil)
 
 // NewRecorder wraps the provided publish.Interface in an implementation that
-// records publish results to an io.Writer.
+// records publish results to a file.
 func NewRecorder(inner Interface, name string) (Interface, error) {
 	return &recorder{
 		inner:    inner,
