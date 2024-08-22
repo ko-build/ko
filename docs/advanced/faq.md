@@ -11,7 +11,7 @@ GOFLAGS="-ldflags=-X=main.version=1.2.3" ko build .
 
 Currently, there is a limitation that does not allow to set multiple arguments in `ldflags` using `GOFLAGS`.
 Using `-ldflags` multiple times also does not work.
-In this use case, it works best to use the [`builds` section](./../configuration) in the `.ko.yaml` file.
+In this use case, it works best to use the [`builds` section](./../configuration.md) in the `.ko.yaml` file.
 
 ## Why are my images all created in 1970?
 
@@ -38,7 +38,7 @@ export KO_DATA_DATE_EPOCH=$(git log -1 --format='%ct')
 Yes, but support for Windows containers is new, experimental, and tenuous. Be prepared to file bugs. 🐛
 
 The default base image does not provide a Windows image.
-You can try out building a Windows container image by [setting the base image](./../configuration) to a Windows base image and building with `--platform=windows/amd64` or `--platform=all`:
+You can try out building a Windows container image by [setting the base image](./../configuration.md) to a Windows base image and building with `--platform=windows/amd64` or `--platform=all`:
 
 For example, to build a Windows container image, update your `.ko.yaml` to set the base image:
 
