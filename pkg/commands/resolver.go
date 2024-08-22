@@ -266,11 +266,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	}
 
 	if po.ImageRefsFile != "" {
-		f, err := os.OpenFile(po.ImageRefsFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-		if err != nil {
-			return nil, err
-		}
-		innerPublisher, err = publish.NewRecorder(innerPublisher, f)
+		innerPublisher, err = publish.NewRecorder(innerPublisher, po.ImageRefsFile)
 		if err != nil {
 			return nil, err
 		}
