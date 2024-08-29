@@ -102,6 +102,7 @@ type gobuild struct {
 	defaultLdflags       []string
 	platformMatcher      *platformMatcher
 	dir                  string
+	appDir               string
 	labels               map[string]string
 	annotations          map[string]string
 	user                 string
@@ -133,6 +134,7 @@ type gobuildOpener struct {
 	annotations          map[string]string
 	user                 string
 	dir                  string
+	appDir               string
 	jobs                 int
 	debug                bool
 }
@@ -169,6 +171,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		labels:               gbo.labels,
 		annotations:          gbo.annotations,
 		dir:                  gbo.dir,
+		appDir:               gbo.appDir,
 		debug:                gbo.debug,
 		platformMatcher:      matcher,
 		cache: &layerCache{
@@ -593,7 +596,7 @@ func appFilename(importpath string) string {
 // owner: BUILTIN/Users group: BUILTIN/Users ($sddlValue="O:BUG:BU")
 const userOwnerAndGroupSID = "AQAAgBQAAAAkAAAAAAAAAAAAAAABAgAAAAAABSAAAAAhAgAAAQIAAAAAAAUgAAAAIQIAAA=="
 
-func tarBinary(name, binary string, platform *v1.Platform, opts *layerOptions) (*bytes.Buffer, error) {
+func tarBinary(name, binary, binaryDir string, platform *v1.Platform, opts *layerOptions) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
@@ -602,12 +605,12 @@ func tarBinary(name, binary string, platform *v1.Platform, opts *layerOptions) (
 	// For Windows, the layer must contain a Hives/ directory, and the root
 	// of the actual filesystem goes in a Files/ directory.
 	// For Linux, the binary goes into /ko-app/
-	dirs := []string{defaultAppDir}
+	dirs := []string{binaryDir}
 	if platform.OS == "windows" {
 		dirs = []string{
 			"Hives",
 			"Files",
-			path.Join("Files", defaultAppDir),
+			path.Join("Files", binaryDir),
 		}
 		name = "Files" + name
 	}
@@ -942,6 +945,13 @@ func (g gobuild) useDebugging(platform v1.Platform) bool {
 	return g.debug && doesPlatformSupportDebugging(platform)
 }
 
+func (g gobuild) getAppDir() string {
+	if g.appDir != "" {
+		return g.appDir
+	}
+	return defaultAppDir
+}
+
 func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, platform *v1.Platform) (oci.SignedImage, error) {
 	if err := g.semaphore.Acquire(ctx, 1); err != nil {
 		return nil, err
@@ -1058,7 +1068,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		},
 	})
 
-	appDir := defaultAppDir
+	appDir := g.getAppDir()
 	appFileName := appFilename(ref.Path())
 	appPath := path.Join(appDir, appFileName)
 
@@ -1069,7 +1079,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	}
 
 	miss := func() (v1.Layer, error) {
-		return buildLayer(appPath, file, platform, layerMediaType, &lo)
+		return buildLayer(g.getAppDir(), appPath, file, platform, layerMediaType, &lo)
 	}
 
 	var binaryLayer v1.Layer
@@ -1104,11 +1114,11 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 		defer os.RemoveAll(filepath.Dir(delveBinary))
 
-		delvePath = path.Join(defaultAppDir, filepath.Base(delveBinary))
+		delvePath = path.Join(g.getAppDir(), filepath.Base(delveBinary))
 
 		// add layer with delve binary
 		delveLayer, err := g.cache.get(ctx, delveBinary, func() (v1.Layer, error) {
-			return buildLayer(delvePath, delveBinary, platform, layerMediaType, &lo)
+			return buildLayer(appDir, delvePath, delveBinary, platform, layerMediaType, &lo)
 		})
 		if err != nil {
 			return nil, fmt.Errorf("cache.get(%q): %w", delveBinary, err)
@@ -1152,7 +1162,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	cfg.Config.Entrypoint = []string{appPath}
 	cfg.Config.Cmd = nil
 	if platform.OS == "windows" {
-		appPath := strings.Replace(path.Join("C:", defaultAppDir, appFileName), "/", `\`, -1)
+		appPath := strings.Replace(path.Join("C:", g.getAppDir(), appFileName), "/", `\`, -1)
 		if g.debug {
 			cfg.Config.Entrypoint = append([]string{"C:\\" + delvePath}, delveArgs...)
 			cfg.Config.Entrypoint = append(cfg.Config.Entrypoint, appPath)
@@ -1160,7 +1170,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 			cfg.Config.Entrypoint = []string{appPath}
 		}
 
-		addDirPath := strings.Replace(path.Join("C:", defaultAppDir), "/", `\`, -1)
+		addDirPath := strings.Replace(path.Join("C:", g.getAppDir()), "/", `\`, -1)
 		updatePath(cfg, addDirPath)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
 	} else {
@@ -1221,9 +1231,9 @@ type layerOptions struct {
 	linuxCapabilities *caps.FileCaps
 }
 
-func buildLayer(appPath, file string, platform *v1.Platform, layerMediaType types.MediaType, opts *layerOptions) (v1.Layer, error) {
+func buildLayer(appDir, appPath, file string, platform *v1.Platform, layerMediaType types.MediaType, opts *layerOptions) (v1.Layer, error) {
 	// Construct a tarball with the binary and produce a layer.
-	binaryLayerBuf, err := tarBinary(appPath, file, platform, opts)
+	binaryLayerBuf, err := tarBinary(appPath, file, appDir, platform, opts)
 	if err != nil {
 		return nil, fmt.Errorf("tarring binary: %w", err)
 	}
