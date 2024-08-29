@@ -57,6 +57,7 @@ import (
 
 const (
 	defaultAppFilename = "ko-app"
+	defaultAppDir      = "/ko-app"
 
 	defaultGoBin = "go"         // defaults to first go binary found in PATH
 	goBinPathEnv = "KO_GO_PATH" // env lookup for optional relative or full go binary path
@@ -601,12 +602,12 @@ func tarBinary(name, binary string, platform *v1.Platform, opts *layerOptions) (
 	// For Windows, the layer must contain a Hives/ directory, and the root
 	// of the actual filesystem goes in a Files/ directory.
 	// For Linux, the binary goes into /ko-app/
-	dirs := []string{"ko-app"}
+	dirs := []string{defaultAppDir}
 	if platform.OS == "windows" {
 		dirs = []string{
 			"Hives",
 			"Files",
-			"Files/ko-app",
+			path.Join("Files", defaultAppDir),
 		}
 		name = "Files" + name
 	}
@@ -1057,7 +1058,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		},
 	})
 
-	appDir := "/ko-app"
+	appDir := defaultAppDir
 	appFileName := appFilename(ref.Path())
 	appPath := path.Join(appDir, appFileName)
 
@@ -1103,7 +1104,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 		defer os.RemoveAll(filepath.Dir(delveBinary))
 
-		delvePath = path.Join("/ko-app", filepath.Base(delveBinary))
+		delvePath = path.Join(defaultAppDir, filepath.Base(delveBinary))
 
 		// add layer with delve binary
 		delveLayer, err := g.cache.get(ctx, delveBinary, func() (v1.Layer, error) {
@@ -1151,7 +1152,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	cfg.Config.Entrypoint = []string{appPath}
 	cfg.Config.Cmd = nil
 	if platform.OS == "windows" {
-		appPath := `C:\ko-app\` + appFileName
+		appPath := strings.Replace(path.Join("C:", defaultAppDir, appFileName), "/", `\`, -1)
 		if g.debug {
 			cfg.Config.Entrypoint = append([]string{"C:\\" + delvePath}, delveArgs...)
 			cfg.Config.Entrypoint = append(cfg.Config.Entrypoint, appPath)
@@ -1159,7 +1160,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 			cfg.Config.Entrypoint = []string{appPath}
 		}
 
-		updatePath(cfg, `C:\ko-app`)
+		addDirPath := strings.Replace(path.Join("C:", defaultAppDir), "/", `\`, -1)
+		updatePath(cfg, addDirPath)
 		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
 	} else {
 		if g.useDebugging(*platform) {
