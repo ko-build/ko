@@ -33,6 +33,7 @@ This can make it a good fit for lightweight CI/CD use cases.
 - [Shipwright](https://shipwright.io)
 - [Capsule](https://capsule.clastix.io/)
 - [CloudScript](https://cloudscript.com.br/)
+- [Kamaji](https://kamaji.clastix.io/)
 
 [_Add your project here!_](https://github.com/ko-build/ko/edit/main/docs/index.md)
 
