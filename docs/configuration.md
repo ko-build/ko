@@ -183,6 +183,18 @@ influence the build process.
 | `KO_CONFIG_PATH` | `./.ko.yaml`                               | Path to `ko` configuration file (optional)                                                                                                                                                                                       |
 | `KOCACHE`        | (not set)                                  | This tells `ko` to store a local mapping between the `go build` inputs to the image layer that they produce, so `go build` can be skipped entirely if the layer is already present in the image registry (optional).             |
 
+## Overwriting which directory binaries are placed in
+
+By default `ko` places executable binaries of your application into `/ko-app`.
+
+As it is sometimes desirable to place an executable into a specific folder inside
+the container, or into a default executable path like `/bin` or `/usr/local/bin`,
+this directory can be overwritten.
+
+This custom path can be defined either
+- via the `--app-dir` command line flag
+- or a `defaultAppDirectory` entry in the `.ko.yaml` file.
+
 ## Naming Images
 
 `ko` provides a few different strategies for naming the image it pushes, to
