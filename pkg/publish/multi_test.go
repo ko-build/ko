@@ -48,10 +48,7 @@ func TestMulti(t *testing.T) {
 	}
 	defer os.RemoveAll(tmp)
 
-	lp, err := publish.NewLayout(tmp)
-	if err != nil {
-		t.Errorf("NewLayout() = %v", err)
-	}
+	lp := publish.NewLayout(tmp)
 
 	p := publish.MultiPublisher(lp, tp)
 	if _, err := p.Publish(context.Background(), img, importpath); err != nil {

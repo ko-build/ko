@@ -213,10 +213,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 
 		publishers := []publish.Interface{}
 		if po.OCILayoutPath != "" {
-			lp, err := publish.NewLayout(po.OCILayoutPath)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create LayoutPublisher for %q: %w", po.OCILayoutPath, err)
-			}
+			lp := publish.NewLayout(po.OCILayoutPath)
 			publishers = append(publishers, lp)
 		}
 		if po.TarballFile != "" {
