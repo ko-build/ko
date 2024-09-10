@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -72,8 +73,8 @@ type erroringClient struct {
 }
 
 func (m *erroringClient) NegotiateAPIVersion(context.Context) {}
-func (m *erroringClient) ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error) {
-	return types.ImageLoadResponse{}, errImageLoad
+func (m *erroringClient) ImageLoad(context.Context, io.Reader, bool) (image.LoadResponse, error) {
+	return image.LoadResponse{}, errImageLoad
 }
 func (m *erroringClient) ImageTag(_ context.Context, _ string, _ string) error {
 	return errImageTag
