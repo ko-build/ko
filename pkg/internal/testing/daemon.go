@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/image"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 )
 
@@ -33,8 +34,8 @@ type MockDaemon struct {
 }
 
 func (m *MockDaemon) NegotiateAPIVersion(context.Context) {}
-func (m *MockDaemon) ImageLoad(context.Context, io.Reader, bool) (types.ImageLoadResponse, error) {
-	return types.ImageLoadResponse{
+func (m *MockDaemon) ImageLoad(context.Context, io.Reader, bool) (image.LoadResponse, error) {
+	return image.LoadResponse{
 		Body: io.NopCloser(strings.NewReader("Loaded")),
 	}, nil
 }
