@@ -27,7 +27,6 @@ jobs:
       - name: Publish and sign image
         env:
           KO_DOCKER_REPO: ghcr.io/${{ github.repository }}
-          COSIGN_EXPERIMENTAL: 'true'
         run: |
           go build ./
           echo "${{ github.token }}" | ./ko login ghcr.io --username "${{ github.actor }}" --password-stdin
