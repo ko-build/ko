@@ -1,6 +1,6 @@
 module github.com/google/ko
 
-go 1.22.3
+go 1.22.7
 
 require (
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20240514230400-03fa26f5508f

@@ -27,3 +27,9 @@ linters:
   disable:
     - errcheck
     - depguard
+
+linters-settings:
+  gosec:
+    excludes:
+      # TODO: Check those example in pkg/caps/caps.go:131
+      - G115  # Potential integer overflow when converting between integer types
