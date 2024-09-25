@@ -22,5 +22,6 @@ ko [flags]
 * [ko login](ko_login.md)	 - Log in to a registry
 * [ko resolve](ko_resolve.md)	 - Print the input files with image references resolved to built/pushed image digests.
 * [ko run](ko_run.md)	 - A variant of `kubectl run` that containerizes IMPORTPATH first.
+* [ko test](ko_test.md)	 - Build and publish container images with go test from the given importpaths.
 * [ko version](ko_version.md)	 - Print ko version.
 
