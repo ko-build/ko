@@ -191,3 +191,10 @@ func WithDebugger() Option {
 		return nil
 	}
 }
+
+func WithGoTest() Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.goTest = true
+		return nil
+	}
+}
