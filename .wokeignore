@@ -1,4 +1,2 @@
-vendor/**
-
 # Uses some Cobra methods
 pkg/commands/*

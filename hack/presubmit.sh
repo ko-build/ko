@@ -24,7 +24,7 @@ pushd "${PROJECT_ROOT}"
 trap popd EXIT
 
 # Verify that all source files are correctly formatted.
-find . -name "*.go" | grep -v vendor/ | xargs gofmt -d -e -l
+find . -name "*.go" -exec gofmt -d -e -l {} +
 
 # Verify that generated Markdown docs are up-to-date.
 tmpdir=$(mktemp -d)

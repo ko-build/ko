@@ -4,3 +4,5 @@
 ko
 
 .DS_Store
+
+/vendor/

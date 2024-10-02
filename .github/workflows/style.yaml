@@ -58,7 +58,6 @@ jobs:
           fail_on_error: true
           locale: "US"
           exclude: |
-            ./vendor/*
             ./.golangci.yaml
 
       - uses: get-woke/woke-action-reviewdog@d71fd0115146a01c3181439ce714e21a69d75e31 # v0

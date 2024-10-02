@@ -24,6 +24,5 @@ pushd ${PROJECT_ROOT}
 trap popd EXIT
 
 go mod tidy
-go mod vendor
 
 go run $PROJECT_ROOT/cmd/help/main.go --dir=$PROJECT_ROOT/docs/reference/
