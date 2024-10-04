@@ -191,3 +191,10 @@ func WithDebugger() Option {
 		return nil
 	}
 }
+
+func WithAppDir(dir string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.appDir = dir
+		return nil
+	}
+}
