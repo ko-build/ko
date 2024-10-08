@@ -138,6 +138,7 @@ func TestGoBuildQualifyImport(t *testing.T) {
 }
 
 var baseRef = name.MustParseReference("all.your/base")
+var scratchBaseRef = name.MustParseReference("scratch")
 
 func TestGoBuildIsSupportedRef(t *testing.T) {
 	base, err := random.Image(1024, 3)
@@ -640,7 +641,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 	})
 }
 
-func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
+func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, base name.Reference, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
 	t.Helper()
 
 	ls, err := img.Layers()
@@ -791,7 +792,7 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		if _, found := mf.Annotations[specsv1.AnnotationBaseImageDigest]; !found {
 			t.Errorf("image annotations did not contain base image digest")
 		}
-		want := baseRef.Name()
+		want := base.Name()
 		if got := mf.Annotations[specsv1.AnnotationBaseImageName]; got != want {
 			t.Errorf("base image ref; got %q, want %q", got, want)
 		}
@@ -860,7 +861,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, true)
+	validateImage(t, img, baseLayers, baseRef, creationTime, true, true)
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
@@ -1068,7 +1069,7 @@ func TestGoBuildWithoutSBOM(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, false)
+	validateImage(t, img, baseLayers, baseRef, creationTime, true, false)
 }
 
 func TestGoBuildIndex(t *testing.T) {
@@ -1114,7 +1115,7 @@ func TestGoBuildIndex(t *testing.T) {
 		if err != nil {
 			t.Fatalf("idx.Image(%s) = %v", desc.Digest, err)
 		}
-		validateImage(t, img, baseLayers, creationTime, false, true)
+		validateImage(t, img, baseLayers, baseRef, creationTime, false, true)
 	}
 
 	if want, got := images, int64(len(im.Manifests)); want != got {
@@ -1452,6 +1453,79 @@ func TestGoBuildConsistentMediaTypes(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGoBuildScratch(t *testing.T) {
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) {
+			img, err := ScratchImage([]string{"linux/s390x"})
+			return scratchBaseRef, img, err
+		}),
+		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
+		WithLabel("foo", "bar"),
+		WithLabel("hello", "world"),
+		WithPlatforms("all"),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(oci.SignedImage)
+	if !ok {
+		t.Fatalf("Build() not a SignedImage: %T", result)
+	}
+
+	baseLayers := int64(0) // scratch image has no layers
+	validateImage(t, img, baseLayers, scratchBaseRef, creationTime, true, true)
+
+	// Check that rebuilding the image again results in the same image digest.
+	t.Run("check determinism", func(t *testing.T) {
+		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+		if err != nil {
+			t.Fatalf("Build() = %v", err)
+		}
+
+		d1, err := result.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+		d2, err := result2.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+
+		if d1 != d2 {
+			t.Errorf("Digest mismatch: %s != %s", d1, d2)
+		}
+	})
+
+	t.Run("check labels", func(t *testing.T) {
+		cfg, err := img.ConfigFile()
+		if err != nil {
+			t.Fatalf("ConfigFile() = %v", err)
+		}
+
+		want := map[string]string{
+			"foo":   "bar",
+			"hello": "world",
+		}
+		got := cfg.Config.Labels
+		if d := cmp.Diff(got, want); d != "" {
+			t.Fatalf("Labels diff (-got,+want): %s", d)
+		}
+	})
 }
 
 func TestDebugger(t *testing.T) {
