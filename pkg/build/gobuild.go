@@ -1117,6 +1117,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		"--log",
 		"--accept-multiclient",
 		"--api-version=2",
+		"--",
 	}
 
 	// Augment the base image with our application layer.
