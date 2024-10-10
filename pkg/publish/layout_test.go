@@ -36,10 +36,7 @@ func TestLayout(t *testing.T) {
 	}
 	defer os.RemoveAll(tmp)
 
-	lp, err := NewLayout(tmp)
-	if err != nil {
-		t.Errorf("NewLayout() = %v", err)
-	}
+	lp := NewLayout(tmp)
 	if d, err := lp.Publish(context.Background(), img, importpath); err != nil {
 		t.Errorf("Publish() = %v", err)
 	} else if !strings.HasPrefix(d.String(), tmp) {
