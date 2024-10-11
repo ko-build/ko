@@ -9,7 +9,26 @@ theme:
   favicon: images/favicon-96x96.png
   custom_dir: docs/custom/
   palette:
-    primary: light blue
+    # Palette toggle for automatic mode
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Switch to light mode
+
+    # Palette toggle for light mode
+    - media: "(prefers-color-scheme: light)"
+      primary: light blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Palette toggle for dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: light blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to system preference
 
 nav:
   - index.md

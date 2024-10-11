@@ -41,4 +41,7 @@ This can make it a good fit for lightweight CI/CD use cases.
 
 `ko` is a Cloud Native Computing Foundation Sandbox project.
 
-<a href="https://cncf.io"><img width=300 src="./images/cncf.svg" alt="CNCF logo" /></a>
+<a href="https://cncf.io">
+    <img width=300 src="./images/cncf-light.svg#only-light" alt="CNCF logo" />
+    <img width=300 src="./images/cncf-dark.svg#only-dark" alt="CNCF logo" />
+</a>
