@@ -844,6 +844,8 @@ func TestGoBuild(t *testing.T) {
 		withSBOMber(fauxSBOM),
 		WithLabel("foo", "bar"),
 		WithLabel("hello", "world"),
+		WithAnnotation("fizz", "buzz"),
+		WithAnnotation("goodbye", "world"),
 		WithPlatforms("all"),
 	)
 	if err != nil {
@@ -896,6 +898,27 @@ func TestGoBuild(t *testing.T) {
 		got := cfg.Config.Labels
 		if d := cmp.Diff(got, want); d != "" {
 			t.Fatalf("Labels diff (-got,+want): %s", d)
+		}
+	})
+
+	t.Run("check annotations", func(t *testing.T) {
+		baseDigest, err := base.Digest()
+		if err != nil {
+			t.Fatalf("base.Digest() = %v", err)
+		}
+		man, err := img.Manifest()
+		if err != nil {
+			t.Fatalf("Manifest() = %v", err)
+		}
+		want := map[string]string{
+			specsv1.AnnotationBaseImageName:   baseRef.Name(),
+			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
+			"fizz":                            "buzz",
+			"goodbye":                         "world",
+		}
+		got := man.Annotations
+		if d := cmp.Diff(got, want); d != "" {
+			t.Fatalf("Annotations diff (-got,+want): %s", d)
 		}
 	})
 }
