@@ -142,6 +142,17 @@ func WithLabel(k, v string) Option {
 	}
 }
 
+// WithAnnotation is a functional option for adding annotations to built manifests
+func WithAnnotation(k, v string) Option {
+	return func(gbo *gobuildOpener) error {
+		if gbo.annotations == nil {
+			gbo.annotations = map[string]string{}
+		}
+		gbo.annotations[k] = v
+		return nil
+	}
+}
+
 // withBuilder is a functional option for overriding the way go binaries
 // are built.
 func withBuilder(b builder) Option {

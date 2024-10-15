@@ -24,6 +24,7 @@ import (
 	gb "go/build"
 	"io"
 	"log"
+	"maps"
 	"os"
 	"os/exec"
 	"path"
@@ -101,6 +102,7 @@ type gobuild struct {
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
+	annotations          map[string]string
 	debug                bool
 	semaphore            *semaphore.Weighted
 
@@ -126,6 +128,7 @@ type gobuildOpener struct {
 	defaultLdflags       []string
 	platforms            []string
 	labels               map[string]string
+	annotations          map[string]string
 	dir                  string
 	jobs                 int
 	debug                bool
@@ -142,6 +145,9 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 	if gbo.jobs == 0 {
 		gbo.jobs = runtime.GOMAXPROCS(0)
 	}
+	if gbo.annotations == nil {
+		gbo.annotations = map[string]string{}
+	}
 	return &gobuild{
 		ctx:                  gbo.ctx,
 		getBase:              gbo.getBase,
@@ -157,6 +163,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		defaultFlags:         gbo.defaultFlags,
 		defaultLdflags:       gbo.defaultLdflags,
 		labels:               gbo.labels,
+		annotations:          gbo.annotations,
 		dir:                  gbo.dir,
 		debug:                gbo.debug,
 		platformMatcher:      matcher,
@@ -1259,11 +1266,10 @@ func (g *gobuild) Build(ctx context.Context, s string) (Result, error) {
 			return nil, err
 		}
 
-		anns := map[string]string{
-			specsv1.AnnotationBaseImageDigest: baseDigest.String(),
-			specsv1.AnnotationBaseImageName:   baseRef.Name(),
-		}
-		base = mutate.Annotations(base, anns).(Result)
+		annotations := maps.Clone(g.annotations)
+		annotations[specsv1.AnnotationBaseImageDigest] = baseDigest.String()
+		annotations[specsv1.AnnotationBaseImageName] = baseRef.Name()
+		base = mutate.Annotations(base, annotations).(Result)
 	}
 
 	switch mt {
@@ -1311,14 +1317,19 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		if err != nil {
 			return nil, fmt.Errorf("error getting matching image from index: %w", err)
 		}
+
+		annotations := maps.Clone(g.annotations)
 		// Decorate the image with the ref of the index, and the matching
 		// platform's digest.
-		img = mutate.Annotations(img, map[string]string{
-			specsv1.AnnotationBaseImageDigest: matches[0].Digest.String(),
-			specsv1.AnnotationBaseImageName:   baseRef.Name(),
-		}).(v1.Image)
+		annotations[specsv1.AnnotationBaseImageDigest] = matches[0].Digest.String()
+		annotations[specsv1.AnnotationBaseImageName] = baseRef.Name()
+		img = mutate.Annotations(img, annotations).(v1.Image)
 		return g.buildOne(ctx, ref, img, matches[0].Platform)
 	}
+
+	g.annotations[specsv1.AnnotationBaseImageName] = baseRef.Name()
+	baseDigest, _ := baseIndex.Digest()
+	g.annotations[specsv1.AnnotationBaseImageDigest] = baseDigest.String()
 
 	// Build an image for each matching platform from the base and append
 	// it to a new index to produce the result. We use the indices to
@@ -1333,6 +1344,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 				return err
 			}
 
+			annotations := maps.Clone(g.annotations)
 			// Decorate the image with the ref of the index, and the matching
 			// platform's digest.  The ref of the index encodes the critical
 			// repository information for fetching the base image's digest, but
@@ -1350,10 +1362,10 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 			// no-ops for us because we didn't record the digest of the actual
 			// image we used, and we would potentially end up doing Nx more work
 			// than we really need to do.
-			baseImage = mutate.Annotations(baseImage, map[string]string{
-				specsv1.AnnotationBaseImageDigest: desc.Digest.String(),
-				specsv1.AnnotationBaseImageName:   baseRef.Name(),
-			}).(v1.Image)
+			annotations[specsv1.AnnotationBaseImageDigest] = desc.Digest.String()
+			annotations[specsv1.AnnotationBaseImageName] = baseRef.Name()
+
+			baseImage = mutate.Annotations(baseImage, annotations).(v1.Image)
 
 			img, err := g.buildOne(gctx, ref, baseImage, desc.Platform)
 			if err != nil {
@@ -1383,7 +1395,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	idx := ocimutate.AppendManifests(
 		mutate.Annotations(
 			mutate.IndexMediaType(empty.Index, baseType),
-			im.Annotations).(v1.ImageIndex),
+			g.annotations).(v1.ImageIndex),
 		adds...)
 
 	if g.sbom != nil {

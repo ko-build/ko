@@ -119,6 +119,13 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		}
 		opts = append(opts, build.WithLabel(parts[0], parts[1]))
 	}
+	for _, an := range bo.Annotations {
+		k, v, ok := strings.Cut(an, "=")
+		if !ok {
+			return nil, fmt.Errorf("missing '=' in annotation: %s", an)
+		}
+		opts = append(opts, build.WithAnnotation(k, v))
+	}
 
 	if bo.BuildConfigs != nil {
 		opts = append(opts, build.WithConfig(bo.BuildConfigs))
