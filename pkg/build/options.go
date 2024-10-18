@@ -153,6 +153,14 @@ func WithAnnotation(k, v string) Option {
 	}
 }
 
+// WithUser is a functional option for overriding the user in the image config.
+func WithUser(user string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.user = user
+		return nil
+	}
+}
+
 // withBuilder is a functional option for overriding the way go binaries
 // are built.
 func withBuilder(b builder) Option {
