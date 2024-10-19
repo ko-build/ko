@@ -2,6 +2,22 @@
 
 To install a [root certificate](https://en.wikipedia.org/wiki/Root_certificate) into your container built using `ko`, you can use one of the following methods.
 
+## incert
+[`incert`](https://github.com/chainguard-dev/incert) allows you to append CA certificates to an image and push the modified image to a specified registry.
+
+`incert` can be run after `ko build` to build your Go application container image with custom root CA certificates.
+
+### Example
+1. Build and push your Go application container image using `ko build`
+```sh
+KO_DOCKER_REPO=mycompany/myimage:latest ko build .
+```
+
+2. Append the built image with your custom CA certificate(s) using `incert`
+```sh
+incert -image-url=mycompany/myimage:latest -ca-certs-file=/path/to/cacerts.pem -dest-image-url=myregistry/myimage:latest
+```
+
 ## Custom Base Image
 
 New root certificates can be [installed into a custom image](https://stackoverflow.com/questions/42292444/how-do-i-add-a-ca-root-certificate-inside-a-docker-image) using standard OS packages. Then, this custom image can be used [to override the base image for `ko`](https://ko.build/configuration/#overriding-base-images). Once the Go application container image is built using `ko` with the custom base image, the root certificates installed on the base image will be trusted by the Go application.
