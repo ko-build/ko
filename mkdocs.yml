@@ -52,6 +52,7 @@ nav:
     - advanced/terraform.md
     - advanced/lambda.md
     - advanced/linux-capabilities.md
+    - advanced/root-ca-certificates.md
   - CLI Reference:
     - 'ko': reference/ko.md
     - 'ko apply': reference/ko_apply.md
