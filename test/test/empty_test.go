@@ -16,8 +16,8 @@ package test
 
 import "testing"
 
-func TestDummy(t *testing.T) {
-	t.Run("dummy test", func(t *testing.T) {
-		t.Logf("this is a dummy test")
+func TestEmpty(t *testing.T) {
+	t.Run("empty test", func(t *testing.T) {
+		t.Logf("this is an empty test")
 	})
 }
