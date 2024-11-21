@@ -4,12 +4,8 @@ If your `Dockerfile` looks like either of the examples in the [official tutorial
 
 Let's review the best practice multi-stage Dockerfile in that tutorial first:
 
-```plaintext
-# syntax=docker/dockerfile:1
-
-##
+```Dockerfile
 ## Build
-##
 FROM golang:1.16-buster AS build
 
 WORKDIR /app
@@ -22,9 +18,7 @@ COPY *.go ./
 
 RUN go build -o /docker-gs-ping
 
-##
 ## Deploy
-##
 FROM gcr.io/distroless/base-debian10
 
 WORKDIR /
