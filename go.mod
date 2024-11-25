@@ -15,7 +15,7 @@ require (
 	github.com/sigstore/cosign/v2 v2.4.1
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 	go.uber.org/automaxprocs v1.6.0
 	golang.org/x/sync v0.9.0
 	golang.org/x/tools v0.27.0
