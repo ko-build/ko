@@ -105,6 +105,9 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithDebugger())
 		opts = append(opts, build.WithDisabledOptimizations()) // also needed for Delve
 	}
+	if bo.GoTest {
+		opts = append(opts, build.WithGoTest())
+	}
 	switch bo.SBOM {
 	case "none":
 		opts = append(opts, build.WithDisabledSBOM())
