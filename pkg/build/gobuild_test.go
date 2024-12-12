@@ -1547,3 +1547,35 @@ func TestDebugger(t *testing.T) {
 		}
 	}
 }
+
+func TestGoBuild_DefaultFlagsApplied(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	var buildCtx buildContext
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(func(_ context.Context, b buildContext) (string, error) {
+			buildCtx = b
+			return "", errors.New("fake build error")
+		}),
+		withSBOMber(fauxSBOM),
+		WithPlatforms("all"),
+		WithDefaultFlags([]string{"-v"}),
+		WithTrimpath(true),
+	)
+	require.NoError(t, err)
+
+	// Build and capture the buildContext.
+	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	require.ErrorContains(t, err, "fake build error")
+	require.Equal(t, []string{"-v", "-trimpath"}, buildCtx.flags)
+}
