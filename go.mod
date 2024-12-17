@@ -21,7 +21,7 @@ require (
 	golang.org/x/tools v0.28.0
 	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/apimachinery v0.31.4
-	sigs.k8s.io/kind v0.25.0
+	sigs.k8s.io/kind v0.26.0
 )
 
 require (
