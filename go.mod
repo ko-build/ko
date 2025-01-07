@@ -1,6 +1,7 @@
 module github.com/google/ko
 
 go 1.22.7
+toolchain go1.23.4
 
 require (
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.0.0-20240514230400-03fa26f5508f
@@ -20,7 +21,7 @@ require (
 	golang.org/x/sync v0.10.0
 	golang.org/x/tools v0.29.0
 	gopkg.in/yaml.v3 v3.0.1
-	k8s.io/apimachinery v0.31.4
+	k8s.io/apimachinery v0.32.0
 	sigs.k8s.io/kind v0.26.0
 )
 
@@ -141,9 +142,9 @@ require (
 	golang.org/x/term v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240827150818-7e3bb234dfed // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
+	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/utils v0.0.0-20240711033017-18e509b52bc8 // indirect
+	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
