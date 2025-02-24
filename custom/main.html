@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block site_meta %}
+    {{ super() }}
+    {% if page and page.meta and page.meta.ko_meta %}
+    <meta charset=utf-8>
+    <meta name=go-import content="ko.build git https://github.com/ko-build/ko">
+    <meta name=go-source content="ko.build git https://github.com/ko-build/ko https://github.com/ko-build/ko/tree/main{/dir} https://github.com/ko-build/ko/blob/main{/dir}/{file}#L{line}">
+    {% endif %}
+{% endblock %}
+
