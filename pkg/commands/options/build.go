@@ -68,6 +68,7 @@ type BuildOptions struct {
 	Annotations          []string
 	User                 string
 	Debug                bool
+	GoTest               bool
 	// UserAgent enables overriding the default value of the `User-Agent` HTTP
 	// request header used when retrieving the base image.
 	UserAgent string
