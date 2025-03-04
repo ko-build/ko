@@ -11,7 +11,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.2
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/opencontainers/image-spec v1.1.0
+	github.com/opencontainers/image-spec v1.1.1
 	github.com/sigstore/cosign/v2 v2.4.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.19.0
