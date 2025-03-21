@@ -25,7 +25,7 @@ import (
 
 // ScratchImage returns a scratch image manifest with scratch images for each of the specified platforms
 func ScratchImage(platforms []string) (Result, error) {
-	manifests := make([]mutate.IndexAddendum, len(platforms))
+	manifests := make([]mutate.IndexAddendum, 0, len(platforms))
 	for _, pf := range platforms {
 		if pf == "all" {
 			return nil, fmt.Errorf("'all' is not supported for building a scratch image, the platform list must be provided")
