@@ -17,9 +17,13 @@ kind: Deployment
 metadata:
   name: my-deployment
 spec:
-  replicas: 3
-  ...
+  selector:
+    matchLabels:
+      app: my-app
   template:
+    metadata:
+      labels:
+        app: my-app
     spec:
       containers:
       - name: my-app
