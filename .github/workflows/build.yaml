@@ -12,8 +12,8 @@ jobs:
       fail-fast: false
       matrix:
         go-version:
-          - '1.22'
           - '1.23'
+          - '1.24'
 
     name: Build ${{ matrix.go-version }}
     runs-on: ubuntu-latest
