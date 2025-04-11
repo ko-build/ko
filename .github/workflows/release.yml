@@ -5,6 +5,8 @@ on:
     tags:
       - '*'
 
+permissions: {}
+
 jobs:
   goreleaser:
     outputs:

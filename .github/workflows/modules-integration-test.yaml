@@ -5,22 +5,24 @@ on:
     branches:
       - 'main'
 
+permissions: {}
+
 jobs:
   test:
     name: Module Tests
-    strategy:
-      matrix:
-        go-version:
-          - '1.22'
-          - '1.23'
-
     runs-on: 'ubuntu-latest'
+
+    permissions:
+      contents: read
+
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
-          go-version: ${{ matrix.go-version }}
+          go-version: '1.24'
           check-latest: true
 
       - env:

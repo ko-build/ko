@@ -4,11 +4,16 @@ on:
   pull_request:
     branches: ['main']
 
-jobs:
+permissions: {}
 
+jobs:
   check:
     name: Boilerplate Check
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
     strategy:
       fail-fast: false # Keep running if one leg fails.
       matrix:
@@ -25,6 +30,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - uses: chainguard-dev/actions/boilerplate@e82b4e5ae10182af72972addcb3fedf7454621c8 # main
         with:
