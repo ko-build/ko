@@ -1,35 +1,47 @@
-run:
-  timeout: 5m
-
-issues:
-  exclude-rules:
-    - path: test # Excludes /test, *_test.go etc.
-      linters:
-        - gosec
-
+version: "2"
 linters:
   enable:
     - asciicheck
     - errorlint
-    - gofmt
     - gosec
-    - goimports
     - importas
+    - misspell
     - prealloc
     - revive
-    - misspell
-    - stylecheck
+    - staticcheck
     - tparallel
     - unconvert
     - unparam
     - whitespace
-
   disable:
-    - errcheck
     - depguard
-
-linters-settings:
-  gosec:
-    excludes:
-      # TODO: Check those example in pkg/caps/caps.go:131
-      - G115  # Potential integer overflow when converting between integer types
+    - errcheck
+  settings:
+    gosec:
+      excludes:
+        - G115
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - gosec
+        path: test
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
