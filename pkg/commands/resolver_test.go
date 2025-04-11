@@ -27,8 +27,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/client"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -68,19 +68,19 @@ type erroringClient struct {
 	daemon.Client
 
 	inspectErr  error
-	inspectResp types.ImageInspect
+	inspectResp image.InspectResponse
 	inspectBody []byte
 }
 
 func (m *erroringClient) NegotiateAPIVersion(context.Context) {}
-func (m *erroringClient) ImageLoad(context.Context, io.Reader, bool) (image.LoadResponse, error) {
+func (m *erroringClient) ImageLoad(context.Context, io.Reader, ...client.ImageLoadOption) (image.LoadResponse, error) {
 	return image.LoadResponse{}, errImageLoad
 }
 func (m *erroringClient) ImageTag(_ context.Context, _ string, _ string) error {
 	return errImageTag
 }
 
-func (m *erroringClient) ImageInspectWithRaw(_ context.Context, _ string) (types.ImageInspect, []byte, error) {
+func (m *erroringClient) ImageInspectWithRaw(_ context.Context, _ string) (image.InspectResponse, []byte, error) {
 	return m.inspectResp, m.inspectBody, m.inspectErr
 }
 

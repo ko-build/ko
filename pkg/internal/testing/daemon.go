@@ -19,8 +19,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/image"
+	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 )
 
@@ -29,12 +29,12 @@ type MockDaemon struct {
 	Tags []string
 
 	inspectErr  error
-	inspectResp types.ImageInspect
+	inspectResp image.InspectResponse
 	inspectBody []byte
 }
 
 func (m *MockDaemon) NegotiateAPIVersion(context.Context) {}
-func (m *MockDaemon) ImageLoad(context.Context, io.Reader, bool) (image.LoadResponse, error) {
+func (m *MockDaemon) ImageLoad(context.Context, io.Reader, ...client.ImageLoadOption) (image.LoadResponse, error) {
 	return image.LoadResponse{
 		Body: io.NopCloser(strings.NewReader("Loaded")),
 	}, nil
@@ -48,6 +48,6 @@ func (m *MockDaemon) ImageTag(_ context.Context, _ string, tag string) error {
 	return nil
 }
 
-func (m *MockDaemon) ImageInspectWithRaw(_ context.Context, _ string) (types.ImageInspect, []byte, error) {
+func (m *MockDaemon) ImageInspectWithRaw(_ context.Context, _ string) (image.InspectResponse, []byte, error) {
 	return m.inspectResp, m.inspectBody, m.inspectErr
 }
