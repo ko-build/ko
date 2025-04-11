@@ -4,12 +4,19 @@ on:
   pull_request:
     branches: ['main']
 
-jobs:
+permissions: {}
 
+jobs:
   donotsubmit:
     name: Do Not Submit
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: read
+
     steps:
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        persist-credentials: false
+
     - uses: chainguard-dev/actions/donotsubmit@84c993eaf02da1c325854fb272a4df9184bd80fc # main
