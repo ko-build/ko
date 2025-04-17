@@ -1336,9 +1336,10 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 		return g.buildOne(ctx, ref, img, matches[0].Platform)
 	}
 
-	g.annotations[specsv1.AnnotationBaseImageName] = baseRef.Name()
+	annotations := maps.Clone(g.annotations)
+	annotations[specsv1.AnnotationBaseImageName] = baseRef.Name()
 	baseDigest, _ := baseIndex.Digest()
-	g.annotations[specsv1.AnnotationBaseImageDigest] = baseDigest.String()
+	annotations[specsv1.AnnotationBaseImageDigest] = baseDigest.String()
 
 	// Build an image for each matching platform from the base and append
 	// it to a new index to produce the result. We use the indices to
@@ -1404,7 +1405,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	idx := ocimutate.AppendManifests(
 		mutate.Annotations(
 			mutate.IndexMediaType(empty.Index, baseType),
-			g.annotations).(v1.ImageIndex),
+			annotations).(v1.ImageIndex),
 		adds...)
 
 	if g.sbom != nil {
