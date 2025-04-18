@@ -464,11 +464,13 @@ func goversionm(ctx context.Context, file string, appPath string, appFileName st
 	switch se.(type) {
 	case oci.SignedImage:
 		sbom := bytes.NewBuffer(nil)
-		cmd := exec.CommandContext(ctx, gobin, "version", "-m", file)
+		// seems in go1.24 the -m flag breaks things
+		// tested with go1.23 and works, but starting with go1.24.0 it breaks
+		cmd := exec.CommandContext(ctx, gobin, "version", file)
 		cmd.Stdout = sbom
 		cmd.Stderr = os.Stderr
 		if err := cmd.Run(); err != nil {
-			return nil, "", fmt.Errorf("go version -m %s: %w", file, err)
+			return nil, "", fmt.Errorf("go version %s: %w", file, err)
 		}
 
 		// In order to get deterministics SBOMs replace our randomized
