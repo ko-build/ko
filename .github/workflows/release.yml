@@ -32,7 +32,7 @@ jobs:
       # This installs the current latest release. We have to manually bump this.
       - uses: ko-build/setup-ko@3aebd0597dc1e9d1a26bcfdb7cbeb19c131d3037 # v0.7
         with:
-          version: v0.17.1 # DO NOT REMOVE THIS OR IT WILL CREATE A CYCLE.
+          version: v0.18.0 # DO NOT REMOVE THIS OR IT WILL CREATE A CYCLE.
 
       - uses: imjasonh/setup-crane@31b88efe9de28ae0ffa220711af4b60be9435f6e # v0.4
 
