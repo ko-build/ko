@@ -76,6 +76,10 @@ type Config struct {
 	Ldflags StringArray `yaml:",omitempty"`
 	Flags   FlagArray   `yaml:",omitempty"`
 
+	// TestLdflags and TestFlags will be used for the Go test command line arguments
+	TestLdflags StringArray `yaml:",omitempty"`
+	TestFlags   FlagArray   `yaml:",omitempty"`
+
 	// Env allows setting environment variables for `go build`
 	Env []string `yaml:",omitempty"`
 
