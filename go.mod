@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v28.2.2+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20240618133044-5a0af90af097
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
-	github.com/go-viper/mapstructure/v2 v2.2.1
+	github.com/go-viper/mapstructure/v2 v2.3.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.6
 	github.com/opencontainers/image-spec v1.1.1
