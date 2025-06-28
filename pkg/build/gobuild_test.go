@@ -584,8 +584,8 @@ func TestGoBuildNoKoData(t *testing.T) {
 
 	// Check that we have the expected number of layers.
 	t.Run("check layer count", func(t *testing.T) {
-		// We get a layer for the go binary and a layer for the kodata/
-		if got, want := int64(len(ls)), baseLayers+2; got != want {
+		// We get a layer for the go binary
+		if got, want := int64(len(ls)), baseLayers+1; got != want {
 			t.Fatalf("len(Layers()) = %v, want %v", got, want)
 		}
 	})
