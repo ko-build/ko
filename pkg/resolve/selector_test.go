@@ -293,3 +293,100 @@ func strToYAML(t *testing.T, yuml string) *yaml.Node {
 
 	return &node
 }
+
+func TestLabelsNode(t *testing.T) {
+	tests := []struct {
+		desc   string
+		labels map[string]string
+		label  string
+		value  string
+		exists bool
+	}{{
+		desc:   "label exists",
+		labels: map[string]string{"app": "web", "version": "v1"},
+		label:  "app",
+		value:  "web",
+		exists: true,
+	}, {
+		desc:   "label does not exist",
+		labels: map[string]string{"app": "web", "version": "v1"},
+		label:  "tier",
+		value:  "",
+		exists: false,
+	}, {
+		desc:   "empty labels",
+		labels: map[string]string{},
+		label:  "app",
+		value:  "",
+		exists: false,
+	}, {
+		desc:   "label with empty value",
+		labels: map[string]string{"app": "", "version": "v1"},
+		label:  "app",
+		value:  "",
+		exists: true,
+	}, {
+		desc:   "multiple labels with special characters",
+		labels: map[string]string{"app.io/name": "web", "version": "v1", "owner": "team-a"},
+		label:  "app.io/name",
+		value:  "web",
+		exists: true,
+	}, {
+		desc:   "label with numeric value",
+		labels: map[string]string{"replicas": "3", "port": "8080"},
+		label:  "replicas",
+		value:  "3",
+		exists: true,
+	}, {
+		desc:   "case sensitive label lookup",
+		labels: map[string]string{"App": "web", "app": "database"},
+		label:  "app",
+		value:  "database",
+		exists: true,
+	}}
+
+	for _, test := range tests {
+		t.Run(test.desc, func(t *testing.T) {
+			// Create a mapping node directly
+			node := &yaml.Node{
+				Kind: yaml.MappingNode,
+			}
+
+			// Add key-value pairs to the node
+			for key, value := range test.labels {
+				keyNode := &yaml.Node{
+					Kind:  yaml.ScalarNode,
+					Value: key,
+				}
+				valueNode := &yaml.Node{
+					Kind:  yaml.ScalarNode,
+					Value: value,
+				}
+				node.Content = append(node.Content, keyNode, valueNode)
+			}
+
+			ln := labelsNode{node}
+
+			// Test Get method
+			gotValue := ln.Get(test.label)
+			if gotValue != test.value {
+				t.Errorf("Get(%q) = %q, want %q", test.label, gotValue, test.value)
+			}
+
+			// Test Has method
+			gotExists := ln.Has(test.label)
+			if gotExists != test.exists {
+				t.Errorf("Has(%q) = %v, want %v", test.label, gotExists, test.exists)
+			}
+
+			// Test Lookup method
+			gotLookupValue, gotLookupExists := ln.Lookup(test.label)
+			if gotLookupValue != test.value {
+				t.Errorf("Lookup(%q) value = %q, want %q", test.label, gotLookupValue, test.value)
+			}
+			if gotLookupExists != test.exists {
+				t.Errorf("Lookup(%q) exists = %v, want %v", test.label, gotLookupExists, test.exists)
+			}
+		})
+	}
+}
