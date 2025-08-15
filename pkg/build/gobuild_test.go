@@ -577,18 +577,7 @@ func TestGoBuildNoKoData(t *testing.T) {
 		t.Fatalf("Build() not an Image: %T", result)
 	}
 
-	ls, err := img.Layers()
-	if err != nil {
-		t.Fatalf("Layers() = %v", err)
-	}
-
-	// Check that we have the expected number of layers.
-	t.Run("check layer count", func(t *testing.T) {
-		// We get a layer for the go binary and a layer for the kodata/
-		if got, want := int64(len(ls)), baseLayers+2; got != want {
-			t.Fatalf("len(Layers()) = %v, want %v", got, want)
-		}
-	})
+	validateImage(t, img.(oci.SignedImage), baseLayers, creationTime, true, true, false)
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
@@ -610,37 +599,9 @@ func TestGoBuildNoKoData(t *testing.T) {
 			t.Errorf("Digest mismatch: %s != %s", d1, d2)
 		}
 	})
-
-	// Check that the entrypoint of the image is configured to invoke our Go application
-	t.Run("check entrypoint", func(t *testing.T) {
-		cfg, err := img.ConfigFile()
-		if err != nil {
-			t.Errorf("ConfigFile() = %v", err)
-		}
-		entrypoint := cfg.Config.Entrypoint
-		if got, want := len(entrypoint), 1; got != want {
-			t.Errorf("len(entrypoint) = %v, want %v", got, want)
-		}
-
-		if got, want := entrypoint[0], "/ko-app/ko"; got != want {
-			t.Errorf("entrypoint = %v, want %v", got, want)
-		}
-	})
-
-	t.Run("check creation time", func(t *testing.T) {
-		cfg, err := img.ConfigFile()
-		if err != nil {
-			t.Errorf("ConfigFile() = %v", err)
-		}
-
-		actual := cfg.Created
-		if actual.Time != creationTime.Time {
-			t.Errorf("created = %v, want %v", actual, creationTime)
-		}
-	})
 }
 
-func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
+func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations, expectSBOM, expectData bool) {
 	t.Helper()
 
 	ls, err := img.Layers()
@@ -648,16 +609,21 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		t.Fatalf("Layers() = %v", err)
 	}
 
+	additionalLayers := int64(1)
+	if expectData {
+		additionalLayers += 1
+	}
+
 	// Check that we have the expected number of layers.
 	t.Run("check layer count", func(t *testing.T) {
 		// We get a layer for the go binary and a layer for the kodata/
-		if got, want := int64(len(ls)), baseLayers+2; got != want {
+		if got, want := int64(len(ls)), baseLayers+additionalLayers; got != want {
 			t.Fatalf("len(Layers()) = %v, want %v", got, want)
 		}
 	})
 
 	t.Run("check app layer contents", func(t *testing.T) {
-		dataLayer := ls[baseLayers]
+		dataLayer := ls[baseLayers+additionalLayers-1]
 
 		if _, err := dataLayer.Digest(); err != nil {
 			t.Errorf("Digest() = %v", err)
@@ -679,6 +645,9 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 	// Check that the kodata layer contains the expected data (even though it was a symlink
 	// outside kodata).
 	t.Run("check kodata", func(t *testing.T) {
+		if !expectData {
+			t.Skip("skipping kodata check")
+		}
 		dataLayer := ls[baseLayers]
 		r, err := dataLayer.Uncompressed()
 		if err != nil {
@@ -722,7 +691,11 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 			t.Errorf("len(entrypoint) = %v, want %v", got, want)
 		}
 
-		if got, want := entrypoint[0], "/ko-app/test"; got != want {
+		want := "/ko-app/test"
+		if !expectData {
+			want = "/ko-app/ko"
+		}
+		if got := entrypoint[0]; got != want {
 			t.Errorf("entrypoint = %v, want %v", got, want)
 		}
 	})
@@ -739,8 +712,11 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 				found = true
 			}
 		}
-		if !found {
+		if expectData && !found {
 			t.Error("Didn't find KO_DATA_PATH.")
+		}
+		if !expectData && found {
+			t.Error("Found unexpected KO_DATA_PATH.")
 		}
 	})
 
@@ -863,7 +839,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, true)
+	validateImage(t, img, baseLayers, creationTime, true, true, true)
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
@@ -1105,7 +1081,7 @@ func TestGoBuildWithoutSBOM(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, false)
+	validateImage(t, img, baseLayers, creationTime, true, false, true)
 }
 
 func TestGoBuildIndex(t *testing.T) {
@@ -1151,7 +1127,7 @@ func TestGoBuildIndex(t *testing.T) {
 		if err != nil {
 			t.Fatalf("idx.Image(%s) = %v", desc.Digest, err)
 		}
-		validateImage(t, img, baseLayers, creationTime, false, true)
+		validateImage(t, img, baseLayers, creationTime, false, true, true)
 	}
 
 	if want, got := images, int64(len(im.Manifests)); want != got {
