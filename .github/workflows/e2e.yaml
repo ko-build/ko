@@ -97,3 +97,7 @@ jobs:
           # Check that --debug adds dlv to the image, and that dlv is runnable.
           docker run --entrypoint="dlv" $(go run ./ build ./test/ --platform=${PLATFORM} --debug) version | grep "Delve Debugger"
         fi
+
+        # Build and run tests in the test/ folder
+        testimg=$(go run ./ test ./test/test/ --platform=${PLATFORM})
+        docker run ${testimg} | grep "PASS"
