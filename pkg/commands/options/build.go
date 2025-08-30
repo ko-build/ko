@@ -23,10 +23,11 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/ko/pkg/build"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/tools/go/packages"
+
+	"github.com/ko-build/ko/pkg/build"
 )
 
 const (
@@ -261,7 +262,7 @@ func createBuildConfigMap(workingDirectory string, configs []build.Config) (map[
 			path = filepath.Dir(config.Main)
 		}
 
-		// Verify that the path actually leads to a local file (https://github.com/google/ko/issues/483)
+		// Verify that the path actually leads to a local file (https://github.com/ko-build/ko/issues/483)
 		if _, err := os.Stat(filepath.Join(baseDir, path)); err != nil {
 			return nil, err
 		}
