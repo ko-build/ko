@@ -1547,3 +1547,66 @@ func TestDebugger(t *testing.T) {
 		}
 	}
 }
+
+func TestGoTest(t *testing.T) {
+	base, err := random.Image(1024, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		WithPlatforms("linux/amd64"),
+		WithGoTest(),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	for _, c := range []struct {
+		importpath   string
+		expectedName string
+	}{
+		{
+			importpath:   "github.com/google/ko/test/test/",
+			expectedName: "test.test",
+		}, {
+			importpath:   "github.com/google/ko/pkg/build",
+			expectedName: "build.test",
+		},
+	} {
+		t.Run(c.importpath, func(t *testing.T) {
+			result, err := ng.Build(context.Background(), StrictScheme+c.importpath)
+			if err != nil {
+				t.Fatalf("Build() = %v", err)
+			}
+
+			img, ok := result.(v1.Image)
+			if !ok {
+				t.Fatalf("Build() not an Image: %T", result)
+			}
+
+			// Check that the entrypoint of the image is not overwritten
+			cfg, err := img.ConfigFile()
+			if err != nil {
+				t.Errorf("ConfigFile() = %v", err)
+			}
+			gotEntrypoint := cfg.Config.Entrypoint
+			wantEntrypoint := []string{
+				"/ko-app/" + c.expectedName,
+			}
+
+			if got, want := len(gotEntrypoint), len(wantEntrypoint); got != want {
+				t.Fatalf("len(entrypoint) = %v, want %v", got, want)
+			}
+
+			for i := range wantEntrypoint {
+				if got, want := gotEntrypoint[i], wantEntrypoint[i]; got != want {
+					t.Errorf("entrypoint[%d] = %v, want %v", i, got, want)
+				}
+			}
+		})
+	}
+}
