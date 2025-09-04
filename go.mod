@@ -5,7 +5,7 @@ go 1.24.3
 require (
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.10.1
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
-	github.com/docker/docker v28.3.3+incompatible
+	github.com/docker/docker v28.4.0+incompatible
 	github.com/dprotaso/go-yit v0.0.0-20240618133044-5a0af90af097
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/go-viper/mapstructure/v2 v2.4.0
@@ -109,7 +109,6 @@ require (
 	github.com/go-openapi/strfmt v0.23.0 // indirect
 	github.com/go-openapi/swag v0.23.1 // indirect
 	github.com/go-openapi/validate v0.24.0 // indirect
-	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/certificate-transparency-go v1.3.2 // indirect
