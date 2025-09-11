@@ -27,3 +27,9 @@ docker run -p 40000:40000 <img>
 ```
 
 This sets up your app to be waiting to run the command you've specified. All that's needed now is to connect your debugger client to the running container!
+
+By default, the application will not start until a debugger has connected and issued the `continue` command. This is required in order to be able to set breakpoints for code that is executed during start-up. If you want the application to start running without waiting for a debugger, use the `--debug-continue` parameter:
+
+```plaintext
+ko build . --debug --debug-continue
+```

@@ -210,3 +210,10 @@ func WithDebugger() Option {
 		return nil
 	}
 }
+
+func WithDebuggerContinue() Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.debugContinue = true
+		return nil
+	}
+}
