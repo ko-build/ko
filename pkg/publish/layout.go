@@ -24,7 +24,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/layout"
 	"github.com/google/go-containerregistry/pkg/v1/types"
-	"github.com/google/ko/pkg/build"
+	"github.com/ko-build/ko/pkg/build"
 )
 
 type LayoutPublisher struct {

@@ -18,7 +18,7 @@ import (
 	"context"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/google/ko/pkg/build"
+	"github.com/ko-build/ko/pkg/build"
 )
 
 // Interface abstracts different methods for publishing images.
