@@ -425,15 +425,15 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 func goenv(ctx context.Context) (map[string]string, error) {
 	gobin := getGoBinary()
 	cmd := exec.CommandContext(ctx, gobin, "env")
-	var output bytes.Buffer
-	cmd.Stdout = &output
-	cmd.Stderr = &output
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("go env: %w: %s", err, output.String())
+		return nil, fmt.Errorf("go env: %w: %s", err, stderr.String())
 	}
 
 	env := make(map[string]string)
-	scanner := bufio.NewScanner(bytes.NewReader(output.Bytes()))
+	scanner := bufio.NewScanner(bytes.NewReader(stdout.Bytes()))
 
 	line := 0
 	for scanner.Scan() {
