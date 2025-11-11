@@ -68,6 +68,7 @@ type BuildOptions struct {
 	Annotations          []string
 	User                 string
 	Debug                bool
+	DebugContinue        bool
 	// UserAgent enables overriding the default value of the `User-Agent` HTTP
 	// request header used when retrieving the base image.
 	UserAgent string
@@ -103,6 +104,8 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"The default user the image should be run as.")
 	cmd.Flags().BoolVar(&bo.Debug, "debug", bo.Debug,
 		"Include Delve debugger into image and wrap around ko-app. This debugger will listen to port 40000.")
+	cmd.Flags().BoolVar(&bo.DebugContinue, "debug-continue", bo.DebugContinue,
+		"Continue the debugged process on start. Useful when you don't want to require a debugger to attach for the application to start.")
 	bo.Trimpath = true
 }
 
