@@ -2,7 +2,7 @@
 
 `ko`'s functionality can be consumed as a library in a Go application.
 
-To build an image, use [`pkg/build`](https://pkg.go.dev/github.com/google/ko/pkg/build), and publish it with [`pkg/publish`](https://pkg.go.dev/github.com/google/ko/pkg/publish).
+To build an image, use [`pkg/build`](https://pkg.go.dev/github.com/ko-build/ko/pkg/build), and publish it with [`pkg/publish`](https://pkg.go.dev/github.com/ko-build/ko/pkg/publish).
 
 This is a minimal example of using the packages together, to implement the core subset of `ko`'s functionality:
 
@@ -17,8 +17,9 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/publish"
+
+	"github.com/ko-build/ko/pkg/build"
+	"github.com/ko-build/ko/pkg/publish"
 )
 
 const (

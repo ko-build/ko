@@ -18,7 +18,7 @@ metadata:
 spec:
   containers:
   - name: obiwan
-    image: ko://github.com/google/ko/test
+    image: ko://github.com/ko-build/ko/test
     args:
       - --wait=true
   restartPolicy: Never
