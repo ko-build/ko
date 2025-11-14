@@ -640,7 +640,13 @@ func TestGoBuildNoKoData(t *testing.T) {
 	})
 }
 
-func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, checkAnnotations bool, expectSBOM bool) {
+type validationOptions struct {
+	checkAnnotations   bool
+	expectSBOM         bool
+	entryPointBasePath string
+}
+
+func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creationTime v1.Time, opts validationOptions) {
 	t.Helper()
 
 	ls, err := img.Layers()
@@ -722,7 +728,11 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 			t.Errorf("len(entrypoint) = %v, want %v", got, want)
 		}
 
-		if got, want := entrypoint[0], "/ko-app/test"; got != want {
+		want := "/ko-app/test"
+		if opts.entryPointBasePath != "" {
+			want = path.Join(opts.entryPointBasePath, "test")
+		}
+		if got := entrypoint[0]; got != want {
 			t.Errorf("entrypoint = %v, want %v", got, want)
 		}
 	})
@@ -756,7 +766,9 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 				pathValue := strings.TrimPrefix(envVar, "PATH=")
 				pathEntries := strings.Split(pathValue, ":")
 				for _, pathEntry := range pathEntries {
-					if pathEntry == "/ko-app" {
+					if opts.entryPointBasePath != "" && pathEntry == opts.entryPointBasePath {
+						found = true
+					} else if pathEntry == "/ko-app" {
 						found = true
 					}
 				}
@@ -780,7 +792,7 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 	})
 
 	t.Run("check annotations", func(t *testing.T) {
-		if !checkAnnotations {
+		if !opts.checkAnnotations {
 			t.Skip("skipping annotations check")
 		}
 		mf, err := img.Manifest()
@@ -797,7 +809,7 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		}
 	})
 
-	if expectSBOM {
+	if opts.expectSBOM {
 		t.Run("checking for SBOM", func(t *testing.T) {
 			f, err := img.Attachment("sbom")
 			if err != nil {
@@ -863,7 +875,7 @@ func TestGoBuild(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, true)
+	validateImage(t, img, baseLayers, creationTime, validationOptions{checkAnnotations: true, expectSBOM: true})
 
 	// Check that rebuilding the image again results in the same image digest.
 	t.Run("check determinism", func(t *testing.T) {
@@ -1105,7 +1117,82 @@ func TestGoBuildWithoutSBOM(t *testing.T) {
 		t.Fatalf("Build() not a SignedImage: %T", result)
 	}
 
-	validateImage(t, img, baseLayers, creationTime, true, false)
+	validateImage(t, img, baseLayers, creationTime, validationOptions{checkAnnotations: true, expectSBOM: false})
+}
+
+func TestGoBuild_WithAppDir(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
+		WithLabel("foo", "bar"),
+		WithLabel("hello", "world"),
+		WithPlatforms("all"),
+		WithAppDir("/usr/local/bin"),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(oci.SignedImage)
+	if !ok {
+		t.Fatalf("Build() not a SignedImage: %T", result)
+	}
+
+	validateImage(t, img, baseLayers, creationTime, validationOptions{checkAnnotations: true, expectSBOM: true, entryPointBasePath: "/usr/local/bin"})
+
+	// Check that rebuilding the image again results in the same image digest.
+	t.Run("check determinism", func(t *testing.T) {
+		result2, err := ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+		if err != nil {
+			t.Fatalf("Build() = %v", err)
+		}
+
+		d1, err := result.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+		d2, err := result2.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+
+		if d1 != d2 {
+			t.Errorf("Digest mismatch: %s != %s", d1, d2)
+		}
+	})
+
+	t.Run("check labels", func(t *testing.T) {
+		cfg, err := img.ConfigFile()
+		if err != nil {
+			t.Fatalf("ConfigFile() = %v", err)
+		}
+
+		want := map[string]string{
+			"foo":   "bar",
+			"hello": "world",
+		}
+		got := cfg.Config.Labels
+		if d := cmp.Diff(got, want); d != "" {
+			t.Fatalf("Labels diff (-got,+want): %s", d)
+		}
+	})
 }
 
 func TestGoBuildIndex(t *testing.T) {
@@ -1151,7 +1238,7 @@ func TestGoBuildIndex(t *testing.T) {
 		if err != nil {
 			t.Fatalf("idx.Image(%s) = %v", desc.Digest, err)
 		}
-		validateImage(t, img, baseLayers, creationTime, false, true)
+		validateImage(t, img, baseLayers, creationTime, validationOptions{checkAnnotations: false, expectSBOM: true})
 	}
 
 	if want, got := images, int64(len(im.Manifests)); want != got {
@@ -1535,6 +1622,64 @@ func TestDebugger(t *testing.T) {
 		"--api-version=2",
 		"--",
 		"/ko-app/ko",
+	}
+
+	if got, want := len(gotEntrypoint), len(wantEntrypoint); got != want {
+		t.Fatalf("len(entrypoint) = %v, want %v", got, want)
+	}
+
+	for i := range wantEntrypoint {
+		if got, want := gotEntrypoint[i], wantEntrypoint[i]; got != want {
+			t.Errorf("entrypoint[%d] = %v, want %v", i, got, want)
+		}
+	}
+}
+
+func TestDebugger_WithAppDirOverwrite(t *testing.T) {
+	base, err := random.Image(1024, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		WithPlatforms("linux/amd64"),
+		WithAppDir("/usr/local/bin"),
+		WithDebugger(),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), StrictScheme+importpath)
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(v1.Image)
+	if !ok {
+		t.Fatalf("Build() not an Image: %T", result)
+	}
+
+	// Check that the entrypoint of the image is not overwritten
+	cfg, err := img.ConfigFile()
+	if err != nil {
+		t.Errorf("ConfigFile() = %v", err)
+	}
+	gotEntrypoint := cfg.Config.Entrypoint
+	wantEntrypoint := []string{
+		"/usr/local/bin/dlv",
+		"exec",
+		"--listen=:40000",
+		"--headless",
+		"--log",
+		"--accept-multiclient",
+		"--api-version=2",
+		"--",
+		"/usr/local/bin/ko",
 	}
 
 	if got, want := len(gotEntrypoint), len(wantEntrypoint); got != want {
