@@ -74,6 +74,7 @@ type buildContext struct {
 	flags        []string
 	ldflags      []string
 	platform     v1.Platform
+	goTest       bool
 }
 
 type builder func(context.Context, buildContext) (string, error)
@@ -105,6 +106,7 @@ type gobuild struct {
 	annotations          map[string]string
 	user                 string
 	debug                bool
+	goTest               bool
 	semaphore            *semaphore.Weighted
 
 	cache *layerCache
@@ -134,6 +136,7 @@ type gobuildOpener struct {
 	dir                  string
 	jobs                 int
 	debug                bool
+	goTest               bool
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -169,6 +172,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		annotations:          gbo.annotations,
 		dir:                  gbo.dir,
 		debug:                gbo.debug,
+		goTest:               gbo.goTest,
 		platformMatcher:      matcher,
 		cache: &layerCache{
 			buildToDiff: map[string]buildIDToDiffID{},
@@ -247,9 +251,15 @@ func (g *gobuild) IsSupportedReference(s string) error {
 	if dir == "." {
 		dir = ""
 	}
-	pkgs, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName}, ref.Path())
+	pkgs, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedName, Tests: g.goTest}, ref.Path())
 	if err != nil {
 		return fmt.Errorf("error loading package from %s: %w", ref.Path(), err)
+	}
+	if g.goTest {
+		if len(pkgs) == 0 {
+			return errors.New("no package found in importpath")
+		}
+		return nil
 	}
 	if len(pkgs) != 1 {
 		return fmt.Errorf("found %d local packages, expected 1", len(pkgs))
@@ -368,8 +378,12 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 		return "", err
 	}
 
-	args := make([]string, 0, 4+len(buildArgs))
-	args = append(args, "build")
+	args := make([]string, 0, 5+len(buildArgs))
+	if buildCtx.goTest {
+		args = append(args, "test", "-c")
+	} else {
+		args = append(args, "build")
+	}
 	args = append(args, buildArgs...)
 	tmpDir := ""
 
@@ -671,9 +685,17 @@ func (g *gobuild) kodataPath(ref reference) (string, error) {
 	if dir == "." {
 		dir = ""
 	}
-	pkgs, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedFiles}, ref.Path())
+	pkgs, err := packages.Load(&packages.Config{Dir: dir, Mode: packages.NeedFiles, Tests: g.goTest}, ref.Path())
 	if err != nil {
 		return "", fmt.Errorf("error loading package from %s: %w", ref.Path(), err)
+	}
+	if g.goTest {
+		for i, p := range pkgs {
+			if len(p.GoFiles) != 0 {
+				return filepath.Join(filepath.Dir(pkgs[i].GoFiles[0]), "kodata"), nil
+			}
+		}
+		return "", fmt.Errorf("package loaded from %s contains no Go files", ref.path)
 	}
 	if len(pkgs) != 1 {
 		return "", fmt.Errorf("found %d local packages, expected 1", len(pkgs))
@@ -1002,6 +1024,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	// Get the build flags.
 	flags := config.Flags
+	if g.goTest {
+		flags = config.TestFlags
+	}
 	if len(flags) == 0 {
 		// Use the default, if any.
 		flags = g.defaultFlags
@@ -1009,6 +1034,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	// Get the build ldflags.
 	ldflags := config.Ldflags
+	if g.goTest {
+		ldflags = config.TestLdflags
+	}
 	if len(ldflags) == 0 {
 		// Use the default, if any
 		ldflags = g.defaultLdflags
@@ -1023,6 +1051,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		flags:        flags,
 		ldflags:      ldflags,
 		platform:     *platform,
+		goTest:       g.goTest,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("build: %w", err)
@@ -1057,6 +1086,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 
 	appDir := "/ko-app"
 	appFileName := appFilename(ref.Path())
+	if g.goTest {
+		appFileName += ".test"
+	}
 	appPath := path.Join(appDir, appFileName)
 
 	var lo layerOptions
@@ -1081,6 +1113,11 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, fmt.Errorf("cache.get(%q): %w", file, err)
 	}
 
+	comment := "go build output, at " + appPath
+	if g.goTest {
+		comment = "go test -c output, at " + appPath
+	}
+
 	layers = append(layers, mutate.Addendum{
 		Layer:     binaryLayer,
 		MediaType: layerMediaType,
@@ -1088,7 +1125,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 			Author:    "ko",
 			Created:   g.creationTime,
 			CreatedBy: "ko build " + ref.String(),
-			Comment:   "go build output, at " + appPath,
+			Comment:   comment,
 		},
 	})
 
