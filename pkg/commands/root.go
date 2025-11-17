@@ -15,10 +15,9 @@
 package commands
 
 import (
-	"os"
-
 	cranecmd "github.com/google/go-containerregistry/cmd/crane/cmd"
 	"github.com/google/go-containerregistry/pkg/logs"
+	"github.com/google/ko/pkg/commands/options"
 	"github.com/spf13/cobra"
 	"go.uber.org/automaxprocs/maxprocs"
 )
@@ -26,18 +25,15 @@ import (
 var Root = New()
 
 func New() *cobra.Command {
-	var verbose bool
+	lo := &options.LogOptions{}
+
 	root := &cobra.Command{
 		Use:               "ko",
 		Short:             "Rapidly iterate with Go, Containers, and Kubernetes.",
 		SilenceUsage:      true, // Don't show usage on errors
 		DisableAutoGenTag: true,
-		PersistentPreRun: func(_ *cobra.Command, _ []string) {
-			if verbose {
-				logs.Warn.SetOutput(os.Stderr)
-				logs.Debug.SetOutput(os.Stderr)
-			}
-			logs.Progress.SetOutput(os.Stderr)
+		PersistentPreRun: func(cmd *cobra.Command, _ []string) {
+			lo.SetOutput(cmd)
 
 			maxprocs.Set(maxprocs.Logger(logs.Debug.Printf))
 		},
@@ -45,7 +41,8 @@ func New() *cobra.Command {
 			cmd.Help()
 		},
 	}
-	root.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable debug logs")
+
+	options.AddLogOptions(root, lo)
 
 	AddKubeCommands(root)
 
