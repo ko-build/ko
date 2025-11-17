@@ -67,7 +67,8 @@ ko resolve -f FILENAME [flags]
 ### Options inherited from parent commands
 
 ```
-  -v, --verbose   Enable debug logs
+  -s, --structured   Enable structured logs
+  -v, --verbose      Enable debug logs
 ```
 
 ### SEE ALSO
