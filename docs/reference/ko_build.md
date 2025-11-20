@@ -53,10 +53,12 @@ ko build IMPORTPATH... [flags]
       --image-user string          The default user the image should be run as.
       --insecure-registry          Whether to skip TLS verification on the registry
   -j, --jobs int                   The maximum number of concurrent builds (default GOMAXPROCS)
+      --json                       Enable json-structured output
   -L, --local                      Load into images to local docker daemon.
       --oci-layout-path string     Path to save the OCI image layout of the built images
       --platform strings           Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths      Whether to preserve the full import path after KO_DOCKER_REPO.
+      --pretty                     Indent json output (pretty-print) (default true)
       --push                       Push images to KO_DOCKER_REPO (default true)
       --sbom string                The SBOM media type to use (none will disable SBOM synthesis and upload). (default "spdx")
       --sbom-dir string            Path to file where the SBOM will be written.
@@ -68,7 +70,8 @@ ko build IMPORTPATH... [flags]
 ### Options inherited from parent commands
 
 ```
-  -v, --verbose   Enable debug logs
+  -s, --structured   Enable structured logs
+  -v, --verbose      Enable debug logs
 ```
 
 ### SEE ALSO

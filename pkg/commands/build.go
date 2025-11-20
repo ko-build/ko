@@ -25,6 +25,7 @@ import (
 func addBuild(topLevel *cobra.Command) {
 	po := &options.PublishOptions{}
 	bo := &options.BuildOptions{}
+	oo := &options.OutputOptions{}
 
 	build := &cobra.Command{
 		Use:     "build IMPORTPATH...",
@@ -81,12 +82,12 @@ func addBuild(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("failed to publish images: %w", err)
 			}
-			for _, img := range images {
-				fmt.Println(img)
-			}
-			return nil
+
+			return oo.Printer().Print(images)
 		},
 	}
+
+	options.AddOutputOptions(build, oo)
 	options.AddPublishArg(build, po)
 	options.AddBuildOptions(build, bo)
 	topLevel.AddCommand(build)
