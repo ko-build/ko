@@ -13,7 +13,7 @@ require (
 	github.com/google/go-containerregistry v0.20.7
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/sigstore/cosign/v2 v2.5.4-0.20250807184110-0ac382ac7102
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/automaxprocs v1.6.0
