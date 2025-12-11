@@ -1498,52 +1498,88 @@ func TestDebugger(t *testing.T) {
 	}
 	importpath := "github.com/google/ko"
 
-	ng, err := NewGo(
-		context.Background(),
-		"",
-		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
-		WithPlatforms("linux/amd64"),
-		WithDebugger(),
-	)
-	if err != nil {
-		t.Fatalf("NewGo() = %v", err)
+	tests := []struct {
+		desc           string
+		opts           []Option
+		wantEntrypoint []string
+	}{
+		{
+			desc: "debugger enabled",
+			opts: []Option{
+				WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+				WithPlatforms("linux/amd64"),
+				WithDebugger(),
+			},
+			wantEntrypoint: []string{
+				"/ko-app/dlv",
+				"exec",
+				"--listen=:40000",
+				"--headless",
+				"--log",
+				"--accept-multiclient",
+				"--api-version=2",
+				"--continue=false",
+				"--",
+				"/ko-app/ko",
+			},
+		},
+		{
+			desc: "debugger enabled with continue",
+			opts: []Option{
+				WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+				WithPlatforms("linux/amd64"),
+				WithDebugger(),
+				WithDebuggerContinue(),
+			},
+			wantEntrypoint: []string{
+				"/ko-app/dlv",
+				"exec",
+				"--listen=:40000",
+				"--headless",
+				"--log",
+				"--accept-multiclient",
+				"--api-version=2",
+				"--continue=true",
+				"--",
+				"/ko-app/ko",
+			},
+		},
 	}
 
-	result, err := ng.Build(context.Background(), StrictScheme+importpath)
-	if err != nil {
-		t.Fatalf("Build() = %v", err)
-	}
+	for _, tc := range tests {
+		t.Run(tc.desc, func(t *testing.T) {
+			ng, err := NewGo(context.Background(), "", tc.opts...)
+			if err != nil {
+				t.Fatalf("NewGo() = %v", err)
+			}
 
-	img, ok := result.(v1.Image)
-	if !ok {
-		t.Fatalf("Build() not an Image: %T", result)
-	}
+			result, err := ng.Build(context.Background(), StrictScheme+importpath)
+			if err != nil {
+				t.Fatalf("Build() = %v", err)
+			}
 
-	// Check that the entrypoint of the image is not overwritten
-	cfg, err := img.ConfigFile()
-	if err != nil {
-		t.Errorf("ConfigFile() = %v", err)
-	}
-	gotEntrypoint := cfg.Config.Entrypoint
-	wantEntrypoint := []string{
-		"/ko-app/dlv",
-		"exec",
-		"--listen=:40000",
-		"--headless",
-		"--log",
-		"--accept-multiclient",
-		"--api-version=2",
-		"--",
-		"/ko-app/ko",
-	}
+			img, ok := result.(v1.Image)
+			if !ok {
+				t.Fatalf("Build() not an Image: %T", result)
+			}
 
-	if got, want := len(gotEntrypoint), len(wantEntrypoint); got != want {
-		t.Fatalf("len(entrypoint) = %v, want %v", got, want)
-	}
+			// Check that the entrypoint of the image is not overwritten
+			cfg, err := img.ConfigFile()
+			if err != nil {
+				t.Errorf("ConfigFile() = %v", err)
+			}
+			gotEntrypoint := cfg.Config.Entrypoint
+			wantEntrypoint := tc.wantEntrypoint
 
-	for i := range wantEntrypoint {
-		if got, want := gotEntrypoint[i], wantEntrypoint[i]; got != want {
-			t.Errorf("entrypoint[%d] = %v, want %v", i, got, want)
-		}
+			if got, want := len(gotEntrypoint), len(wantEntrypoint); got != want {
+				t.Fatalf("len(entrypoint) = %v, want %v", got, want)
+			}
+
+			for i := range wantEntrypoint {
+				if got, want := gotEntrypoint[i], wantEntrypoint[i]; got != want {
+					t.Errorf("entrypoint[%d] = %v, want %v", i, got, want)
+				}
+			}
+		})
 	}
 }

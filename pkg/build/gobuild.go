@@ -105,6 +105,7 @@ type gobuild struct {
 	annotations          map[string]string
 	user                 string
 	debug                bool
+	debugContinue        bool
 	semaphore            *semaphore.Weighted
 
 	cache *layerCache
@@ -134,6 +135,7 @@ type gobuildOpener struct {
 	dir                  string
 	jobs                 int
 	debug                bool
+	debugContinue        bool
 }
 
 func (gbo *gobuildOpener) Open() (Interface, error) {
@@ -169,6 +171,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		annotations:          gbo.annotations,
 		dir:                  gbo.dir,
 		debug:                gbo.debug,
+		debugContinue:        gbo.debugContinue,
 		platformMatcher:      matcher,
 		cache: &layerCache{
 			buildToDiff: map[string]buildIDToDiffID{},
@@ -1129,6 +1132,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		"--log",
 		"--accept-multiclient",
 		"--api-version=2",
+		fmt.Sprintf("--continue=%t", g.debugContinue),
 		"--",
 	}
 
