@@ -3,20 +3,16 @@ name: goreleaser
 on:
   push:
     tags:
-      - '*'
+      - "*"
 
 permissions: {}
 
 jobs:
   goreleaser:
-    outputs:
-      hashes: ${{ steps.hash.outputs.hashes }}
-      tag_name: ${{ steps.tag.outputs.tag_name }}
-
     permissions:
-      packages: write
-      id-token: write
-      contents: write
+      packages: write # For container registry (ghcr.io)
+      id-token: write # For Sigstore signing (OIDC)
+      contents: write # For GitHub releases and artifacts ← STILL NEEDED
 
     runs-on: ubuntu-latest
     steps:
@@ -26,7 +22,7 @@ jobs:
 
       - uses: actions/setup-go@3041bf56c941b39c61721a86cd11f3bb1338122a # v5.2.0
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
           check-latest: true
 
       # This installs the current latest release. We have to manually bump this.
@@ -43,7 +39,6 @@ jobs:
         run: echo "tag_name=${GITHUB_REF#refs/*/}" >> "$GITHUB_OUTPUT"
 
       - uses: goreleaser/goreleaser-action@9ed2f89a662bf1735a48bc8557fd212fa902bebf # v6.1.0
-        id: run-goreleaser
         with:
           version: latest
           args: release --clean
@@ -66,83 +61,3 @@ jobs:
           RUN_ATTEMPT: ${{ github.run_attempt }}
           RUN_ID: ${{ github.run_id }}
           REGISTRY: "ghcr.io/${{ github.repository }}"
-
-      - name: Generate subject
-        id: hash
-        env:
-          ARTIFACTS: "${{ steps.run-goreleaser.outputs.artifacts }}"
-        run: |
-          set -euo pipefail
-
-          checksum_file=$(echo "$ARTIFACTS" | jq -r '.[] | select (.type=="Checksum") | .path')
-          echo "hashes=$(cat $checksum_file | base64 -w0)" >> "$GITHUB_OUTPUT"
-
-  provenance:
-    needs:
-      - goreleaser
-
-    permissions:
-      actions: read   # To read the workflow path.
-      id-token: write # To sign the provenance.
-      contents: write # To add assets to a release.
-
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
-    with:
-      base64-subjects: "${{ needs.goreleaser.outputs.hashes }}"
-      upload-assets: true
-      upload-tag-name: "${{ needs.goreleaser.outputs.tag_name }}"
-
-  verification:
-    needs:
-      - goreleaser
-      - provenance
-
-    runs-on: ubuntu-latest
-    permissions: read-all
-
-    steps:
-      # Note: this will be replaced with the GHA in the future.
-      - name: Install the verifier
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-
-          gh -R slsa-framework/slsa-verifier release download v1.3.2 -p "slsa-verifier-linux-amd64"
-          chmod ug+x slsa-verifier-linux-amd64
-          # Note: see https://github.com/slsa-framework/slsa-verifier/blob/main/SHA256SUM.md
-          COMPUTED_HASH=$(sha256sum slsa-verifier-linux-amd64 | cut -d ' ' -f1)
-          EXPECTED_HASH="b1d6c9bbce6274e253f0be33158cacd7fb894c5ebd643f14a911bfe55574f4c0"
-          if [[ "$EXPECTED_HASH" != "$COMPUTED_HASH" ]];then
-              echo "error: expected $EXPECTED_HASH, computed $COMPUTED_HASH"
-              exit 1
-          fi
-
-      - name: Download assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PROVENANCE: "${{ needs.provenance.outputs.provenance-name }}"
-        run: |
-          set -euo pipefail
-
-          gh -R "$GITHUB_REPOSITORY" release download "$GITHUB_REF_NAME" -p "*.tar.gz"
-          gh -R "$GITHUB_REPOSITORY" release download "$GITHUB_REF_NAME" -p "$PROVENANCE"
-
-      - name: Verify assets
-        env:
-          CHECKSUMS: ${{ needs.goreleaser.outputs.hashes }}
-          PROVENANCE: "${{ needs.provenance.outputs.provenance-name }}"
-        run: |
-          set -euo pipefail
-
-          checksums=$(echo "$CHECKSUMS" | base64 -d)
-          while read -r line; do
-              fn=$(echo $line | cut -d ' ' -f2)
-
-              echo "Verifying $fn"
-              ./slsa-verifier-linux-amd64 -artifact-path "$fn" \
-                                      -provenance "$PROVENANCE" \
-                                      -source "github.com/$GITHUB_REPOSITORY" \
-                                      -tag "$GITHUB_REF_NAME"
-
-          done <<<"$checksums"
