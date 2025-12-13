@@ -681,7 +681,15 @@ func (g *gobuild) kodataPath(ref reference) (string, error) {
 	if len(pkgs[0].GoFiles) == 0 {
 		return "", fmt.Errorf("package %s contains no Go files", pkgs[0])
 	}
-	return filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), "kodata"), nil
+	dataPath := filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), "kodata")
+	_, err = os.Stat(dataPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", nil
+		}
+		return "", fmt.Errorf("error describing kodata dir %s: %w", dataPath, err)
+	}
+	return dataPath, nil
 }
 
 // Where kodata lives in the image.
@@ -770,6 +778,9 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 	root, err := g.kodataPath(ref)
 	if err != nil {
 		return nil, err
+	}
+	if root == "" {
+		return nil, nil
 	}
 
 	creationTime := g.kodataCreationTime
@@ -1038,22 +1049,24 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	if err != nil {
 		return nil, fmt.Errorf("tarring kodata: %w", err)
 	}
-	dataLayerBytes := dataLayerBuf.Bytes()
-	dataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
-		return io.NopCloser(bytes.NewBuffer(dataLayerBytes)), nil
-	}, tarball.WithCompressedCaching, tarball.WithMediaType(layerMediaType))
-	if err != nil {
-		return nil, err
+	if dataLayerBuf != nil {
+		dataLayerBytes := dataLayerBuf.Bytes()
+		dataLayer, err := tarball.LayerFromOpener(func() (io.ReadCloser, error) {
+			return io.NopCloser(bytes.NewBuffer(dataLayerBytes)), nil
+		}, tarball.WithCompressedCaching, tarball.WithMediaType(layerMediaType))
+		if err != nil {
+			return nil, err
+		}
+		layers = append(layers, mutate.Addendum{
+			Layer: dataLayer,
+			History: v1.History{
+				Author:    "ko",
+				CreatedBy: "ko build " + ref.String(),
+				Created:   g.kodataCreationTime,
+				Comment:   "kodata contents, at $KO_DATA_PATH",
+			},
+		})
 	}
-	layers = append(layers, mutate.Addendum{
-		Layer: dataLayer,
-		History: v1.History{
-			Author:    "ko",
-			CreatedBy: "ko build " + ref.String(),
-			Created:   g.kodataCreationTime,
-			Comment:   "kodata contents, at $KO_DATA_PATH",
-		},
-	})
 
 	appDir := "/ko-app"
 	appFileName := appFilename(ref.Path())
@@ -1158,7 +1171,6 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 
 		updatePath(cfg, `C:\ko-app`)
-		cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
 	} else {
 		if g.useDebugging(*platform) {
 			cfg.Config.Entrypoint = append([]string{delvePath}, delveArgs...)
@@ -1166,7 +1178,13 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		}
 
 		updatePath(cfg, appDir)
-		cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
+	}
+	if dataLayerBuf != nil {
+		if platform.OS == "windows" {
+			cfg.Config.Env = append(cfg.Config.Env, `KO_DATA_PATH=C:\var\run\ko`)
+		} else {
+			cfg.Config.Env = append(cfg.Config.Env, "KO_DATA_PATH="+kodataRoot)
+		}
 	}
 	cfg.Author = "github.com/ko-build/ko"
 
