@@ -811,7 +811,7 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 	return buf, walkRecursive(tw, root, chroot, creationTime, platform)
 }
 
-func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]interface{}, error) {
+func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]any, error) {
 	envVars := map[string]string{
 		"LDFLAGS": "",
 	}
@@ -848,7 +848,7 @@ func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]
 		date = time.Now()
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"Env":       envVars,
 		"GoEnv":     goEnv,
 		"Git":       info.TemplateValue(),
@@ -857,7 +857,7 @@ func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]
 	}, nil
 }
 
-func applyTemplating(list []string, data map[string]interface{}) ([]string, error) {
+func applyTemplating(list []string, data map[string]any) ([]string, error) {
 	result := make([]string, 0, len(list))
 	for _, entry := range list {
 		tmpl, err := template.New("argsTmpl").Option("missingkey=error").Parse(entry)
@@ -1173,9 +1173,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	if cfg.Config.Labels == nil {
 		cfg.Config.Labels = map[string]string{}
 	}
-	for k, v := range g.labels {
-		cfg.Config.Labels[k] = v
-	}
+	maps.Copy(cfg.Config.Labels, g.labels)
 
 	if g.user != "" {
 		cfg.Config.User = g.user
@@ -1347,7 +1345,6 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	errg, gctx := errgroup.WithContext(ctx)
 	adds := make([]ocimutate.IndexAddendum, len(matches))
 	for i, desc := range matches {
-		i, desc := i, desc
 		errg.Go(func() error {
 			baseImage, err := baseIndex.Image(desc.Digest)
 			if err != nil {

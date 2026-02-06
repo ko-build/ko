@@ -53,7 +53,7 @@ func TestCaching(t *testing.T) {
 	// Each iteration, we test that the first build is slow and subsequent
 	// builds are fast and return the same image.  Then we invalidate the
 	// cache and iterate.
-	for idx := 0; idx < 3; idx++ {
+	for range 3 {
 		start := time.Now()
 		img1, err := cb.Build(context.Background(), ip)
 		if err != nil {

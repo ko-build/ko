@@ -149,7 +149,7 @@ metadata:
 kind: Bar
 `
 	// Note that this ends in '---', so it in ends in a final null YAML document.
-	inputYAML := []byte(fmt.Sprintf("%s---\n%s---", passesSelector, failsSelector))
+	inputYAML := fmt.Appendf(nil, "%s---\n%s---", passesSelector, failsSelector)
 	base := mustRepository("gcr.io/multi-pass")
 
 	outputYAML, err := resolveFile(

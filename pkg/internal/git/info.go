@@ -57,13 +57,13 @@ type Info struct {
 }
 
 // TemplateValue converts this Info into a map for use in golang templates.
-func (i Info) TemplateValue() map[string]interface{} {
+func (i Info) TemplateValue() map[string]any {
 	treeState := "clean"
 	if i.Dirty {
 		treeState = "dirty"
 	}
 
-	return map[string]interface{}{
+	return map[string]any{
 		"Branch":          i.Branch,
 		"Tag":             i.Tag,
 		"ShortCommit":     i.ShortCommit,

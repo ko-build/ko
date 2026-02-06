@@ -357,7 +357,7 @@ func TestCreateTemplateData(t *testing.T) {
 		params, err := createTemplateData(context.TODO(), buildContext{dir: dir})
 		require.NoError(t, err)
 
-		gitParams := params["Git"].(map[string]interface{})
+		gitParams := params["Git"].(map[string]any)
 		require.Equal(t, "", gitParams["Branch"])
 		require.Equal(t, "", gitParams["Tag"])
 		require.Equal(t, "", gitParams["ShortCommit"])
@@ -377,7 +377,7 @@ func TestCreateTemplateData(t *testing.T) {
 		params, err := createTemplateData(context.TODO(), buildContext{dir: dir})
 		require.NoError(t, err)
 
-		gitParams := params["Git"].(map[string]interface{})
+		gitParams := params["Git"].(map[string]any)
 		require.Equal(t, "main", gitParams["Branch"])
 		require.Equal(t, "v0.0.1", gitParams["Tag"])
 		require.Equal(t, "clean", gitParams["TreeState"])
@@ -752,10 +752,10 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		}
 		found := false
 		for _, envVar := range cfg.Config.Env {
-			if strings.HasPrefix(envVar, "PATH=") {
-				pathValue := strings.TrimPrefix(envVar, "PATH=")
-				pathEntries := strings.Split(pathValue, ":")
-				for _, pathEntry := range pathEntries {
+			if after, ok := strings.CutPrefix(envVar, "PATH="); ok {
+				pathValue := after
+				pathEntries := strings.SplitSeq(pathValue, ":")
+				for pathEntry := range pathEntries {
 					if pathEntry == "/ko-app" {
 						found = true
 					}
