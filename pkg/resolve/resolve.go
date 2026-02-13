@@ -53,7 +53,6 @@ func ImageReferences(ctx context.Context, docs []*yaml.Node, builder build.Inter
 	var sm sync.Map
 	var errg errgroup.Group
 	for ref := range refs {
-		ref := ref
 		errg.Go(func() error {
 			img, err := builder.Build(ctx, ref)
 			if err != nil {
