@@ -711,6 +711,54 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		}
 	})
 
+	// Check that directory headers are written for subdirectories in kodata.
+	t.Run("check kodata directory headers", func(t *testing.T) {
+		dataLayer := ls[baseLayers]
+		r, err := dataLayer.Uncompressed()
+		if err != nil {
+			t.Fatalf("Uncompressed() = %v", err)
+		}
+		defer r.Close()
+
+		expectedDir := path.Join(kodataRoot, "subdir")
+		expectedFile := path.Join(kodataRoot, "subdir", "file.txt")
+		foundDir := false
+		foundFile := false
+
+		tr := tar.NewReader(r)
+		for {
+			header, err := tr.Next()
+			if errors.Is(err, io.EOF) {
+				break
+			} else if err != nil {
+				t.Errorf("Next() = %v", err)
+				continue
+			}
+
+			if header.Name == expectedDir {
+				foundDir = true
+				if header.Typeflag != tar.TypeDir {
+					t.Errorf("expected %q to be a directory (typeflag %d), got typeflag %d",
+						expectedDir, tar.TypeDir, header.Typeflag)
+				}
+			}
+			if header.Name == expectedFile {
+				foundFile = true
+				if header.Typeflag != tar.TypeReg {
+					t.Errorf("expected %q to be a regular file (typeflag %d), got typeflag %d",
+						expectedFile, tar.TypeReg, header.Typeflag)
+				}
+			}
+		}
+
+		if !foundDir {
+			t.Errorf("directory header for %q not found in tarball", expectedDir)
+		}
+		if !foundFile {
+			t.Errorf("file %q not found in tarball", expectedFile)
+		}
+	})
+
 	// Check that the entrypoint of the image is configured to invoke our Go application
 	t.Run("check entrypoint", func(t *testing.T) {
 		cfg, err := img.ConfigFile()

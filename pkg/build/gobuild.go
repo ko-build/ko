@@ -687,6 +687,53 @@ func (g *gobuild) kodataPath(ref reference) (string, error) {
 // Where kodata lives in the image.
 const kodataRoot = "/var/run/ko"
 
+// writeDirToTar writes a directory header to the tar writer.
+func writeDirToTar(tw *tar.Writer, name string, modTime time.Time) error {
+	return tw.WriteHeader(&tar.Header{
+		Name:     name,
+		Typeflag: tar.TypeDir,
+		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
+		// under which it was created. Additionally, windows can only set 0222,
+		// 0444, or 0666, none of which are executable.
+		Mode:    0555,
+		ModTime: modTime,
+	})
+}
+
+// writeFileToTar writes a file to the tar writer.
+func writeFileToTar(tw *tar.Writer, name, evalPath string, size int64, modTime time.Time, platform *v1.Platform) error {
+	file, err := os.Open(evalPath)
+	if err != nil {
+		return fmt.Errorf("os.Open(%q): %w", evalPath, err)
+	}
+	defer file.Close()
+
+	header := &tar.Header{
+		Name:     name,
+		Size:     size,
+		Typeflag: tar.TypeReg,
+		// Use a fixed Mode, so that this isn't sensitive to the directory and umask
+		// under which it was created. Additionally, windows can only set 0222,
+		// 0444, or 0666, none of which are executable.
+		Mode:    0555,
+		ModTime: modTime,
+	}
+	if platform.OS == "windows" {
+		// This magic value is for some reason needed for Windows to be
+		// able to execute the binary.
+		header.PAXRecords = map[string]string{
+			"MSWINDOWS.rawsd": userOwnerAndGroupSID,
+		}
+	}
+	if err := tw.WriteHeader(header); err != nil {
+		return fmt.Errorf("tar.Writer.WriteHeader(%q): %w", name, err)
+	}
+	if _, err := io.Copy(tw, file); err != nil {
+		return fmt.Errorf("io.Copy(%q, %q): %w", name, evalPath, err)
+	}
+	return nil
+}
+
 // walkRecursive performs a filepath.Walk of the given root directory adding it
 // to the provided tar.Writer with root -> chroot.  All symlinks are dereferenced,
 // which is what leads to recursion when we encounter a directory symlink.
@@ -698,11 +745,16 @@ func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, pl
 		if err != nil {
 			return fmt.Errorf("filepath.Walk(%q): %w", root, err)
 		}
-		// Skip other directories.
+
+		newPath := path.Join(chroot, filepath.ToSlash(hostPath[len(root):]))
+
+		// Handle directories: write header and let filepath.Walk recurse.
 		if info.Mode().IsDir() {
+			if err := writeDirToTar(tw, newPath, creationTime.Time); err != nil {
+				return fmt.Errorf("writing dir %q to tar: %w", newPath, err)
+			}
 			return nil
 		}
-		newPath := path.Join(chroot, filepath.ToSlash(hostPath[len(root):]))
 
 		// Don't chase symlinks on Windows, where cross-compiled symlink support is not possible.
 		if platform.OS == "windows" {
@@ -717,48 +769,22 @@ func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, pl
 			return fmt.Errorf("filepath.EvalSymlinks(%q): %w", hostPath, err)
 		}
 
-		// Chase symlinks.
+		// Get info of the symlink target.
 		info, err = os.Stat(evalPath)
 		if err != nil {
 			return fmt.Errorf("os.Stat(%q): %w", evalPath, err)
 		}
-		// Skip other directories.
+
+		// Symlink target is a directory: write header and recurse.
 		if info.Mode().IsDir() {
+			if err := writeDirToTar(tw, newPath, creationTime.Time); err != nil {
+				return fmt.Errorf("writing dir %q to tar: %w", newPath, err)
+			}
 			return walkRecursive(tw, evalPath, newPath, creationTime, platform)
 		}
 
-		// Open the file to copy it into the tarball.
-		file, err := os.Open(evalPath)
-		if err != nil {
-			return fmt.Errorf("os.Open(%q): %w", evalPath, err)
-		}
-		defer file.Close()
-
-		// Copy the file into the image tarball.
-		header := &tar.Header{
-			Name:     newPath,
-			Size:     info.Size(),
-			Typeflag: tar.TypeReg,
-			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
-			// under which it was created. Additionally, windows can only set 0222,
-			// 0444, or 0666, none of which are executable.
-			Mode:    0555,
-			ModTime: creationTime.Time,
-		}
-		if platform.OS == "windows" {
-			// This magic value is for some reason needed for Windows to be
-			// able to execute the binary.
-			header.PAXRecords = map[string]string{
-				"MSWINDOWS.rawsd": userOwnerAndGroupSID,
-			}
-		}
-		if err := tw.WriteHeader(header); err != nil {
-			return fmt.Errorf("tar.Writer.WriteHeader(%q): %w", newPath, err)
-		}
-		if _, err := io.Copy(tw, file); err != nil {
-			return fmt.Errorf("io.Copy(%q, %q): %w", newPath, evalPath, err)
-		}
-		return nil
+		// Regular file (or symlink to file): write to tar.
+		return writeFileToTar(tw, newPath, evalPath, info.Size(), creationTime.Time, platform)
 	})
 }
 
@@ -795,15 +821,7 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 		}
 	}
 	for _, dir := range dirs {
-		if err := tw.WriteHeader(&tar.Header{
-			Name:     dir,
-			Typeflag: tar.TypeDir,
-			// Use a fixed Mode, so that this isn't sensitive to the directory and umask
-			// under which it was created. Additionally, windows can only set 0222,
-			// 0444, or 0666, none of which are executable.
-			Mode:    0555,
-			ModTime: creationTime.Time,
-		}); err != nil {
+		if err := writeDirToTar(tw, dir, creationTime.Time); err != nil {
 			return nil, fmt.Errorf("writing dir %q: %w", dir, err)
 		}
 	}
