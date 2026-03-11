@@ -20,9 +20,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -33,6 +35,7 @@ import (
 	ociremote "github.com/sigstore/cosign/v2/pkg/oci/remote"
 	"github.com/sigstore/cosign/v2/pkg/oci/walk"
 	"golang.org/x/sync/errgroup"
+	"golang.org/x/term"
 
 	"github.com/google/ko/pkg/build"
 )
@@ -47,6 +50,7 @@ type defalt struct {
 	jobs     int
 
 	pusher *remote.Pusher
+	ropt   []remote.Option
 	oopt   []ociremote.Option
 }
 
@@ -115,6 +119,7 @@ func (do *defaultOpener) Open() (Interface, error) {
 		insecure: do.insecure,
 		jobs:     do.jobs,
 		pusher:   pusher,
+		ropt:     do.ropt,
 		oopt:     oopt,
 	}, nil
 }
@@ -156,7 +161,7 @@ func (d *defalt) pushResult(ctx context.Context, tag name.Tag, br build.Result) 
 	g.SetLimit(d.jobs)
 
 	g.Go(func() error {
-		return d.pusher.Push(ctx, tag, br)
+		return d.pushWithProgress(ctx, tag, br)
 	})
 
 	// writePeripherals implements walk.Fn
@@ -220,6 +225,139 @@ func (d *defalt) pushResult(ctx context.Context, tag name.Tag, br build.Result) 
 	}
 
 	return g.Wait()
+}
+
+func (d *defalt) pushWithProgress(ctx context.Context, ref name.Reference, target remote.Taggable) error {
+	updates := make(chan v1.Update, 128)
+	options := append([]remote.Option{}, d.ropt...)
+	options = append(options, remote.WithProgress(updates), remote.WithContext(ctx))
+
+	errCh := make(chan error, 1)
+	go func() {
+		errCh <- remote.Push(ref, target, options...)
+	}()
+
+	start := time.Now()
+	lastPrint := start
+	lastComplete := int64(0)
+	total := int64(0)
+	complete := int64(0)
+	var pushErr error
+	updatesOpen := true
+	pushDone := false
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	inlineProgress := term.IsTerminal(int(os.Stderr.Fd()))
+	printedInline := false
+	lastInlineLen := 0
+
+	for updatesOpen || !pushDone {
+		select {
+		case <-ctx.Done():
+			if inlineProgress && printedInline {
+				fmt.Fprintln(os.Stderr)
+			}
+			return ctx.Err()
+		case update, ok := <-updates:
+			if !ok {
+				updatesOpen = false
+				continue
+			}
+			if update.Total > 0 {
+				total = update.Total
+			}
+			if update.Complete > complete {
+				complete = update.Complete
+			}
+		case pushErr = <-errCh:
+			pushDone = true
+		case now := <-ticker.C:
+			if complete == 0 || complete == lastComplete {
+				continue
+			}
+			rate := bytesPerSecond(complete-lastComplete, now.Sub(lastPrint))
+			if inlineProgress {
+				line := progressLineWithRef(inlineRefName(ref), complete, total, rate)
+				lastInlineLen = printInlineProgress(line, lastInlineLen)
+				printedInline = true
+			} else {
+				logProgress(ref, complete, total, rate)
+			}
+			lastComplete = complete
+			lastPrint = now
+		}
+	}
+
+	if complete > 0 || total > 0 {
+		elapsedRate := bytesPerSecond(complete, time.Since(start))
+		if inlineProgress {
+			line := progressLineWithRef(inlineRefName(ref), complete, total, elapsedRate)
+			printInlineProgress(line, lastInlineLen)
+			fmt.Fprintln(os.Stderr)
+		} else {
+			logProgress(ref, complete, total, elapsedRate)
+		}
+	} else if inlineProgress && printedInline {
+		fmt.Fprintln(os.Stderr)
+	}
+	return pushErr
+}
+
+func logProgress(ref name.Reference, complete, total int64, rate float64) {
+	log.Printf("%s", progressLineWithRef(ref.Name(), complete, total, rate))
+}
+
+func progressLineWithRef(refName string, complete, total int64, rate float64) string {
+	if total > 0 {
+		return fmt.Sprintf("Push progress %s: %.1f%% (%s/%s) at %s",
+			refName,
+			100*float64(complete)/float64(total),
+			formatMiB(complete),
+			formatMiB(total),
+			formatRate(rate))
+	}
+	return fmt.Sprintf("Push progress %s: %s uploaded at %s",
+		refName,
+		formatMiB(complete),
+		formatRate(rate))
+}
+
+func printInlineProgress(line string, previousLen int) int {
+	// Use CR + spaces to keep progress on a single line without ANSI reliance.
+	padding := ""
+	if previousLen > len(line) {
+		padding = strings.Repeat(" ", previousLen-len(line))
+	}
+	fmt.Fprintf(os.Stderr, "\r%s%s", line, padding)
+	return len(line)
+}
+
+func inlineRefName(ref name.Reference) string {
+	refName := ref.Name()
+	// Keep inline output short to avoid terminal line wrapping.
+	if slash := strings.LastIndex(refName, "/"); slash >= 0 && slash+1 < len(refName) {
+		refName = refName[slash+1:]
+	}
+	const maxInlineRef = 64
+	if len(refName) > maxInlineRef {
+		refName = "..." + refName[len(refName)-(maxInlineRef-3):]
+	}
+	return refName
+}
+
+func bytesPerSecond(bytes int64, d time.Duration) float64 {
+	if d <= 0 {
+		return 0
+	}
+	return float64(bytes) / d.Seconds()
+}
+
+func formatMiB(bytes int64) string {
+	return fmt.Sprintf("%.2fMiB", float64(bytes)/(1024*1024))
+}
+
+func formatRate(bytesPerSecond float64) string {
+	return fmt.Sprintf("%.2fMiB/s", bytesPerSecond/(1024*1024))
 }
 
 // Publish implements publish.Interface
