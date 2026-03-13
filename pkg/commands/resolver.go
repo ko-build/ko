@@ -26,8 +26,8 @@ import (
 	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	"go.yaml.in/yaml/v4"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/yaml.v3"
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/google/ko/pkg/build"
@@ -441,7 +441,7 @@ func resolveFile(
 
 	// The loop is to support multi-document yaml files.
 	// This is handled by using a yaml.Decoder and reading objects until io.EOF, see:
-	// https://godoc.org/gopkg.in/yaml.v3#Decoder.Decode
+	// https://godoc.org/go.yaml.in/yaml/v4#Decoder.Decode
 	decoder := yaml.NewDecoder(bytes.NewBuffer(b))
 	for {
 		var doc yaml.Node
