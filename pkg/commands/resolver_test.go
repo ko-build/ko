@@ -41,7 +41,7 @@ import (
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 	kotesting "github.com/google/ko/pkg/internal/testing"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 )
 
 var (
