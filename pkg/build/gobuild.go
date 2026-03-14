@@ -917,6 +917,13 @@ func createBuildArgs(ctx context.Context, buildCtx buildContext) ([]string, erro
 
 func (g *gobuild) configForImportPath(ip string) Config {
 	config := g.buildConfigs[ip]
+
+	// Apply defaultFlags before any flag manipulation (trimpath, gcflags, etc.)
+	// so that the emptiness check works on the original per-build flags.
+	if len(config.Flags) == 0 {
+		config.Flags = g.defaultFlags
+	}
+
 	if g.trimpath {
 		// The `-trimpath` flag removes file system paths from the resulting binary, to aid reproducibility.
 		// Ref: https://pkg.go.dev/cmd/go#hdr-Compile_packages_and_dependencies
@@ -1000,12 +1007,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		return nil, fmt.Errorf("could not create env for %s: %w", ref.Path(), err)
 	}
 
-	// Get the build flags.
+	// Get the build flags (defaultFlags already applied in configForImportPath).
 	flags := config.Flags
-	if len(flags) == 0 {
-		// Use the default, if any.
-		flags = g.defaultFlags
-	}
 
 	// Get the build ldflags.
 	ldflags := config.Ldflags

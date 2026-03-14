@@ -496,6 +496,44 @@ func TestBuildConfig(t *testing.T) {
 				Flags: FlagArray{"-gcflags", "all=-N -l"},
 			},
 		},
+		{
+			description: "defaultFlags applied when no per-build flags",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithDefaultFlags([]string{"-v", "-tags", "netgo"}),
+			},
+			expectConfig: Config{
+				Flags: FlagArray{"-v", "-tags", "netgo"},
+			},
+		},
+		{
+			description: "defaultFlags applied with trimpath",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithDefaultFlags([]string{"-v"}),
+				WithTrimpath(true),
+			},
+			expectConfig: Config{
+				Flags: FlagArray{"-v", "-trimpath"},
+			},
+		},
+		{
+			description: "per-build flags override defaultFlags",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithConfig(map[string]Config{
+					"example.com/foo": {
+						Flags: FlagArray{"-race"},
+					},
+				}),
+				WithDefaultFlags([]string{"-v"}),
+				WithTrimpath(true),
+			},
+			importpath: "example.com/foo",
+			expectConfig: Config{
+				Flags: FlagArray{"-race", "-trimpath"},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
