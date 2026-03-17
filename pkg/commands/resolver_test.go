@@ -27,8 +27,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/client"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/go-containerregistry/pkg/crane"
@@ -41,7 +39,9 @@ import (
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 	kotesting "github.com/google/ko/pkg/internal/testing"
-	"gopkg.in/yaml.v3"
+	"github.com/moby/moby/api/types/image"
+	"github.com/moby/moby/client"
+	"go.yaml.in/yaml/v4"
 )
 
 var (
@@ -69,19 +69,20 @@ type erroringClient struct {
 
 	inspectErr  error
 	inspectResp image.InspectResponse
-	inspectBody []byte
 }
 
-func (m *erroringClient) NegotiateAPIVersion(context.Context) {}
-func (m *erroringClient) ImageLoad(context.Context, io.Reader, ...client.ImageLoadOption) (image.LoadResponse, error) {
-	return image.LoadResponse{}, errImageLoad
+func (m *erroringClient) Ping(context.Context, client.PingOptions) (client.PingResult, error) {
+	return client.PingResult{}, nil
 }
-func (m *erroringClient) ImageTag(_ context.Context, _ string, _ string) error {
-	return errImageTag
+func (m *erroringClient) ImageLoad(context.Context, io.Reader, ...client.ImageLoadOption) (client.ImageLoadResult, error) {
+	return io.NopCloser(strings.NewReader("")), errImageLoad
+}
+func (m *erroringClient) ImageTag(context.Context, client.ImageTagOptions) (client.ImageTagResult, error) {
+	return client.ImageTagResult{}, errImageTag
 }
 
-func (m *erroringClient) ImageInspectWithRaw(_ context.Context, _ string) (image.InspectResponse, []byte, error) {
-	return m.inspectResp, m.inspectBody, m.inspectErr
+func (m *erroringClient) ImageInspect(_ context.Context, _ string, _ ...client.ImageInspectOption) (client.ImageInspectResult, error) {
+	return client.ImageInspectResult{InspectResponse: m.inspectResp}, m.inspectErr
 }
 
 func TestResolveMultiDocumentYAMLs(t *testing.T) {

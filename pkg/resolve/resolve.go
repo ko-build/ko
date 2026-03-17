@@ -23,8 +23,8 @@ import (
 	"github.com/dprotaso/go-yit"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/publish"
+	"go.yaml.in/yaml/v4"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/yaml.v3"
 )
 
 // ImageReferences resolves supported references to images within the input yaml

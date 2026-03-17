@@ -19,9 +19,8 @@ import (
 	"io"
 	"strings"
 
-	"github.com/docker/docker/api/types/image"
-	"github.com/docker/docker/client"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/moby/moby/client"
 )
 
 type MockDaemon struct {
@@ -29,25 +28,24 @@ type MockDaemon struct {
 	Tags []string
 
 	inspectErr  error
-	inspectResp image.InspectResponse
-	inspectBody []byte
+	inspectResp client.ImageInspectResult
 }
 
-func (m *MockDaemon) NegotiateAPIVersion(context.Context) {}
-func (m *MockDaemon) ImageLoad(context.Context, io.Reader, ...client.ImageLoadOption) (image.LoadResponse, error) {
-	return image.LoadResponse{
-		Body: io.NopCloser(strings.NewReader("Loaded")),
-	}, nil
+func (m *MockDaemon) Ping(context.Context, client.PingOptions) (client.PingResult, error) {
+	return client.PingResult{}, nil
+}
+func (m *MockDaemon) ImageLoad(context.Context, io.Reader, ...client.ImageLoadOption) (client.ImageLoadResult, error) {
+	return io.NopCloser(strings.NewReader("Loaded")), nil
 }
 
-func (m *MockDaemon) ImageTag(_ context.Context, _ string, tag string) error {
+func (m *MockDaemon) ImageTag(_ context.Context, opt client.ImageTagOptions) (client.ImageTagResult, error) {
 	if m.Tags == nil {
 		m.Tags = []string{}
 	}
-	m.Tags = append(m.Tags, tag)
-	return nil
+	m.Tags = append(m.Tags, opt.Target)
+	return client.ImageTagResult{}, nil
 }
 
-func (m *MockDaemon) ImageInspectWithRaw(_ context.Context, _ string) (image.InspectResponse, []byte, error) {
-	return m.inspectResp, m.inspectBody, m.inspectErr
+func (m *MockDaemon) ImageInspect(context.Context, string, ...client.ImageInspectOption) (client.ImageInspectResult, error) {
+	return m.inspectResp, m.inspectErr
 }
