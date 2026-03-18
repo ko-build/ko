@@ -1,6 +1,6 @@
 module github.com/google/ko
 
-go 1.25.6
+go 1.25.7
 
 require (
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.12.0
@@ -9,7 +9,7 @@ require (
 	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.3-0.20260312205200-e9163014982e
+	github.com/google/go-containerregistry v0.21.3
 	github.com/moby/moby/api v1.54.0
 	github.com/moby/moby/client v0.3.0
 	github.com/opencontainers/image-spec v1.1.1
