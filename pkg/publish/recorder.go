@@ -27,7 +27,7 @@ import (
 	"github.com/sigstore/cosign/v3/pkg/oci/walk"
 )
 
-// recorder wraps a publisher implementation in a layer that recordes the published
+// recorder wraps a publisher implementation in a layer that records the published
 // references to a file.
 type recorder struct {
 	inner    Interface
