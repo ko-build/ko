@@ -39,7 +39,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/pkg/internal/gittesting"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/stretchr/testify/require"
 )
 
