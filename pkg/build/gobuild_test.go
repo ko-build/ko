@@ -39,7 +39,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/google/ko/pkg/internal/gittesting"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/sigstore/cosign/v2/pkg/oci"
+	"github.com/sigstore/cosign/v3/pkg/oci"
 	"github.com/stretchr/testify/require"
 )
 
@@ -357,7 +357,7 @@ func TestCreateTemplateData(t *testing.T) {
 		params, err := createTemplateData(context.TODO(), buildContext{dir: dir})
 		require.NoError(t, err)
 
-		gitParams := params["Git"].(map[string]interface{})
+		gitParams := params["Git"].(map[string]any)
 		require.Equal(t, "", gitParams["Branch"])
 		require.Equal(t, "", gitParams["Tag"])
 		require.Equal(t, "", gitParams["ShortCommit"])
@@ -377,7 +377,7 @@ func TestCreateTemplateData(t *testing.T) {
 		params, err := createTemplateData(context.TODO(), buildContext{dir: dir})
 		require.NoError(t, err)
 
-		gitParams := params["Git"].(map[string]interface{})
+		gitParams := params["Git"].(map[string]any)
 		require.Equal(t, "main", gitParams["Branch"])
 		require.Equal(t, "v0.0.1", gitParams["Tag"])
 		require.Equal(t, "clean", gitParams["TreeState"])
@@ -494,6 +494,44 @@ func TestBuildConfig(t *testing.T) {
 			},
 			expectConfig: Config{
 				Flags: FlagArray{"-gcflags", "all=-N -l"},
+			},
+		},
+		{
+			description: "defaultFlags applied when no per-build flags",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithDefaultFlags([]string{"-v", "-tags", "netgo"}),
+			},
+			expectConfig: Config{
+				Flags: FlagArray{"-v", "-tags", "netgo"},
+			},
+		},
+		{
+			description: "defaultFlags applied with trimpath",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithDefaultFlags([]string{"-v"}),
+				WithTrimpath(true),
+			},
+			expectConfig: Config{
+				Flags: FlagArray{"-v", "-trimpath"},
+			},
+		},
+		{
+			description: "per-build flags override defaultFlags",
+			options: []Option{
+				WithBaseImages(nilGetBase),
+				WithConfig(map[string]Config{
+					"example.com/foo": {
+						Flags: FlagArray{"-race"},
+					},
+				}),
+				WithDefaultFlags([]string{"-v"}),
+				WithTrimpath(true),
+			},
+			importpath: "example.com/foo",
+			expectConfig: Config{
+				Flags: FlagArray{"-race", "-trimpath"},
 			},
 		},
 	}
@@ -717,6 +755,54 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		}
 	})
 
+	// Check that directory headers are written for subdirectories in kodata.
+	t.Run("check kodata directory headers", func(t *testing.T) {
+		dataLayer := ls[baseLayers]
+		r, err := dataLayer.Uncompressed()
+		if err != nil {
+			t.Fatalf("Uncompressed() = %v", err)
+		}
+		defer r.Close()
+
+		expectedDir := path.Join(kodataRoot, "subdir")
+		expectedFile := path.Join(kodataRoot, "subdir", "file.txt")
+		foundDir := false
+		foundFile := false
+
+		tr := tar.NewReader(r)
+		for {
+			header, err := tr.Next()
+			if errors.Is(err, io.EOF) {
+				break
+			} else if err != nil {
+				t.Errorf("Next() = %v", err)
+				continue
+			}
+
+			if header.Name == expectedDir {
+				foundDir = true
+				if header.Typeflag != tar.TypeDir {
+					t.Errorf("expected %q to be a directory (typeflag %d), got typeflag %d",
+						expectedDir, tar.TypeDir, header.Typeflag)
+				}
+			}
+			if header.Name == expectedFile {
+				foundFile = true
+				if header.Typeflag != tar.TypeReg {
+					t.Errorf("expected %q to be a regular file (typeflag %d), got typeflag %d",
+						expectedFile, tar.TypeReg, header.Typeflag)
+				}
+			}
+		}
+
+		if !foundDir {
+			t.Errorf("directory header for %q not found in tarball", expectedDir)
+		}
+		if !foundFile {
+			t.Errorf("file %q not found in tarball", expectedFile)
+		}
+	})
+
 	// Check that the entrypoint of the image is configured to invoke our Go application
 	t.Run("check entrypoint", func(t *testing.T) {
 		cfg, err := img.ConfigFile()
@@ -762,8 +848,8 @@ func validateImage(t *testing.T, img oci.SignedImage, baseLayers int64, creation
 		}
 		found := false
 		for _, envVar := range cfg.Config.Env {
-			if strings.HasPrefix(envVar, "PATH=") {
-				pathValue := strings.TrimPrefix(envVar, "PATH=")
+			if after, ok := strings.CutPrefix(envVar, "PATH="); ok {
+				pathValue := after
 				pathEntries := strings.Split(pathValue, ":")
 				for _, pathEntry := range pathEntries {
 					if opts.entryPointBasePath != "" && pathEntry == opts.entryPointBasePath {

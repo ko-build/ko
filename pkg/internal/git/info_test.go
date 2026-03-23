@@ -182,7 +182,7 @@ func TestGitNotInPath(t *testing.T) {
 	requireEmpty(t, tpl)
 }
 
-func requireEmpty(t *testing.T, tpl map[string]interface{}) {
+func requireEmpty(t *testing.T, tpl map[string]any) {
 	require.Equal(t, "", tpl["Branch"])
 	require.Equal(t, "", tpl["Tag"])
 	require.Equal(t, "", tpl["ShortCommit"])

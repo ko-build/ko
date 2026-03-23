@@ -52,7 +52,7 @@ func TestCaching(t *testing.T) {
 	// publishs are fast and return the same reference.  For each of these
 	// iterations we use a new random image, which should invalidate the
 	// cached reference from previous iterations.
-	for idx := 0; idx < 3; idx++ {
+	for range 3 {
 		img, _ := random.Index(256, 8, 1)
 
 		start := time.Now()

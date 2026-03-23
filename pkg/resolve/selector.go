@@ -18,7 +18,7 @@ import (
 	"errors"
 
 	y "github.com/dprotaso/go-yit"
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v4"
 	"k8s.io/apimachinery/pkg/labels"
 )
 
@@ -164,4 +164,13 @@ func (n labelsNode) Has(label string) bool {
 		}
 	}
 	return false
+}
+
+func (n labelsNode) Lookup(label string) (value string, exists bool) {
+	for i := 0; i < len(n.Content); i += 2 {
+		if n.Content[i].Value == label {
+			return n.Content[i+1].Value, true
+		}
+	}
+	return "", false
 }
