@@ -569,6 +569,20 @@ func buildEnv(platform v1.Platform, osEnv, buildEnv []string) ([]string, error) 
 
 	env = append(env, osEnv...)
 	env = append(env, buildEnv...)
+
+	// Reject GOFLAGS containing -toolexec to prevent bypassing the
+	// toolexec blocklist via environment variables.
+	for _, e := range env {
+		if strings.HasPrefix(e, "GOFLAGS=") {
+			val := strings.TrimPrefix(e, "GOFLAGS=")
+			for _, d := range []string{"-", "--"} {
+				if strings.Contains(val, d+"toolexec") {
+					return nil, fmt.Errorf("cannot set %stoolexec via GOFLAGS environment variable", d)
+				}
+			}
+		}
+	}
+
 	return env, nil
 }
 
