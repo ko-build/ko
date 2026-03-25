@@ -300,6 +300,46 @@ func TestBuildEnv(t *testing.T) {
 	}
 }
 
+func TestBuildEnvRejectsToolexecInGOFLAGS(t *testing.T) {
+	tests := []struct {
+		description string
+		buildEnv    []string
+		shouldErr   bool
+	}{{
+		description: "GOFLAGS with -toolexec should be rejected",
+		buildEnv:    []string{"GOFLAGS=-toolexec=id"},
+		shouldErr:   true,
+	}, {
+		description: "GOFLAGS with --toolexec should be rejected",
+		buildEnv:    []string{"GOFLAGS=--toolexec=id"},
+		shouldErr:   true,
+	}, {
+		description: "GOFLAGS with -toolexec and other flags should be rejected",
+		buildEnv:    []string{"GOFLAGS=-v -toolexec=id"},
+		shouldErr:   true,
+	}, {
+		description: "GOFLAGS without toolexec should be allowed",
+		buildEnv:    []string{"GOFLAGS=-v -count=1"},
+		shouldErr:   false,
+	}, {
+		description: "non-GOFLAGS env vars should be allowed",
+		buildEnv:    []string{"CGO_ENABLED=1"},
+		shouldErr:   false,
+	}}
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			platform := v1.Platform{OS: "linux", Architecture: "amd64"}
+			_, err := buildEnv(platform, nil, test.buildEnv)
+			if test.shouldErr && err == nil {
+				t.Error("buildEnv(): expected error for GOFLAGS with toolexec, got nil")
+			}
+			if !test.shouldErr && err != nil {
+				t.Errorf("buildEnv(): unexpected error: %v", err)
+			}
+		})
+	}
+}
+
 func TestGoEnv(t *testing.T) {
 	goVars, err := goenv(context.TODO())
 	require.NoError(t, err)
