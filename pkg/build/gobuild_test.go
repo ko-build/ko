@@ -16,6 +16,7 @@ package build
 
 import (
 	"archive/tar"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -1631,5 +1632,118 @@ func TestDebugger(t *testing.T) {
 		if got, want := gotEntrypoint[i], wantEntrypoint[i]; got != want {
 			t.Errorf("entrypoint[%d] = %v, want %v", i, got, want)
 		}
+	}
+}
+
+// TestWalkRecursiveSymlinkTraversal verifies that walkRecursive rejects symlinks
+// in kodata/ that point outside the kodata root, preventing host files from being
+// packed into the container image.
+func TestWalkRecursiveSymlinkTraversal(t *testing.T) {
+	// Build a temp kodata dir with a symlink that escapes it.
+	kodataDir := t.TempDir()
+	outsideDir := t.TempDir()
+
+	// Write a sensitive file outside kodata.
+	sensitiveFile := filepath.Join(outsideDir, "secret.txt")
+	if err := os.WriteFile(sensitiveFile, []byte("supersecret"), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a symlink inside kodata pointing to the file outside kodata.
+	escapingLink := filepath.Join(kodataDir, "escape")
+	if err := os.Symlink(sensitiveFile, escapingLink); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skipf("skipping symlink traversal test on Windows: %v", err)
+		}
+		t.Fatal(err)
+	}
+
+	resolvedKodata, err := filepath.EvalSymlinks(kodataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	absKodataRoot, err := filepath.Abs(resolvedKodata)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	defer tw.Close()
+	platform := &v1.Platform{OS: "linux", Architecture: "amd64"}
+	creationTime := v1.Time{}
+
+	err = walkRecursive(tw, kodataDir, "/var/run/ko", absKodataRoot, creationTime, platform)
+	if err == nil {
+		t.Error("walkRecursive: expected error for symlink escaping kodata root, got nil")
+	} else if !strings.Contains(err.Error(), "outside the kodata root") {
+		t.Errorf("walkRecursive: unexpected error message: %v", err)
+	}
+}
+
+// TestWalkRecursiveSymlinkWithinKodata verifies that symlinks within kodata are
+// still followed correctly after the traversal check is applied.
+func TestWalkRecursiveSymlinkWithinKodata(t *testing.T) {
+	kodataDir := t.TempDir()
+
+	// Write a regular file and a symlink to it, both inside kodata.
+	target := filepath.Join(kodataDir, "target.txt")
+	if err := os.WriteFile(target, []byte("hello"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(kodataDir, "link.txt")
+	if err := os.Symlink(target, link); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skipf("skipping symlink within-kodata test on Windows: %v", err)
+		}
+		t.Fatal(err)
+	}
+
+	resolvedKodata, err := filepath.EvalSymlinks(kodataDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	absKodataRoot, err := filepath.Abs(resolvedKodata)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	defer tw.Close()
+	platform := &v1.Platform{OS: "linux", Architecture: "amd64"}
+	creationTime := v1.Time{}
+
+	if err := walkRecursive(tw, kodataDir, "/var/run/ko", absKodataRoot, creationTime, platform); err != nil {
+		t.Fatalf("walkRecursive: unexpected error for in-kodata symlink: %v", err)
+	}
+	tw.Close()
+
+	// Verify that the symlink target was actually written to the tar archive.
+	wantPath := path.Join("/var/run/ko", "link.txt")
+	found := false
+	tr := tar.NewReader(&buf)
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatalf("tar.Reader.Next(): %v", err)
+		}
+		if hdr.Name != wantPath {
+			continue
+		}
+		found = true
+		body, err := io.ReadAll(tr)
+		if err != nil {
+			t.Fatalf("io.ReadAll: %v", err)
+		}
+		if got, want := string(body), "hello"; got != want {
+			t.Errorf("link.txt content = %q, want %q", got, want)
+		}
+	}
+	if !found {
+		t.Errorf("expected %q in tar archive, not found", wantPath)
 	}
 }
