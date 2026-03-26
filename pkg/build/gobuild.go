@@ -575,9 +575,12 @@ func buildEnv(platform v1.Platform, osEnv, buildEnv []string) ([]string, error) 
 	for _, e := range env {
 		if strings.HasPrefix(e, "GOFLAGS=") {
 			val := strings.TrimPrefix(e, "GOFLAGS=")
-			for _, d := range []string{"-", "--"} {
-				if strings.Contains(val, d+"toolexec") {
-					return nil, fmt.Errorf("cannot set %stoolexec via GOFLAGS environment variable", d)
+			// Parse GOFLAGS into individual arguments and only match on flag tokens,
+			// so that values containing "-toolexec" as a substring are allowed.
+			for _, arg := range strings.Fields(val) {
+				if arg == "-toolexec" || arg == "--toolexec" ||
+					strings.HasPrefix(arg, "-toolexec=") || strings.HasPrefix(arg, "--toolexec=") {
+					return nil, fmt.Errorf("cannot set %s via GOFLAGS environment variable", arg)
 				}
 			}
 		}
