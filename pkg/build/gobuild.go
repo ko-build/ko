@@ -754,7 +754,10 @@ func writeFileToTar(tw *tar.Writer, name, evalPath string, size int64, modTime t
 // walkRecursive performs a filepath.Walk of the given root directory adding it
 // to the provided tar.Writer with root -> chroot.  All symlinks are dereferenced,
 // which is what leads to recursion when we encounter a directory symlink.
-func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, platform *v1.Platform) error {
+// absKodataRoot is the absolute path of the original kodata directory; symlinks
+// that resolve to a path outside of it are rejected to prevent arbitrary host
+// files from being packed into the container image.
+func walkRecursive(tw *tar.Writer, root, chroot, absKodataRoot string, creationTime v1.Time, platform *v1.Platform) error {
 	return filepath.Walk(root, func(hostPath string, info os.FileInfo, err error) error {
 		if hostPath == root {
 			return nil
@@ -786,6 +789,19 @@ func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, pl
 			return fmt.Errorf("filepath.EvalSymlinks(%q): %w", hostPath, err)
 		}
 
+		// Verify the resolved path remains within the kodata root.  A symlink
+		// pointing outside the kodata directory would otherwise cause ko to pack
+		// arbitrary host files (e.g. ~/.ssh/id_rsa, /etc/passwd) into the image.
+		absEvalPath, err := filepath.Abs(evalPath)
+		if err != nil {
+			return fmt.Errorf("filepath.Abs(%q): %w", evalPath, err)
+		}
+		absKodataRootWithSep := absKodataRoot + string(filepath.Separator)
+		if absEvalPath != absKodataRoot && !strings.HasPrefix(absEvalPath, absKodataRootWithSep) {
+			return fmt.Errorf("kodata symlink %q resolves to %q which is outside the kodata root %q",
+				hostPath, evalPath, absKodataRoot)
+		}
+
 		// Get info of the symlink target.
 		info, err = os.Stat(evalPath)
 		if err != nil {
@@ -797,7 +813,7 @@ func walkRecursive(tw *tar.Writer, root, chroot string, creationTime v1.Time, pl
 			if err := writeDirToTar(tw, newPath, creationTime.Time); err != nil {
 				return fmt.Errorf("writing dir %q to tar: %w", newPath, err)
 			}
-			return walkRecursive(tw, evalPath, newPath, creationTime, platform)
+			return walkRecursive(tw, evalPath, newPath, absKodataRoot, creationTime, platform)
 		}
 
 		// Regular file (or symlink to file): write to tar.
@@ -843,7 +859,17 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 		}
 	}
 
-	return buf, walkRecursive(tw, root, chroot, creationTime, platform)
+	// Resolve the canonical absolute path of the kodata root so that symlink
+	// targets resolved by filepath.EvalSymlinks can be compared consistently.
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return nil, fmt.Errorf("filepath.EvalSymlinks(%q): %w", root, err)
+	}
+	absKodataRoot, err := filepath.Abs(resolvedRoot)
+	if err != nil {
+		return nil, fmt.Errorf("filepath.Abs(%q): %w", resolvedRoot, err)
+	}
+	return buf, walkRecursive(tw, root, chroot, absKodataRoot, creationTime, platform)
 }
 
 func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]any, error) {
