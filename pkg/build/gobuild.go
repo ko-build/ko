@@ -861,13 +861,19 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 
 	// Resolve the canonical absolute path of the kodata root so that symlink
 	// targets resolved by filepath.EvalSymlinks can be compared consistently.
-	resolvedRoot, err := filepath.EvalSymlinks(root)
-	if err != nil {
-		return nil, fmt.Errorf("filepath.EvalSymlinks(%q): %w", root, err)
-	}
-	absKodataRoot, err := filepath.Abs(resolvedRoot)
-	if err != nil {
-		return nil, fmt.Errorf("filepath.Abs(%q): %w", resolvedRoot, err)
+	// If the kodata directory does not exist, walkRecursive handles that
+	// gracefully (filepath.Walk skips missing roots), so we fall back to the
+	// raw path as the boundary — no traversal is possible without a root.
+	absKodataRoot := root
+	if _, statErr := os.Stat(root); statErr == nil {
+		resolvedRoot, err := filepath.EvalSymlinks(root)
+		if err != nil {
+			return nil, fmt.Errorf("filepath.EvalSymlinks(%q): %w", root, err)
+		}
+		absKodataRoot, err = filepath.Abs(resolvedRoot)
+		if err != nil {
+			return nil, fmt.Errorf("filepath.Abs(%q): %w", resolvedRoot, err)
+		}
 	}
 	return buf, walkRecursive(tw, root, chroot, absKodataRoot, creationTime, platform)
 }
