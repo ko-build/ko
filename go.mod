@@ -6,7 +6,6 @@ require (
 	github.com/awslabs/amazon-ecr-credential-helper/ecr-login v0.12.0
 	github.com/chrismellard/docker-credential-acr-env v0.0.0-20230304212654-82a0ddb27589
 	github.com/dprotaso/go-yit v0.0.0-20260209000607-dfb86291624d
-	github.com/go-training/helloworld v0.0.0-20200225145412-ba5f4379d78b
 	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.21.3
