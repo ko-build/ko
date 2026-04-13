@@ -100,15 +100,6 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 			baseImage = bo.BaseImage
 		}
 
-		if baseImage == "scratch" {
-			log.Printf("Using base %s for %s", ref, s)
-			si, err := build.ScratchImage(bo.Platforms)
-			if err != nil {
-				return nil, nil, fmt.Errorf("constructing scratch image: %w", err)
-			}
-			return ref, si, nil
-		}
-
 		var nameOpts []name.Option
 		if bo.InsecureRegistry {
 			nameOpts = append(nameOpts, name.Insecure)
@@ -116,6 +107,15 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 		ref, err := name.ParseReference(baseImage, nameOpts...)
 		if err != nil {
 			return nil, nil, fmt.Errorf("parsing base image (%q): %w", baseImage, err)
+		}
+
+		if baseImage == "scratch" {
+			log.Printf("Using base %s for %s", ref, s)
+			si, err := build.ScratchImage(bo.Platforms)
+			if err != nil {
+				return nil, nil, fmt.Errorf("constructing scratch image: %w", err)
+			}
+			return ref, si, nil
 		}
 
 		var result build.Result
