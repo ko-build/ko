@@ -44,8 +44,8 @@ func TestScratchImage(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected no error when getting manifest, got %s", err)
 	}
-	if mt != expMT {
-		t.Errorf("expected a manifest, got %s", err)
+	if mf.MediaType != expMT {
+		t.Errorf("expected manifest media type = %s, got %s", expMT, mf.MediaType)
 	}
 	if len(mf.Manifests) != 2 {
 		t.Fatalf("expected two manifests, got %d", len(mf.Manifests))
