@@ -32,6 +32,10 @@ baseImageOverrides:
   github.com/my-user/my-repo/cmd/app: registry.example.com/base/for/app
   github.com/my-user/my-repo/cmd/foo: registry.example.com/base/for/foo
 ```
+#### Scratch Base Image
+
+If the base image name `scratch` is used, `ko` will construct an empty base image with support for the platforms
+specified.  In this mode it is not possible to specify `all` platforms.
 
 ### Overriding Go build settings
 
