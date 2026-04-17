@@ -20,7 +20,7 @@ require (
 	go.yaml.in/yaml/v4 v4.0.0-rc.4
 	golang.org/x/sync v0.20.0
 	golang.org/x/tools v0.44.0
-	k8s.io/apimachinery v0.35.3
+	k8s.io/apimachinery v0.35.4
 	sigs.k8s.io/kind v0.31.0
 )
 
