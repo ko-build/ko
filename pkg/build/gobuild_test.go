@@ -319,8 +319,24 @@ func TestBuildEnvRejectsToolexecInGOFLAGS(t *testing.T) {
 		buildEnv:    []string{"GOFLAGS=-v -toolexec=id"},
 		shouldErr:   true,
 	}, {
+		description: "GOFLAGS with -overlay should be rejected",
+		buildEnv:    []string{"GOFLAGS=-overlay=/tmp/overlay.json"},
+		shouldErr:   true,
+	}, {
+		description: "GOFLAGS with --overlay= should be rejected",
+		buildEnv:    []string{"GOFLAGS=--overlay=/tmp/overlay.json"},
+		shouldErr:   true,
+	}, {
+		description: "GOFLAGS with -modfile should be rejected",
+		buildEnv:    []string{"GOFLAGS=-modfile=/tmp/other.mod"},
+		shouldErr:   true,
+	}, {
 		description: "GOFLAGS without toolexec should be allowed",
 		buildEnv:    []string{"GOFLAGS=-v -count=1"},
+		shouldErr:   false,
+	}, {
+		description: "GOFLAGS value that happens to contain toolexec as substring should be allowed",
+		buildEnv:    []string{"GOFLAGS=-ldflags=-X=pkg/v.overlayID=abc"},
 		shouldErr:   false,
 	}, {
 		description: "non-GOFLAGS env vars should be allowed",

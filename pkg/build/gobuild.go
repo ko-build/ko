@@ -570,16 +570,20 @@ func buildEnv(platform v1.Platform, osEnv, buildEnv []string) ([]string, error) 
 	env = append(env, osEnv...)
 	env = append(env, buildEnv...)
 
-	// Reject GOFLAGS containing -toolexec to prevent bypassing the
-	// toolexec blocklist via environment variables.
+	// Reject GOFLAGS carrying flags that can redirect the build into
+	// attacker-controlled code: -toolexec swaps the compiler/linker
+	// wrapper, -overlay replaces arbitrary source files on disk with an
+	// alternate mapping, and -modfile substitutes the go.mod that drives
+	// module resolution. All three bypass the args-level blocklist when
+	// passed via the environment.
 	for _, e := range env {
 		if strings.HasPrefix(e, "GOFLAGS=") {
 			val := strings.TrimPrefix(e, "GOFLAGS=")
-			// Parse GOFLAGS into individual arguments and only match on flag tokens,
-			// so that values containing "-toolexec" as a substring are allowed.
+			// Parse GOFLAGS into individual arguments and only match on
+			// flag tokens, so that values containing one of these
+			// substrings as text (e.g. a path) are allowed.
 			for _, arg := range strings.Fields(val) {
-				if arg == "-toolexec" || arg == "--toolexec" ||
-					strings.HasPrefix(arg, "-toolexec=") || strings.HasPrefix(arg, "--toolexec=") {
+				if isBlockedGoBuildFlag(arg) {
 					return nil, fmt.Errorf("cannot set %s via GOFLAGS environment variable", arg)
 				}
 			}
@@ -587,6 +591,21 @@ func buildEnv(platform v1.Platform, osEnv, buildEnv []string) ([]string, error) 
 	}
 
 	return env, nil
+}
+
+// isBlockedGoBuildFlag reports whether arg targets one of the go build
+// flags that ko forbids for supply-chain safety: -toolexec, -overlay,
+// and -modfile. It handles both the "-flag" and "--flag" single-token
+// forms as well as the "-flag=value" / "--flag=value" forms.
+func isBlockedGoBuildFlag(arg string) bool {
+	for _, d := range []string{"-", "--"} {
+		for _, name := range []string{"toolexec", "overlay", "modfile"} {
+			if arg == d+name || strings.HasPrefix(arg, d+name+"=") {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func appFilename(importpath string) string {
@@ -969,13 +988,14 @@ func createBuildArgs(ctx context.Context, buildCtx buildContext) ([]string, erro
 		args = append(args, fmt.Sprintf("-ldflags=%s", strings.Join(ldflags, " ")))
 	}
 
-	// Reject any flags that attempt to set --toolexec (with or
-	// without =, with one or two -s)
+	// Reject any flags that attempt to set -toolexec, -overlay, or
+	// -modfile (with or without =, with one or two -s). -overlay and
+	// -modfile let a config-level attacker redirect the build into
+	// alternate source/module files with the same supply-chain impact as
+	// the existing -toolexec blocklist entry.
 	for _, a := range args {
-		for _, d := range []string{"-", "--"} {
-			if a == d+"toolexec" || strings.HasPrefix(a, d+"toolexec=") {
-				return nil, fmt.Errorf("cannot set %s", a)
-			}
+		if isBlockedGoBuildFlag(a) {
+			return nil, fmt.Errorf("cannot set %s", a)
 		}
 	}
 
