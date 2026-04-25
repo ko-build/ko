@@ -48,42 +48,73 @@ func EnumerateFiles(fo *FilenameOptions) chan string {
 				files <- paths
 				continue
 			}
-			// For each of the "filenames" we are passed (file or directory) start a
-			// "Walk" to enumerate all of the contained files recursively.
-			err := filepath.Walk(paths, func(path string, fi os.FileInfo, err error) error {
-				if err != nil {
-					return err
-				}
-
-				// If this is a directory, skip it if it isn't the current directory we are
-				// processing (unless we are in recursive mode).  If we decide to process
-				// the directory, and we're in watch mode, then we set up a watch on the
-				// directory.
-				if fi.IsDir() {
-					if path != paths && !fo.Recursive {
-						return filepath.SkipDir
-					}
-					// We don't stream back directories, we just decide to skip them, or not.
-					return nil
-				}
-
-				// Don't check extension if the filepath was passed explicitly
-				if path != paths {
-					switch filepath.Ext(path) {
-					case ".json", ".yaml":
-						// Process these.
-					default:
-						return nil
-					}
-				}
-
-				files <- path
-				return nil
-			})
-			if err != nil {
+			if err := enumerateFiles(paths, paths, fo.Recursive, map[string]struct{}{}, files); err != nil {
 				log.Fatalf("Error enumerating files: %v", err)
 			}
 		}
 	}()
 	return files
+}
+
+func enumerateFiles(root, filename string, recursive bool, visited map[string]struct{}, files chan<- string) error {
+	fi, err := os.Lstat(filename)
+	if err != nil {
+		return err
+	}
+
+	isDir := fi.IsDir()
+	if fi.Mode()&os.ModeSymlink != 0 {
+		targetInfo, err := os.Stat(filename)
+		if err != nil {
+			// Preserve the old behavior for file-like symlinks: if the entry was
+			// passed explicitly, stream it and let later file handling report errors.
+			if filename == root {
+				files <- filename
+			}
+			return nil
+		}
+		isDir = targetInfo.IsDir()
+	}
+
+	if isDir {
+		if filename != root && !recursive {
+			return nil
+		}
+		resolved, err := filepath.EvalSymlinks(filename)
+		if err != nil {
+			return err
+		}
+		abs, err := filepath.Abs(resolved)
+		if err != nil {
+			return err
+		}
+		if _, ok := visited[abs]; ok {
+			return nil
+		}
+		visited[abs] = struct{}{}
+
+		entries, err := os.ReadDir(filename)
+		if err != nil {
+			return err
+		}
+		for _, entry := range entries {
+			if err := enumerateFiles(root, filepath.Join(filename, entry.Name()), recursive, visited, files); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// Don't check extension if the filepath was passed explicitly.
+	if filename != root {
+		switch filepath.Ext(filename) {
+		case ".json", ".yaml":
+			// Process these.
+		default:
+			return nil
+		}
+	}
+
+	files <- filename
+	return nil
 }
