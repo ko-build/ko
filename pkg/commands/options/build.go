@@ -92,7 +92,7 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 	cmd.Flags().StringVar(&bo.SBOM, "sbom", "spdx",
 		"The SBOM media type to use (none will disable SBOM synthesis and upload).")
 	cmd.Flags().StringVar(&bo.SBOMDir, "sbom-dir", "",
-		"Path to file where the SBOM will be written.")
+		"Path to directory where the SBOM will be written.")
 	cmd.Flags().StringSliceVar(&bo.Platforms, "platform", []string{},
 		"Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*")
 	cmd.Flags().StringSliceVar(&bo.Labels, "image-label", []string{},
