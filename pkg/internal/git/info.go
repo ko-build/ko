@@ -201,12 +201,8 @@ func getTag(ctx context.Context, dir string, excluding []string) (string, error)
 }
 
 func gitDescribe(ctx context.Context, dir, ref string, excluding []string) (string, error) {
-	args := []string{
-		"describe",
-		"--tags",
-		"--abbrev=0",
-		ref,
-	}
+	args := make([]string, 0, 4+len(excluding))
+	args = append(args, "describe", "--tags", "--abbrev=0", ref)
 	for _, exclude := range excluding {
 		args = append(args, "--exclude="+exclude)
 	}

@@ -89,13 +89,14 @@ func GitAdd(t *testing.T, dir string) {
 }
 
 func fakeGit(dir string, args ...string) (string, error) {
-	allArgs := []string{
+	allArgs := make([]string, 0, 10+len(args))
+	allArgs = append(allArgs,
 		"-c", "user.name='GoReleaser'",
 		"-c", "user.email='test@goreleaser.github.com'",
 		"-c", "commit.gpgSign=false",
 		"-c", "tag.gpgSign=false",
 		"-c", "log.showSignature=false",
-	}
+	)
 	allArgs = append(allArgs, args...)
 	return gitRun(dir, allArgs...)
 }
