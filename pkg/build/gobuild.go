@@ -374,11 +374,15 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 	tmpDir := ""
 
 	if dir := os.Getenv("KOCACHE"); dir != "" {
+		// KOCACHE is a user-supplied cache directory; clean it before use.
+		dir = filepath.Clean(dir)
+		/* #nosec G304 G703 -- KOCACHE is intentionally user-controlled. */
 		dirInfo, err := os.Stat(dir)
 		if err != nil {
 			if !os.IsNotExist(err) {
 				return "", fmt.Errorf("could not stat KOCACHE: %w", err)
 			}
+			/* #nosec G304 G703 -- KOCACHE is intentionally user-controlled. */
 			if err := os.MkdirAll(dir, os.ModePerm); err != nil && !os.IsExist(err) {
 				return "", fmt.Errorf("could not create KOCACHE dir %s: %w", dir, err)
 			}
@@ -388,6 +392,7 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 
 		// TODO(#264): if KOCACHE is unset, default to filepath.Join(os.TempDir(), "ko").
 		tmpDir = filepath.Join(dir, "bin", buildCtx.ip, buildCtx.platform.String())
+		/* #nosec G304 G703 -- tmpDir is derived from the user-controlled KOCACHE. */
 		if err := os.MkdirAll(tmpDir, os.ModePerm); err != nil {
 			return "", fmt.Errorf("creating KOCACHE bin dir: %w", err)
 		}
@@ -404,6 +409,7 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 	args = append(args, buildCtx.ip)
 
 	gobin := getGoBinary()
+	/* #nosec G204 G702 -- ko intentionally invokes the user-configured go toolchain with user-supplied build args. */
 	cmd := exec.CommandContext(ctx, gobin, args...)
 	cmd.Dir = buildCtx.dir
 	cmd.Env = buildCtx.env

@@ -121,6 +121,7 @@ func (bo *BuildOptions) LoadConfig() error {
 	v.AutomaticEnv()
 
 	if override := os.Getenv("KO_CONFIG_PATH"); override != "" {
+		/* #nosec G304 G703 -- KO_CONFIG_PATH is intentionally user-controlled. */
 		file, err := os.Stat(override)
 		if err != nil {
 			return fmt.Errorf("error looking for config file: %w", err)
@@ -129,6 +130,7 @@ func (bo *BuildOptions) LoadConfig() error {
 			v.SetConfigFile(override)
 		} else if file.IsDir() {
 			path := filepath.Join(override, ".ko.yaml")
+			/* #nosec G304 G703 -- path is derived from the user-controlled KO_CONFIG_PATH. */
 			file, err = os.Stat(path)
 			if err != nil {
 				return fmt.Errorf("error looking for config file: %w", err)

@@ -52,9 +52,8 @@ type runConfig struct {
 
 // run a git command and returns its output or errors.
 func run(ctx context.Context, cfg runConfig) (string, error) {
-	extraArgs := []string{
-		"-c", "log.showSignature=false",
-	}
+	extraArgs := make([]string, 0, 2+len(cfg.args))
+	extraArgs = append(extraArgs, "-c", "log.showSignature=false")
 	cfg.args = append(extraArgs, cfg.args...)
 	/* #nosec */
 	cmd := exec.CommandContext(ctx, "git", cfg.args...)
