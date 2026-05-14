@@ -1,4 +1,4 @@
-// Copyright 2020 ko Build Authors All Rights Reserved.
+// Copyright 2020 Google LLC All Rights Reserved.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -22,33 +22,30 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/ko/pkg/build"
-	"github.com/google/ko/pkg/publish/kind"
+	"github.com/google/ko/pkg/publish/k3s"
 )
 
 const (
-	// KindDomain is a sentinel "registry" that represents side-loading images into kind nodes.
-	KindDomain = "kind.local"
+	//K3sDomain   k3s local sentinel registry where the images get's loaded
+	K3sDomain = "k3s.local"
 )
 
-type kindPublisher struct {
-	base  string
+type k3sPublisher struct {
 	namer Namer
 	tags  []string
 }
 
-// NewKindPublisher returns a new publish.Interface that loads images into kind nodes.
-func NewKindPublisher(base string, namer Namer, tags []string) Interface {
-	return &kindPublisher{
-		base:  base,
+//NewK3sPublisher returns a new publish.Interface that loads image into k3s clusters
+func NewK3sPublisher(namer Namer, tags []string) Interface {
+	return &k3sPublisher{
 		namer: namer,
 		tags:  tags,
 	}
 }
 
-// Publish implements publish.Interface.
-func (t *kindPublisher) Publish(ctx context.Context, br build.Result, s string) (name.Reference, error) {
+//Publish implements publish.Interface
+func (k *k3sPublisher) Publish(ctx context.Context, br build.Result, s string) (name.Reference, error) {
 	s = strings.TrimPrefix(s, build.StrictScheme)
-	// https://github.com/google/go-containerregistry/issues/212
 	s = strings.ToLower(s)
 
 	img, err := toImage(br, s)
@@ -61,25 +58,24 @@ func (t *kindPublisher) Publish(ctx context.Context, br build.Result, s string) 
 		return nil, err
 	}
 
-	digestTag, err := name.NewTag(fmt.Sprintf("%s:%s", t.namer(t.base, s), h.Hex))
+	digestTag, err := name.NewTag(fmt.Sprintf("%s:%s", k.namer(K3sDomain, s), h.Hex))
 	if err != nil {
 		return nil, err
 	}
 
 	log.Printf("Loading %v", digestTag)
-	if err := kind.Write(ctx, digestTag, img); err != nil {
+	if err := k3s.Write(ctx, digestTag, img); err != nil {
 		return nil, err
 	}
 	log.Printf("Loaded %v", digestTag)
 
-	for _, tagName := range t.tags {
-		log.Printf("Adding tag %v", tagName)
-		tag, err := name.NewTag(fmt.Sprintf("%s:%s", t.namer(t.base, s), tagName))
+	for _, tagName := range k.tags {
+		tag, err := name.NewTag(fmt.Sprintf("%s:%s", k.namer(K3sDomain, s), tagName))
 		if err != nil {
 			return nil, err
 		}
 
-		if err := kind.Tag(ctx, digestTag, tag); err != nil {
+		if err := k3s.Tag(ctx, digestTag, tag); err != nil {
 			return nil, err
 		}
 		log.Printf("Added tag %v", tagName)
@@ -88,6 +84,7 @@ func (t *kindPublisher) Publish(ctx context.Context, br build.Result, s string) 
 	return &digestTag, nil
 }
 
-func (t *kindPublisher) Close() error {
+//Close implements publish.Interface
+func (k *k3sPublisher) Close() error {
 	return nil
 }
