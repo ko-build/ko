@@ -44,7 +44,7 @@ jobs:
           cosign download sbom $(go run ./ build) | tee spdx.json
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx.json
 
-      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ always() }}
         with:
           name: spdx.json
@@ -84,7 +84,7 @@ jobs:
 
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx-multi-arch.json
 
-      - uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: ${{ always() }}
         with:
           name: spdx-multi-arch.json
