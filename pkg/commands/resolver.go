@@ -477,7 +477,9 @@ func resolveFile(
 			return nil, fmt.Errorf("failed to encode output: %w", err)
 		}
 	}
-	e.Close()
+	if err := e.Close(); err != nil {
+		return nil, fmt.Errorf("failed to close yaml encoder: %w", err)
+	}
 
 	return buf.Bytes(), nil
 }
