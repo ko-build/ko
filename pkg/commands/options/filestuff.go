@@ -66,14 +66,12 @@ func enumerateFiles(root, filename string, recursive bool, visited map[string]st
 	if fi.Mode()&os.ModeSymlink != 0 {
 		targetInfo, err := os.Stat(filename)
 		if err != nil {
-			// Preserve the old behavior for file-like symlinks: if the entry was
-			// passed explicitly, stream it and let later file handling report errors.
-			if filename == root {
-				files <- filename
-			}
-			return nil
+			// Preserve the old behavior for file-like symlinks: stream matching
+			// entries and let later file handling report broken targets.
+			isDir = false
+		} else {
+			isDir = targetInfo.IsDir()
 		}
-		isDir = targetInfo.IsDir()
 	}
 
 	if isDir {

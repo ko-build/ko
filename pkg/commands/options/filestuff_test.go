@@ -82,6 +82,20 @@ func TestEnumerateFilesNonRecursiveSkipsSymlinkedSubdirectory(t *testing.T) {
 	}
 }
 
+func TestEnumerateFilesRecursiveKeepsBrokenManifestSymlink(t *testing.T) {
+	root := t.TempDir()
+	link := filepath.Join(root, "broken.yaml")
+	if err := os.Symlink(filepath.Join(root, "missing.yaml"), link); err != nil {
+		t.Skipf("skipping symlink test: %v", err)
+	}
+
+	got := collectFiles(&FilenameOptions{Filenames: []string{root}, Recursive: true})
+	want := []string{link}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("EnumerateFiles() = %v, want %v", got, want)
+	}
+}
+
 func collectFiles(fo *FilenameOptions) []string {
 	got := make([]string, 0)
 	for file := range EnumerateFiles(fo) {
