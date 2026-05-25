@@ -37,7 +37,7 @@ jobs:
       run: go install ./
 
     - name: Setup Cluster
-      uses: chainguard-dev/actions/setup-kind@ba7f6ca337ff10bd3f46d12df52b57fdfe714492 # main
+      uses: chainguard-dev/actions/setup-kind@3e76343fe029f8e2a10bfbec0da8f437e5dab7a5 # main
       with:
         registry-authority: ${{ env.REGISTRY_NAME }}:${{ env.REGISTRY_PORT }}
 
@@ -71,4 +71,4 @@ jobs:
 
     - name: Collect diagnostics and upload
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@ba7f6ca337ff10bd3f46d12df52b57fdfe714492 # main
+      uses: chainguard-dev/actions/kind-diag@3e76343fe029f8e2a10bfbec0da8f437e5dab7a5 # main
