@@ -90,7 +90,7 @@ jobs:
         run: go install .
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@acca2b1b2070338fb9fd1ca27ecee81d687e58e5 # v6.1.2
+        uses: aws-actions/configure-aws-credentials@99214aa6889fcddfa57764031d71add364327e59 # v6.1.3
         with:
           role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT }}:role/federated-ecr-readwrite
           aws-region: ${{ env.AWS_REGION }}
