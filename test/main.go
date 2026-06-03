@@ -34,13 +34,17 @@ var (
 	wait = flag.Bool("wait", false, "Whether to wait for SIGTERM")
 )
 
-// This is defined so we can test build-time variable setting using ldflags.
-var version = "default"
+// These are defined so we can test build-time variable setting using ldflags.
+var (
+	version      = "default"
+	anotherThing = "anotherThing"
+)
 
 func main() {
 	flag.Parse()
 
 	log.Println("version =", version)
+	log.Println("anotherThing =", anotherThing)
 
 	if runtime.GOOS == "windows" {
 		// Go seems to not load location data from Windows, so timezone

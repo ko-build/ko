@@ -6,12 +6,10 @@
 Unfortunately, because `ko` wraps `go build`, it's not possible to use this flag directly; however, you can use the `GOFLAGS` environment variable instead:
 
 ```sh
-GOFLAGS="-ldflags=-X=main.version=1.2.3" ko build .
+GOFLAGS="-ldflags=-X=main.version=1.2.3 -ldflags=-X=main.foo=bar" ko build .
 ```
 
-Currently, there is a limitation that does not allow to set multiple arguments in `ldflags` using `GOFLAGS`.
-Using `-ldflags` multiple times also does not work.
-In this use case, it works best to use the [`builds` section](./../configuration.md) in the `.ko.yaml` file.
+You can also set `-ldflags` using the [`builds` section](./../configuration.md) in the `.ko.yaml` file.
 
 ## Why are my images all created in 1970?
 
