@@ -59,6 +59,10 @@ type BuildOptions struct {
 	// Empty string means the current working directory.
 	WorkingDirectory string
 
+	// Ldflags are ldflags passed to go build via the CLI. When set, these take
+	// precedence over defaultLdflags from .ko.yaml.
+	Ldflags []string
+
 	ConcurrentBuilds     int
 	DisableOptimizations bool
 	SBOM                 string
@@ -89,6 +93,8 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"The maximum number of concurrent builds (default GOMAXPROCS)")
 	cmd.Flags().BoolVar(&bo.DisableOptimizations, "disable-optimizations", bo.DisableOptimizations,
 		"Disable optimizations when building Go code. Useful when you want to interactively debug the created container.")
+	cmd.Flags().StringSliceVar(&bo.Ldflags, "ldflags", nil,
+		"ldflags to pass to go build (may be repeated)")
 	cmd.Flags().StringVar(&bo.SBOM, "sbom", "spdx",
 		"The SBOM media type to use (none will disable SBOM synthesis and upload).")
 	cmd.Flags().StringVar(&bo.SBOMDir, "sbom-dir", "",

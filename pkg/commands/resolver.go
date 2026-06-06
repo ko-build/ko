@@ -84,11 +84,16 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		}
 	}
 
+	defaultLdflags := bo.DefaultLdflags
+	if len(bo.Ldflags) > 0 {
+		defaultLdflags = bo.Ldflags
+	}
+
 	opts := []build.Option{
 		build.WithBaseImages(getBaseImage(bo)),
 		build.WithDefaultEnv(bo.DefaultEnv),
 		build.WithDefaultFlags(bo.DefaultFlags),
-		build.WithDefaultLdflags(bo.DefaultLdflags),
+		build.WithDefaultLdflags(defaultLdflags),
 		build.WithPlatforms(bo.Platforms...),
 		build.WithJobs(bo.ConcurrentBuilds),
 	}
