@@ -3,15 +3,20 @@
 ## How can I set `ldflags`?
 
 [Using -ldflags](https://blog.cloudflare.com/setting-go-variables-at-compile-time/) is a common way to embed version info in go binaries (In fact, we do this for `ko`!).
-Unfortunately, because `ko` wraps `go build`, it's not possible to use this flag directly; however, you can use the `GOFLAGS` environment variable instead:
+You can pass ldflags to `go build` with the `--ldflags` flag (repeatable):
+
+```sh
+ko build --ldflags "-X=main.version=1.2.3" --ldflags "-s -w" .
+```
+
+You can also use the `GOFLAGS` environment variable:
 
 ```sh
 GOFLAGS="-ldflags=-X=main.version=1.2.3" ko build .
 ```
 
-Currently, there is a limitation that does not allow to set multiple arguments in `ldflags` using `GOFLAGS`.
-Using `-ldflags` multiple times also does not work.
-In this use case, it works best to use the [`builds` section](./../configuration.md) in the `.ko.yaml` file.
+`GOFLAGS` has a limitation that does not allow setting multiple arguments in `ldflags`.
+For more complex cases, use the [`builds` section](./../configuration.md) in the `.ko.yaml` file.
 
 ## Why are my images all created in 1970?
 
