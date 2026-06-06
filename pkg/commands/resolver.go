@@ -84,16 +84,11 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		}
 	}
 
-	defaultLdflags := bo.DefaultLdflags
-	if len(bo.Ldflags) > 0 {
-		defaultLdflags = bo.Ldflags
-	}
-
 	opts := []build.Option{
 		build.WithBaseImages(getBaseImage(bo)),
 		build.WithDefaultEnv(bo.DefaultEnv),
 		build.WithDefaultFlags(bo.DefaultFlags),
-		build.WithDefaultLdflags(defaultLdflags),
+		build.WithDefaultLdflags(bo.DefaultLdflags),
 		build.WithPlatforms(bo.Platforms...),
 		build.WithJobs(bo.ConcurrentBuilds),
 	}
@@ -102,6 +97,9 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	}
 	if kodataCreationTime != nil {
 		opts = append(opts, build.WithKoDataCreationTime(*kodataCreationTime))
+	}
+	if len(bo.Ldflags) > 0 {
+		opts = append(opts, build.WithLdflags(bo.Ldflags))
 	}
 	if bo.DisableOptimizations {
 		opts = append(opts, build.WithDisabledOptimizations())

@@ -1109,6 +1109,40 @@ func TestGoBuild_Defaults(t *testing.T) {
 	require.Equal(t, "bar", envVars["BAR"])
 }
 
+func TestGoBuild_CLILdflagsOverrideConfig(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	var buildCtx buildContext
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(func(_ context.Context, b buildContext) (string, error) {
+			buildCtx = b
+			return "", errors.New("fake build error")
+		}),
+		withSBOMber(fauxSBOM),
+		WithPlatforms("all"),
+		WithDefaultLdflags([]string{"-s"}),
+		WithLdflags([]string{"-X=main.version=cli"}),
+		WithConfig(map[string]Config{
+			"github.com/google/ko/test": {
+				Ldflags: StringArray{"-w"},
+			},
+		}),
+	)
+	require.NoError(t, err)
+
+	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	require.ErrorContains(t, err, "fake build error")
+	require.Equal(t, []string{"-X=main.version=cli"}, buildCtx.ldflags)
+}
+
 func TestGoBuild_ConfigOverrideDefaults(t *testing.T) {
 	baseLayers := int64(3)
 	base, err := random.Image(1024, baseLayers)

@@ -99,6 +99,7 @@ type gobuild struct {
 	defaultEnv           []string
 	defaultFlags         []string
 	defaultLdflags       []string
+	ldflags              []string
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
@@ -127,6 +128,7 @@ type gobuildOpener struct {
 	defaultEnv           []string
 	defaultFlags         []string
 	defaultLdflags       []string
+	ldflags              []string
 	platforms            []string
 	labels               map[string]string
 	annotations          map[string]string
@@ -165,6 +167,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		defaultEnv:           gbo.defaultEnv,
 		defaultFlags:         gbo.defaultFlags,
 		defaultLdflags:       gbo.defaultLdflags,
+		ldflags:              gbo.ldflags,
 		labels:               gbo.labels,
 		annotations:          gbo.annotations,
 		dir:                  gbo.dir,
@@ -1083,11 +1086,13 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	// Get the build flags (defaultFlags already applied in configForImportPath).
 	flags := config.Flags
 
-	// Get the build ldflags.
-	ldflags := config.Ldflags
+	// Get the build ldflags. CLI ldflags override .ko.yaml per-build and default ldflags.
+	ldflags := g.ldflags
 	if len(ldflags) == 0 {
-		// Use the default, if any
-		ldflags = g.defaultLdflags
+		ldflags = config.Ldflags
+		if len(ldflags) == 0 {
+			ldflags = g.defaultLdflags
+		}
 	}
 
 	// Do the build into a temporary file.

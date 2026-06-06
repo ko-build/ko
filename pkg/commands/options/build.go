@@ -60,7 +60,7 @@ type BuildOptions struct {
 	WorkingDirectory string
 
 	// Ldflags are ldflags passed to go build via the CLI. When set, these take
-	// precedence over defaultLdflags from .ko.yaml.
+	// precedence over ldflags from .ko.yaml.
 	Ldflags []string
 
 	ConcurrentBuilds     int

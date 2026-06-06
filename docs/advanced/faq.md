@@ -3,7 +3,7 @@
 ## How can I set `ldflags`?
 
 [Using -ldflags](https://blog.cloudflare.com/setting-go-variables-at-compile-time/) is a common way to embed version info in go binaries (In fact, we do this for `ko`!).
-You can pass ldflags to `go build` with the `--ldflags` flag (repeatable):
+You can pass ldflags to `go build` with the `--ldflags` flag (repeatable). When set, `--ldflags` takes precedence over ldflags in `.ko.yaml`:
 
 ```sh
 ko build --ldflags "-X=main.version=1.2.3" --ldflags "-s -w" .
