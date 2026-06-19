@@ -16,7 +16,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -25,7 +25,7 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
-      - uses: chainguard-dev/actions/gofmt@3b7bbeebc3a5d2bc37aa008350202651c32a26e1
+      - uses: chainguard-dev/actions/gofmt@9978bf17926f53444b5eff45479954d94ec12e32
         with:
           args: -s
 
@@ -37,7 +37,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -46,7 +46,7 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
-      - uses: chainguard-dev/actions/goimports@3b7bbeebc3a5d2bc37aa008350202651c32a26e1
+      - uses: chainguard-dev/actions/goimports@9978bf17926f53444b5eff45479954d94ec12e32
 
   lint:
     name: Lint
@@ -57,7 +57,7 @@ jobs:
 
     steps:
       - name: Check out code
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
 
@@ -67,10 +67,10 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
-      - uses: chainguard-dev/actions/trailing-space@3b7bbeebc3a5d2bc37aa008350202651c32a26e1
+      - uses: chainguard-dev/actions/trailing-space@9978bf17926f53444b5eff45479954d94ec12e32
         if: ${{ always() }}
 
-      - uses: chainguard-dev/actions/eof-newline@3b7bbeebc3a5d2bc37aa008350202651c32a26e1
+      - uses: chainguard-dev/actions/eof-newline@9978bf17926f53444b5eff45479954d94ec12e32
         if: ${{ always() }}
 
       - uses: reviewdog/action-misspell@d6429416b12b09b4e2768307d53bef58d172e962 # v1.27.0
