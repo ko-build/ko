@@ -470,6 +470,13 @@ func resolveFile(
 		return nil, fmt.Errorf("error resolving image references: %w", err)
 	}
 
+	// If the selector filtered out all documents, skip encoding entirely.
+	// Calling Close() on an encoder that never wrote anything causes
+	// go.yaml.in/yaml/v4 to return "yaml: expected STREAM-START".
+	if len(docNodes) == 0 {
+		return []byte{}, nil
+	}
+
 	buf := &bytes.Buffer{}
 	e := yaml.NewEncoder(buf)
 	e.SetIndent(2)
