@@ -13,12 +13,12 @@ jobs:
     name: e2e tests
     runs-on: ubuntu-latest
     env:
-      # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
-      # '*.local' hostnames. This works both for `ko` and our own tag-to-digest resolution logic,
+      # go-containerregistry treats '*.localhost' hostnames as insecure (HTTP) registries.
+      # This works both for `ko` and our own tag-to-digest resolution logic,
       # thus allowing us to test without bypassing tag-to-digest resolution.
-      REGISTRY_NAME: registry.local
+      REGISTRY_NAME: registry.localhost
       REGISTRY_PORT: 5000
-      KO_DOCKER_REPO: registry.local:5000/ko
+      KO_DOCKER_REPO: registry.localhost:5000/ko
 
     permissions:
       contents: read
