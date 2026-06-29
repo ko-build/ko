@@ -13,7 +13,7 @@ jobs:
     name: e2e tests
     runs-on: ubuntu-latest
     env:
-      # go-containerregistry treats '*.localhost' hostnames as insecure (HTTP) registries.
+      # go-containerregistry v0.21.7+ treats '*.localhost' hostnames as insecure (HTTP) registries.
       # This works both for `ko` and our own tag-to-digest resolution logic,
       # thus allowing us to test without bypassing tag-to-digest resolution.
       REGISTRY_NAME: registry.localhost
