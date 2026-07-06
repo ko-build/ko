@@ -763,10 +763,12 @@ func writeFileToTar(tw *tar.Writer, name, evalPath string, size int64, modTime t
 // walkRecursive performs a filepath.Walk of the given root directory adding it
 // to the provided tar.Writer with root -> chroot.  All symlinks are dereferenced,
 // which is what leads to recursion when we encounter a directory symlink.
-// absKodataRoot is the absolute path of the original kodata directory; symlinks
-// that resolve to a path outside of it are rejected to prevent arbitrary host
-// files from being packed into the container image.
-func walkRecursive(tw *tar.Writer, root, chroot, absKodataRoot string, creationTime v1.Time, platform *v1.Platform) error {
+// absAllowedRoot is the absolute path of the directory tree within which
+// symlinks are permitted to resolve; symlinks that resolve to a path outside of
+// it are rejected to prevent arbitrary host files from being packed into the
+// container image.  It defaults to the kodata root but may be widened to the
+// enclosing source tree (see resolveKodataAllowedRoot).
+func walkRecursive(tw *tar.Writer, root, chroot, absAllowedRoot string, creationTime v1.Time, platform *v1.Platform) error {
 	return filepath.Walk(root, func(hostPath string, info os.FileInfo, err error) error {
 		if hostPath == root {
 			return nil
@@ -798,17 +800,17 @@ func walkRecursive(tw *tar.Writer, root, chroot, absKodataRoot string, creationT
 			return fmt.Errorf("filepath.EvalSymlinks(%q): %w", hostPath, err)
 		}
 
-		// Verify the resolved path remains within the kodata root.  A symlink
-		// pointing outside the kodata directory would otherwise cause ko to pack
+		// Verify the resolved path remains within the allowed root.  A symlink
+		// pointing outside the source tree would otherwise cause ko to pack
 		// arbitrary host files (e.g. ~/.ssh/id_rsa, /etc/passwd) into the image.
 		absEvalPath, err := filepath.Abs(evalPath)
 		if err != nil {
 			return fmt.Errorf("filepath.Abs(%q): %w", evalPath, err)
 		}
-		absKodataRootWithSep := absKodataRoot + string(filepath.Separator)
-		if absEvalPath != absKodataRoot && !strings.HasPrefix(absEvalPath, absKodataRootWithSep) {
-			return fmt.Errorf("kodata symlink %q resolves to %q which is outside the kodata root %q",
-				hostPath, evalPath, absKodataRoot)
+		absAllowedRootWithSep := absAllowedRoot + string(filepath.Separator)
+		if absEvalPath != absAllowedRoot && !strings.HasPrefix(absEvalPath, absAllowedRootWithSep) {
+			return fmt.Errorf("kodata symlink %q resolves to %q which is outside the allowed root %q",
+				hostPath, evalPath, absAllowedRoot)
 		}
 
 		// Get info of the symlink target.
@@ -822,7 +824,7 @@ func walkRecursive(tw *tar.Writer, root, chroot, absKodataRoot string, creationT
 			if err := writeDirToTar(tw, newPath, creationTime.Time); err != nil {
 				return fmt.Errorf("writing dir %q to tar: %w", newPath, err)
 			}
-			return walkRecursive(tw, evalPath, newPath, absKodataRoot, creationTime, platform)
+			return walkRecursive(tw, evalPath, newPath, absAllowedRoot, creationTime, platform)
 		}
 
 		// Regular file (or symlink to file): write to tar.
@@ -874,6 +876,7 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 	// gracefully (filepath.Walk skips missing roots), so we fall back to the
 	// raw path as the boundary — no traversal is possible without a root.
 	absKodataRoot := root
+	absAllowedRoot := root
 	if _, statErr := os.Stat(root); statErr == nil {
 		resolvedRoot, err := filepath.EvalSymlinks(root)
 		if err != nil {
@@ -883,8 +886,56 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 		if err != nil {
 			return nil, fmt.Errorf("filepath.Abs(%q): %w", resolvedRoot, err)
 		}
+		// Widen the boundary from the kodata directory to the enclosing source
+		// tree so that in-repo symlinks (a top-level LICENSE, shared config
+		// outside the command root, etc.) keep working, while symlinks that
+		// escape the project entirely are still rejected.
+		absAllowedRoot = resolveKodataAllowedRoot(absKodataRoot)
 	}
-	return buf, walkRecursive(tw, root, chroot, absKodataRoot, creationTime, platform)
+	return buf, walkRecursive(tw, root, chroot, absAllowedRoot, creationTime, platform)
+}
+
+// resolveKodataAllowedRoot returns the directory tree within which kodata
+// symlinks are permitted to resolve.  By default this is the kodata root
+// itself, but it is widened to the enclosing source tree so that symlinks to
+// files elsewhere in the project continue to work while still blocking symlinks
+// that escape the project entirely.
+//
+// The widened root is taken from the KO_DATA_PATH_ALLOWED_ROOT environment
+// variable when set, otherwise from the enclosing git worktree.  The candidate
+// is only used when it is an ancestor of (or equal to) the kodata root, so the
+// boundary can never become narrower than the kodata directory.
+func resolveKodataAllowedRoot(absKodataRoot string) string {
+	candidate := kodataAllowedRootCandidate(absKodataRoot)
+	if candidate == "" {
+		return absKodataRoot
+	}
+	abs, err := filepath.Abs(candidate)
+	if err != nil {
+		return absKodataRoot
+	}
+	// Canonicalize so the comparison matches absKodataRoot, which was resolved
+	// with EvalSymlinks (e.g. /var -> /private/var on macOS).
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
+		abs = resolved
+	}
+	if abs == absKodataRoot || strings.HasPrefix(absKodataRoot, abs+string(filepath.Separator)) {
+		return abs
+	}
+	return absKodataRoot
+}
+
+// kodataAllowedRootCandidate returns the caller-supplied or git-derived
+// candidate for the widened symlink boundary, or "" when none is available.
+func kodataAllowedRootCandidate(absKodataRoot string) string {
+	if env := os.Getenv("KO_DATA_PATH_ALLOWED_ROOT"); env != "" {
+		return env
+	}
+	out, err := exec.Command("git", "-C", absKodataRoot, "rev-parse", "--show-toplevel").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
 
 func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]any, error) {
