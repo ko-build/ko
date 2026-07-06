@@ -1931,3 +1931,29 @@ func TestResolveKodataAllowedRoot(t *testing.T) {
 		})
 	}
 }
+
+// TestWithinRoot covers the containment check, including a root that already
+// ends in a path separator (a filesystem root such as "/"), which must not
+// produce a double-separator prefix that spuriously rejects a valid path.
+func TestWithinRoot(t *testing.T) {
+	sep := string(filepath.Separator)
+	tests := []struct {
+		name string
+		p    string
+		root string
+		want bool
+	}{
+		{name: "equal", p: filepath.Join(sep, "a", "b"), root: filepath.Join(sep, "a", "b"), want: true},
+		{name: "child", p: filepath.Join(sep, "a", "b", "c"), root: filepath.Join(sep, "a", "b"), want: true},
+		{name: "sibling rejected", p: filepath.Join(sep, "a", "bc"), root: filepath.Join(sep, "a", "b"), want: false},
+		{name: "escape rejected", p: filepath.Join(sep, "etc", "passwd"), root: filepath.Join(sep, "home", "user", "repo"), want: false},
+		{name: "root with trailing sep does not double up", p: filepath.Join(sep, "etc", "passwd"), root: sep, want: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := withinRoot(tc.p, tc.root); got != tc.want {
+				t.Errorf("withinRoot(%q, %q) = %v, want %v", tc.p, tc.root, got, tc.want)
+			}
+		})
+	}
+}

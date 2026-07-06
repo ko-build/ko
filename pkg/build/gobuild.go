@@ -807,8 +807,7 @@ func walkRecursive(tw *tar.Writer, root, chroot, absAllowedRoot string, creation
 		if err != nil {
 			return fmt.Errorf("filepath.Abs(%q): %w", evalPath, err)
 		}
-		absAllowedRootWithSep := absAllowedRoot + string(filepath.Separator)
-		if absEvalPath != absAllowedRoot && !strings.HasPrefix(absEvalPath, absAllowedRootWithSep) {
+		if !withinRoot(absEvalPath, absAllowedRoot) {
 			return fmt.Errorf("kodata symlink %q resolves to %q which is outside the allowed root %q",
 				hostPath, evalPath, absAllowedRoot)
 		}
@@ -919,10 +918,25 @@ func resolveKodataAllowedRoot(absKodataRoot string) string {
 	if resolved, err := filepath.EvalSymlinks(abs); err == nil {
 		abs = resolved
 	}
-	if abs == absKodataRoot || strings.HasPrefix(absKodataRoot, abs+string(filepath.Separator)) {
+	if withinRoot(absKodataRoot, abs) {
 		return abs
 	}
 	return absKodataRoot
+}
+
+// withinRoot reports whether p is root itself or lies inside the root
+// directory.  It tolerates a root that already ends in a path separator (a
+// filesystem root such as "/" or a Windows drive root like `C:\`), which would
+// otherwise produce a double-separator prefix and spuriously fail the check.
+func withinRoot(p, root string) bool {
+	if p == root {
+		return true
+	}
+	sep := string(filepath.Separator)
+	if !strings.HasSuffix(root, sep) {
+		root += sep
+	}
+	return strings.HasPrefix(p, root)
 }
 
 // kodataAllowedRootCandidate returns the caller-supplied or git-derived
