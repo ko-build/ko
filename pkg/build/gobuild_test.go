@@ -1957,3 +1957,25 @@ func TestWithinRoot(t *testing.T) {
 		})
 	}
 }
+
+// TestResolveKodataAllowedRootGitWorktree verifies that, with no env override,
+// the allowed root is widened to the enclosing git worktree (detected by a .git
+// entry, without shelling out to git).
+func TestResolveKodataAllowedRootGitWorktree(t *testing.T) {
+	t.Setenv("KO_DATA_PATH_ALLOWED_ROOT", "")
+	base := t.TempDir()
+	resolvedBase, err := filepath.EvalSymlinks(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(resolvedBase, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	kodataRoot := filepath.Join(resolvedBase, "cmd", "app", "kodata")
+	if err := os.MkdirAll(kodataRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if got := resolveKodataAllowedRoot(kodataRoot); got != resolvedBase {
+		t.Errorf("resolveKodataAllowedRoot(%q) = %q, want git worktree root %q", kodataRoot, got, resolvedBase)
+	}
+}

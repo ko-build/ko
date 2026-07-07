@@ -874,14 +874,13 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 	// If the kodata directory does not exist, walkRecursive handles that
 	// gracefully (filepath.Walk skips missing roots), so we fall back to the
 	// raw path as the boundary — no traversal is possible without a root.
-	absKodataRoot := root
 	absAllowedRoot := root
 	if _, statErr := os.Stat(root); statErr == nil {
 		resolvedRoot, err := filepath.EvalSymlinks(root)
 		if err != nil {
 			return nil, fmt.Errorf("filepath.EvalSymlinks(%q): %w", root, err)
 		}
-		absKodataRoot, err = filepath.Abs(resolvedRoot)
+		absKodataRoot, err := filepath.Abs(resolvedRoot)
 		if err != nil {
 			return nil, fmt.Errorf("filepath.Abs(%q): %w", resolvedRoot, err)
 		}
@@ -925,18 +924,15 @@ func resolveKodataAllowedRoot(absKodataRoot string) string {
 }
 
 // withinRoot reports whether p is root itself or lies inside the root
-// directory.  It tolerates a root that already ends in a path separator (a
-// filesystem root such as "/" or a Windows drive root like `C:\`), which would
-// otherwise produce a double-separator prefix and spuriously fail the check.
+// directory.  Using filepath.Rel keeps the comparison robust against trailing
+// separators (a filesystem root such as "/" or a Windows drive root like
+// `C:\`) and platform-specific separators.
 func withinRoot(p, root string) bool {
-	if p == root {
-		return true
+	rel, err := filepath.Rel(root, p)
+	if err != nil {
+		return false
 	}
-	sep := string(filepath.Separator)
-	if !strings.HasSuffix(root, sep) {
-		root += sep
-	}
-	return strings.HasPrefix(p, root)
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // kodataAllowedRootCandidate returns the caller-supplied or git-derived
@@ -945,11 +941,23 @@ func kodataAllowedRootCandidate(absKodataRoot string) string {
 	if env := os.Getenv("KO_DATA_PATH_ALLOWED_ROOT"); env != "" {
 		return env
 	}
-	out, err := exec.Command("git", "-C", absKodataRoot, "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		return ""
+	return enclosingGitRoot(absKodataRoot)
+}
+
+// enclosingGitRoot walks up from dir looking for a .git entry and returns the
+// worktree root, or "" if dir is not inside a git checkout.  It reads the
+// filesystem directly rather than shelling out to git.
+func enclosingGitRoot(dir string) string {
+	for {
+		if _, err := os.Stat(filepath.Join(dir, ".git")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
 	}
-	return strings.TrimSpace(string(out))
 }
 
 func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]any, error) {
