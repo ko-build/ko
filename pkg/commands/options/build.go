@@ -55,6 +55,14 @@ type BuildOptions struct {
 	// DefaultLdflags defines the default ldflags when per-build value is not explicitly defined.
 	DefaultLdflags []string
 
+	// BinaryFolder overrides the default in-image binary folder ("/ko-app").
+	// The app name is kept. Ignored if BinaryPath is set.
+	BinaryFolder string
+
+	// BinaryPath is an absolute in-image path that fully overrides the default
+	// binary path ("/ko-app/<app-name>"). Takes precedence over BinaryFolder.
+	BinaryPath string
+
 	// WorkingDirectory allows for setting the working directory for invocations of the `go` tool.
 	// Empty string means the current working directory.
 	WorkingDirectory string
@@ -172,6 +180,14 @@ func (bo *BuildOptions) LoadConfig() error {
 
 	if ldflags := v.GetStringSlice("defaultLdflags"); len(ldflags) > 0 {
 		bo.DefaultLdflags = ldflags
+	}
+
+	if folder := v.GetString("binaryFolder"); folder != "" {
+		bo.BinaryFolder = folder
+	}
+
+	if binPath := v.GetString("binaryPath"); binPath != "" {
+		bo.BinaryPath = binPath
 	}
 
 	if bo.BaseImage == "" {
