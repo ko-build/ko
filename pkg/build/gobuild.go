@@ -58,8 +58,9 @@ import (
 const (
 	defaultAppFilename = "ko-app"
 
-	defaultGoBin = "go"         // defaults to first go binary found in PATH
-	goBinPathEnv = "KO_GO_PATH" // env lookup for optional relative or full go binary path
+	defaultGoBin             = "go"                        // defaults to first go binary found in PATH
+	goBinPathEnv             = "KO_GO_PATH"                // env lookup for optional relative or full go binary path
+	koDataPathAllowedRootEnv = "KO_DATA_PATH_ALLOWED_ROOT" // optional override for the kodata symlink trust boundary
 )
 
 // GetBase takes an importpath and returns a base image reference and base image (or index).
@@ -692,7 +693,7 @@ func tarBinary(name, binary string, platform *v1.Platform, opts *layerOptions) (
 	return buf, nil
 }
 
-func (g *gobuild) kodataPath(ref reference) (string, error) {
+func (g *gobuild) packageDir(ref reference) (string, error) {
 	dir := filepath.Clean(g.dir)
 	if dir == "." {
 		dir = ""
@@ -707,7 +708,51 @@ func (g *gobuild) kodataPath(ref reference) (string, error) {
 	if len(pkgs[0].GoFiles) == 0 {
 		return "", fmt.Errorf("package %s contains no Go files", pkgs[0])
 	}
-	return filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), "kodata"), nil
+	return filepath.Dir(pkgs[0].GoFiles[0]), nil
+}
+
+func resolveSymlinkRoot(root string) (string, error) {
+	resolvedRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		return "", fmt.Errorf("filepath.EvalSymlinks(%q): %w", root, err)
+	}
+	absRoot, err := filepath.Abs(resolvedRoot)
+	if err != nil {
+		return "", fmt.Errorf("filepath.Abs(%q): %w", resolvedRoot, err)
+	}
+	return absRoot, nil
+}
+
+func gitTopLevel(ctx context.Context, dir string) (string, error) {
+	/* #nosec */
+	cmd := exec.CommandContext(ctx, "git", "rev-parse", "--show-toplevel")
+	cmd.Dir = dir
+	out, err := cmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+func resolveKODataAllowedRoot(ctx context.Context, packageDir, kodataRoot string) (string, error) {
+	if override := os.Getenv(koDataPathAllowedRootEnv); override != "" {
+		if !filepath.IsAbs(override) {
+			override = filepath.Join(packageDir, override)
+		}
+		return resolveSymlinkRoot(override)
+	}
+
+	if topLevel, err := gitTopLevel(ctx, packageDir); err == nil {
+		return resolveSymlinkRoot(topLevel)
+	}
+
+	if _, err := os.Stat(kodataRoot); err == nil {
+		return resolveSymlinkRoot(kodataRoot)
+	} else if !os.IsNotExist(err) {
+		return "", fmt.Errorf("os.Stat(%q): %w", kodataRoot, err)
+	}
+
+	return kodataRoot, nil
 }
 
 // Where kodata lives in the image.
@@ -763,10 +808,10 @@ func writeFileToTar(tw *tar.Writer, name, evalPath string, size int64, modTime t
 // walkRecursive performs a filepath.Walk of the given root directory adding it
 // to the provided tar.Writer with root -> chroot.  All symlinks are dereferenced,
 // which is what leads to recursion when we encounter a directory symlink.
-// absKodataRoot is the absolute path of the original kodata directory; symlinks
-// that resolve to a path outside of it are rejected to prevent arbitrary host
-// files from being packed into the container image.
-func walkRecursive(tw *tar.Writer, root, chroot, absKodataRoot string, creationTime v1.Time, platform *v1.Platform) error {
+// absAllowedRoot is the absolute path of the trusted boundary for resolved
+// symlinks; targets outside of it are rejected to prevent arbitrary host files
+// from being packed into the container image.
+func walkRecursive(tw *tar.Writer, root, chroot, absAllowedRoot string, creationTime v1.Time, platform *v1.Platform) error {
 	return filepath.Walk(root, func(hostPath string, info os.FileInfo, err error) error {
 		if hostPath == root {
 			return nil
@@ -798,17 +843,17 @@ func walkRecursive(tw *tar.Writer, root, chroot, absKodataRoot string, creationT
 			return fmt.Errorf("filepath.EvalSymlinks(%q): %w", hostPath, err)
 		}
 
-		// Verify the resolved path remains within the kodata root.  A symlink
-		// pointing outside the kodata directory would otherwise cause ko to pack
+		// Verify the resolved path remains within the allowed root.  A symlink
+		// pointing outside the allowed root would otherwise cause ko to pack
 		// arbitrary host files (e.g. ~/.ssh/id_rsa, /etc/passwd) into the image.
 		absEvalPath, err := filepath.Abs(evalPath)
 		if err != nil {
 			return fmt.Errorf("filepath.Abs(%q): %w", evalPath, err)
 		}
-		absKodataRootWithSep := absKodataRoot + string(filepath.Separator)
-		if absEvalPath != absKodataRoot && !strings.HasPrefix(absEvalPath, absKodataRootWithSep) {
-			return fmt.Errorf("kodata symlink %q resolves to %q which is outside the kodata root %q",
-				hostPath, evalPath, absKodataRoot)
+		absAllowedRootWithSep := absAllowedRoot + string(filepath.Separator)
+		if absEvalPath != absAllowedRoot && !strings.HasPrefix(absEvalPath, absAllowedRootWithSep) {
+			return fmt.Errorf("kodata symlink %q resolves to %q which is outside the allowed root %q",
+				hostPath, evalPath, absAllowedRoot)
 		}
 
 		// Get info of the symlink target.
@@ -822,7 +867,7 @@ func walkRecursive(tw *tar.Writer, root, chroot, absKodataRoot string, creationT
 			if err := writeDirToTar(tw, newPath, creationTime.Time); err != nil {
 				return fmt.Errorf("writing dir %q to tar: %w", newPath, err)
 			}
-			return walkRecursive(tw, evalPath, newPath, absKodataRoot, creationTime, platform)
+			return walkRecursive(tw, evalPath, newPath, absAllowedRoot, creationTime, platform)
 		}
 
 		// Regular file (or symlink to file): write to tar.
@@ -835,10 +880,11 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 	tw := tar.NewWriter(buf)
 	defer tw.Close()
 
-	root, err := g.kodataPath(ref)
+	packageDir, err := g.packageDir(ref)
 	if err != nil {
 		return nil, err
 	}
+	root := filepath.Join(packageDir, "kodata")
 
 	creationTime := g.kodataCreationTime
 
@@ -868,23 +914,11 @@ func (g *gobuild) tarKoData(ref reference, platform *v1.Platform) (*bytes.Buffer
 		}
 	}
 
-	// Resolve the canonical absolute path of the kodata root so that symlink
-	// targets resolved by filepath.EvalSymlinks can be compared consistently.
-	// If the kodata directory does not exist, walkRecursive handles that
-	// gracefully (filepath.Walk skips missing roots), so we fall back to the
-	// raw path as the boundary — no traversal is possible without a root.
-	absKodataRoot := root
-	if _, statErr := os.Stat(root); statErr == nil {
-		resolvedRoot, err := filepath.EvalSymlinks(root)
-		if err != nil {
-			return nil, fmt.Errorf("filepath.EvalSymlinks(%q): %w", root, err)
-		}
-		absKodataRoot, err = filepath.Abs(resolvedRoot)
-		if err != nil {
-			return nil, fmt.Errorf("filepath.Abs(%q): %w", resolvedRoot, err)
-		}
+	absAllowedRoot, err := resolveKODataAllowedRoot(g.ctx, packageDir, root)
+	if err != nil {
+		return nil, err
 	}
-	return buf, walkRecursive(tw, root, chroot, absKodataRoot, creationTime, platform)
+	return buf, walkRecursive(tw, root, chroot, absAllowedRoot, creationTime, platform)
 }
 
 func createTemplateData(ctx context.Context, buildCtx buildContext) (map[string]any, error) {

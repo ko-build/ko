@@ -1710,11 +1710,15 @@ func TestDebugger(t *testing.T) {
 }
 
 // TestWalkRecursiveSymlinkTraversal verifies that walkRecursive rejects symlinks
-// in kodata/ that point outside the kodata root, preventing host files from being
+// in kodata/ that point outside the allowed root, preventing host files from being
 // packed into the container image.
 func TestWalkRecursiveSymlinkTraversal(t *testing.T) {
-	// Build a temp kodata dir with a symlink that escapes it.
-	kodataDir := t.TempDir()
+	// Build a temp repo with a kodata dir containing a symlink that escapes it.
+	repoDir := t.TempDir()
+	kodataDir := filepath.Join(repoDir, "kodata")
+	if err := os.Mkdir(kodataDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	outsideDir := t.TempDir()
 
 	// Write a sensitive file outside kodata.
@@ -1732,11 +1736,11 @@ func TestWalkRecursiveSymlinkTraversal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	resolvedKodata, err := filepath.EvalSymlinks(kodataDir)
+	resolvedRepo, err := filepath.EvalSymlinks(repoDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	absKodataRoot, err := filepath.Abs(resolvedKodata)
+	absAllowedRoot, err := filepath.Abs(resolvedRepo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1747,37 +1751,41 @@ func TestWalkRecursiveSymlinkTraversal(t *testing.T) {
 	platform := &v1.Platform{OS: "linux", Architecture: "amd64"}
 	creationTime := v1.Time{}
 
-	err = walkRecursive(tw, kodataDir, "/var/run/ko", absKodataRoot, creationTime, platform)
+	err = walkRecursive(tw, kodataDir, "/var/run/ko", absAllowedRoot, creationTime, platform)
 	if err == nil {
-		t.Error("walkRecursive: expected error for symlink escaping kodata root, got nil")
-	} else if !strings.Contains(err.Error(), "outside the kodata root") {
+		t.Error("walkRecursive: expected error for symlink escaping allowed root, got nil")
+	} else if !strings.Contains(err.Error(), "outside the allowed root") {
 		t.Errorf("walkRecursive: unexpected error message: %v", err)
 	}
 }
 
-// TestWalkRecursiveSymlinkWithinKodata verifies that symlinks within kodata are
-// still followed correctly after the traversal check is applied.
-func TestWalkRecursiveSymlinkWithinKodata(t *testing.T) {
-	kodataDir := t.TempDir()
+// TestWalkRecursiveSymlinkWithinRepo verifies that in-repo symlinks outside the
+// kodata directory are still followed when the repository root is trusted.
+func TestWalkRecursiveSymlinkWithinRepo(t *testing.T) {
+	repoDir := t.TempDir()
+	kodataDir := filepath.Join(repoDir, "kodata")
+	if err := os.Mkdir(kodataDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
 
-	// Write a regular file and a symlink to it, both inside kodata.
-	target := filepath.Join(kodataDir, "target.txt")
+	// Write a regular file outside kodata but within the same repo and a symlink to it.
+	target := filepath.Join(repoDir, "LICENSE")
 	if err := os.WriteFile(target, []byte("hello"), 0644); err != nil {
 		t.Fatal(err)
 	}
 	link := filepath.Join(kodataDir, "link.txt")
-	if err := os.Symlink(target, link); err != nil {
+	if err := os.Symlink(filepath.Join("..", "LICENSE"), link); err != nil {
 		if runtime.GOOS == "windows" {
-			t.Skipf("skipping symlink within-kodata test on Windows: %v", err)
+			t.Skipf("skipping symlink within-repo test on Windows: %v", err)
 		}
 		t.Fatal(err)
 	}
 
-	resolvedKodata, err := filepath.EvalSymlinks(kodataDir)
+	resolvedRepo, err := filepath.EvalSymlinks(repoDir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	absKodataRoot, err := filepath.Abs(resolvedKodata)
+	absAllowedRoot, err := filepath.Abs(resolvedRepo)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1788,8 +1796,8 @@ func TestWalkRecursiveSymlinkWithinKodata(t *testing.T) {
 	platform := &v1.Platform{OS: "linux", Architecture: "amd64"}
 	creationTime := v1.Time{}
 
-	if err := walkRecursive(tw, kodataDir, "/var/run/ko", absKodataRoot, creationTime, platform); err != nil {
-		t.Fatalf("walkRecursive: unexpected error for in-kodata symlink: %v", err)
+	if err := walkRecursive(tw, kodataDir, "/var/run/ko", absAllowedRoot, creationTime, platform); err != nil {
+		t.Fatalf("walkRecursive: unexpected error for in-repo symlink: %v", err)
 	}
 	tw.Close()
 
@@ -1820,4 +1828,71 @@ func TestWalkRecursiveSymlinkWithinKodata(t *testing.T) {
 	if !found {
 		t.Errorf("expected %q in tar archive, not found", wantPath)
 	}
+}
+
+func TestResolveKODataAllowedRoot(t *testing.T) {
+	t.Run("env override", func(t *testing.T) {
+		packageDir := t.TempDir()
+		allowedRoot := filepath.Join(packageDir, "shared")
+		if err := os.Mkdir(allowedRoot, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		t.Setenv(koDataPathAllowedRootEnv, "shared")
+
+		got, err := resolveKODataAllowedRoot(context.Background(), packageDir, filepath.Join(packageDir, "kodata"))
+		if err != nil {
+			t.Fatalf("resolveKODataAllowedRoot() = %v", err)
+		}
+
+		want, err := filepath.Abs(allowedRoot)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Fatalf("resolveKODataAllowedRoot() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("git top level", func(t *testing.T) {
+		repoDir := t.TempDir()
+		gittesting.GitInit(t, repoDir)
+		packageDir := filepath.Join(repoDir, "cmd", "app")
+		if err := os.MkdirAll(packageDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := resolveKODataAllowedRoot(context.Background(), packageDir, filepath.Join(packageDir, "kodata"))
+		if err != nil {
+			t.Fatalf("resolveKODataAllowedRoot() = %v", err)
+		}
+
+		want, err := filepath.Abs(repoDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Fatalf("resolveKODataAllowedRoot() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("kodata fallback", func(t *testing.T) {
+		packageDir := t.TempDir()
+		kodataDir := filepath.Join(packageDir, "kodata")
+		if err := os.Mkdir(kodataDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+
+		got, err := resolveKODataAllowedRoot(context.Background(), packageDir, kodataDir)
+		if err != nil {
+			t.Fatalf("resolveKODataAllowedRoot() = %v", err)
+		}
+
+		want, err := filepath.Abs(kodataDir)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got != want {
+			t.Fatalf("resolveKODataAllowedRoot() = %q, want %q", got, want)
+		}
+	})
 }
