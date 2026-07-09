@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -2019,22 +2020,14 @@ func TestTarBinaryParentDirs(t *testing.T) {
 
 			for _, dir := range tc.wantDirs {
 				if !gotDirs[dir] {
-					t.Errorf("expected dir header %q in tar, got dirs %v", dir, keys(gotDirs))
+					t.Errorf("expected dir header %q in tar, got dirs %v", dir, maps.Keys(gotDirs))
 				}
 			}
 			// The regular file header is written with the leading slash trimmed
 			// only for Windows; on linux the name is used as-is.
 			if !gotFiles[tc.wantFile] {
-				t.Errorf("expected file header %q in tar, got files %v", tc.wantFile, keys(gotFiles))
+				t.Errorf("expected file header %q in tar, got files %v", tc.wantFile, maps.Keys(gotFiles))
 			}
 		})
 	}
-}
-
-func keys(m map[string]bool) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	return out
 }

@@ -622,10 +622,6 @@ func appFilename(importpath string) string {
 // owner: BUILTIN/Users group: BUILTIN/Users ($sddlValue="O:BUG:BU")
 const userOwnerAndGroupSID = "AQAAgBQAAAAkAAAAAAAAAAAAAAABAgAAAAAABSAAAAAhAgAAAQIAAAAAAAUgAAAAIQIAAA=="
 
-// parentDirs returns the cumulative parent directories of the file path name,
-// as relative paths, ordered from shallowest to deepest so that parents are
-// created before their children. For example, given "/go/bin/myapp" it returns
-// ["go", "go/bin"].
 func parentDirs(name string) []string {
 	// filepath.Clean normalizes the path; splitting on the separator leaves an
 	// empty first element for absolute paths (leading separator), which we skip.
@@ -651,7 +647,7 @@ func tarBinary(name, binary string, platform *v1.Platform, opts *layerOptions) (
 	// For Windows, the layer must contain a Hives/ directory, and the root
 	// of the actual filesystem goes in a Files/ directory.
 	// For Linux, the binary's parent directories are derived from its (possibly
-	// overridden) path so that arbitrary folders (e.g. /go/bin) are created.
+	// overridden) path so that arbitrary folders are created.
 	dirs := parentDirs(name)
 	if platform.OS == "windows" {
 		dirs = []string{
@@ -1163,9 +1159,8 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		},
 	})
 
-	appDir := "/ko-app"
 	appFileName := appFilename(ref.Path())
-	appPath := path.Join(appDir, appFileName)
+	var appDir, appPath string
 
 	if g.binaryFolder != "" && g.binaryPath != "" {
 		log.Printf("both binaryFolder (%q) and binaryPath (%q) are set; binaryPath takes precedence", g.binaryFolder, g.binaryPath)
@@ -1177,6 +1172,9 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		appFileName = path.Base(appPath)
 	case g.binaryFolder != "":
 		appDir = g.binaryFolder
+		appPath = path.Join(appDir, appFileName)
+	default:
+		appDir = "/ko-app"
 		appPath = path.Join(appDir, appFileName)
 	}
 

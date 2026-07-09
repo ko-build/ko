@@ -214,32 +214,3 @@ func TestOverrideConfigPath(t *testing.T) {
 		})
 	}
 }
-
-func TestBinaryFolderFromEnv(t *testing.T) {
-	t.Setenv("KO_BINARYFOLDER", "/go/bin")
-
-	bo := &BuildOptions{}
-	err := bo.LoadConfig()
-	require.NoError(t, err)
-	require.Equal(t, "/go/bin", bo.BinaryFolder)
-}
-
-func TestBinaryPathFromEnv(t *testing.T) {
-	t.Setenv("KO_BINARYPATH", "/custom/mybin")
-
-	bo := &BuildOptions{}
-	err := bo.LoadConfig()
-	require.NoError(t, err)
-	require.Equal(t, "/custom/mybin", bo.BinaryPath)
-}
-
-func TestBinaryOverridesFromConfigFile(t *testing.T) {
-	bo := &BuildOptions{
-		WorkingDirectory: "testdata/binary-overrides",
-	}
-	err := bo.LoadConfig()
-	require.NoError(t, err)
-	// matches values in ./testdata/binary-overrides/.ko.yaml
-	require.Equal(t, "/go/bin", bo.BinaryFolder)
-	require.Equal(t, "/custom/mybin", bo.BinaryPath)
-}

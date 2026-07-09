@@ -186,7 +186,8 @@ binaryFolder: /go/bin
 ```
 
 Use `binaryPath` to fully replace the default `/ko-app/<app-name>` with an
-absolute path, including both the folder and the binary name:
+absolute path, including both the folder and the binary name. If both
+`binaryFolder` and `binaryPath` are set, `binaryPath` takes precedence (`binaryFolder` is ignored):
 
 ```yaml
 binaryPath: /go/bin/myapp
@@ -199,10 +200,6 @@ variables, which override the YAML configuration:
 KO_BINARYFOLDER=/go/bin
 KO_BINARYPATH=/go/bin/myapp
 ```
-
-Parent folders are created automatically if they do not exist. If both
-`binaryFolder` and `binaryPath` are set, `ko` emits a warning and `binaryPath`
-takes precedence (`binaryFolder` is ignored).
 
 ### Environment Variables (advanced)
 

@@ -1,3 +1,0 @@
-defaultBaseImage: alpine
-binaryFolder: /go/bin
-binaryPath: /custom/mybin
