@@ -28,7 +28,7 @@ jobs:
       with:
         persist-credentials: false
 
-    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
         go-version-file: 'go.mod'
         check-latest: true
@@ -37,7 +37,7 @@ jobs:
       run: go install ./
 
     - name: Setup Cluster
-      uses: chainguard-dev/actions/setup-kind@f0be69916b439d0fcced2451b23d0f27cd46d545 # main
+      uses: chainguard-dev/actions/setup-kind@4d37df0d85a91f619edc34a8803323033cdcb124 # main
       with:
         registry-authority: ${{ env.REGISTRY_NAME }}:${{ env.REGISTRY_PORT }}
 
@@ -71,4 +71,4 @@ jobs:
 
     - name: Collect diagnostics and upload
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@f0be69916b439d0fcced2451b23d0f27cd46d545 # main
+      uses: chainguard-dev/actions/kind-diag@4d37df0d85a91f619edc34a8803323033cdcb124 # main

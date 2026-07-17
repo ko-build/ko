@@ -20,12 +20,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: 'go.mod'
           check-latest: true
 
-      - uses: chainguard-dev/actions/gofmt@f0be69916b439d0fcced2451b23d0f27cd46d545
+      - uses: chainguard-dev/actions/gofmt@4d37df0d85a91f619edc34a8803323033cdcb124
         with:
           args: -s
 
@@ -41,12 +41,12 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: 'go.mod'
           check-latest: true
 
-      - uses: chainguard-dev/actions/goimports@f0be69916b439d0fcced2451b23d0f27cd46d545
+      - uses: chainguard-dev/actions/goimports@4d37df0d85a91f619edc34a8803323033cdcb124
 
   lint:
     name: Lint
@@ -62,15 +62,15 @@ jobs:
           persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: 'go.mod'
           check-latest: true
 
-      - uses: chainguard-dev/actions/trailing-space@f0be69916b439d0fcced2451b23d0f27cd46d545
+      - uses: chainguard-dev/actions/trailing-space@4d37df0d85a91f619edc34a8803323033cdcb124
         if: ${{ always() }}
 
-      - uses: chainguard-dev/actions/eof-newline@f0be69916b439d0fcced2451b23d0f27cd46d545
+      - uses: chainguard-dev/actions/eof-newline@4d37df0d85a91f619edc34a8803323033cdcb124
         if: ${{ always() }}
 
       - uses: reviewdog/action-misspell@d6429416b12b09b4e2768307d53bef58d172e962 # v1.27.0
