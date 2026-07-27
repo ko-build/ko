@@ -25,7 +25,7 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
-      - uses: chainguard-dev/actions/gofmt@fabe4ed3f66ceb5f8ec86ed7ae6d0c945ca362fb
+      - uses: chainguard-dev/actions/gofmt@b2555de0cf9724fb9b49d050ff18bd1f49562ba7
         with:
           args: -s
 
@@ -46,7 +46,7 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
-      - uses: chainguard-dev/actions/goimports@fabe4ed3f66ceb5f8ec86ed7ae6d0c945ca362fb
+      - uses: chainguard-dev/actions/goimports@b2555de0cf9724fb9b49d050ff18bd1f49562ba7
 
   lint:
     name: Lint
@@ -67,10 +67,10 @@ jobs:
           go-version-file: 'go.mod'
           check-latest: true
 
-      - uses: chainguard-dev/actions/trailing-space@fabe4ed3f66ceb5f8ec86ed7ae6d0c945ca362fb
+      - uses: chainguard-dev/actions/trailing-space@b2555de0cf9724fb9b49d050ff18bd1f49562ba7
         if: ${{ always() }}
 
-      - uses: chainguard-dev/actions/eof-newline@fabe4ed3f66ceb5f8ec86ed7ae6d0c945ca362fb
+      - uses: chainguard-dev/actions/eof-newline@b2555de0cf9724fb9b49d050ff18bd1f49562ba7
         if: ${{ always() }}
 
       - uses: reviewdog/action-misspell@d6429416b12b09b4e2768307d53bef58d172e962 # v1.27.0
