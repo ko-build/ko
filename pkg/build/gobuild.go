@@ -100,6 +100,8 @@ type gobuild struct {
 	defaultFlags         []string
 	defaultLdflags       []string
 	ldflags              []string
+	binaryFolder         string
+	binaryPath           string
 	platformMatcher      *platformMatcher
 	dir                  string
 	labels               map[string]string
@@ -129,6 +131,8 @@ type gobuildOpener struct {
 	defaultFlags         []string
 	defaultLdflags       []string
 	ldflags              []string
+	binaryFolder         string
+	binaryPath           string
 	platforms            []string
 	labels               map[string]string
 	annotations          map[string]string
@@ -168,6 +172,8 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		defaultFlags:         gbo.defaultFlags,
 		defaultLdflags:       gbo.defaultLdflags,
 		ldflags:              gbo.ldflags,
+		binaryFolder:         gbo.binaryFolder,
+		binaryPath:           gbo.binaryPath,
 		labels:               gbo.labels,
 		annotations:          gbo.annotations,
 		dir:                  gbo.dir,
@@ -616,6 +622,22 @@ func appFilename(importpath string) string {
 // owner: BUILTIN/Users group: BUILTIN/Users ($sddlValue="O:BUG:BU")
 const userOwnerAndGroupSID = "AQAAgBQAAAAkAAAAAAAAAAAAAAABAgAAAAAABSAAAAAhAgAAAQIAAAAAAAUgAAAAIQIAAA=="
 
+func parentDirs(name string) []string {
+	// filepath.Clean normalizes the path; splitting on the separator leaves an
+	// empty first element for absolute paths (leading separator), which we skip.
+	components := strings.Split(filepath.Clean(name), string(os.PathSeparator))
+	dirs := make([]string, 0, len(components))
+	acc := ""
+	for _, c := range components[:len(components)-1] { // drop the file itself
+		if c == "" {
+			continue
+		}
+		acc = path.Join(acc, c)
+		dirs = append(dirs, acc)
+	}
+	return dirs
+}
+
 func tarBinary(name, binary string, platform *v1.Platform, opts *layerOptions) (*bytes.Buffer, error) {
 	buf := bytes.NewBuffer(nil)
 	tw := tar.NewWriter(buf)
@@ -624,8 +646,9 @@ func tarBinary(name, binary string, platform *v1.Platform, opts *layerOptions) (
 	// Write the parent directories to the tarball archive.
 	// For Windows, the layer must contain a Hives/ directory, and the root
 	// of the actual filesystem goes in a Files/ directory.
-	// For Linux, the binary goes into /ko-app/
-	dirs := []string{"ko-app"}
+	// For Linux, the binary's parent directories are derived from its (possibly
+	// overridden) path so that arbitrary folders are created.
+	dirs := parentDirs(name)
 	if platform.OS == "windows" {
 		dirs = []string{
 			"Hives",
@@ -1209,9 +1232,24 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		},
 	})
 
-	appDir := "/ko-app"
 	appFileName := appFilename(ref.Path())
-	appPath := path.Join(appDir, appFileName)
+	var appDir, appPath string
+
+	if g.binaryFolder != "" && g.binaryPath != "" {
+		log.Printf("both binaryFolder (%q) and binaryPath (%q) are set; binaryPath takes precedence", g.binaryFolder, g.binaryPath)
+	}
+	switch {
+	case g.binaryPath != "":
+		appPath = g.binaryPath
+		appDir = path.Dir(appPath)
+		appFileName = path.Base(appPath)
+	case g.binaryFolder != "":
+		appDir = g.binaryFolder
+		appPath = path.Join(appDir, appFileName)
+	default:
+		appDir = "/ko-app"
+		appPath = path.Join(appDir, appFileName)
+	}
 
 	var lo layerOptions
 	lo.linuxCapabilities, err = caps.NewFileCaps(config.LinuxCapabilities...)
