@@ -32,6 +32,7 @@ import (
 var (
 	f    = flag.String("f", "kenobi", "File in kodata to print")
 	wait = flag.Bool("wait", false, "Whether to wait for SIGTERM")
+	noTz = flag.Bool("no-tz", false, "Skip timezone loading. Useful for distroless baseimages which will never have tzdata available")
 )
 
 // This is defined so we can test build-time variable setting using ldflags.
@@ -42,7 +43,9 @@ func main() {
 
 	log.Println("version =", version)
 
-	if runtime.GOOS == "windows" {
+	if *noTz {
+		log.Println("skipping timezone conversion because --no-tz is set")
+	} else if runtime.GOOS == "windows" {
 		// Go seems to not load location data from Windows, so timezone
 		// conversion fails unless tzdata is embedded in the Go program
 		// with the go build tag `timetzdata`. Since we want to test
