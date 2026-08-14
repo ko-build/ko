@@ -22,8 +22,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: "go.mod"
-          check-latest: true
+          go-version: 'stable'
 
       - name: Verify
         run: ./hack/presubmit.sh
@@ -42,8 +41,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: "go.mod"
-          check-latest: true
+          go-version: 'stable'
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.4.0

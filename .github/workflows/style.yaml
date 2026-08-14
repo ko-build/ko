@@ -22,8 +22,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: 'go.mod'
-          check-latest: true
+          go-version: 'stable'
 
       - uses: chainguard-dev/actions/gofmt@bed8050123fff65538e2db1902ff9404030c0221
         with:
@@ -43,8 +42,7 @@ jobs:
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: 'go.mod'
-          check-latest: true
+          go-version: 'stable'
 
       - uses: chainguard-dev/actions/goimports@bed8050123fff65538e2db1902ff9404030c0221
 
@@ -64,8 +62,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
-          go-version-file: 'go.mod'
-          check-latest: true
+          go-version: 'stable'
 
       - uses: chainguard-dev/actions/trailing-space@bed8050123fff65538e2db1902ff9404030c0221
         if: ${{ always() }}
