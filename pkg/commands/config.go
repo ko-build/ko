@@ -112,7 +112,7 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 
 		// For ko.local, look in the daemon.
 		if ref.Context().RegistryStr() == publish.LocalDomain {
-			result, err = daemon.Image(ref)
+			result, err = daemon.Image(ref, daemon.WithContext(ctx))
 			if err != nil {
 				return nil, nil, fmt.Errorf("loading %s from daemon: %w", ref, err)
 			}
