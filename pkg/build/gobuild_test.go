@@ -1109,6 +1109,40 @@ func TestGoBuild_Defaults(t *testing.T) {
 	require.Equal(t, "bar", envVars["BAR"])
 }
 
+func TestGoBuild_CLILdflagsOverrideConfig(t *testing.T) {
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	var buildCtx buildContext
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(func(_ context.Context, b buildContext) (string, error) {
+			buildCtx = b
+			return "", errors.New("fake build error")
+		}),
+		withSBOMber(fauxSBOM),
+		WithPlatforms("all"),
+		WithDefaultLdflags([]string{"-s"}),
+		WithLdflags([]string{"-X=main.version=cli"}),
+		WithConfig(map[string]Config{
+			"github.com/google/ko/test": {
+				Ldflags: StringArray{"-w"},
+			},
+		}),
+	)
+	require.NoError(t, err)
+
+	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join(importpath, "test"))
+	require.ErrorContains(t, err, "fake build error")
+	require.Equal(t, []string{"-X=main.version=cli"}, buildCtx.ldflags)
+}
+
 func TestGoBuild_ConfigOverrideDefaults(t *testing.T) {
 	baseLayers := int64(3)
 	base, err := random.Image(1024, baseLayers)
@@ -1716,7 +1750,7 @@ func TestWalkRecursiveSymlinkTraversal(t *testing.T) {
 	err = walkRecursive(tw, kodataDir, "/var/run/ko", absKodataRoot, creationTime, platform)
 	if err == nil {
 		t.Error("walkRecursive: expected error for symlink escaping kodata root, got nil")
-	} else if !strings.Contains(err.Error(), "outside the kodata root") {
+	} else if !strings.Contains(err.Error(), "outside the allowed root") {
 		t.Errorf("walkRecursive: unexpected error message: %v", err)
 	}
 }
@@ -1785,5 +1819,163 @@ func TestWalkRecursiveSymlinkWithinKodata(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("expected %q in tar archive, not found", wantPath)
+	}
+}
+
+// TestWalkRecursiveSymlinkWithinAllowedRoot verifies that a symlink in kodata
+// pointing outside the kodata directory but still inside the widened allowed
+// root (e.g. a top-level LICENSE in the project) is followed correctly.
+func TestWalkRecursiveSymlinkWithinAllowedRoot(t *testing.T) {
+	// repoDir is the widened allowed root; kodata lives beneath it.
+	repoDir := t.TempDir()
+	kodataDir := filepath.Join(repoDir, "cmd", "app", "kodata")
+	if err := os.MkdirAll(kodataDir, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// A file inside the repo but outside kodata (the case evankanderson raised).
+	licenseFile := filepath.Join(repoDir, "LICENSE")
+	if err := os.WriteFile(licenseFile, []byte("license"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Symlink inside kodata pointing at the in-repo, out-of-kodata file.
+	link := filepath.Join(kodataDir, "LICENSE")
+	if err := os.Symlink(licenseFile, link); err != nil {
+		if runtime.GOOS == "windows" {
+			t.Skipf("skipping symlink within-allowed-root test on Windows: %v", err)
+		}
+		t.Fatal(err)
+	}
+
+	resolvedRepo, err := filepath.EvalSymlinks(repoDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	absAllowedRoot, err := filepath.Abs(resolvedRepo)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var buf bytes.Buffer
+	tw := tar.NewWriter(&buf)
+	defer tw.Close()
+	platform := &v1.Platform{OS: "linux", Architecture: "amd64"}
+	creationTime := v1.Time{}
+
+	if err := walkRecursive(tw, kodataDir, "/var/run/ko", absAllowedRoot, creationTime, platform); err != nil {
+		t.Fatalf("walkRecursive: unexpected error for in-repo symlink: %v", err)
+	}
+	tw.Close()
+
+	wantPath := path.Join("/var/run/ko", "LICENSE")
+	found := false
+	tr := tar.NewReader(&buf)
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		if err != nil {
+			t.Fatalf("tar.Reader.Next(): %v", err)
+		}
+		if hdr.Name != wantPath {
+			continue
+		}
+		found = true
+		body, err := io.ReadAll(tr)
+		if err != nil {
+			t.Fatalf("io.ReadAll: %v", err)
+		}
+		if got, want := string(body), "license"; got != want {
+			t.Errorf("LICENSE content = %q, want %q", got, want)
+		}
+	}
+	if !found {
+		t.Errorf("expected %q in tar archive, not found", wantPath)
+	}
+}
+
+// TestResolveKodataAllowedRoot verifies the boundary is widened to an ancestor
+// candidate (env override) but never narrowed below the kodata root.
+func TestResolveKodataAllowedRoot(t *testing.T) {
+	base := t.TempDir()
+	resolvedBase, err := filepath.EvalSymlinks(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kodataRoot := filepath.Join(resolvedBase, "cmd", "app", "kodata")
+	if err := os.MkdirAll(kodataRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	// An ancestor directory that does not contain kodata (non-ancestor case).
+	unrelated := t.TempDir()
+
+	tests := []struct {
+		name string
+		env  string
+		want string
+	}{
+		{name: "no override falls back to kodata root", env: "", want: kodataRoot},
+		{name: "ancestor override widens boundary", env: resolvedBase, want: resolvedBase},
+		{name: "non-ancestor override ignored", env: unrelated, want: kodataRoot},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("KO_DATA_PATH_ALLOWED_ROOT", tc.env)
+			got := resolveKodataAllowedRoot(kodataRoot)
+			if got != tc.want {
+				t.Errorf("resolveKodataAllowedRoot(%q) = %q, want %q", kodataRoot, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestWithinRoot covers the containment check, including a root that already
+// ends in a path separator (a filesystem root such as "/"), which must not
+// produce a double-separator prefix that spuriously rejects a valid path.
+func TestWithinRoot(t *testing.T) {
+	sep := string(filepath.Separator)
+	tests := []struct {
+		name string
+		p    string
+		root string
+		want bool
+	}{
+		{name: "equal", p: filepath.Join(sep, "a", "b"), root: filepath.Join(sep, "a", "b"), want: true},
+		{name: "child", p: filepath.Join(sep, "a", "b", "c"), root: filepath.Join(sep, "a", "b"), want: true},
+		{name: "sibling rejected", p: filepath.Join(sep, "a", "bc"), root: filepath.Join(sep, "a", "b"), want: false},
+		{name: "escape rejected", p: filepath.Join(sep, "etc", "passwd"), root: filepath.Join(sep, "home", "user", "repo"), want: false},
+		{name: "root with trailing sep does not double up", p: filepath.Join(sep, "etc", "passwd"), root: sep, want: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := withinRoot(tc.p, tc.root); got != tc.want {
+				t.Errorf("withinRoot(%q, %q) = %v, want %v", tc.p, tc.root, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestResolveKodataAllowedRootGitWorktree verifies that, with no env override,
+// the allowed root is widened to the enclosing git worktree (detected by a .git
+// entry, without shelling out to git).
+func TestResolveKodataAllowedRootGitWorktree(t *testing.T) {
+	t.Setenv("KO_DATA_PATH_ALLOWED_ROOT", "")
+	base := t.TempDir()
+	resolvedBase, err := filepath.EvalSymlinks(base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(resolvedBase, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	kodataRoot := filepath.Join(resolvedBase, "cmd", "app", "kodata")
+	if err := os.MkdirAll(kodataRoot, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if got := resolveKodataAllowedRoot(kodataRoot); got != resolvedBase {
+		t.Errorf("resolveKodataAllowedRoot(%q) = %q, want git worktree root %q", kodataRoot, got, resolvedBase)
 	}
 }

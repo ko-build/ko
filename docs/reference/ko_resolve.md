@@ -50,6 +50,7 @@ ko resolve -f FILENAME [flags]
       --image-user string          The default user the image should be run as.
       --insecure-registry          Whether to skip TLS verification on the registry
   -j, --jobs int                   The maximum number of concurrent builds (default GOMAXPROCS)
+      --ldflags strings            ldflags to pass to go build (may be repeated)
   -L, --local                      Load into images to local docker daemon.
       --oci-layout-path string     Path to save the OCI image layout of the built images
       --platform strings           Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*

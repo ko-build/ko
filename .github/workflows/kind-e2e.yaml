@@ -13,31 +13,30 @@ jobs:
     name: e2e tests
     runs-on: ubuntu-latest
     env:
-      # https://github.com/google/go-containerregistry/pull/125 allows insecure registry for
-      # '*.local' hostnames. This works both for `ko` and our own tag-to-digest resolution logic,
+      # go-containerregistry v0.21.7+ treats '*.localhost' hostnames as insecure (HTTP) registries.
+      # This works both for `ko` and our own tag-to-digest resolution logic,
       # thus allowing us to test without bypassing tag-to-digest resolution.
-      REGISTRY_NAME: registry.local
+      REGISTRY_NAME: registry.localhost
       REGISTRY_PORT: 5000
-      KO_DOCKER_REPO: registry.local:5000/ko
+      KO_DOCKER_REPO: registry.localhost:5000/ko
 
     permissions:
       contents: read
 
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         persist-credentials: false
 
-    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
-        go-version-file: 'go.mod'
-        check-latest: true
+        go-version: 'stable'
 
     - name: Install ko
       run: go install ./
 
     - name: Setup Cluster
-      uses: chainguard-dev/actions/setup-kind@79bd291c02ef97a833226e8da2cefaa775874fd2 # main
+      uses: chainguard-dev/actions/setup-kind@bed8050123fff65538e2db1902ff9404030c0221 # main
       with:
         registry-authority: ${{ env.REGISTRY_NAME }}:${{ env.REGISTRY_PORT }}
 
@@ -71,4 +70,4 @@ jobs:
 
     - name: Collect diagnostics and upload
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@79bd291c02ef97a833226e8da2cefaa775874fd2 # main
+      uses: chainguard-dev/actions/kind-diag@bed8050123fff65538e2db1902ff9404030c0221 # main

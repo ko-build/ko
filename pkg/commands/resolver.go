@@ -98,6 +98,9 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	if kodataCreationTime != nil {
 		opts = append(opts, build.WithKoDataCreationTime(*kodataCreationTime))
 	}
+	if len(bo.Ldflags) > 0 {
+		opts = append(opts, build.WithLdflags(bo.Ldflags))
+	}
 	if bo.DisableOptimizations {
 		opts = append(opts, build.WithDisabledOptimizations())
 	}
@@ -465,6 +468,13 @@ func resolveFile(
 
 	if err := resolve.ImageReferences(ctx, docNodes, builder, pub); err != nil {
 		return nil, fmt.Errorf("error resolving image references: %w", err)
+	}
+
+	// If the selector filtered out all documents, skip encoding entirely.
+	// Calling Close() on an encoder that never wrote anything causes
+	// go.yaml.in/yaml/v4 to return "yaml: expected STREAM-START".
+	if len(docNodes) == 0 {
+		return []byte{}, nil
 	}
 
 	buf := &bytes.Buffer{}

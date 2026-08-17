@@ -148,6 +148,20 @@ func TestCreateBuildConfigs(t *testing.T) {
 	}
 }
 
+func TestLdflagsFlag(t *testing.T) {
+	cmd := &cobra.Command{}
+	bo := &BuildOptions{}
+	AddBuildOptions(cmd, bo)
+
+	err := cmd.ParseFlags([]string{
+		"--ldflags", "-X=main.version=1.2.3",
+		"--ldflags", "-s",
+		"--ldflags", "-w",
+	})
+	require.NoError(t, err)
+	require.Equal(t, []string{"-X=main.version=1.2.3", "-s", "-w"}, bo.Ldflags)
+}
+
 func TestAddBuildOptionsSetsDefaultsForNonFlagOptions(t *testing.T) {
 	cmd := &cobra.Command{}
 	bo := &BuildOptions{}
