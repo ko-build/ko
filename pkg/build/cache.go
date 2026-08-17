@@ -208,7 +208,7 @@ func getBuildID(ctx context.Context, file string) (string, error) {
 	cmd.Stdout = &output
 
 	if err := cmd.Run(); err != nil {
-		log.Printf("Unexpected error running \"go tool buildid %s\": %v\n%v", err, file, output.String())
+		log.Printf("Unexpected error running \"go tool buildid %s\": %v\n%v", file, err, output.String())
 		return "", fmt.Errorf("go tool buildid %s: %w", file, err)
 	}
 	return strings.TrimSpace(output.String()), nil

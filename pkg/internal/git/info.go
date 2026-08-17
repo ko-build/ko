@@ -82,7 +82,11 @@ func GetInfo(ctx context.Context, dir string) (Info, error) {
 		return Info{}, ErrNoGit
 	}
 
-	if !isRepo(ctx, dir) {
+	ok, err := isRepo(ctx, dir)
+	if err != nil {
+		return Info{}, err
+	}
+	if !ok {
 		return Info{}, ErrNotRepository
 	}
 
@@ -129,12 +133,18 @@ func GetInfo(ctx context.Context, dir string) (Info, error) {
 }
 
 // isRepo returns true if current folder is a git repository.
-func isRepo(ctx context.Context, dir string) bool {
+func isRepo(ctx context.Context, dir string) (bool, error) {
 	out, err := run(ctx, runConfig{
 		dir:  dir,
 		args: []string{"rev-parse", "--is-inside-work-tree"},
 	})
-	return err == nil && strings.TrimSpace(out) == "true"
+	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return false, err
+		}
+		return false, nil
+	}
+	return strings.TrimSpace(out) == "true", nil
 }
 
 // checkDirty returns an error if the current git repository is dirty.
@@ -143,7 +153,13 @@ func checkDirty(ctx context.Context, dir string) error {
 		dir:  dir,
 		args: []string{"status", "--porcelain"},
 	})
-	if strings.TrimSpace(out) != "" || err != nil {
+	if err != nil {
+		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			return err
+		}
+		return ErrDirty{status: out}
+	}
+	if strings.TrimSpace(out) != "" {
 		return ErrDirty{status: out}
 	}
 	return nil

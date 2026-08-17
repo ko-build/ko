@@ -49,6 +49,15 @@ import (
 
 const fakeGitURL = "git@github.com:foo/bar.git"
 
+func TestGetInfoCanceledContext(t *testing.T) {
+	dir := t.TempDir()
+	gittesting.GitInit(t, dir)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := git.GetInfo(ctx, dir)
+	require.ErrorIs(t, err, context.Canceled)
+}
+
 func TestNotAGitFolder(t *testing.T) {
 	dir := t.TempDir()
 	i, err := git.GetInfo(context.TODO(), dir)

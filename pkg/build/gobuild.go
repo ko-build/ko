@@ -1499,7 +1499,10 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 
 	annotations := maps.Clone(g.annotations)
 	annotations[specsv1.AnnotationBaseImageName] = baseRef.Name()
-	baseDigest, _ := baseIndex.Digest()
+	baseDigest, err := baseIndex.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("digesting base image index: %w", err)
+	}
 	annotations[specsv1.AnnotationBaseImageDigest] = baseDigest.String()
 
 	// Build an image for each matching platform from the base and append

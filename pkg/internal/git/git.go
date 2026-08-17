@@ -39,7 +39,7 @@ package git
 import (
 	"bytes"
 	"context"
-	"errors"
+	"fmt"
 	"os/exec"
 	"strings"
 )
@@ -69,7 +69,11 @@ func run(ctx context.Context, cfg runConfig) (string, error) {
 	err := cmd.Run()
 
 	if err != nil {
-		return "", errors.New(stderr.String())
+		msg := strings.TrimSpace(stderr.String())
+		if msg == "" {
+			return "", err
+		}
+		return "", fmt.Errorf("%w: %s", err, msg)
 	}
 
 	return stdout.String(), nil
@@ -78,9 +82,6 @@ func run(ctx context.Context, cfg runConfig) (string, error) {
 // clean the output.
 func clean(output string, err error) (string, error) {
 	output = strings.ReplaceAll(strings.Split(output, "\n")[0], "'", "")
-	if err != nil {
-		err = errors.New(strings.TrimSuffix(err.Error(), "\n"))
-	}
 	return output, err
 }
 
@@ -93,10 +94,6 @@ func cleanAllLines(output string, err error) ([]string, error) {
 			continue
 		}
 		result = append(result, l)
-	}
-	// TODO: maybe check for exec.ExitError only?
-	if err != nil {
-		err = errors.New(strings.TrimSuffix(err.Error(), "\n"))
 	}
 	return result, err
 }
