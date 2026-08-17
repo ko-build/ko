@@ -55,7 +55,7 @@ func addBuild(topLevel *cobra.Command) {
   #   ko.local/<import path>
   # This always preserves import paths.
   ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			if err := options.Validate(po, bo); err != nil {
 				return fmt.Errorf("validating options: %w", err)
 			}
@@ -76,7 +76,9 @@ func addBuild(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
-			defer publisher.Close()
+			defer func() {
+				err = closePublisher(publisher, err)
+			}()
 			images, err := publishImages(ctx, args, publisher, builder)
 			if err != nil {
 				return fmt.Errorf("failed to publish images: %w", err)

@@ -28,6 +28,18 @@ func PublishImages(ctx context.Context, importpaths []string, pub publish.Interf
 	return publishImages(ctx, importpaths, pub, b)
 }
 
+// closePublisher always closes p and returns err, unless Close fails and err
+// is nil, in which case the Close error is returned.
+func closePublisher(p publish.Interface, err error) error {
+	if p == nil {
+		return err
+	}
+	if cerr := p.Close(); cerr != nil && err == nil {
+		return cerr
+	}
+	return err
+}
+
 func publishImages(ctx context.Context, importpaths []string, pub publish.Interface, b build.Interface) (map[string]name.Reference, error) {
 	imgs := make(map[string]name.Reference)
 	for _, importpath := range importpaths {

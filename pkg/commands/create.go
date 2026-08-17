@@ -62,7 +62,7 @@ func addCreate(topLevel *cobra.Command) {
   # Any flags passed after '--' are passed to 'kubectl apply' directly:
   ko apply -f config -- --namespace=foo --kubeconfig=cfg.yaml
 `,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			if err := options.Validate(po, bo); err != nil {
 				return fmt.Errorf("validating options: %w", err)
 			}
@@ -81,7 +81,9 @@ func addCreate(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
-			defer publisher.Close()
+			defer func() {
+				err = closePublisher(publisher, err)
+			}()
 
 			// Issue a "kubectl create" command reading from stdin,
 			// to which we will pipe the resolved files, and any

@@ -16,6 +16,7 @@ package publish
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path"
 	"strings"
@@ -103,5 +104,74 @@ func TestRecorder(t *testing.T) {
 		if want, got := repo.Context().String(), ref.Context().String(); want != got {
 			t.Errorf("reference repo = %v, wanted %v", got, want)
 		}
+	}
+}
+
+type closeTracker struct {
+	ioWriteCloser
+	closed bool
+}
+
+type ioWriteCloser interface {
+	Write([]byte) (int, error)
+	Close() error
+}
+
+func (c *closeTracker) Close() error {
+	c.closed = true
+	return c.ioWriteCloser.Close()
+}
+
+type closeErrPublish struct {
+	cbPublish
+	closeErr error
+}
+
+func (c *closeErrPublish) Close() error {
+	return c.closeErr
+}
+
+func TestRecorderCloseClosesFileWhenInnerFails(t *testing.T) {
+	repo := name.MustParseReference("docker.io/ubuntu:latest")
+	innerErr := errors.New("inner close failed")
+	inner := &closeErrPublish{
+		cbPublish: cbPublish{cb: func(_ context.Context, b build.Result, _ string) (name.Reference, error) {
+			h, err := b.Digest()
+			if err != nil {
+				return nil, err
+			}
+			return repo.Context().Digest(h.String()), nil
+		}},
+		closeErr: innerErr,
+	}
+
+	dir := t.TempDir()
+	file := path.Join(dir, "testfile")
+	recI, err := NewRecorder(inner, file)
+	if err != nil {
+		t.Fatalf("NewRecorder() = %v", err)
+	}
+	rec := recI.(*recorder)
+
+	img, err := random.Image(3, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	if _, err := rec.Publish(context.Background(), signed.Image(img), ""); err != nil {
+		t.Fatalf("recorder.Publish() = %v", err)
+	}
+
+	ct := &closeTracker{ioWriteCloser: rec.wc.(interface {
+		Write([]byte) (int, error)
+		Close() error
+	})}
+	rec.wc = ct
+
+	err = rec.Close()
+	if !errors.Is(err, innerErr) {
+		t.Fatalf("Close() = %v, want %v", err, innerErr)
+	}
+	if !ct.closed {
+		t.Fatal("recorder file was not closed when inner Close failed")
 	}
 }

@@ -48,7 +48,7 @@ func addRun(topLevel *cobra.Command) {
 
   # You can also supply args and flags to the command.
   ko run ./cmd/baz -- -v arg1 arg2 --yes`,
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) (err error) {
 			if err := options.Validate(po, bo); err != nil {
 				return fmt.Errorf("validating options: %w", err)
 			}
@@ -80,7 +80,9 @@ func addRun(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
-			defer publisher.Close()
+			defer func() {
+				err = closePublisher(publisher, err)
+			}()
 
 			if len(os.Args) < 3 {
 				return fmt.Errorf("usage: %s run <package>", os.Args[0])

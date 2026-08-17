@@ -26,6 +26,7 @@ import (
 	"path"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -361,6 +362,78 @@ func mustRandom() v1.Image {
 		panic(err)
 	}
 	return img
+}
+
+type errWriteCloser struct {
+	writeErr error
+	closeErr error
+	closed   bool
+}
+
+func (e *errWriteCloser) Write([]byte) (int, error) { return 0, e.writeErr }
+func (e *errWriteCloser) Close() error {
+	e.closed = true
+	return e.closeErr
+}
+
+func TestResolveFilesToWriterReturnsWriteError(t *testing.T) {
+	cache, err := build.NewCaching(testBuilder)
+	if err != nil {
+		t.Fatalf("NewCaching() = %v", err)
+	}
+	tmp := yamlToTmpFile(t, []byte(build.StrictScheme+fooRef+"\n"))
+	t.Cleanup(func() { os.Remove(tmp) })
+
+	writeErr := errors.New("write failed")
+	out := &errWriteCloser{writeErr: writeErr}
+	base := mustRepository("gcr.io/write-err")
+	err = ResolveFilesToWriter(
+		context.Background(),
+		cache,
+		kotesting.NewFixedPublish(base, testHashes),
+		&options.FilenameOptions{Filenames: []string{tmp}},
+		&options.SelectorOptions{},
+		out,
+	)
+	if !errors.Is(err, writeErr) {
+		t.Fatalf("ResolveFilesToWriter() = %v, want %v", err, writeErr)
+	}
+}
+
+func TestResolveFilesToWriterReturnsWriteErrorWithMultipleFiles(t *testing.T) {
+	cache, err := build.NewCaching(testBuilder)
+	if err != nil {
+		t.Fatalf("NewCaching() = %v", err)
+	}
+	tmp1 := yamlToTmpFile(t, []byte(build.StrictScheme+fooRef+"\n"))
+	tmp2 := yamlToTmpFile(t, []byte(build.StrictScheme+barRef+"\n"))
+	t.Cleanup(func() {
+		os.Remove(tmp1)
+		os.Remove(tmp2)
+	})
+
+	writeErr := errors.New("write failed")
+	out := &errWriteCloser{writeErr: writeErr}
+	base := mustRepository("gcr.io/write-err-multi")
+	done := make(chan error, 1)
+	go func() {
+		done <- ResolveFilesToWriter(
+			context.Background(),
+			cache,
+			kotesting.NewFixedPublish(base, testHashes),
+			&options.FilenameOptions{Filenames: []string{tmp1, tmp2}},
+			&options.SelectorOptions{},
+			out,
+		)
+	}()
+	select {
+	case err := <-done:
+		if !errors.Is(err, writeErr) {
+			t.Fatalf("ResolveFilesToWriter() = %v, want %v", err, writeErr)
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("ResolveFilesToWriter hung after a write error with multiple files")
+	}
 }
 
 func yamlToTmpFile(t *testing.T, yaml []byte) string {

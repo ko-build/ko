@@ -16,6 +16,7 @@ package publish
 
 import (
 	"context"
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -88,11 +89,9 @@ func (r *recorder) Publish(ctx context.Context, br build.Result, ref string) (na
 
 // Close implements Interface
 func (r *recorder) Close() error {
-	if err := r.inner.Close(); err != nil {
-		return err
-	}
+	var closeErr error
 	if c, ok := r.wc.(io.Closer); ok {
-		return c.Close()
+		closeErr = c.Close()
 	}
-	return nil
+	return errors.Join(r.inner.Close(), closeErr)
 }

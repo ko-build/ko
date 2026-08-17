@@ -16,15 +16,58 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/publish"
 )
+
+type closeErrPublisher struct {
+	closeErr error
+	closed   bool
+}
+
+func (c *closeErrPublisher) Publish(context.Context, build.Result, string) (name.Reference, error) {
+	return nil, nil
+}
+
+func (c *closeErrPublisher) Close() error {
+	c.closed = true
+	return c.closeErr
+}
+
+var _ publish.Interface = (*closeErrPublisher)(nil)
+
+func TestClosePublisher(t *testing.T) {
+	closeErr := errors.New("close failed")
+	workErr := errors.New("publish failed")
+
+	t.Run("returns close error when work succeeded", func(t *testing.T) {
+		p := &closeErrPublisher{closeErr: closeErr}
+		if err := closePublisher(p, nil); !errors.Is(err, closeErr) {
+			t.Fatalf("closePublisher() = %v, want %v", err, closeErr)
+		}
+		if !p.closed {
+			t.Fatal("Close was not called")
+		}
+	})
+	t.Run("prefers work error over close error", func(t *testing.T) {
+		p := &closeErrPublisher{closeErr: closeErr}
+		if err := closePublisher(p, workErr); !errors.Is(err, workErr) {
+			t.Fatalf("closePublisher() = %v, want %v", err, workErr)
+		}
+		if !p.closed {
+			t.Fatal("Close was not called")
+		}
+	})
+}
 
 func TestPublishImages(t *testing.T) {
 	namespace := "base"

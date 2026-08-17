@@ -54,7 +54,7 @@ func addResolve(topLevel *cobra.Command) {
   # This always preserves import paths.
   ko resolve --local -f config/`,
 		Args: cobra.NoArgs,
-		RunE: func(cmd *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) (err error) {
 			if err := options.Validate(po, bo); err != nil {
 				return fmt.Errorf("validating options: %w", err)
 			}
@@ -70,7 +70,9 @@ func addResolve(topLevel *cobra.Command) {
 			if err != nil {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
-			defer publisher.Close()
+			defer func() {
+				err = closePublisher(publisher, err)
+			}()
 			return ResolveFilesToWriter(ctx, builder, publisher, fo, so, os.Stdout)
 		},
 	}

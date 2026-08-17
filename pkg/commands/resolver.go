@@ -326,8 +326,12 @@ func ResolveFilesToWriter(
 	publisher publish.Interface,
 	fo *options.FilenameOptions,
 	so *options.SelectorOptions,
-	out io.WriteCloser) error {
-	defer out.Close()
+	out io.WriteCloser) (err error) {
+	defer func() {
+		if cerr := out.Close(); cerr != nil && err == nil {
+			err = cerr
+		}
+	}()
 
 	// By having this as a channel, we can hook this up to a filesystem
 	// watcher and leave `fs` open to stream the names of yaml files
@@ -371,7 +375,9 @@ func ResolveFilesToWriter(
 
 			// Make a new future to use to ship the bytes back and append
 			// it to the list of futures (see comment below about ordering).
-			ch := make(resolvedFuture)
+			// Buffer one result so a send cannot block if the writer
+			// returns early (for example a broken pipe).
+			ch := make(resolvedFuture, 1)
 			futures = append(futures, ch)
 
 			// Kick off the resolution that will respond with its bytes on
@@ -405,7 +411,11 @@ func ResolveFilesToWriter(
 				// We write the delimiter LAST so that when streamed to
 				// kubectl it knows that the resource is complete and may
 				// be applied.
-				out.Write(append(b, []byte("\n---\n")...))
+				if _, err := out.Write(append(b, []byte("\n---\n")...)); err != nil {
+					// Still wait so in-flight builds are not leaked.
+					_ = errs.Wait()
+					return fmt.Errorf("writing resolved yaml: %w", err)
+				}
 			}
 		}
 	}
