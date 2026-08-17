@@ -65,7 +65,10 @@ func Write(ctx context.Context, tag name.Tag, img v1.Image) error {
 
 		grp := errgroup.Group{}
 		grp.Go(func() error {
-			return pw.CloseWithError(tarball.Write(tag, img, pw))
+			// CloseWithError always returns nil; return the Write error so Wait surfaces it.
+			err := tarball.Write(tag, img, pw)
+			pw.CloseWithError(err)
+			return err
 		})
 
 		var buf bytes.Buffer

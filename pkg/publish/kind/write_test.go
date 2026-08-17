@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"sigs.k8s.io/kind/pkg/cluster/nodes"
 	"sigs.k8s.io/kind/pkg/exec"
@@ -209,6 +210,28 @@ func TestWriteClosesPipeWhenImportFailsWithoutReadingStdin(t *testing.T) {
 	}
 }
 
+func TestWriteSurfacesTarballWriteError(t *testing.T) {
+	ctx := context.Background()
+	img, err := random.Image(1024, 1)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
+	newTag, err := name.NewTag("kind.local/test:new")
+	if err != nil {
+		t.Fatalf("name.NewTag() = %v", err)
+	}
+
+	errWrite := errors.New("tarball write failed")
+	GetProvider = func() provider {
+		return &fakeProvider{nodes: []nodes.Node{&fakeNode{}}}
+	}
+
+	if err := Write(ctx, newTag, failImage{Image: img, err: errWrite}); !errors.Is(err, errWrite) {
+		t.Fatalf("Write() = %v, want %v", err, errWrite)
+	}
+}
+
 // fakeProvider
 type fakeProvider struct {
 	nodes []nodes.Node
@@ -268,3 +291,13 @@ func (f *fakeCmd) SetStdin(stdin io.Reader) exec.Cmd {
 func (f *fakeCmd) SetEnv(...string) exec.Cmd    { return f }
 func (f *fakeCmd) SetStdout(io.Writer) exec.Cmd { return f }
 func (f *fakeCmd) SetStderr(io.Writer) exec.Cmd { return f }
+
+// failImage fails ConfigName so tarball.Write errors before producing a tarball.
+type failImage struct {
+	v1.Image
+	err error
+}
+
+func (f failImage) ConfigName() (v1.Hash, error) {
+	return v1.Hash{}, f.err
+}
