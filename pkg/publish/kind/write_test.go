@@ -21,6 +21,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/random"
@@ -160,6 +161,54 @@ func TestFailCommands(t *testing.T) {
 	}
 }
 
+func TestWriteClosesPipeWhenImportFailsWithoutReadingStdin(t *testing.T) {
+	ctx := context.Background()
+	// Large enough that tarball.Write fills the pipe if the importer never reads.
+	img, err := random.Image(1<<20, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
+	newTag, err := name.NewTag("kind.local/test:new")
+	if err != nil {
+		t.Fatalf("name.NewTag() = %v", err)
+	}
+
+	errTest := errors.New("import failed")
+	n1 := &fakeNode{err: errTest, skipStdin: true}
+	GetProvider = func() provider {
+		return &fakeProvider{nodes: []nodes.Node{n1}}
+	}
+
+	if err := Write(ctx, newTag, img); !errors.Is(err, errTest) {
+		t.Fatalf("Write() = %v, want %v", err, errTest)
+	}
+	if len(n1.cmds) != 1 || n1.cmds[0].stdin == nil {
+		t.Fatalf("expected import command with stdin, got %+v", n1.cmds)
+	}
+
+	// If Write returned without closing the pipe, the writer is still blocked
+	// and this Read either returns data or hangs. After the fix the pipe is
+	// closed and Read fails immediately.
+	type result struct {
+		n   int
+		err error
+	}
+	ch := make(chan result, 1)
+	go func() {
+		n, err := n1.cmds[0].stdin.Read(make([]byte, 1))
+		ch <- result{n, err}
+	}()
+	select {
+	case got := <-ch:
+		if got.n > 0 || got.err == nil {
+			t.Fatalf("stdin still open after failed import: n=%d err=%v", got.n, got.err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("stdin Read blocked after Write returned; pipe was not closed")
+	}
+}
+
 // fakeProvider
 type fakeProvider struct {
 	nodes []nodes.Node
@@ -170,14 +219,16 @@ func (f *fakeProvider) ListInternalNodes(string) ([]nodes.Node, error) {
 }
 
 type fakeNode struct {
-	cmds []*fakeCmd
-	err  error
+	cmds      []*fakeCmd
+	err       error
+	skipStdin bool
 }
 
 func (f *fakeNode) CommandContext(_ context.Context, cmd string, args ...string) exec.Cmd {
 	command := &fakeCmd{
-		cmd: strings.Join(append([]string{cmd}, args...), " "),
-		err: f.err,
+		cmd:       strings.Join(append([]string{cmd}, args...), " "),
+		err:       f.err,
+		skipStdin: f.skipStdin,
 	}
 	f.cmds = append(f.cmds, command)
 	return command
@@ -194,13 +245,14 @@ func (f *fakeNode) IP() (string, string, error)        { return "", "", nil }
 func (f *fakeNode) SerialLogs(io.Writer) error         { return nil }
 
 type fakeCmd struct {
-	cmd   string
-	err   error
-	stdin io.Reader
+	cmd       string
+	err       error
+	stdin     io.Reader
+	skipStdin bool
 }
 
 func (f *fakeCmd) Run() error {
-	if f.stdin != nil {
+	if f.stdin != nil && !f.skipStdin {
 		// Consume the entire stdin to move the image publish forward.
 		io.ReadAll(f.stdin)
 	}

@@ -72,12 +72,15 @@ func Write(ctx context.Context, tag name.Tag, img v1.Image) error {
 		cmd := n.CommandContext(ctx, "ctr", "--namespace=k8s.io", "images", "import", "--all-platforms", "-").SetStdin(pr)
 		cmd.SetStdout(&buf)
 		cmd.SetStderr(&buf)
-		if err := cmd.Run(); err != nil {
+		err := cmd.Run()
+		// Unblock tarball.Write if the importer stopped reading (failed or cancelled).
+		pr.Close()
+		waitErr := grp.Wait()
+		if err != nil {
 			return fmt.Errorf("failed to load image to node %q: %w\n%s", n, err, buf.String())
 		}
-
-		if err := grp.Wait(); err != nil {
-			return fmt.Errorf("failed to write intermediate tarball representation: %w", err)
+		if waitErr != nil {
+			return fmt.Errorf("failed to write intermediate tarball representation: %w", waitErr)
 		}
 
 		return nil
