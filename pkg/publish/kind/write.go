@@ -73,7 +73,7 @@ func Write(ctx context.Context, tag name.Tag, img v1.Image) error {
 		cmd.SetStdout(&buf)
 		cmd.SetStderr(&buf)
 		err := cmd.Run()
-		// Unblock tarball.Write if the importer stopped reading (failed or cancelled).
+		// Unblock tarball.Write if the importer stopped reading (failed or canceled).
 		pr.Close()
 		waitErr := grp.Wait()
 		if err != nil {
