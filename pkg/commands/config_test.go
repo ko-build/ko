@@ -16,6 +16,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
@@ -55,5 +56,17 @@ func TestOverrideDefaultBaseImageUsingBuildOption(t *testing.T) {
 	gotDigest := digest.String()
 	if gotDigest != wantDigest {
 		t.Errorf("got digest %s, wanted %s", gotDigest, wantDigest)
+	}
+}
+
+func TestGetBaseImageLocalHonorsCanceledContext(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	bo := &options.BuildOptions{
+		BaseImage: "ko.local/does-not-exist",
+	}
+	_, _, err := getBaseImage(bo)(ctx, "ko://example.com/helloworld")
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("getBaseImage() = %v, want context.Canceled", err)
 	}
 }
