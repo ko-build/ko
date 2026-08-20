@@ -24,7 +24,7 @@ jobs:
         with:
           go-version: 'stable'
 
-      - uses: chainguard-dev/actions/gofmt@bed8050123fff65538e2db1902ff9404030c0221
+      - uses: chainguard-dev/actions/gofmt@7bd1e94b2a1b7faa891392757de7d89489070c5c
         with:
           args: -s
 
@@ -44,7 +44,7 @@ jobs:
         with:
           go-version: 'stable'
 
-      - uses: chainguard-dev/actions/goimports@bed8050123fff65538e2db1902ff9404030c0221
+      - uses: chainguard-dev/actions/goimports@7bd1e94b2a1b7faa891392757de7d89489070c5c
 
   lint:
     name: Lint
@@ -64,10 +64,10 @@ jobs:
         with:
           go-version: 'stable'
 
-      - uses: chainguard-dev/actions/trailing-space@bed8050123fff65538e2db1902ff9404030c0221
+      - uses: chainguard-dev/actions/trailing-space@7bd1e94b2a1b7faa891392757de7d89489070c5c
         if: ${{ always() }}
 
-      - uses: chainguard-dev/actions/eof-newline@bed8050123fff65538e2db1902ff9404030c0221
+      - uses: chainguard-dev/actions/eof-newline@7bd1e94b2a1b7faa891392757de7d89489070c5c
         if: ${{ always() }}
 
       - uses: reviewdog/action-misspell@d6429416b12b09b4e2768307d53bef58d172e962 # v1.27.0

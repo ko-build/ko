@@ -19,4 +19,4 @@ jobs:
       with:
         persist-credentials: false
 
-    - uses: chainguard-dev/actions/donotsubmit@bed8050123fff65538e2db1902ff9404030c0221 # main
+    - uses: chainguard-dev/actions/donotsubmit@7bd1e94b2a1b7faa891392757de7d89489070c5c # main
