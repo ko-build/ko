@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"path"
 	"path/filepath"
@@ -1977,5 +1978,214 @@ func TestResolveKodataAllowedRootGitWorktree(t *testing.T) {
 	}
 	if got := resolveKodataAllowedRoot(kodataRoot); got != resolvedBase {
 		t.Errorf("resolveKodataAllowedRoot(%q) = %q, want git worktree root %q", kodataRoot, got, resolvedBase)
+	}
+}
+
+// TestParentDirs verifies the parentDirs helper returns the cumulative parent
+// directories of a POSIX file path as relative paths (no leading slash),
+// ordered shallowest-to-deepest so that parents are created before children.
+func TestParentDirs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   string
+		want []string
+	}{{
+		name: "default ko-app path",
+		in:   "/ko-app/ko",
+		want: []string{"ko-app"},
+	}, {
+		name: "nested folder override",
+		in:   "/go/bin/myapp",
+		want: []string{"go", "go/bin"},
+	}, {
+		name: "root-level file has no parent dirs",
+		in:   "/myapp",
+		want: []string{},
+	}, {
+		name: "no leading slash",
+		in:   "ko-app/ko",
+		want: []string{"ko-app"},
+	}, {
+		name: "deeply nested path",
+		in:   "/a/b/c/d",
+		want: []string{"a", "a/b", "a/b/c"},
+	}} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := parentDirs(tc.in)
+			if len(got) != len(tc.want) {
+				t.Fatalf("parentDirs(%q) = %v (len %d), want %v (len %d)", tc.in, got, len(got), tc.want, len(tc.want))
+			}
+			for i := range tc.want {
+				if got[i] != tc.want[i] {
+					t.Errorf("parentDirs(%q)[%d] = %q, want %q", tc.in, i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
+
+// buildImageForEntrypoint is a helper that builds a test image using the given
+// build options and returns the resulting image's entrypoint. It mirrors the
+// harness used by TestGoBuildNoKoData.
+func buildImageForEntrypoint(t *testing.T, importpath string, opts ...Option) []string {
+	t.Helper()
+
+	baseLayers := int64(3)
+	base, err := random.Image(1024, baseLayers)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	baseOpts := []Option{
+		WithCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
+		WithPlatforms("all"),
+	}
+	ng, err := NewGo(context.Background(), "", append(baseOpts, opts...)...)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	result, err := ng.Build(context.Background(), StrictScheme+importpath)
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	img, ok := result.(v1.Image)
+	if !ok {
+		t.Fatalf("Build() not an Image: %T", result)
+	}
+
+	cfg, err := img.ConfigFile()
+	if err != nil {
+		t.Fatalf("ConfigFile() = %v", err)
+	}
+	return cfg.Config.Entrypoint
+}
+
+// TestGoBuildBinaryPathOverrides verifies that WithBinaryFolder and
+// WithBinaryPath override the in-image entrypoint as documented, that
+// binaryPath wins when both are set, and that the default is unchanged.
+func TestGoBuildBinaryPathOverrides(t *testing.T) {
+	// importpath's base ("ko") is the derived app name.
+	const importpath = "github.com/google/ko"
+
+	t.Run("default is /ko-app/<app-name>", func(t *testing.T) {
+		entrypoint := buildImageForEntrypoint(t, importpath)
+		if got, want := len(entrypoint), 1; got != want {
+			t.Fatalf("len(entrypoint) = %v, want %v", got, want)
+		}
+		if got, want := entrypoint[0], "/ko-app/ko"; got != want {
+			t.Errorf("entrypoint = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("WithBinaryFolder keeps app name", func(t *testing.T) {
+		entrypoint := buildImageForEntrypoint(t, importpath, WithBinaryFolder("/go/bin"))
+		if got, want := len(entrypoint), 1; got != want {
+			t.Fatalf("len(entrypoint) = %v, want %v", got, want)
+		}
+		if got, want := entrypoint[0], "/go/bin/ko"; got != want {
+			t.Errorf("entrypoint = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("WithBinaryPath fully replaces path", func(t *testing.T) {
+		entrypoint := buildImageForEntrypoint(t, importpath, WithBinaryPath("/custom/location/mybinary"))
+		if got, want := len(entrypoint), 1; got != want {
+			t.Fatalf("len(entrypoint) = %v, want %v", got, want)
+		}
+		if got, want := entrypoint[0], "/custom/location/mybinary"; got != want {
+			t.Errorf("entrypoint = %v, want %v", got, want)
+		}
+	})
+
+	t.Run("binaryPath wins when both set", func(t *testing.T) {
+		entrypoint := buildImageForEntrypoint(t, importpath,
+			WithBinaryFolder("/go/bin"),
+			WithBinaryPath("/custom/location/mybinary"),
+		)
+		if got, want := len(entrypoint), 1; got != want {
+			t.Fatalf("len(entrypoint) = %v, want %v", got, want)
+		}
+		if got, want := entrypoint[0], "/custom/location/mybinary"; got != want {
+			t.Errorf("entrypoint = %v, want %v", got, want)
+		}
+	})
+}
+
+// TestTarBinaryParentDirs verifies that tarBinary writes tar directory headers
+// for all parent directories of the (possibly overridden) target path, so that
+// arbitrary folders (e.g. /go/bin) exist in the resulting layer.
+func TestTarBinaryParentDirs(t *testing.T) {
+	// Create a small dummy executable to stand in for the built binary.
+	tmpDir := t.TempDir()
+	binary := filepath.Join(tmpDir, "fakebinary")
+	if err := os.WriteFile(binary, []byte("#!/bin/sh\ntrue\n"), 0755); err != nil {
+		t.Fatalf("WriteFile() = %v", err)
+	}
+
+	platform := &v1.Platform{OS: "linux", Architecture: "amd64"}
+
+	for _, tc := range []struct {
+		name     string
+		target   string
+		wantDirs []string
+		wantFile string
+	}{{
+		name:     "binary folder override",
+		target:   "/go/bin/myapp",
+		wantDirs: []string{"go", "go/bin"},
+		wantFile: "/go/bin/myapp",
+	}, {
+		name:     "default ko-app path",
+		target:   "/ko-app/ko",
+		wantDirs: []string{"ko-app"},
+		wantFile: "/ko-app/ko",
+	}, {
+		name:     "full binary path override",
+		target:   "/custom/location/mybinary",
+		wantDirs: []string{"custom", "custom/location"},
+		wantFile: "/custom/location/mybinary",
+	}} {
+		t.Run(tc.name, func(t *testing.T) {
+			buf, err := tarBinary(tc.target, binary, platform, &layerOptions{})
+			if err != nil {
+				t.Fatalf("tarBinary() = %v", err)
+			}
+
+			gotDirs := map[string]bool{}
+			gotFiles := map[string]bool{}
+			tr := tar.NewReader(bytes.NewReader(buf.Bytes()))
+			for {
+				hdr, err := tr.Next()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					t.Fatalf("tar.Reader.Next() = %v", err)
+				}
+				switch hdr.Typeflag {
+				case tar.TypeDir:
+					gotDirs[hdr.Name] = true
+				case tar.TypeReg:
+					gotFiles[hdr.Name] = true
+				}
+			}
+
+			for _, dir := range tc.wantDirs {
+				if !gotDirs[dir] {
+					t.Errorf("expected dir header %q in tar, got dirs %v", dir, maps.Keys(gotDirs))
+				}
+			}
+			// The regular file header is written with the leading slash trimmed
+			// only for Windows; on linux the name is used as-is.
+			if !gotFiles[tc.wantFile] {
+				t.Errorf("expected file header %q in tar, got files %v", tc.wantFile, maps.Keys(gotFiles))
+			}
+		})
 	}
 }

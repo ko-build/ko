@@ -142,6 +142,13 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 		opts = append(opts, build.WithSBOMDir(bo.SBOMDir))
 	}
 
+	if bo.BinaryFolder != "" {
+		opts = append(opts, build.WithBinaryFolder(bo.BinaryFolder))
+	}
+	if bo.BinaryPath != "" {
+		opts = append(opts, build.WithBinaryPath(bo.BinaryPath))
+	}
+
 	return opts, nil
 }
 
