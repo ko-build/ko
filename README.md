@@ -9,7 +9,7 @@
 
 ---
 
-> 🎉 Google has applied for `ko` to join the Cloud Native Computing Foundation as a Sandbox project! Learn more [here](https://opensource.googleblog.com/2022/10/ko-applies-to-become-a-cncf-sandbox-project.html)!
+> 🎉 `ko` is a [Cloud Native Computing Foundation](https://cncf.io) [Sandbox project](https://www.cncf.io/projects/ko/)!
 
 `ko` is a simple, fast container image builder for Go applications.
 
@@ -39,3 +39,14 @@ See you there!
 ### Community Meetings
 
 You can find all the necessary details about the community meetings in this [page](https://ko.build/community).
+
+---
+
+`ko` is a Cloud Native Computing Foundation [Sandbox project](https://www.cncf.io/projects/ko/).
+
+<a href="https://cncf.io">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="./docs/images/cncf-dark.svg">
+        <img width="300" src="./docs/images/cncf-light.svg" alt="CNCF logo">
+    </picture>
+</a>
