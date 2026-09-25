@@ -93,7 +93,8 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 		"Whether to skip TLS verification on the registry")
 
 	cmd.Flags().StringVar(&po.OCILayoutPath, "oci-layout-path", "", "Path to save the OCI image layout of the built images")
-	cmd.Flags().StringVar(&po.TarballFile, "tarball", "", "File to save images tarballs")
+	cmd.Flags().StringVar(&po.TarballFile, "tarball", "",
+		"File to save Docker-save-style image tarballs. Only single-platform images are supported; multi-platform image indexes are not, use --oci-layout-path for multi-platform output.")
 
 	cmd.Flags().StringVar(&po.ImageRefsFile, "image-refs", "",
 		"Path to file where a list of the published image references will be written.")

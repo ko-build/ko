@@ -62,7 +62,7 @@ ko resolve -f FILENAME [flags]
   -l, --selector string            Selector (label query) to filter on, supports '=', '==', and '!='.(e.g. -l key1=value1,key2=value2)
       --tag-only                   Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.
   -t, --tags strings               Which tags to use for the produced image instead of the default 'latest' tag (may not work properly with --base-import-paths or --bare). (default [latest])
-      --tarball string             File to save images tarballs
+      --tarball string             File to save Docker-save-style image tarballs. Only single-platform images are supported; multi-platform image indexes are not, use --oci-layout-path for multi-platform output.
 ```
 
 ### Options inherited from parent commands
