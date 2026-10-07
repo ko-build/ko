@@ -433,6 +433,7 @@ func build(ctx context.Context, buildCtx buildContext) (string, error) {
 	log.Printf("Building %s for %s", buildCtx.ip, buildCtx.platform)
 	if err := cmd.Run(); err != nil {
 		if os.Getenv("KOCACHE") == "" {
+			/* #nosec G703 -- tmpDir comes from MkdirTemp when KOCACHE is unset. */
 			_ = os.RemoveAll(tmpDir)
 		}
 		return "", fmt.Errorf("go build: %w: %s", err, output.String())

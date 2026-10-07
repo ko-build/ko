@@ -59,9 +59,11 @@ jobs:
         export PLATFORM=$(go env GOOS)/$(go env GOARCH)
 
         if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
-          OSVERSION="10.0.20348"
+          # windows-latest is Windows Server 2025 (10.0.26100). The base image
+          # OS version must match the host or the daemon drops the loaded image.
+          OSVERSION="10.0.26100"
           PLATFORM=${PLATFORM}:${OSVERSION}
-          export KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:ltsc2022
+          export KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:ltsc2025
         else
           # Explicitly test multiple platform builds (a subset of what's in the base!)
           export PLATFORM=${PLATFORM},linux/arm64
