@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -31,6 +32,7 @@ type tar struct {
 	base  string
 	namer Namer
 	tags  []string
+	mu    sync.Mutex // protects refs
 	refs  map[name.Reference]v1.Image
 }
 
@@ -62,7 +64,9 @@ func (t *tar) Publish(_ context.Context, br build.Result, s string) (name.Refere
 		if err != nil {
 			return nil, err
 		}
+		t.mu.Lock()
 		t.refs[tag] = img
+		t.mu.Unlock()
 	}
 
 	h, err := img.Digest()
@@ -75,7 +79,9 @@ func (t *tar) Publish(_ context.Context, br build.Result, s string) (name.Refere
 		if err != nil {
 			return nil, err
 		}
+		t.mu.Lock()
 		t.refs[ref] = img
+		t.mu.Unlock()
 	}
 
 	ref := fmt.Sprintf("%s@%s", t.namer(t.base, s), h)
@@ -93,6 +99,9 @@ func (t *tar) Publish(_ context.Context, br build.Result, s string) (name.Refere
 }
 
 func (t *tar) Close() error {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+
 	log.Printf("Saving %v", t.file)
 	if err := tarball.MultiRefWriteToFile(t.file, t.refs); err != nil {
 		// Bad practice, but we log  this here because right now we just defer the Close.
