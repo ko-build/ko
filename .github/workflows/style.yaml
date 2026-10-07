@@ -70,7 +70,7 @@ jobs:
       - uses: chainguard-dev/actions/eof-newline@bed8050123fff65538e2db1902ff9404030c0221
         if: ${{ always() }}
 
-      - uses: reviewdog/action-misspell@d6429416b12b09b4e2768307d53bef58d172e962 # v1.27.0
+      - uses: reviewdog/action-misspell@ce198e1db0d029be165f2d3e809c1a42353446b0 # v1.30.2
         if: ${{ always() }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
