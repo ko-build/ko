@@ -15,6 +15,7 @@
 package publish
 
 import (
+	archivetar "archive/tar"
 	"context"
 	"encoding/json"
 	"errors"
@@ -22,11 +23,13 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/ko/pkg/build"
 )
 
@@ -150,7 +153,7 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 	// from the image ID when the image is already loaded. Docker 29.7 on
 	// Windows can import an image without the repository tag from the load
 	// tarball, and tagging from "repo:tag" then fails with "No such image".
-	if err := loadDaemonImage(img, digestTag, d.getOpts(ctx)); err != nil {
+	if err := loadDaemonImage(ctx, img, digestTag, d.getOpts(ctx)); err != nil {
 		return nil, err
 	}
 	log.Printf("Loaded %v", digestTag)
@@ -161,7 +164,7 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 		if err != nil {
 			return nil, err
 		}
-		if err := loadDaemonImage(img, tag, d.getOpts(ctx)); err != nil {
+		if err := loadDaemonImage(ctx, img, tag, d.getOpts(ctx)); err != nil {
 			return nil, fmt.Errorf("adding tag %s: %w", tagName, err)
 		}
 		log.Printf("Added tag %v", tagName)
@@ -170,18 +173,24 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 	return &digestTag, nil
 }
 
-// loadDaemonImage loads img into the daemon as tag. If the daemon reports that
-// the image was imported by ID only, it loads again so the existing image is
-// tagged from its ID.
-func loadDaemonImage(img v1.Image, tag name.Tag, opts []daemon.Option) error {
+// loadDaemonImage loads img into the daemon as tag. A second write tags an
+// image that Docker imported by ID only. That retry must itself retain the
+// tag; an ID-only result is a failure. Docker 29.7 on Windows also rejects
+// archive entries named "sha256:<hex>", so that error is retried from an
+// archive whose config filename has no colon.
+func loadDaemonImage(ctx context.Context, img v1.Image, tag name.Tag, opts []daemon.Option) error {
 	resp, err := daemon.Write(tag, img, opts...)
 	if err != nil {
 		log.Println("daemon.Write response:", trimDaemonResponse(resp))
 		return err
 	}
-	streamErr := dockerStreamError(resp)
-	if streamErr == nil && !daemonLoadDroppedTag(resp, tag.String()) {
+	applied, streamErr := daemonTagStatus(resp, tag.String())
+	if applied {
 		return nil
+	}
+	if isInvalidTarEntryName(streamErr) {
+		log.Printf("Docker rejected archive entry names for %s (%v); reloading without a colon in the config filename", tag, streamErr)
+		return dockerLoadSanitized(ctx, tag, img)
 	}
 	if streamErr != nil {
 		log.Printf("Docker load of %s reported %q; tagging by image ID", tag, streamErr)
@@ -195,10 +204,144 @@ func loadDaemonImage(img v1.Image, tag name.Tag, opts []daemon.Option) error {
 		}
 		return err
 	}
+	applied, streamErr = daemonTagStatus(resp, tag.String())
+	if applied {
+		return nil
+	}
+	if streamErr != nil {
+		return fmt.Errorf("tagging %s: %w", tag, streamErr)
+	}
+	return fmt.Errorf("tagging %s: daemon imported the image without retaining the tag", tag)
+}
+
+func isInvalidTarEntryName(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "invalid entry name")
+}
+
+// daemonTagStatus reports whether resp shows that tag was retained.
+// An empty response is the already-present fast path, which tags by image ID.
+func daemonTagStatus(resp, tag string) (bool, error) {
+	if resp == "" {
+		return true, nil
+	}
 	if err := dockerStreamError(resp); err != nil {
-		return fmt.Errorf("tagging %s: %w", tag, err)
+		return false, err
+	}
+	if daemonLoadDroppedTag(resp, tag) {
+		return false, nil
+	}
+	return true, nil
+}
+
+func dockerLoadSanitized(ctx context.Context, tag name.Tag, img v1.Image) error {
+	pr, pw := io.Pipe()
+	writeErr := make(chan error, 1)
+	go func() {
+		err := writeSanitizedDockerArchive(pw, tag, img)
+		writeErr <- err
+		_ = pw.CloseWithError(err)
+	}()
+
+	cmd := exec.CommandContext(ctx, "docker", "load")
+	cmd.Stdin = pr
+	out, err := cmd.CombinedOutput()
+	if werr := <-writeErr; werr != nil && err == nil {
+		err = werr
+	}
+	text := string(out)
+	if err != nil {
+		return fmt.Errorf("loading %s: %w: %s", tag, err, trimDaemonResponse(text))
+	}
+	if strings.Contains(text, tag.String()) && !strings.Contains(text, "Loaded image ID:") {
+		return nil
+	}
+	if strings.Contains(text, "Loaded image ID:") || !strings.Contains(text, tag.String()) {
+		return fmt.Errorf("loading %s: docker load did not retain the tag: %s", tag, trimDaemonResponse(text))
 	}
 	return nil
+}
+
+// writeSanitizedDockerArchive writes a docker save archive whose config blob
+// is not named "sha256:<hex>". Docker's Windows loader rejects that entry.
+func writeSanitizedDockerArchive(w io.Writer, ref name.Reference, img v1.Image) error {
+	pr, pw := io.Pipe()
+	writeErr := make(chan error, 1)
+	go func() {
+		err := tarball.Write(ref, img, pw)
+		writeErr <- err
+		_ = pw.CloseWithError(err)
+	}()
+	err := rewriteDockerArchive(pr, w)
+	if werr := <-writeErr; werr != nil && err == nil {
+		err = werr
+	}
+	return err
+}
+
+func rewriteDockerArchive(r io.Reader, w io.Writer) error {
+	tr := archivetar.NewReader(r)
+	tw := archivetar.NewWriter(w)
+	for {
+		hdr, err := tr.Next()
+		if errors.Is(err, io.EOF) {
+			return tw.Close()
+		}
+		if err != nil {
+			return err
+		}
+		hdr.PAXRecords = nil
+		hdr.Format = archivetar.FormatUnknown
+		if hdr.Name == "manifest.json" {
+			body, err := io.ReadAll(tr)
+			if err != nil {
+				return err
+			}
+			body, err = rewriteManifestConfigNames(body)
+			if err != nil {
+				return err
+			}
+			hdr.Name = "manifest.json"
+			hdr.Size = int64(len(body))
+			if err := tw.WriteHeader(hdr); err != nil {
+				return err
+			}
+			if _, err := tw.Write(body); err != nil {
+				return err
+			}
+			continue
+		}
+		hdr.Name = strings.TrimPrefix(hdr.Name, "sha256:")
+		if err := tw.WriteHeader(hdr); err != nil {
+			return err
+		}
+		/* #nosec G110 -- this copies an archive entry we just wrote, bounded by the image itself. */
+		if _, err := io.Copy(tw, tr); err != nil {
+			return err
+		}
+	}
+}
+
+func rewriteManifestConfigNames(b []byte) ([]byte, error) {
+	var manifests []map[string]json.RawMessage
+	if err := json.Unmarshal(b, &manifests); err != nil {
+		return nil, fmt.Errorf("parsing docker archive manifest: %w", err)
+	}
+	for _, m := range manifests {
+		raw, ok := m["Config"]
+		if !ok {
+			continue
+		}
+		var cfg string
+		if err := json.Unmarshal(raw, &cfg); err != nil {
+			return nil, fmt.Errorf("parsing docker archive config name: %w", err)
+		}
+		rewritten, err := json.Marshal(strings.TrimPrefix(cfg, "sha256:"))
+		if err != nil {
+			return nil, err
+		}
+		m["Config"] = rewritten
+	}
+	return json.Marshal(manifests)
 }
 
 func trimDaemonResponse(resp string) string {
