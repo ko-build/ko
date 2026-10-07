@@ -16,7 +16,10 @@ package publish
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -143,8 +146,11 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 	}
 
 	log.Printf("Loading %v", digestTag)
-	if resp, err := daemon.Write(digestTag, img, d.getOpts(ctx)...); err != nil {
-		log.Println("daemon.Write response: ", resp)
+	// Tag through daemon.Write rather than daemon.Tag. Write applies the name
+	// from the image ID when the image is already loaded. Docker 29.7 on
+	// Windows can import an image without the repository tag from the load
+	// tarball, and tagging from "repo:tag" then fails with "No such image".
+	if err := loadDaemonImage(img, digestTag, d.getOpts(ctx)); err != nil {
 		return nil, err
 	}
 	log.Printf("Loaded %v", digestTag)
@@ -155,14 +161,84 @@ func (d *demon) Publish(ctx context.Context, br build.Result, s string) (name.Re
 		if err != nil {
 			return nil, err
 		}
-
-		if err := daemon.Tag(digestTag, tag, d.getOpts(ctx)...); err != nil {
-			return nil, err
+		if err := loadDaemonImage(img, tag, d.getOpts(ctx)); err != nil {
+			return nil, fmt.Errorf("adding tag %s: %w", tagName, err)
 		}
 		log.Printf("Added tag %v", tagName)
 	}
 
 	return &digestTag, nil
+}
+
+// loadDaemonImage loads img into the daemon as tag. If the daemon reports that
+// the image was imported by ID only, it loads again so the existing image is
+// tagged from its ID.
+func loadDaemonImage(img v1.Image, tag name.Tag, opts []daemon.Option) error {
+	resp, err := daemon.Write(tag, img, opts...)
+	if err != nil {
+		log.Println("daemon.Write response:", trimDaemonResponse(resp))
+		return err
+	}
+	streamErr := dockerStreamError(resp)
+	if streamErr == nil && !daemonLoadDroppedTag(resp, tag.String()) {
+		return nil
+	}
+	if streamErr != nil {
+		log.Printf("Docker load of %s reported %q; tagging by image ID", tag, streamErr)
+	} else {
+		log.Printf("Docker loaded %s without its tag; tagging by image ID", tag)
+	}
+	resp, err = daemon.Write(tag, img, opts...)
+	if err != nil {
+		if streamErr != nil {
+			return fmt.Errorf("loading %s: %w", tag, streamErr)
+		}
+		return err
+	}
+	if err := dockerStreamError(resp); err != nil {
+		return fmt.Errorf("tagging %s: %w", tag, err)
+	}
+	return nil
+}
+
+func trimDaemonResponse(resp string) string {
+	resp = strings.TrimSpace(resp)
+	if len(resp) > 500 {
+		return resp[:500] + "..."
+	}
+	return resp
+}
+
+// dockerStreamError returns the first error message in a Docker API stream.
+// ImageLoad uses HTTP 200 even when the stream itself reports a failure.
+func dockerStreamError(resp string) error {
+	if resp == "" {
+		return nil
+	}
+	dec := json.NewDecoder(strings.NewReader(resp))
+	for {
+		var msg struct {
+			Error string `json:"error"`
+		}
+		if err := dec.Decode(&msg); err == io.EOF {
+			return nil
+		} else if err != nil {
+			return nil
+		}
+		if msg.Error != "" {
+			return errors.New(msg.Error)
+		}
+	}
+}
+
+// daemonLoadDroppedTag reports whether a docker load response imported an
+// image by ID and did not retain tag. An empty response means the image was
+// already present and tagged by ID.
+func daemonLoadDroppedTag(resp, tag string) bool {
+	if resp == "" || strings.Contains(resp, tag) {
+		return false
+	}
+	return strings.Contains(resp, "Loaded image ID:")
 }
 
 func (d *demon) Close() error {
