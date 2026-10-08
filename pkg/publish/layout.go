@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -29,14 +30,19 @@ import (
 
 type LayoutPublisher struct {
 	p string
+	m sync.Mutex
 }
 
 // NewLayout returns a new publish.Interface that saves images to an OCI Image Layout.
 func NewLayout(p string) Interface {
-	return &LayoutPublisher{p}
+	return &LayoutPublisher{p: p}
 }
 
 func (l *LayoutPublisher) writeResult(br build.Result) (layout.Path, error) {
+	// Layout initialization and appends both read and rewrite index.json.
+	l.m.Lock()
+	defer l.m.Unlock()
+
 	p, err := layout.FromPath(l.p)
 	if err != nil {
 		p, err = layout.Write(l.p, empty.Index)
