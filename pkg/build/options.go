@@ -219,3 +219,23 @@ func WithDebugger() Option {
 		return nil
 	}
 }
+
+// WithBinaryFolder overrides the in-image folder
+// ("/ko-app") that the binary is placed in. The app name is kept. Ignored if
+// WithBinaryPath is also set.
+func WithBinaryFolder(folder string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.binaryFolder = folder
+		return nil
+	}
+}
+
+// WithBinaryPath fully overrides the in-image
+// binary path ("/ko-app/<app-name>"). Must be an absolute path. Takes
+// precedence over WithBinaryFolder.
+func WithBinaryPath(p string) Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.binaryPath = p
+		return nil
+	}
+}

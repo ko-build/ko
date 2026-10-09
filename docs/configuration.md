@@ -171,6 +171,36 @@ builds:
 The values for a `build` will be used if specified, otherwise their respective defaults will be used.
 Both default and per-build values may use [template parameters](#templating-support).
 
+### Overriding the binary path
+
+By default, `ko` places the compiled binary at `/ko-app/<app-name>` inside the
+image, where `<app-name>` is derived from the import path (e.g. building
+`./cmd/app` yields `/ko-app/app`). You can override this location with either
+`binaryFolder` or `binaryPath`.
+
+Use `binaryFolder` to override only the folder, keeping the derived app name.
+Setting it to `/go/bin` produces `/go/bin/<app-name>`:
+
+```yaml
+binaryFolder: /go/bin
+```
+
+Use `binaryPath` to fully replace the default `/ko-app/<app-name>` with an
+absolute path, including both the folder and the binary name. If both
+`binaryFolder` and `binaryPath` are set, `binaryPath` takes precedence (`binaryFolder` is ignored):
+
+```yaml
+binaryPath: /go/bin/myapp
+```
+
+You can also use the `KO_BINARYFOLDER` and `KO_BINARYPATH` environment
+variables, which override the YAML configuration:
+
+```shell
+KO_BINARYFOLDER=/go/bin
+KO_BINARYPATH=/go/bin/myapp
+```
+
 ### Environment Variables (advanced)
 
 For ease of use, backward compatibility and advanced use cases, `ko` supports the following environment variables to
