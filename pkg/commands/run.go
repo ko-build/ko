@@ -15,6 +15,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -123,18 +124,7 @@ func addRun(topLevel *cobra.Command) {
 
 				/* #nosec G706 -- argv is the kubectl invocation we just built; logging it is the intent. */
 				log.Printf("$ kubectl %s", strings.Join(argv, " "))
-				/* #nosec G204 G702 -- ko run intentionally invokes kubectl with user-supplied arguments. */
-				kubectlCmd := exec.CommandContext(ctx, "kubectl", argv...)
-
-				// Pass through our environment
-				kubectlCmd.Env = os.Environ()
-				// Pass through our std*
-				kubectlCmd.Stderr = os.Stderr
-				kubectlCmd.Stdout = os.Stdout
-				kubectlCmd.Stdin = os.Stdin
-
-				// Run it.
-				if err := kubectlCmd.Run(); err != nil {
+				if err := runKubectl(ctx, argv); err != nil {
 					return err
 				}
 			}
@@ -159,4 +149,38 @@ func unparsedDashes() int {
 		}
 	}
 	return -1
+}
+
+// runKubectl runs kubectl with argv. Unlike exec.CommandContext, a canceled
+// context sends os.Interrupt so kubectl --rm can delete the pod instead of
+// being SIGKILLed immediately.
+func runKubectl(ctx context.Context, argv []string) error {
+	/* #nosec G204 G702 -- ko run intentionally invokes kubectl with user-supplied arguments. */
+	cmd := exec.Command("kubectl", argv...)
+	cmd.Env = os.Environ()
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = os.Stdin
+	return runInterruptible(ctx, cmd)
+}
+
+func runInterruptible(ctx context.Context, cmd *exec.Cmd) error {
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	waitErr := make(chan error, 1)
+	go func() {
+		waitErr <- cmd.Wait()
+	}()
+
+	select {
+	case err := <-waitErr:
+		return err
+	case <-ctx.Done():
+		if err := cmd.Process.Signal(os.Interrupt); err != nil {
+			_ = cmd.Process.Kill()
+		}
+		return <-waitErr
+	}
 }
