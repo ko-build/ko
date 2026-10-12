@@ -292,36 +292,41 @@ func GenerateIndexSPDX(koVersion string, sii oci.SignedImageIndex) ([]byte, erro
 			qual := []qualifier{{
 				key:   "mediaType",
 				value: string(desc.MediaType),
-			}, {
-				key:   "arch",
-				value: desc.Platform.Architecture,
-			}, {
-				key:   "os",
-				value: desc.Platform.OS,
 			}}
-			if desc.Platform.Variant != "" {
+			// platform is optional on an index descriptor, so a base index can
+			// legitimately hold a manifest without one.
+			if p := desc.Platform; p != nil {
 				qual = append(qual, qualifier{
-					key:   "variant",
-					value: desc.Platform.Variant,
+					key:   "arch",
+					value: p.Architecture,
+				}, qualifier{
+					key:   "os",
+					value: p.OS,
 				})
-			}
-			if desc.Platform.OSVersion != "" {
-				qual = append(qual, qualifier{
-					key:   "os-version",
-					value: desc.Platform.OSVersion,
-				})
-			}
-			for _, feat := range desc.Platform.OSFeatures {
-				qual = append(qual, qualifier{
-					key:   "os-feature",
-					value: feat,
-				})
+				if p.Variant != "" {
+					qual = append(qual, qualifier{
+						key:   "variant",
+						value: p.Variant,
+					})
+				}
+				if p.OSVersion != "" {
+					qual = append(qual, qualifier{
+						key:   "os-version",
+						value: p.OSVersion,
+					})
+				}
+				for _, feat := range p.OSFeatures {
+					qual = append(qual, qualifier{
+						key:   "os-feature",
+						value: feat,
+					})
+				}
 			}
 
 			doc.Packages = append(doc.Packages, Package{
 				ID:      depID,
 				Name:    imageDigest.String(),
-				Version: desc.Platform.String(),
+				Version: platformVersion(desc.Platform),
 				// TODO: PackageSupplier: "Organization: " + dep.Path
 				DownloadLocation: NOASSERTION,
 				FilesAnalyzed:    false,
@@ -541,4 +546,13 @@ type ExternalDocumentRef struct {
 	Checksum           Checksum `json:"checksum"`
 	ExternalDocumentID string   `json:"externalDocumentId"`
 	SPDXDocument       string   `json:"spdxDocument"`
+}
+
+// platformVersion renders a descriptor's platform, which the image index spec
+// leaves optional, so it may be absent.
+func platformVersion(p *v1.Platform) string {
+	if p == nil {
+		return ""
+	}
+	return p.String()
 }
