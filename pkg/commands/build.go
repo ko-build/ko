@@ -94,7 +94,7 @@ func addBuild(topLevel *cobra.Command) {
 
 			switch oo.Output {
 			case options.OutputJSON:
-				return writeJSONBuildOutput(cmd.OutOrStdout(), newBuildOutput(collector.Results(), po.Tags, bo.Labels, bo.Annotations))
+				return writeJSONBuildOutput(cmd.OutOrStdout(), newBuildOutput(collector.Results(), po.Tags, bo.Labels, bo.Annotations, sbomPushed(po)))
 
 			default:
 				return writeBuildOutput(cmd.OutOrStdout(), images)

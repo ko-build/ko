@@ -26,7 +26,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/mutate"
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/ko/pkg/build"
+	"github.com/sigstore/cosign/v3/pkg/oci"
+	ocimutate "github.com/sigstore/cosign/v3/pkg/oci/mutate"
 	"github.com/sigstore/cosign/v3/pkg/oci/signed"
+	"github.com/sigstore/cosign/v3/pkg/oci/static"
 )
 
 func TestCollector(t *testing.T) {
@@ -178,5 +181,137 @@ func TestCollectorDowncastedIndex(t *testing.T) {
 				t.Errorf("Platforms = %v, want %v", got.Platforms, tc.wantPlatforms)
 			}
 		})
+	}
+}
+
+func TestCollectorSBOMs(t *testing.T) {
+	repo := name.MustParseReference("example.com/app")
+	withSBOM := func(arch string, content string) oci.SignedImage {
+		i, err := random.Image(10, 1)
+		if err != nil {
+			t.Fatal(err)
+		}
+		c, _ := i.ConfigFile()
+		c.OS, c.Architecture = "linux", arch
+		if i, err = mutate.ConfigFile(i, c); err != nil {
+			t.Fatal(err)
+		}
+		si := signed.Image(i)
+		if content == "" {
+			return si
+		}
+		f, err := static.NewFile([]byte(content), static.WithLayerMediaType("text/spdx+json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if si, err = ocimutate.AttachFileToImage(si, "sbom", f); err != nil {
+			t.Fatal(err)
+		}
+		return si
+	}
+	amd, arm := withSBOM("amd64", "amd-sbom"), withSBOM("arm64", "")
+	// Like ko, use the signed AppendManifests so children keep their attachments.
+	idx := ocimutate.AppendManifests(empty.Index,
+		ocimutate.IndexAddendum{Add: amd, Descriptor: v1.Descriptor{Platform: &v1.Platform{OS: "linux", Architecture: "amd64"}}},
+		ocimutate.IndexAddendum{Add: arm, Descriptor: v1.Descriptor{Platform: &v1.Platform{OS: "linux", Architecture: "arm64"}}},
+	)
+	idxFile, err := static.NewFile([]byte("index-sbom"), static.WithLayerMediaType("text/spdx+json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	idx, err = ocimutate.AttachFileToImageIndex(idx, "sbom", idxFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	amdDigest, _ := amd.Digest()
+	idxDigest, _ := idx.Digest()
+
+	type want struct {
+		platform string
+		size     int64
+		ref      string
+	}
+	for _, tc := range []struct {
+		name string
+		br   build.Result
+		ref  func() name.Reference
+		want []want
+	}{{
+		name: "index: top-level then per-platform, platforms without SBOM skipped",
+		br:   idx,
+		ref:  func() name.Reference { return repo.Context().Digest(idxDigest.String()) },
+		want: []want{
+			{"", int64(len("index-sbom")), "example.com/app:sha256-" + idxDigest.Hex + ".sbom"},
+			{"linux/amd64", int64(len("amd-sbom")), "example.com/app:sha256-" + amdDigest.Hex + ".sbom"},
+		},
+	}, {
+		name: "downcast to a child image reports only that image",
+		br:   idx,
+		ref:  func() name.Reference { return repo.Context().Tag(amdDigest.Hex) },
+		want: []want{{"linux/amd64", int64(len("amd-sbom")), "example.com/app:sha256-" + amdDigest.Hex + ".sbom"}},
+	}, {
+		name: "single image without SBOM",
+		br:   arm,
+		ref:  func() name.Reference { return repo },
+		want: nil,
+	}} {
+		t.Run(tc.name, func(t *testing.T) {
+			col := NewCollector(&cbPublish{cb: func(context.Context, build.Result, string) (name.Reference, error) {
+				return tc.ref(), nil
+			}})
+			if _, err := col.Publish(context.Background(), tc.br, "example.com/app"); err != nil {
+				t.Fatalf("Publish() = %v", err)
+			}
+			var got []want
+			sboms := col.Results()[0].SBOMs
+			if len(sboms) > 0 {
+				got = make([]want, 0, len(sboms))
+			}
+			for _, sb := range sboms {
+				if sb.MediaType != "text/spdx+json" || sb.Digest == "" {
+					t.Errorf("incomplete SBOM entry: %+v", sb)
+				}
+				got = append(got, want{sb.Platform, sb.Size, sb.Ref.String()})
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("SBOMs = %+v, want %+v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCollectorSBOMRefRespectsCosignRepository(t *testing.T) {
+	t.Setenv("COSIGN_REPOSITORY", "sboms.example.com/store")
+
+	i, err := random.Image(10, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f, err := static.NewFile([]byte("sbom"), static.WithLayerMediaType("text/spdx+json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	si, err := ocimutate.AttachFileToImage(signed.Image(i), "sbom", f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h, err := si.Digest()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repo := name.MustParseReference("example.com/app")
+	col := NewCollector(&cbPublish{cb: func(context.Context, build.Result, string) (name.Reference, error) {
+		return repo.Context().Digest(h.String()), nil
+	}})
+	if _, err := col.Publish(context.Background(), si, "example.com/app"); err != nil {
+		t.Fatalf("Publish() = %v", err)
+	}
+	got := col.Results()[0].SBOMs
+	if len(got) != 1 {
+		t.Fatalf("got %d SBOMs, want 1", len(got))
+	}
+	if want := "sboms.example.com/store:sha256-" + h.Hex + ".sbom"; got[0].Ref.String() != want {
+		t.Errorf("Ref = %s, want %s", got[0].Ref, want)
 	}
 }

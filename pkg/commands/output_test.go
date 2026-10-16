@@ -33,6 +33,7 @@ func TestBuildOutputJSON(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		tags        []string
+		sbomPushed  bool
 		results     []publish.Published
 		labels      []string
 		annotations []string
@@ -56,8 +57,8 @@ func TestBuildOutputJSON(t *testing.T) {
 			"labels":      map[string]any{"org.opencontainers.image.title": "app", "empty": ""},
 			"annotations": []any{"a=b"},
 			"images": []any{
-				map[string]any{"importpath": "example.com/b", "ref": "example.com/b@" + digestB, "digest": digestB, "platforms": []any{"linux/arm64"}},
-				map[string]any{"importpath": "example.com/a", "ref": "localhost:5000/a@" + digestA, "digest": digestA, "platforms": []any{}},
+				map[string]any{"importpath": "example.com/b", "ref": "example.com/b@" + digestB, "digest": digestB, "platforms": []any{"linux/arm64"}, "sbom": []any{}},
+				map[string]any{"importpath": "example.com/a", "ref": "localhost:5000/a@" + digestA, "digest": digestA, "platforms": []any{}, "sbom": []any{}},
 			},
 		},
 	}, {
@@ -72,8 +73,8 @@ func TestBuildOutputJSON(t *testing.T) {
 			"labels":      map[string]any{},
 			"annotations": []any{},
 			"images": []any{
-				map[string]any{"importpath": "example.com/c", "ref": "example.com/c:v1@" + digestA, "digest": digestA, "platforms": []any{}},
-				map[string]any{"importpath": "example.com/d", "ref": "ko.local/d:" + hexB, "digest": digestB, "platforms": []any{}},
+				map[string]any{"importpath": "example.com/c", "ref": "example.com/c:v1@" + digestA, "digest": digestA, "platforms": []any{}, "sbom": []any{}},
+				map[string]any{"importpath": "example.com/d", "ref": "ko.local/d:" + hexB, "digest": digestB, "platforms": []any{}, "sbom": []any{}},
 			},
 		},
 	}, {
@@ -88,14 +89,39 @@ func TestBuildOutputJSON(t *testing.T) {
 			"labels":      map[string]any{},
 			"annotations": []any{},
 			"images": []any{
-				map[string]any{"importpath": "example.com/f", "ref": "example.com/shared@" + digestA, "digest": digestA, "platforms": []any{}},
-				map[string]any{"importpath": "example.com/g", "ref": "example.com/shared@" + digestB, "digest": digestB, "platforms": []any{}},
+				map[string]any{"importpath": "example.com/f", "ref": "example.com/shared@" + digestA, "digest": digestA, "platforms": []any{}, "sbom": []any{}},
+				map[string]any{"importpath": "example.com/g", "ref": "example.com/shared@" + digestB, "digest": digestB, "platforms": []any{}, "sbom": []any{}},
+			},
+		},
+	}, {
+		name:       "sboms get a ref only when pushed",
+		tags:       []string{"latest"},
+		sbomPushed: true,
+		results: []publish.Published{{
+			ImportPath: "example.com/a", Ref: name.MustParseReference("example.com/a@" + digestA), Digest: digestA, Platforms: []string{"linux/amd64"},
+			SBOMs: []publish.SBOM{
+				{MediaType: "text/spdx+json", Digest: digestB, Size: 10, Ref: name.MustParseReference("example.com/a:sha256-" + hexB + ".sbom")},
+				{Platform: "linux/amd64", MediaType: "text/spdx+json", Digest: digestB, Size: 20},
+			},
+		}},
+		want: map[string]any{
+			"tags":        []any{"example.com/a:latest"},
+			"labels":      map[string]any{},
+			"annotations": []any{},
+			"images": []any{
+				map[string]any{
+					"importpath": "example.com/a", "ref": "example.com/a@" + digestA, "digest": digestA, "platforms": []any{"linux/amd64"},
+					"sbom": []any{
+						map[string]any{"format": "spdx", "mediaType": "text/spdx+json", "digest": digestB, "size": float64(10), "ref": "example.com/a:sha256-" + hexB + ".sbom"},
+						map[string]any{"platform": "linux/amd64", "format": "spdx", "mediaType": "text/spdx+json", "digest": digestB, "size": float64(20)},
+					},
+				},
 			},
 		},
 	}} {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			if err := writeJSONBuildOutput(&buf, newBuildOutput(tc.results, tc.tags, tc.labels, tc.annotations)); err != nil {
+			if err := writeJSONBuildOutput(&buf, newBuildOutput(tc.results, tc.tags, tc.labels, tc.annotations, tc.sbomPushed)); err != nil {
 				t.Fatal(err)
 			}
 			var got map[string]any
