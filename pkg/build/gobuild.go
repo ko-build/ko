@@ -522,7 +522,7 @@ func spdx(version string) sbomber {
 				return nil, "", err
 			}
 
-			if err := writeSBOM(b, appFileName, dir, "spdx.json"); err != nil {
+			if err := writeSBOM(b, appFileName, dir, spdxExt); err != nil {
 				return nil, "", err
 			}
 
@@ -534,7 +534,7 @@ func spdx(version string) sbomber {
 				return nil, "", err
 			}
 
-			if err := writeSBOM(b, appFileName, dir, "spdx.json"); err != nil {
+			if err := writeSBOM(b, appFileName, dir, spdxExt); err != nil {
 				return nil, "", err
 			}
 
@@ -544,6 +544,29 @@ func spdx(version string) sbomber {
 			return nil, "", fmt.Errorf("unrecognized type: %T", se)
 		}
 	}
+}
+
+// spdxExt is the extension of the SPDX SBOMs written to the SBOM directory.
+const spdxExt = "spdx.json"
+
+// sbomName is the base name, without extension, of the SBOM written to the
+// SBOM directory for importpath built for platform, or for its index when
+// platform is nil.
+func sbomName(importpath string, platform *v1.Platform) string {
+	name := appFilename(importpath)
+	if platform == nil {
+		return name + "-index"
+	}
+	// Construct a path-safe encoding of platform.
+	pf := strings.ReplaceAll(strings.ReplaceAll(platform.String(), "/", "-"), ":", "-")
+	return name + "-" + pf
+}
+
+// SBOMPath returns where WithSBOMDir(dir) writes the SPDX SBOM of importpath
+// built for platform, or of its index when platform is nil. Import paths
+// sharing a base name share the file, so the last build wins.
+func SBOMPath(dir, importpath string, platform *v1.Platform) string {
+	return filepath.Join(filepath.Clean(dir), sbomName(importpath, platform)+"."+spdxExt)
 }
 
 func writeSBOM(sbom []byte, appFileName, dir, ext string) error {
@@ -1356,9 +1379,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 	si := signed.Image(image)
 
 	if g.sbom != nil {
-		// Construct a path-safe encoding of platform.
-		pf := strings.ReplaceAll(strings.ReplaceAll(platform.String(), "/", "-"), ":", "-")
-		sbom, mt, err := g.sbom(ctx, file, appPath, fmt.Sprintf("%s-%s", appFileName, pf), si, g.sbomDir)
+		sbom, mt, err := g.sbom(ctx, file, appPath, sbomName(ref.Path(), platform), si, g.sbomDir)
 		if err != nil {
 			return nil, err
 		}
@@ -1571,8 +1592,7 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 
 	if g.sbom != nil {
 		ref := newRef(ref)
-		appFileName := appFilename(ref.Path())
-		sbom, mt, err := g.sbom(ctx, "", "", fmt.Sprintf("%s-index", appFileName), idx, g.sbomDir)
+		sbom, mt, err := g.sbom(ctx, "", "", sbomName(ref.Path(), nil), idx, g.sbomDir)
 		if err != nil {
 			return nil, err
 		}

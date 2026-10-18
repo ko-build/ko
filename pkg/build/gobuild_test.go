@@ -1979,3 +1979,23 @@ func TestResolveKodataAllowedRootGitWorktree(t *testing.T) {
 		t.Errorf("resolveKodataAllowedRoot(%q) = %q, want git worktree root %q", kodataRoot, got, resolvedBase)
 	}
 }
+
+func TestSBOMPath(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		importpath string
+		platform   *v1.Platform
+		want       string
+	}{
+		{"index", "example.com/app/cmd/server", nil, "sboms/server-index.spdx.json"},
+		{"platform", "example.com/app/cmd/server", &v1.Platform{OS: "linux", Architecture: "amd64"}, "sboms/server-linux-amd64.spdx.json"},
+		{"variant", "example.com/app/cmd/server", &v1.Platform{OS: "linux", Architecture: "arm64", Variant: "v8"}, "sboms/server-linux-arm64-v8.spdx.json"},
+		{"os version", "example.com/app", &v1.Platform{OS: "windows", Architecture: "amd64", OSVersion: "10.0.17763"}, "sboms/app-windows-amd64-10.0.17763.spdx.json"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := SBOMPath("sboms/", tc.importpath, tc.platform); got != filepath.FromSlash(tc.want) {
+				t.Errorf("SBOMPath() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
