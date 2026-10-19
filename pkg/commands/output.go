@@ -173,13 +173,23 @@ func (d sbomDescriber) describe(importpath string, sb publish.SBOM) (sbomOutput,
 // sbomPath returns the file in dir holding sb, or "" if there is none: a file
 // is only reported when its content matches sb's digest, as import paths that
 // share a base name overwrite each other's file. A single-platform image's
-// file may be named without the platform variant.
+// file is named for the platform it was built for, which may differ from its
+// config's in the variant only: either may lack it.
 func sbomPath(dir, importpath string, sb publish.SBOM) (string, error) {
 	candidates := []string{build.SBOMPath(dir, importpath, sb.Platform)}
-	if p := sb.Platform; p != nil && p.Variant != "" {
-		noVariant := *p
-		noVariant.Variant = ""
-		candidates = append(candidates, build.SBOMPath(dir, importpath, &noVariant))
+	if p := sb.Platform; p != nil {
+		other := *p
+		if p.Variant != "" {
+			other.Variant = ""
+			candidates = append(candidates, build.SBOMPath(dir, importpath, &other))
+		} else {
+			other.Variant = "*"
+			matches, err := matchFiles(build.SBOMPath(dir, importpath, &other))
+			if err != nil {
+				return "", err
+			}
+			candidates = append(candidates, matches...)
+		}
 	}
 	for _, path := range candidates {
 		b, err := os.ReadFile(path)
@@ -194,6 +204,31 @@ func sbomPath(dir, importpath string, sb publish.SBOM) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// matchFiles returns the files in pattern's directory whose name matches
+// pattern's base name. Only the base name is a pattern, so that the directory
+// may contain glob metacharacters.
+func matchFiles(pattern string) ([]string, error) {
+	dir := filepath.Dir(pattern)
+	entries, err := os.ReadDir(dir)
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("reading SBOM directory: %w", err)
+	}
+	var out []string
+	for _, e := range entries {
+		ok, err := filepath.Match(filepath.Base(pattern), e.Name())
+		if err != nil {
+			return nil, fmt.Errorf("matching SBOM files: %w", err)
+		}
+		if ok && !e.IsDir() {
+			out = append(out, filepath.Join(dir, e.Name()))
+		}
+	}
+	return out, nil
 }
 
 // sbomFormat names the SBOM format of a media type, e.g. "spdx". Unknown media

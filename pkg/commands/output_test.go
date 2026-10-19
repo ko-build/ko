@@ -167,6 +167,8 @@ func TestSBOMOutputPath(t *testing.T) {
 		{name: "platform image", written: amd64, sbom: publish.SBOM{Platform: amd64, Digest: digest}, wantPath: true},
 		{name: "index", written: nil, sbom: publish.SBOM{Digest: digest}, wantPath: true},
 		{name: "file named without the variant", written: &v1.Platform{OS: "linux", Architecture: "arm64"}, sbom: publish.SBOM{Platform: arm64v8, Digest: digest}, wantPath: true},
+		{name: "file named with the variant", written: arm64v8, sbom: publish.SBOM{Platform: &v1.Platform{OS: "linux", Architecture: "arm64"}, Digest: digest}, wantPath: true},
+		{name: "file named with another architecture's variant", written: &v1.Platform{OS: "linux", Architecture: "arm", Variant: "v7"}, sbom: publish.SBOM{Platform: &v1.Platform{OS: "linux", Architecture: "arm64"}, Digest: digest}},
 		{name: "file overwritten by another image", written: amd64, sbom: publish.SBOM{Platform: amd64, Digest: digestB}},
 		{name: "no such file", written: amd64, sbom: publish.SBOM{Platform: arm64v8, Digest: digest}},
 		{name: "no SBOM directory", written: amd64, sbom: publish.SBOM{Platform: amd64, Digest: digest}, noDir: true},
