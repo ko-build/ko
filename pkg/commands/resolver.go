@@ -287,6 +287,14 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	return publish.NewCaching(innerPublisher)
 }
 
+// sbomPushed tells whether the publisher makePublisher builds from po pushes
+// SBOMs to a registry: only the default registry publisher does, not the docker
+// daemon, kind, or --push=false. Keep it in sync with makePublisher, and call it
+// after makePublisher, which settles po.Local.
+func sbomPushed(po *options.PublishOptions) bool {
+	return po.Push && !po.Local && !strings.HasPrefix(po.DockerRepo, publish.KindDomain)
+}
+
 // nopPublisher simulates publishing without actually publishing anything, to
 // provide fallback behavior when the user configures no push destinations.
 type nopPublisher struct {

@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"github.com/google/ko/pkg/commands/options"
+	"github.com/google/ko/pkg/publish"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +26,7 @@ import (
 func addBuild(topLevel *cobra.Command) {
 	po := &options.PublishOptions{}
 	bo := &options.BuildOptions{}
+	oo := &options.OutputOptions{}
 
 	build := &cobra.Command{
 		Use:     "build IMPORTPATH...",
@@ -54,9 +56,16 @@ func addBuild(topLevel *cobra.Command) {
   # Build and publish import path references to a Docker daemon as:
   #   ko.local/<import path>
   # This always preserves import paths.
-  ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
+  ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
+
+  # Build and publish, writing a single JSON document (tags, labels,
+  # annotations, plus the digest and platforms of each image) to stdout.
+  ko build -O json ./cmd/blah`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := options.Validate(po, bo); err != nil {
+				return fmt.Errorf("validating options: %w", err)
+			}
+			if err := oo.Validate(); err != nil {
 				return fmt.Errorf("validating options: %w", err)
 			}
 
@@ -77,17 +86,34 @@ func addBuild(topLevel *cobra.Command) {
 				return fmt.Errorf("error creating publisher: %w", err)
 			}
 			defer publisher.Close()
+
+			// Only JSON output needs to know more than the published refs.
+			var collector *publish.Collector
+			if oo.Output == options.OutputJSON {
+				collector = publish.NewCollector(publisher)
+				publisher = collector
+			}
 			images, err := publishImages(ctx, args, publisher, builder)
 			if err != nil {
 				return fmt.Errorf("failed to publish images: %w", err)
 			}
-			for _, img := range images {
-				fmt.Println(img)
+			if collector == nil {
+				return writeBuildOutput(cmd.OutOrStdout(), images)
 			}
-			return nil
+
+			results, err := collector.Results()
+			if err != nil {
+				return fmt.Errorf("describing published images: %w", err)
+			}
+			out, err := newBuildOutput(results, po, bo)
+			if err != nil {
+				return fmt.Errorf("describing published images: %w", err)
+			}
+			return writeJSONBuildOutput(cmd.OutOrStdout(), out)
 		},
 	}
 	options.AddPublishArg(build, po)
 	options.AddBuildOptions(build, bo)
+	options.AddOutputArg(build, oo)
 	topLevel.AddCommand(build)
 }
