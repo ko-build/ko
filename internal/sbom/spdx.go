@@ -366,7 +366,7 @@ func starterDocument(koVersion string, date time.Time, d v1.Hash) (Document, str
 		ID:      "SPDXRef-DOCUMENT",
 		Version: Version,
 		CreationInfo: CreationInfo{
-			Created:  date.Format(dateFormat),
+			Created:  date.UTC().Format(dateFormat),
 			Creators: []string{"Tool: ko " + koVersion},
 		},
 		DataLicense:       "CC0-1.0",
