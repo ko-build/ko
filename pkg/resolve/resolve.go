@@ -51,7 +51,7 @@ func ImageReferences(ctx context.Context, docs []*yaml.Node, builder build.Inter
 
 	// Next, perform parallel builds for each of the supported references.
 	var sm sync.Map
-	var errg errgroup.Group
+	errg, ctx := errgroup.WithContext(ctx)
 	for ref := range refs {
 		errg.Go(func() error {
 			img, err := builder.Build(ctx, ref)

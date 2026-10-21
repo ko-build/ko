@@ -17,7 +17,11 @@ package resolve
 import (
 	"bytes"
 	"context"
+	"errors"
+	"fmt"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
@@ -314,4 +318,47 @@ func mustDigest(img build.Result) v1.Hash {
 		panic(err)
 	}
 	return d
+}
+
+// failFastBuild fails building fooRef, and blocks building anything else
+// until its context is cancelled.
+type failFastBuild struct {
+	build.Interface
+}
+
+var errFooBuild = errors.New("foo build failed")
+
+func (b failFastBuild) Build(ctx context.Context, ref string) (build.Result, error) {
+	if strings.TrimPrefix(ref, build.StrictScheme) == fooRef {
+		return nil, errFooBuild
+	}
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-time.After(10 * time.Second):
+		return nil, fmt.Errorf("build of %s was not cancelled", ref)
+	}
+}
+
+func TestBuildErrorCancelsOtherBuilds(t *testing.T) {
+	inputs := []string{
+		build.StrictScheme + fooRef,
+		build.StrictScheme + barRef,
+		build.StrictScheme + bazRef,
+	}
+	inputYAML, err := yaml.Marshal(inputs)
+	if err != nil {
+		t.Fatalf("yaml.Marshal(%v) = %v", inputs, err)
+	}
+	base := mustRepository("gcr.io/multi-pass")
+	doc := strToYAML(t, string(inputYAML))
+
+	start := time.Now()
+	err = ImageReferences(context.Background(), []*yaml.Node{doc}, failFastBuild{testBuilder}, kotesting.NewFixedPublish(base, testHashes))
+	if !errors.Is(err, errFooBuild) {
+		t.Fatalf("ImageReferences() = %v, wanted %v", err, errFooBuild)
+	}
+	if d := time.Since(start); d > 5*time.Second {
+		t.Errorf("ImageReferences() took %v, wanted the failed build to cancel the others", d)
+	}
 }
