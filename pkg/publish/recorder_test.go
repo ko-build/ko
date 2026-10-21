@@ -18,7 +18,9 @@ import (
 	"context"
 	"os"
 	"path"
+	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -103,5 +105,65 @@ func TestRecorder(t *testing.T) {
 		if want, got := repo.Context().String(), ref.Context().String(); want != got {
 			t.Errorf("reference repo = %v, wanted %v", got, want)
 		}
+	}
+}
+
+func TestRecorderConcurrentPublish(t *testing.T) {
+	repo := name.MustParseReference("docker.io/ubuntu:latest")
+	inner := &cbPublish{cb: func(_ context.Context, b build.Result, _ string) (name.Reference, error) {
+		h, err := b.Digest()
+		if err != nil {
+			return nil, err
+		}
+		return repo.Context().Digest(h.String()), nil
+	}}
+
+	file := path.Join(t.TempDir(), "testfile")
+	recorder, err := NewRecorder(inner, file)
+	if err != nil {
+		t.Fatalf("NewRecorder() = %v", err)
+	}
+
+	const n = 32
+	want := make(map[string]bool, n)
+	imgs := make([]build.Result, n)
+	for i := range imgs {
+		img, err := random.Image(3, 1)
+		if err != nil {
+			t.Fatalf("random.Image() = %v", err)
+		}
+		h, err := img.Digest()
+		if err != nil {
+			t.Fatalf("Digest() = %v", err)
+		}
+		want[repo.Context().Digest(h.String()).String()] = true
+		imgs[i] = signed.Image(img)
+	}
+
+	var wg sync.WaitGroup
+	for _, img := range imgs {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if _, err := recorder.Publish(context.Background(), img, ""); err != nil {
+				t.Errorf("recorder.Publish() = %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+	if err := recorder.Close(); err != nil {
+		t.Errorf("recorder.Close() = %v", err)
+	}
+
+	buf, err := os.ReadFile(file)
+	if err != nil {
+		t.Fatalf("os.ReadFile() = %v", err)
+	}
+	got := map[string]bool{}
+	for _, s := range strings.Split(strings.TrimSpace(string(buf)), "\n") {
+		got[s] = true
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("recorded refs = %v, wanted %v", got, want)
 	}
 }

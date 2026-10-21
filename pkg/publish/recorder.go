@@ -19,6 +19,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -32,7 +33,10 @@ import (
 type recorder struct {
 	inner    Interface
 	fileName string
-	wc       io.Writer
+
+	// mu guards wc, since Publish may be called concurrently.
+	mu sync.Mutex
+	wc io.Writer
 }
 
 // recorder implements Interface
@@ -72,6 +76,8 @@ func (r *recorder) Publish(ctx context.Context, br build.Result, ref string) (na
 		references = append(references, result.String())
 	}
 
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if r.wc == nil {
 		f, err := os.OpenFile(r.fileName, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
@@ -91,6 +97,8 @@ func (r *recorder) Close() error {
 	if err := r.inner.Close(); err != nil {
 		return err
 	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if c, ok := r.wc.(io.Closer); ok {
 		return c.Close()
 	}
