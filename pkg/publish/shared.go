@@ -53,46 +53,41 @@ func NewCaching(inner Interface) (Interface, error) {
 
 // Publish implements Interface
 func (c *caching) Publish(ctx context.Context, br build.Result, ref string) (name.Reference, error) {
-	for {
-		f, owner := func() (*future, bool) {
-			// Lock the map of futures.
-			c.m.Lock()
-			defer c.m.Unlock()
-
-			// If a future for "ref" exists, then return it.
-			ent, ok := c.results[ref]
-			if ok {
-				// If the image matches, then return the same future.
-				if ent.br == br {
-					return ent.f, false
-				}
-			}
-			// Otherwise create and record a future for publishing "br" to "ref".
-			f := newFuture(func() (name.Reference, error) {
-				return c.inner.Publish(ctx, br, ref)
-			})
-			c.results[ref] = &entry{br: br, f: f}
-			return f, true
-		}()
-
-		res, err := f.Get()
-		// The future runs with the context of the caller that created it. If
-		// that context was cancelled but ours wasn't, forget the result and
-		// publish again with our context instead of returning its error.
-		if !owner && isContextError(err) && ctx.Err() == nil {
-			c.m.Lock()
-			if ent, ok := c.results[ref]; ok && ent.f == f {
-				delete(c.results, ref)
-			}
-			c.m.Unlock()
-			continue
-		}
-		return res, err
+	res, err := c.publish(ctx, br, ref)
+	if errors.Is(err, context.Canceled) && ctx.Err() == nil {
+		// The shared publish ran with another caller's context, which was
+		// cancelled. Forget it and publish again with our context.
+		c.m.Lock()
+		delete(c.results, ref)
+		c.m.Unlock()
+		res, err = c.publish(ctx, br, ref)
 	}
+	return res, err
 }
 
-func isContextError(err error) bool {
-	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+func (c *caching) publish(ctx context.Context, br build.Result, ref string) (name.Reference, error) {
+	f := func() *future {
+		// Lock the map of futures.
+		c.m.Lock()
+		defer c.m.Unlock()
+
+		// If a future for "ref" exists, then return it.
+		ent, ok := c.results[ref]
+		if ok {
+			// If the image matches, then return the same future.
+			if ent.br == br {
+				return ent.f
+			}
+		}
+		// Otherwise create and record a future for publishing "br" to "ref".
+		f := newFuture(func() (name.Reference, error) {
+			return c.inner.Publish(ctx, br, ref)
+		})
+		c.results[ref] = &entry{br: br, f: f}
+		return f
+	}()
+
+	return f.Get()
 }
 
 func (c *caching) Close() error {

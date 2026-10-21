@@ -44,43 +44,36 @@ func NewCaching(inner Interface) (*Caching, error) {
 
 // Build implements Interface
 func (c *Caching) Build(ctx context.Context, ip string) (Result, error) {
-	for {
-		f, owner := func() (*future, bool) {
-			// Lock the map of futures.
-			c.m.Lock()
-			defer c.m.Unlock()
-
-			// If a future for "ip" exists, then return it.
-			f, ok := c.results[ip]
-			if ok {
-				return f, false
-			}
-			// Otherwise create and record a future for a Build of "ip".
-			f = newFuture(func() (Result, error) {
-				return c.inner.Build(ctx, ip)
-			})
-			c.results[ip] = f
-			return f, true
-		}()
-
-		res, err := f.Get()
-		// The future runs with the context of the caller that created it. If
-		// that context was cancelled but ours wasn't, forget the result and
-		// build again with our context instead of returning its error.
-		if !owner && isContextError(err) && ctx.Err() == nil {
-			c.m.Lock()
-			if c.results[ip] == f {
-				delete(c.results, ip)
-			}
-			c.m.Unlock()
-			continue
-		}
-		return res, err
+	res, err := c.build(ctx, ip)
+	if errors.Is(err, context.Canceled) && ctx.Err() == nil {
+		// The shared build ran with another caller's context, which was
+		// cancelled. Forget it and build again with our context.
+		c.Invalidate(ip)
+		res, err = c.build(ctx, ip)
 	}
+	return res, err
 }
 
-func isContextError(err error) bool {
-	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
+func (c *Caching) build(ctx context.Context, ip string) (Result, error) {
+	f := func() *future {
+		// Lock the map of futures.
+		c.m.Lock()
+		defer c.m.Unlock()
+
+		// If a future for "ip" exists, then return it.
+		f, ok := c.results[ip]
+		if ok {
+			return f
+		}
+		// Otherwise create and record a future for a Build of "ip".
+		f = newFuture(func() (Result, error) {
+			return c.inner.Build(ctx, ip)
+		})
+		c.results[ip] = f
+		return f
+	}()
+
+	return f.Get()
 }
 
 // QualifyImport implements Interface
