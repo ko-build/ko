@@ -1143,6 +1143,7 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 			OS:           cf.OS,
 			Architecture: cf.Architecture,
 			OSVersion:    cf.OSVersion,
+			Variant:      cf.Variant,
 		}
 	}
 	if g.debug && !doesPlatformSupportDebugging(*platform) {

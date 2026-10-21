@@ -25,6 +25,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -622,6 +623,51 @@ func writeTempFile(_ context.Context, buildCtx buildContext) (string, error) {
 		return "", err
 	}
 	return file.Name(), nil
+}
+
+func TestGoBuildSingleImageBaseVariant(t *testing.T) {
+	img, err := random.Image(1024, 1)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	cf, err := img.ConfigFile()
+	if err != nil {
+		t.Fatalf("ConfigFile() = %v", err)
+	}
+	cf = cf.DeepCopy()
+	cf.OS = "linux"
+	cf.Architecture = "arm"
+	cf.Variant = "v7"
+	base, err := mutate.ConfigFile(img, cf)
+	if err != nil {
+		t.Fatalf("mutate.ConfigFile() = %v", err)
+	}
+
+	var got buildContext
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(func(ctx context.Context, buildCtx buildContext) (string, error) {
+			got = buildCtx
+			return writeTempFile(ctx, buildCtx)
+		}),
+		withSBOMber(fauxSBOM),
+		WithPlatforms("linux/arm/v7"),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	if _, err := ng.Build(context.Background(), StrictScheme+filepath.Join("github.com/google/ko", "test")); err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+	if got.platform.Variant != "v7" {
+		t.Errorf("build platform variant = %q, wanted %q", got.platform.Variant, "v7")
+	}
+	if !slices.Contains(got.env, "GOARM=7") {
+		t.Errorf("build env = %v, wanted it to contain GOARM=7", got.env)
+	}
 }
 
 func TestGoBuildNoKoData(t *testing.T) {
