@@ -140,8 +140,8 @@ func NewDefault(base string, options ...Option) (Interface, error) {
 	do.ropt = []remote.Option{remote.WithAuthFromKeychain(do.keychain), remote.WithTransport(do.t), remote.WithUserAgent(do.userAgent)}
 	if do.jobs == 0 {
 		do.jobs = runtime.GOMAXPROCS(0)
-		do.ropt = append(do.ropt, remote.WithJobs(do.jobs))
 	}
+	do.ropt = append(do.ropt, remote.WithJobs(do.jobs))
 
 	return do.Open()
 }

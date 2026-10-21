@@ -19,11 +19,14 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -237,5 +240,46 @@ func TestDefaultWithReleaseTag(t *testing.T) {
 		t.Errorf("Publish() = %v, wanted tag included: %v", d.String(), releaseTag)
 	} else if strings.Contains(d.String(), "@sha256:") {
 		t.Errorf("Publish() = %v, wanted no digest", d.String())
+	}
+}
+
+func TestDefaultWithJobsLimitsUploads(t *testing.T) {
+	var inFlight, maxInFlight atomic.Int32
+	reg := registry.New()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodHead && strings.Contains(r.URL.Path, "/blobs/") {
+			n := inFlight.Add(1)
+			defer inFlight.Add(-1)
+			for {
+				m := maxInFlight.Load()
+				if n <= m || maxInFlight.CompareAndSwap(m, n) {
+					break
+				}
+			}
+			// Hold the request so concurrent uploads overlap.
+			time.Sleep(20 * time.Millisecond)
+		}
+		reg.ServeHTTP(w, r)
+	}))
+	defer server.Close()
+	u, err := url.Parse(server.URL)
+	if err != nil {
+		t.Fatalf("url.Parse(%v) = %v", server.URL, err)
+	}
+
+	manyLayers, err := random.Image(1024, 8)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+
+	def, err := publish.NewDefault(u.Host+"/jobs", publish.WithJobs(1))
+	if err != nil {
+		t.Fatalf("NewDefault() = %v", err)
+	}
+	if _, err := def.Publish(context.Background(), manyLayers, build.StrictScheme+"example.com/cmd/app"); err != nil {
+		t.Fatalf("Publish() = %v", err)
+	}
+	if got := maxInFlight.Load(); got != 1 {
+		t.Errorf("max concurrent blob uploads = %d, wanted 1", got)
 	}
 }
