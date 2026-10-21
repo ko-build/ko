@@ -20,6 +20,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -67,7 +68,6 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 		// This can't really happen.
 		panic(err)
 	}
-	ropt = append(ropt, remote.Reuse(puller))
 
 	cache, err := newCache(puller)
 	if err != nil {
@@ -75,9 +75,10 @@ func getBaseImage(bo *options.BuildOptions) build.GetBase {
 	}
 
 	fetch := func(ctx context.Context, ref name.Reference) (build.Result, error) {
-		ropt = append(ropt, remote.WithContext(ctx))
+		// fetch is called concurrently, so don't append to the shared ropt.
+		opts := append(slices.Clone(ropt), remote.Reuse(puller), remote.WithContext(ctx))
 
-		desc, err := remote.Get(ref, ropt...)
+		desc, err := remote.Get(ref, opts...)
 		if err != nil {
 			return nil, err
 		}

@@ -18,9 +18,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"log"
+	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/crane"
+	"github.com/google/go-containerregistry/pkg/registry"
+	"github.com/google/go-containerregistry/pkg/v1/random"
 
 	"github.com/google/ko/pkg/commands/options"
 )
@@ -69,4 +75,51 @@ func TestGetBaseImageLocalHonorsCanceledContext(t *testing.T) {
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("getBaseImage() = %v, want context.Canceled", err)
 	}
+}
+
+func TestGetBaseImageConcurrentFetch(t *testing.T) {
+	t.Setenv("KOCACHE", "")
+
+	s := httptest.NewServer(registry.New(registry.Logger(log.New(io.Discard, "", 0))))
+	defer s.Close()
+
+	const n = 8
+	bo := &options.BuildOptions{BaseImageOverrides: map[string]string{}}
+	want := map[string]string{}
+	for i := range n {
+		img, err := random.Image(1024, 1)
+		if err != nil {
+			t.Fatalf("random.Image(): %v", err)
+		}
+		ref := fmt.Sprintf("%s/base%d", s.Listener.Addr().String(), i)
+		if err := crane.Push(img, ref); err != nil {
+			t.Fatalf("crane.Push(%s): %v", ref, err)
+		}
+		importpath := fmt.Sprintf("example.com/cmd%d", i)
+		bo.BaseImageOverrides[importpath] = ref
+		want[importpath] = mustDigest(img).String()
+	}
+
+	baseFn := getBaseImage(bo)
+	var wg sync.WaitGroup
+	for importpath, wantDigest := range want {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, res, err := baseFn(context.Background(), "ko://"+importpath)
+			if err != nil {
+				t.Errorf("getBaseImage(%s): %v", importpath, err)
+				return
+			}
+			digest, err := res.Digest()
+			if err != nil {
+				t.Errorf("res.Digest(): %v", err)
+				return
+			}
+			if got := digest.String(); got != wantDigest {
+				t.Errorf("getBaseImage(%s) digest = %s, wanted %s", importpath, got, wantDigest)
+			}
+		}()
+	}
+	wg.Wait()
 }
