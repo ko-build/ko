@@ -16,6 +16,8 @@ package build
 
 import (
 	"context"
+	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -90,5 +92,56 @@ func TestCaching(t *testing.T) {
 		}
 
 		cb.Invalidate(ip)
+	}
+}
+
+// ctxbuild fails with the context's error if it is done, and succeeds otherwise.
+type ctxbuild struct {
+	calls atomic.Int32
+}
+
+// ctxbuild implements Interface
+var _ Interface = (*ctxbuild)(nil)
+
+func (cb *ctxbuild) QualifyImport(ip string) (string, error) { return ip, nil }
+
+func (cb *ctxbuild) IsSupportedReference(string) error { return nil }
+
+func (cb *ctxbuild) Build(ctx context.Context, _ string) (Result, error) {
+	cb.calls.Add(1)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return random.Index(256, 1, 1)
+}
+
+func TestCachingRetriesOtherCallersContextError(t *testing.T) {
+	ip := "foo"
+	inner := &ctxbuild{}
+	cb, _ := NewCaching(inner)
+
+	// The first caller's context is cancelled, so its build fails.
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := cb.Build(cancelled, ip); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Build(cancelled) = %v, wanted %v", err, context.Canceled)
+	}
+
+	// A caller with a live context must not get the cached cancellation.
+	img, err := cb.Build(context.Background(), ip)
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	// And the successful result is cached from then on.
+	img2, err := cb.Build(context.Background(), ip)
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+	if img != img2 {
+		t.Error("Build() returned a different result, wanted the cached one")
+	}
+	if got, want := inner.calls.Load(), int32(2); got != want {
+		t.Errorf("inner builds = %d, wanted %d", got, want)
 	}
 }

@@ -16,6 +16,8 @@ package publish
 
 import (
 	"context"
+	"errors"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -89,5 +91,57 @@ func TestCaching(t *testing.T) {
 		if d1 != d2 {
 			t.Error("Got different references, wanted same")
 		}
+	}
+}
+
+// ctxpublish fails with the context's error if it is done, and succeeds otherwise.
+type ctxpublish struct {
+	calls atomic.Int32
+}
+
+// ctxpublish implements Interface
+var _ Interface = (*ctxpublish)(nil)
+
+func (cp *ctxpublish) Publish(ctx context.Context, _ build.Result, _ string) (name.Reference, error) {
+	cp.calls.Add(1)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	return makeRef()
+}
+
+func (cp *ctxpublish) Close() error {
+	return nil
+}
+
+func TestCachingRetriesOtherCallersContextError(t *testing.T) {
+	ref := "foo"
+	inner := &ctxpublish{}
+	cp, _ := NewCaching(inner)
+	img, _ := random.Index(256, 1, 1)
+
+	// The first caller's context is cancelled, so its publish fails.
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := cp.Publish(cancelled, img, ref); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Publish(cancelled) = %v, wanted %v", err, context.Canceled)
+	}
+
+	// A caller with a live context must not get the cached cancellation.
+	ref1, err := cp.Publish(context.Background(), img, ref)
+	if err != nil {
+		t.Fatalf("Publish() = %v", err)
+	}
+
+	// And the successful result is cached from then on.
+	ref2, err := cp.Publish(context.Background(), img, ref)
+	if err != nil {
+		t.Fatalf("Publish() = %v", err)
+	}
+	if ref1 != ref2 {
+		t.Errorf("Publish() = %v, wanted the cached %v", ref2, ref1)
+	}
+	if got, want := inner.calls.Load(), int32(2); got != want {
+		t.Errorf("inner publishes = %d, wanted %d", got, want)
 	}
 }
