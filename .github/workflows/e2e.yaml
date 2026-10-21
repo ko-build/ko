@@ -74,8 +74,8 @@ jobs:
         # Build and run the test/ binary, which should log "Hello there" served from KO_DATA_PATH
         testimg=$(go run ./ build ./test --platform=${PLATFORM} --preserve-import-paths)
         # The exit status of a >(...) process substitution is ignored, so capture
-        # the output instead, log all of it, and then check it.
-        testout=$(docker run ${testimg} --wait=false 2>&1)
+        # the output instead, log all of it (even if the run fails), and then check it.
+        testout=$(docker run ${testimg} --wait=false 2>&1) || { echo "${testout}"; exit 1; }
         echo "${testout}"
         grep "Hello there" <<< "${testout}"
 
