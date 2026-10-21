@@ -30,6 +30,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -1082,6 +1083,10 @@ func (g *gobuild) configForImportPath(ip string) Config {
 	if len(config.Flags) == 0 {
 		config.Flags = g.defaultFlags
 	}
+	// Copy the flags before appending to them: they are shared with
+	// g.defaultFlags or g.buildConfigs, and this runs once per platform
+	// concurrently.
+	config.Flags = slices.Clone(config.Flags)
 
 	if g.trimpath {
 		// The `-trimpath` flag removes file system paths from the resulting binary, to aid reproducibility.

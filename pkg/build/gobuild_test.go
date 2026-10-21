@@ -25,8 +25,10 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -592,6 +594,47 @@ func TestBuildConfig(t *testing.T) {
 				t.Errorf("%T differ (-got, +want): %s", test.expectConfig, diff)
 			}
 		})
+	}
+}
+
+func TestConfigForImportPathDoesNotMutateFlags(t *testing.T) {
+	// Flag slices with spare capacity, so an append would write into them.
+	defaultBacking := []string{"-v", "", "", ""}
+	configBacking := []string{"-race", "", "", ""}
+
+	i, err := NewGo(context.Background(), "",
+		WithBaseImages(nilGetBase),
+		WithDefaultFlags(defaultBacking[:1]),
+		WithConfig(map[string]Config{
+			"example.com/foo": {Flags: FlagArray(configBacking[:1])},
+		}),
+		WithTrimpath(true),
+		WithDisabledOptimizations(),
+	)
+	if err != nil {
+		t.Fatalf("NewGo(): unexpected error: %+v", err)
+	}
+	gb, ok := i.(*gobuild)
+	if !ok {
+		t.Fatal("NewGo() did not return *gobuild{} as expected")
+	}
+
+	// Called concurrently, once per platform, by buildAll.
+	var wg sync.WaitGroup
+	for _, ip := range []string{"example.com/bar", "example.com/foo", "example.com/bar", "example.com/foo"} {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			gb.configForImportPath(ip)
+		}()
+	}
+	wg.Wait()
+
+	if want := []string{"-v", "", "", ""}; !slices.Equal(defaultBacking, want) {
+		t.Errorf("default flags backing array = %q, wanted %q", defaultBacking, want)
+	}
+	if want := []string{"-race", "", "", ""}; !slices.Equal(configBacking, want) {
+		t.Errorf("build config flags backing array = %q, wanted %q", configBacking, want)
 	}
 }
 
