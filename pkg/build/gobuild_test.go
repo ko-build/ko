@@ -1578,6 +1578,43 @@ func TestMatchesPlatformSpec(t *testing.T) {
 	}
 }
 
+func TestUnmatchedPlatforms(t *testing.T) {
+	// The platforms of a distroless-like base image without linux/arm/v6.
+	bases := []*v1.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm", Variant: "v7"},
+		{OS: "linux", Architecture: "arm64", Variant: "v8"},
+		{OS: "unknown", Architecture: "unknown"},
+		nil,
+	}
+	for _, tc := range []struct {
+		spec []string
+		want []string
+	}{{
+		spec: []string{"all"},
+	}, {
+		spec: []string{"linux/amd64", "linux/arm64"},
+	}, {
+		spec: []string{"linux/amd64", "linux/arm/v6", "linux/arm/v7"},
+		want: []string{"linux/arm/v6"},
+	}, {
+		spec: []string{"linux/s390x", "linux/arm/v6"},
+		want: []string{"linux/s390x", "linux/arm/v6"},
+	}, {
+		// unknown/unknown attestation manifests never satisfy a platform.
+		spec: []string{"unknown/unknown"},
+		want: []string{"unknown/unknown"},
+	}} {
+		pm, err := parseSpec(tc.spec)
+		if err != nil {
+			t.Fatalf("parseSpec(%q) = %v", tc.spec, err)
+		}
+		if diff := cmp.Diff(tc.want, pm.unmatched(bases)); diff != "" {
+			t.Errorf("unmatched(%q) (-want +got):\n%s", tc.spec, diff)
+		}
+	}
+}
+
 func TestGoBuildConsistentMediaTypes(t *testing.T) {
 	for _, c := range []struct {
 		desc                      string

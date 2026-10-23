@@ -1468,18 +1468,23 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 	}
 
 	matches := make([]v1.Descriptor, 0)
+	bases := make([]*v1.Platform, 0, len(im.Manifests))
 	for _, desc := range im.Manifests {
 		// Nested index is pretty rare. We could support this in theory, but return an error for now.
 		if desc.MediaType != types.OCIManifestSchema1 && desc.MediaType != types.DockerManifestSchema2 {
 			return nil, fmt.Errorf("%q has unexpected mediaType %q in base for %q", desc.Digest, desc.MediaType, ref)
 		}
 
+		bases = append(bases, desc.Platform)
 		if g.platformMatcher.matches(desc.Platform) {
 			matches = append(matches, desc)
 		}
 	}
 	if len(matches) == 0 {
 		return nil, errors.New("no matching platforms in base image index")
+	}
+	if missing := g.platformMatcher.unmatched(bases); len(missing) > 0 {
+		log.Printf("WARNING: base image %s has no image for platform(s) %v, these will not be built", baseRef, missing)
 	}
 	if len(matches) == 1 {
 		// Filters resulted in a single matching platform; just produce
@@ -1627,53 +1632,83 @@ func (pm *platformMatcher) matches(base *v1.Platform) bool {
 	}
 
 	for _, p := range pm.platforms {
-		if p.OS != "" && base.OS != p.OS {
-			continue
+		if platformMatches(p, base) {
+			return true
 		}
-		if p.Architecture != "" && base.Architecture != p.Architecture {
-			continue
-		}
-		if p.Variant != "" && base.Variant != p.Variant {
-			continue
-		}
-
-		// Windows is... weird. Windows base images use osversion to
-		// communicate what Windows version is used, which matters for image
-		// selection at runtime.
-		//
-		// Windows osversions include the usual major/minor/patch version
-		// components, as well as an incrementing "build number" which can
-		// change when new Windows base images are released.
-		//
-		// In order to avoid having to match the entire osversion including the
-		// incrementing build number component, we allow matching a platform
-		// that only matches the first three osversion components, only for
-		// Windows images.
-		//
-		// If the X.Y.Z components don't match (or aren't formed as we expect),
-		// the platform doesn't match. Only if X.Y.Z matches and the extra
-		// build number component doesn't, do we consider the platform to
-		// match.
-		//
-		// Ref: https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility?tabs=windows-server-2022%2Cwindows-10-21H1#build-number-new-release-of-windows
-		if p.OSVersion != "" && p.OSVersion != base.OSVersion {
-			if p.OS != "windows" {
-				// osversion mismatch is only possibly allowed when os == windows.
-				continue
-			}
-			if pcount, bcount := strings.Count(p.OSVersion, "."), strings.Count(base.OSVersion, "."); pcount == 2 && bcount == 3 {
-				if p.OSVersion != base.OSVersion[:strings.LastIndex(base.OSVersion, ".")] {
-					// If requested osversion is X.Y.Z and potential match is X.Y.Z.A, all of X.Y.Z must match.
-					// Any other form of these osversions are not a match.
-					continue
-				}
-			} else {
-				// Partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
-				continue
-			}
-		}
-		return true
 	}
 
 	return false
+}
+
+// unmatched returns the requested platforms that none of the base platforms
+// satisfy. It always returns nil for "all".
+func (pm *platformMatcher) unmatched(bases []*v1.Platform) []string {
+	var missing []string
+	for i, p := range pm.platforms {
+		found := false
+		for _, base := range bases {
+			if base == nil || base.OS == "unknown" || base.Architecture == "unknown" {
+				continue
+			}
+			if platformMatches(p, base) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			missing = append(missing, pm.spec[i])
+		}
+	}
+	return missing
+}
+
+// platformMatches reports whether the base platform satisfies the requested
+// platform p. base must not be nil.
+func platformMatches(p v1.Platform, base *v1.Platform) bool {
+	if p.OS != "" && base.OS != p.OS {
+		return false
+	}
+	if p.Architecture != "" && base.Architecture != p.Architecture {
+		return false
+	}
+	if p.Variant != "" && base.Variant != p.Variant {
+		return false
+	}
+
+	// Windows is... weird. Windows base images use osversion to
+	// communicate what Windows version is used, which matters for image
+	// selection at runtime.
+	//
+	// Windows osversions include the usual major/minor/patch version
+	// components, as well as an incrementing "build number" which can
+	// change when new Windows base images are released.
+	//
+	// In order to avoid having to match the entire osversion including the
+	// incrementing build number component, we allow matching a platform
+	// that only matches the first three osversion components, only for
+	// Windows images.
+	//
+	// If the X.Y.Z components don't match (or aren't formed as we expect),
+	// the platform doesn't match. Only if X.Y.Z matches and the extra
+	// build number component doesn't, do we consider the platform to
+	// match.
+	//
+	// Ref: https://docs.microsoft.com/en-us/virtualization/windowscontainers/deploy-containers/version-compatibility?tabs=windows-server-2022%2Cwindows-10-21H1#build-number-new-release-of-windows
+	if p.OSVersion != "" && p.OSVersion != base.OSVersion {
+		if p.OS != "windows" {
+			// osversion mismatch is only possibly allowed when os == windows.
+			return false
+		}
+		if pcount, bcount := strings.Count(p.OSVersion, "."), strings.Count(base.OSVersion, "."); pcount == 2 && bcount == 3 {
+			if p.OSVersion != base.OSVersion[:strings.LastIndex(base.OSVersion, ".")] {
+				// If requested osversion is X.Y.Z and potential match is X.Y.Z.A, all of X.Y.Z must match.
+				// Any other form of these osversions are not a match.
+				return false
+			}
+		} else {
+			// Partial osversion matching only allows X.Y.Z to match X.Y.Z.A.
+			return false
+		}
+	}
+	return true
 }
