@@ -24,7 +24,7 @@ jobs:
         with:
           go-version: 'stable'
 
-      - uses: chainguard-dev/actions/gofmt@84b1be4c638f12d4256ddddef17af98853b6d0d9
+      - uses: chainguard-dev/actions/gofmt@e94104128fff55b3c5e1831a8bbbf198603156f9
         with:
           args: -s
 
@@ -44,7 +44,7 @@ jobs:
         with:
           go-version: 'stable'
 
-      - uses: chainguard-dev/actions/goimports@84b1be4c638f12d4256ddddef17af98853b6d0d9
+      - uses: chainguard-dev/actions/goimports@e94104128fff55b3c5e1831a8bbbf198603156f9
 
   lint:
     name: Lint
@@ -64,13 +64,13 @@ jobs:
         with:
           go-version: 'stable'
 
-      - uses: chainguard-dev/actions/trailing-space@84b1be4c638f12d4256ddddef17af98853b6d0d9
+      - uses: chainguard-dev/actions/trailing-space@e94104128fff55b3c5e1831a8bbbf198603156f9
         if: ${{ always() }}
 
-      - uses: chainguard-dev/actions/eof-newline@84b1be4c638f12d4256ddddef17af98853b6d0d9
+      - uses: chainguard-dev/actions/eof-newline@e94104128fff55b3c5e1831a8bbbf198603156f9
         if: ${{ always() }}
 
-      - uses: reviewdog/action-misspell@ce198e1db0d029be165f2d3e809c1a42353446b0 # v1.30.2
+      - uses: reviewdog/action-misspell@3467363dab5b42db2b1372c5fd2b1771fea2ea48 # v1.30.3
         if: ${{ always() }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
