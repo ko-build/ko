@@ -1480,11 +1480,11 @@ func (g *gobuild) buildAll(ctx context.Context, ref string, baseRef name.Referen
 			matches = append(matches, desc)
 		}
 	}
+	if missing := g.platformMatcher.unmatched(bases); len(missing) > 0 {
+		return nil, fmt.Errorf("base image %s has no image for requested platform(s) %v", baseRef, missing)
+	}
 	if len(matches) == 0 {
 		return nil, errors.New("no matching platforms in base image index")
-	}
-	if missing := g.platformMatcher.unmatched(bases); len(missing) > 0 {
-		log.Printf("WARNING: base image %s has no image for platform(s) %v, these will not be built", baseRef, missing)
 	}
 	if len(matches) == 1 {
 		// Filters resulted in a single matching platform; just produce
