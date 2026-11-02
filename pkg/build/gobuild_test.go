@@ -1578,6 +1578,81 @@ func TestMatchesPlatformSpec(t *testing.T) {
 	}
 }
 
+func TestUnmatchedPlatforms(t *testing.T) {
+	// The platforms of a distroless-like base image without linux/arm/v6.
+	bases := []*v1.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm", Variant: "v7"},
+		{OS: "linux", Architecture: "arm64", Variant: "v8"},
+		{OS: "unknown", Architecture: "unknown"},
+		nil,
+	}
+	for _, tc := range []struct {
+		spec []string
+		want []string
+	}{{
+		spec: []string{"all"},
+	}, {
+		spec: []string{"linux/amd64", "linux/arm64"},
+	}, {
+		spec: []string{"linux/amd64", "linux/arm/v6", "linux/arm/v7"},
+		want: []string{"linux/arm/v6"},
+	}, {
+		spec: []string{"linux/s390x", "linux/arm/v6"},
+		want: []string{"linux/s390x", "linux/arm/v6"},
+	}, {
+		// unknown/unknown attestation manifests never satisfy a platform.
+		spec: []string{"unknown/unknown"},
+		want: []string{"unknown/unknown"},
+	}} {
+		pm, err := parseSpec(tc.spec)
+		if err != nil {
+			t.Fatalf("parseSpec(%q) = %v", tc.spec, err)
+		}
+		if diff := cmp.Diff(tc.want, pm.unmatched(bases)); diff != "" {
+			t.Errorf("unmatched(%q) (-want +got):\n%s", tc.spec, diff)
+		}
+	}
+}
+
+func TestGoBuildIndexMissingPlatform(t *testing.T) {
+	var adds []mutate.IndexAddendum
+	for _, p := range []v1.Platform{
+		{OS: "linux", Architecture: "amd64"},
+		{OS: "linux", Architecture: "arm", Variant: "v7"},
+	} {
+		img, err := random.Image(1024, 1)
+		if err != nil {
+			t.Fatalf("random.Image() = %v", err)
+		}
+		adds = append(adds, mutate.IndexAddendum{
+			Add:        img,
+			Descriptor: v1.Descriptor{Platform: &p},
+		})
+	}
+	base := mutate.AppendManifests(empty.Index, adds...)
+
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		WithPlatforms("linux/amd64", "linux/arm/v6", "linux/arm/v7"),
+		withBuilder(writeTempFile),
+		withSBOMber(fauxSBOM),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	_, err = ng.Build(context.Background(), StrictScheme+filepath.Join("github.com/google/ko", "test"))
+	if err == nil {
+		t.Fatal("Build() = nil, want error for missing platform")
+	}
+	if !strings.Contains(err.Error(), "linux/arm/v6") {
+		t.Errorf("Build() = %v, want error naming linux/arm/v6", err)
+	}
+}
+
 func TestGoBuildConsistentMediaTypes(t *testing.T) {
 	for _, c := range []struct {
 		desc                      string
