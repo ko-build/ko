@@ -36,12 +36,12 @@ jobs:
       run: go install ./
 
     - name: Setup Cluster
-      uses: chainguard-dev/actions/setup-kind@84b1be4c638f12d4256ddddef17af98853b6d0d9 # main
+      uses: chainguard-dev/actions/setup-kind@794a2c44abbbd7b3a186db97b359270e4105448f # main
       with:
         registry-authority: ${{ env.REGISTRY_NAME }}:${{ env.REGISTRY_PORT }}
 
     - name: Install Cosign
-      uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
     - name: Run Smoke Test
       run: |
@@ -70,4 +70,4 @@ jobs:
 
     - name: Collect diagnostics and upload
       if: ${{ failure() }}
-      uses: chainguard-dev/actions/kind-diag@84b1be4c638f12d4256ddddef17af98853b6d0d9 # main
+      uses: chainguard-dev/actions/kind-diag@794a2c44abbbd7b3a186db97b359270e4105448f # main

@@ -31,7 +31,7 @@ jobs:
           go-version: 'stable'
 
       - uses: chainguard-dev/actions/setup-registry@main
-      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
       - name: Install SPDX Tools
         run: |
@@ -43,7 +43,7 @@ jobs:
           cosign download sbom $(go run ./ build) | tee spdx.json
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx.json
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ always() }}
         with:
           name: spdx.json
@@ -68,7 +68,7 @@ jobs:
         with:
           go-version: 'stable'
       - uses: chainguard-dev/actions/setup-registry@main
-      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      - uses: sigstore/cosign-installer@756fe2d284c7292c4e9b62c8a28f1e5629c59532 # v4.1.3
 
       - name: Install SPDX Tools
         run: |
@@ -82,7 +82,7 @@ jobs:
 
           java -jar ./tools-java-${SPDX_TOOLS_VERSION}-jar-with-dependencies.jar Verify spdx-multi-arch.json
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: ${{ always() }}
         with:
           name: spdx-multi-arch.json
