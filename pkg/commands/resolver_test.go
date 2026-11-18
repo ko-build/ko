@@ -36,6 +36,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/daemon"
 	"github.com/google/go-containerregistry/pkg/v1/empty"
 	"github.com/google/go-containerregistry/pkg/v1/random"
+	"github.com/google/go-containerregistry/pkg/v1/tarball"
 	"github.com/google/ko/pkg/build"
 	"github.com/google/ko/pkg/commands/options"
 	kotesting "github.com/google/ko/pkg/internal/testing"
@@ -317,6 +318,69 @@ func TestNewPublisherCanPublish(t *testing.T) {
 			gotImageName := ref.Context().Name()
 			if gotImageName != test.wantImageName {
 				t.Errorf("got %s, wanted %s", gotImageName, test.wantImageName)
+			}
+		})
+	}
+}
+
+func TestNewPublisherTarballTagOnly(t *testing.T) {
+	const repo = "example.test/ko"
+	for _, test := range []struct {
+		name    string
+		tags    []string
+		wantTag string
+	}{
+		{name: "no tags"},
+		{name: "latest", tags: []string{"latest"}, wantTag: "latest"},
+		{name: "single tag", tags: []string{"v1"}, wantTag: "v1"},
+		{name: "multiple tags", tags: []string{"v1", "v2"}, wantTag: "v1"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			file := path.Join(t.TempDir(), "images.tar")
+			publisher, err := NewPublisher(&options.PublishOptions{
+				DockerRepo:  repo,
+				Bare:        true,
+				Tags:        test.tags,
+				TarballFile: file,
+				TagOnly:     true,
+			})
+			if test.wantTag == "" {
+				if err == nil {
+					t.Fatal("NewPublisher() succeeded without a tag")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("NewPublisher(): %v", err)
+			}
+
+			ref, err := publisher.Publish(t.Context(), foo, build.StrictScheme+fooRef)
+			if err != nil {
+				t.Fatalf("publisher.Publish(): %v", err)
+			}
+			if err := publisher.Close(); err != nil {
+				t.Fatalf("publisher.Close(): %v", err)
+			}
+			if got, want := ref.Name(), repo+":"+test.wantTag; got != want {
+				t.Errorf("publisher.Publish() = %s, want %s", got, want)
+			}
+
+			for _, alias := range test.tags {
+				tag, err := name.NewTag(repo + ":" + alias)
+				if err != nil {
+					t.Fatal(err)
+				}
+				stored, err := tarball.ImageFromPath(file, &tag)
+				if err != nil {
+					t.Fatalf("archive does not contain %s: %v", tag.Name(), err)
+				}
+				digest, err := stored.Digest()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if digest != fooHash {
+					t.Errorf("digest for %s = %s, want %s", tag.Name(), digest, fooHash)
+				}
 			}
 		})
 	}
