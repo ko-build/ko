@@ -49,7 +49,7 @@ func TestCaching(t *testing.T) {
 
 	previousDigest := "not-a-digest"
 	// Each iteration, we test that the first publish is slow and subsequent
-	// publishs are fast and return the same reference.  For each of these
+	// publishes are fast and return the same reference.  For each of these
 	// iterations we use a new random image, which should invalidate the
 	// cached reference from previous iterations.
 	for range 3 {

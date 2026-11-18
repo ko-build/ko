@@ -73,7 +73,7 @@ type PublishOptions struct {
 }
 
 func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
-	// Set DockerRepo from the KO_DOCKER_REPO envionment variable.
+	// Set DockerRepo from the KO_DOCKER_REPO environment variable.
 	// See https://github.com/google/ko/pull/351 for flag discussion.
 	if dockerRepo, exists := os.LookupEnv("KO_DOCKER_REPO"); exists {
 		po.DockerRepo = dockerRepo
