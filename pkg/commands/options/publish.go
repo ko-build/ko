@@ -31,7 +31,7 @@ type PublishOptions struct {
 	// In normal ko usage, this is populated with the value of $KO_DOCKER_REPO.
 	DockerRepo string
 
-	// LocalDomain overrides the default domain for images loaded into the local Docker daemon. Use with Local=true.
+	// LocalDomain overrides the default domain for images loaded into Docker or Podman.
 	LocalDomain string
 
 	// UserAgent enables overriding the default value of the `User-Agent` HTTP
@@ -51,7 +51,10 @@ type PublishOptions struct {
 	Push bool
 
 	// Local publishes images to a local docker daemon.
-	Local            bool
+	Local bool
+	// LocalPodman loads images into Podman storage instead of a registry.
+	LocalPodman bool
+
 	InsecureRegistry bool
 
 	OCILayoutPath string
@@ -89,6 +92,8 @@ func AddPublishArg(cmd *cobra.Command, po *PublishOptions) {
 
 	cmd.Flags().BoolVarP(&po.Local, "local", "L", po.Local,
 		"Load into images to local docker daemon.")
+	cmd.Flags().BoolVar(&po.LocalPodman, "local-podman", po.LocalPodman,
+		"Load images into local Podman storage instead of a registry.")
 	cmd.Flags().BoolVar(&po.InsecureRegistry, "insecure-registry", po.InsecureRegistry,
 		"Whether to skip TLS verification on the registry")
 

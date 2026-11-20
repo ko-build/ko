@@ -187,8 +187,6 @@ func NewPublisher(po *options.PublishOptions) (publish.Interface, error) {
 func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 	// use each tag only once
 	po.Tags = unique(po.Tags)
-	// Create the publish.Interface that we will use to publish image references
-	// to either a docker daemon or a container image registry.
 	innerPublisher, err := func() (publish.Interface, error) {
 		repoName := po.DockerRepo
 		namer := options.MakeNamer(po)
@@ -196,12 +194,15 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		if po.LocalDomain == "" {
 			po.LocalDomain = publish.LocalDomain
 		}
-		// If repoName is unset with --local, default it to the local domain.
-		if po.Local && repoName == "" {
+		if po.Local && po.LocalPodman {
+			return nil, errors.New("--local and --local-podman cannot be used together")
+		}
+		// If repoName is unset with either local flag, default it to the local domain.
+		if (po.Local || po.LocalPodman) && repoName == "" {
 			repoName = po.LocalDomain
 		}
-		// When in doubt, if repoName is under the local domain, default to --local.
-		po.Local = po.Local || strings.HasPrefix(repoName, po.LocalDomain)
+		// Only infer --local from the repository if Podman was not explicitly requested.
+		po.Local = po.Local || (!po.LocalPodman && strings.HasPrefix(repoName, po.LocalDomain))
 		if po.Local {
 			// TODO(jonjohnsonjr): I'm assuming that nobody will
 			// use local with other publishers, but that might
@@ -212,7 +213,7 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 				publish.WithLocalDomain(po.LocalDomain),
 			)
 		}
-		if strings.HasPrefix(repoName, publish.KindDomain) {
+		if !po.LocalPodman && strings.HasPrefix(repoName, publish.KindDomain) {
 			return publish.NewKindPublisher(repoName, namer, po.Tags), nil
 		}
 
@@ -234,11 +235,17 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 			tp := publish.NewTarball(po.TarballFile, repoName, namer, po.Tags)
 			publishers = append(publishers, tp)
 		}
-		userAgent := ua()
-		if po.UserAgent != "" {
-			userAgent = po.UserAgent
-		}
-		if po.Push {
+		if po.LocalPodman {
+			pp, err := publish.NewPodman(repoName, namer, po.Tags, po.TagOnly)
+			if err != nil {
+				return nil, err
+			}
+			publishers = append(publishers, pp)
+		} else if po.Push {
+			userAgent := ua()
+			if po.UserAgent != "" {
+				userAgent = po.UserAgent
+			}
 			dp, err := publish.NewDefault(repoName,
 				publish.WithUserAgent(userAgent),
 				publish.WithAuthFromKeychain(keychain),

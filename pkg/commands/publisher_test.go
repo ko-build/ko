@@ -95,6 +95,26 @@ func TestPublishImages(t *testing.T) {
 	}
 }
 
+func TestNewPodmanPublisher(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	for _, tt := range []struct {
+		name string
+		po   options.PublishOptions
+		want string
+	}{
+		{"no repository required", options.PublishOptions{LocalPodman: true, Push: true}, "requires podman on PATH"},
+		{"overrides implicit Docker", options.PublishOptions{LocalPodman: true, DockerRepo: "ko.local"}, "requires podman on PATH"},
+		{"explicit Docker conflicts", options.PublishOptions{LocalPodman: true, Local: true}, "cannot be used together"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := NewPublisher(&tt.po)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("NewPublisher() = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func sampleAppRelDir() (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {

@@ -207,14 +207,32 @@ identified by `KO_DOCKER_REPO`.
 `ko` can also load images to a local Docker daemon, if available, by setting
 `KO_DOCKER_REPO=ko.local`, or by passing the `--local` (`-L`) flag.
 
-Local images can be used as a base image for other `ko` images:
+Local Docker images can be used as a base image for other `ko` images:
 
 ```yaml
 defaultBaseImage: ko.local/example/base/image
 ```
 
+With Podman installed, use `--local-podman` to load a single-platform image into
+Podman storage instead of pushing it to a registry:
+
+```shell
+image=$(ko build --local-podman ./cmd/app)
+podman run --pull=never --rm "$image"
+```
+
+`ko` uses `podman load`, so the image goes into the store used by Podman when run
+as the same user: normally your rootless store, or the system-wide store when
+run as root. No Docker daemon or registry is needed to publish, though `ko` may
+still need to pull the base image. Set `--platform` to a single platform if
+your build would otherwise produce a multi-platform image.
+
+`KO_DOCKER_REPO` defaults to `ko.local` in this mode and controls image naming
+only. `ko` loads all tags specified by `--tags` and prints a digest-derived
+local tag by default. Use `--tag-only` to print the first requested tag instead.
+`--local-podman` cannot be combined with `--local` (Docker).
+
 `ko` can also load images into a local [KinD](https://kind.sigs.k8s.io)
 cluster, if available, by setting `KO_DOCKER_REPO=kind.local`. By default this
 loads into the default KinD cluster name (`kind`). To load into another KinD
 cluster, set `KIND_CLUSTER_NAME=my-other-cluster`.
-

@@ -43,6 +43,7 @@ ko run IMPORTPATH [flags]
   -j, --jobs int                             The maximum number of concurrent builds (default GOMAXPROCS)
       --ldflags strings                      ldflags to pass to go build (may be repeated)
   -L, --local[=true|false]                   Load into images to local docker daemon.
+      --local-podman[=true|false]            Load images into local Podman storage instead of a registry.
       --oci-layout-path string               Path to save the OCI image layout of the built images
       --platform strings                     Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths[=true|false]   Whether to preserve the full import path after KO_DOCKER_REPO.
