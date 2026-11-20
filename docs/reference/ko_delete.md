@@ -9,13 +9,13 @@ ko delete [flags]
 ### Options
 
 ```
-  -h, --help   help for delete
+  -h, --help[=true|false]   help for delete
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -v, --verbose   Enable debug logs
+  -v, --verbose[=true|false]   Enable debug logs
 ```
 
 ### SEE ALSO

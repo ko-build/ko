@@ -9,8 +9,8 @@ ko [flags]
 ### Options
 
 ```
-  -h, --help      help for ko
-  -v, --verbose   Enable debug logs
+  -h, --help[=true|false]      help for ko
+  -v, --verbose[=true|false]   Enable debug logs
 ```
 
 ### SEE ALSO

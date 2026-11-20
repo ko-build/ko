@@ -16,16 +16,16 @@ ko login [OPTIONS] [SERVER] [flags]
 ### Options
 
 ```
-  -h, --help              help for login
-  -p, --password string   Password
-      --password-stdin    Take the password from stdin
-  -u, --username string   Username
+  -h, --help[=true|false]             help for login
+  -p, --password string               Password
+      --password-stdin[=true|false]   Take the password from stdin
+  -u, --username string               Username
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -v, --verbose   Enable debug logs
+  -v, --verbose[=true|false]   Enable debug logs
 ```
 
 ### SEE ALSO
