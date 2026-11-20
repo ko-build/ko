@@ -14,7 +14,10 @@ jobs:
       matrix:
         platform:
         - ubuntu-latest
-        - windows-latest
+        # Pinned until go-containerregistry stops writing "sha256:<hex>" as the
+        # config entry name in docker-load tarballs; Docker 29.7 on
+        # windows-latest rejects it. See ko-build/ko#1755.
+        - windows-2022
 
     name: e2e ${{ matrix.platform }}
     runs-on: ${{ matrix.platform }}
@@ -58,7 +61,7 @@ jobs:
 
         export PLATFORM=$(go env GOOS)/$(go env GOARCH)
 
-        if [[ "${{ matrix.platform }}" == "windows-latest" ]]; then
+        if [[ "${{ matrix.platform }}" == "windows-2022" ]]; then
           OSVERSION="10.0.20348"
           PLATFORM=${PLATFORM}:${OSVERSION}
           export KO_DEFAULTBASEIMAGE=mcr.microsoft.com/windows/nanoserver:ltsc2022
@@ -92,7 +95,7 @@ jobs:
         docker run $(go run ./ build ./test/ --platform=${PLATFORM}) --wait=false 2>&1 | grep "${{ github.sha }}"
 
         # TODO: check why it is failing when building for windows
-        if [[ "${{ matrix.platform }}" != "windows-latest" ]]; then
+        if [[ "${{ matrix.platform }}" != "windows-2022" ]]; then
           # Check that --debug adds dlv to the image, and that dlv is runnable.
           docker run --entrypoint="dlv" $(go run ./ build ./test/ --platform=${PLATFORM} --debug) version | grep "Delve Debugger"
         fi
