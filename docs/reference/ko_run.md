@@ -16,8 +16,7 @@ ko run IMPORTPATH [flags]
 
   # Publish the image and run it on Kubernetes as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local and --preserve-import-paths were passed.
+  # KO_DOCKER_REPO=ko.local selects Docker if --local-podman is not set.
   ko run github.com/foo/bar/cmd/baz
 
   # This supports relative import paths as well.
@@ -43,6 +42,7 @@ ko run IMPORTPATH [flags]
   -j, --jobs int                             The maximum number of concurrent builds (default GOMAXPROCS)
       --ldflags strings                      ldflags to pass to go build (may be repeated)
   -L, --local[=true|false]                   Load into images to local docker daemon.
+      --local-podman[=true|false]            Load images into local Podman storage instead of a registry.
       --oci-layout-path string               Path to save the OCI image layout of the built images
       --platform strings                     Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths[=true|false]   Whether to preserve the full import path after KO_DOCKER_REPO.

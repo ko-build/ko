@@ -37,22 +37,18 @@ func addResolve(topLevel *cobra.Command) {
   # Build and publish import path references to a Docker
   # Registry as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local and --preserve-import-paths were passed.
   ko resolve -f config/
 
   # Build and publish import path references to a Docker
   # Registry preserving import path names as:
   #   ${KO_DOCKER_REPO}/<import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local was passed.
   ko resolve --preserve-import-paths -f config/
 
   # Build and publish import path references to a Docker
   # daemon as:
   #   ko.local/<import path>
-  # This always preserves import paths.
-  ko resolve --local -f config/`,
+  # KO_DOCKER_REPO=ko.local selects Docker if --local-podman is not set.
+  ko resolve --local --preserve-import-paths -f config/`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := options.Validate(po, bo); err != nil {

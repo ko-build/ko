@@ -16,27 +16,25 @@ ko build IMPORTPATH... [flags]
 
   # Build and publish import path references to a Docker Registry as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if --local and
-  # --preserve-import-paths were passed.
   # If the import path is not provided, the current working directory is the
   # default.
   ko build github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
 
   # Build and publish a relative import path as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if --local and
-  # --preserve-import-paths were passed.
   ko build ./cmd/blah
 
   # Build and publish a relative import path as:
   #   ${KO_DOCKER_REPO}/<import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if --local was passed.
   ko build --preserve-import-paths ./cmd/blah
 
   # Build and publish import path references to a Docker daemon as:
   #   ko.local/<import path>
-  # This always preserves import paths.
-  ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
+  # KO_DOCKER_REPO=ko.local selects Docker if --local-podman is not set.
+  ko build --local --preserve-import-paths github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
+
+  # Build a single-platform image and load it into Podman storage.
+  ko build --local-podman ./cmd/blah
 ```
 
 ### Options
@@ -55,6 +53,7 @@ ko build IMPORTPATH... [flags]
   -j, --jobs int                             The maximum number of concurrent builds (default GOMAXPROCS)
       --ldflags strings                      ldflags to pass to go build (may be repeated)
   -L, --local[=true|false]                   Load into images to local docker daemon.
+      --local-podman[=true|false]            Load images into local Podman storage instead of a registry.
       --oci-layout-path string               Path to save the OCI image layout of the built images
       --platform strings                     Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths[=true|false]   Whether to preserve the full import path after KO_DOCKER_REPO.

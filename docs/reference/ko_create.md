@@ -18,8 +18,6 @@ ko create -f FILENAME [flags]
   # Registry as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
   # Then, feed the resulting yaml into "kubectl create".
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local was passed.
   ko create -f config/
 
   # Build and publish import path references to a Docker
@@ -31,8 +29,9 @@ ko create -f FILENAME [flags]
   # Build and publish import path references to a Docker
   # daemon as:
   #   ko.local/<import path>
+  # KO_DOCKER_REPO=ko.local selects Docker if --local-podman is not set.
   # Then, feed the resulting yaml into "kubectl create".
-  ko create --local -f config/
+  ko create --local --preserve-import-paths -f config/
 
   # Create from stdin:
   cat config.yaml | ko create -f -
@@ -59,6 +58,7 @@ ko create -f FILENAME [flags]
   -j, --jobs int                             The maximum number of concurrent builds (default GOMAXPROCS)
       --ldflags strings                      ldflags to pass to go build (may be repeated)
   -L, --local[=true|false]                   Load into images to local docker daemon.
+      --local-podman[=true|false]            Load images into local Podman storage instead of a registry.
       --oci-layout-path string               Path to save the OCI image layout of the built images
       --platform strings                     Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths[=true|false]   Whether to preserve the full import path after KO_DOCKER_REPO.
