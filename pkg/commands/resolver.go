@@ -213,7 +213,10 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 				publish.WithLocalDomain(po.LocalDomain),
 			)
 		}
-		if !po.LocalPodman && strings.HasPrefix(repoName, publish.KindDomain) {
+		if strings.HasPrefix(repoName, publish.KindDomain) {
+			if po.LocalPodman {
+				return nil, fmt.Errorf("--local-podman cannot be combined with KO_DOCKER_REPO=%q (a KinD destination)", repoName)
+			}
 			return publish.NewKindPublisher(repoName, namer, po.Tags), nil
 		}
 

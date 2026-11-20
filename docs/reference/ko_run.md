@@ -16,8 +16,7 @@ ko run IMPORTPATH [flags]
 
   # Publish the image and run it on Kubernetes as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local and --preserve-import-paths were passed.
+  # KO_DOCKER_REPO=ko.local selects Docker if --local-podman is not set.
   ko run github.com/foo/bar/cmd/baz
 
   # This supports relative import paths as well.

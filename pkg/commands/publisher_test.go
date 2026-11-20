@@ -105,6 +105,8 @@ func TestNewPodmanPublisher(t *testing.T) {
 		{"no repository required", options.PublishOptions{LocalPodman: true, Push: true}, "requires podman on PATH"},
 		{"overrides implicit Docker", options.PublishOptions{LocalPodman: true, DockerRepo: "ko.local"}, "requires podman on PATH"},
 		{"explicit Docker conflicts", options.PublishOptions{LocalPodman: true, Local: true}, "cannot be used together"},
+		{"KinD conflicts", options.PublishOptions{LocalPodman: true, DockerRepo: "kind.local"}, "cannot be combined with KO_DOCKER_REPO=\"kind.local\""},
+		{"KinD with path conflicts", options.PublishOptions{LocalPodman: true, DockerRepo: "kind.local/project"}, "cannot be combined with KO_DOCKER_REPO=\"kind.local/project\""},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := NewPublisher(&tt.po)

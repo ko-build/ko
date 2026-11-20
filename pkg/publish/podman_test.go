@@ -79,7 +79,7 @@ fi
 		fail    bool
 	}{
 		{name: "digest tag", tags: []string{"latest", "dev"}, wantTag: h.Hex},
-		{name: "first user tag", tags: []string{"dev", "latest"}, tagOnly: true, wantTag: "dev"},
+		{name: "explicit tag only", tags: []string{"dev"}, tagOnly: true, wantTag: "dev"},
 		{name: "no user tags", wantTag: h.Hex},
 		{name: "load error", tags: []string{"latest"}, fail: true},
 	} {
@@ -138,8 +138,34 @@ fi
 
 func TestPodmanRejectsIndex(t *testing.T) {
 	p := &podman{}
-	if _, err := p.Publish(t.Context(), empty.Index, "ko://example.com/app"); err == nil || !strings.Contains(err.Error(), "single-platform") {
-		t.Errorf("Publish(index) = %v, want single-platform error", err)
+	_, err := p.Publish(t.Context(), empty.Index, "ko://example.com/app")
+	if err == nil {
+		t.Fatal("Publish(index) succeeded, want single-platform error")
+	}
+	for _, hint := range []string{"single-platform", "--platform", "defaultPlatforms", "KO_DEFAULTPLATFORMS"} {
+		if !strings.Contains(err.Error(), hint) {
+			t.Errorf("Publish(index) error %q does not mention %s", err, hint)
+		}
+	}
+}
+
+func TestPodmanRejectsInvalidTagOnly(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	for _, tt := range []struct {
+		name string
+		tags []string
+		want string
+	}{
+		{name: "none", want: "must specify exactly one tag"},
+		{name: "empty", tags: []string{""}, want: "must specify exactly one tag"},
+		{name: "latest", tags: []string{"latest"}, want: "latest tag cannot be used"},
+		{name: "multiple", tags: []string{"dev", "test"}, want: "must specify exactly one tag"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := NewPodman("ko.local", identity, tt.tags, true); err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Errorf("NewPodman(%v) = %v, want %q", tt.tags, err, tt.want)
+			}
+		})
 	}
 }
 

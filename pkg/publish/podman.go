@@ -39,8 +39,10 @@ type podman struct {
 
 // NewPodman returns a publisher that loads images into Podman storage using the Podman CLI.
 func NewPodman(base string, namer Namer, tags []string, tagOnly bool) (Interface, error) {
-	if tagOnly && len(tags) == 0 {
-		return nil, errors.New("must specify tag if requesting tag only")
+	if tagOnly {
+		if err := validateTagOnly(tags); err != nil {
+			return nil, err
+		}
 	}
 	executable, err := exec.LookPath("podman")
 	if err != nil {
@@ -55,7 +57,7 @@ func (p *podman) Publish(ctx context.Context, br build.Result, s string) (name.R
 	}
 	img, ok := br.(v1.Image)
 	if !ok {
-		return nil, fmt.Errorf("--local-podman requires a single-platform image for %s; specify one --platform", s)
+		return nil, fmt.Errorf("--local-podman requires a single-platform image for %s; select one platform with --platform, defaultPlatforms in .ko.yaml, or KO_DEFAULTPLATFORMS", s)
 	}
 	s = strings.ToLower(strings.TrimPrefix(s, build.StrictScheme))
 	repo := p.namer(p.base, s)
@@ -71,13 +73,13 @@ func (p *podman) Publish(ctx context.Context, br build.Result, s string) (name.R
 	}
 	ref := digestTag
 	refs := map[name.Tag]v1.Image{digestTag: img}
-	for i, t := range p.tags {
+	for _, t := range p.tags {
 		tag, err := name.NewTag(fmt.Sprintf("%s:%s", repo, t))
 		if err != nil {
 			return nil, err
 		}
 		refs[tag] = img
-		if i == 0 && p.tagOnly {
+		if p.tagOnly {
 			ref = tag
 		}
 	}

@@ -224,13 +224,17 @@ podman run --pull=never --rm "$image"
 `ko` uses `podman load`, so the image goes into the store used by Podman when run
 as the same user: normally your rootless store, or the system-wide store when
 run as root. No Docker daemon or registry is needed to publish, though `ko` may
-still need to pull the base image. Set `--platform` to a single platform if
-your build would otherwise produce a multi-platform image.
+still need to pull the base image. The flag only changes where images are
+published: `ko` does not read base images from Podman storage. If your defaults
+select multiple platforms, use `--platform` to select one or change
+`defaultPlatforms` in `.ko.yaml` or `KO_DEFAULTPLATFORMS`.
 
 `KO_DOCKER_REPO` defaults to `ko.local` in this mode and controls image naming
 only. `ko` loads all tags specified by `--tags` and prints a digest-derived
-local tag by default. Use `--tag-only` to print the first requested tag instead.
-`--local-podman` cannot be combined with `--local` (Docker).
+local tag by default. To print a named tag instead, use `--tag-only` with
+exactly one tag other than `latest`, for example `--tags=dev`.
+`--local-podman` cannot be combined with `--local` (Docker) or with the
+`kind.local` publishing destination.
 
 `ko` can also load images into a local [KinD](https://kind.sigs.k8s.io)
 cluster, if available, by setting `KO_DOCKER_REPO=kind.local`. By default this

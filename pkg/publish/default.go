@@ -81,13 +81,20 @@ func identity(base, in string) string { return path.Join(base, in) }
 // is the 'latest' tag.
 const latestTag = "latest"
 
+func validateTagOnly(tags []string) error {
+	if len(tags) != 1 || tags[0] == "" {
+		return errors.New("must specify exactly one tag to resolve images into tag-only references")
+	}
+	if tags[0] == latestTag {
+		return errors.New("latest tag cannot be used in tag-only references")
+	}
+	return nil
+}
+
 func (do *defaultOpener) Open() (Interface, error) {
 	if do.tagOnly {
-		if len(do.tags) != 1 {
-			return nil, errors.New("must specify exactly one tag to resolve images into tag-only references")
-		}
-		if do.tags[0] == latestTag {
-			return nil, errors.New("latest tag cannot be used in tag-only references")
+		if err := validateTagOnly(do.tags); err != nil {
+			return nil, err
 		}
 	}
 

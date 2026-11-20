@@ -34,27 +34,25 @@ func addBuild(topLevel *cobra.Command) {
 		Example: `
   # Build and publish import path references to a Docker Registry as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if --local and
-  # --preserve-import-paths were passed.
   # If the import path is not provided, the current working directory is the
   # default.
   ko build github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
 
   # Build and publish a relative import path as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if --local and
-  # --preserve-import-paths were passed.
   ko build ./cmd/blah
 
   # Build and publish a relative import path as:
   #   ${KO_DOCKER_REPO}/<import path>
-  # When KO_DOCKER_REPO is ko.local, it is the same as if --local was passed.
   ko build --preserve-import-paths ./cmd/blah
 
   # Build and publish import path references to a Docker daemon as:
   #   ko.local/<import path>
-  # This always preserves import paths.
-  ko build --local github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah`,
+  # KO_DOCKER_REPO=ko.local selects Docker if --local-podman is not set.
+  ko build --local --preserve-import-paths github.com/foo/bar/cmd/baz github.com/foo/bar/cmd/blah
+
+  # Build a single-platform image and load it into Podman storage.
+  ko build --local-podman ./cmd/blah`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := options.Validate(po, bo); err != nil {
 				return fmt.Errorf("validating options: %w", err)
