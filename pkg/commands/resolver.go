@@ -232,6 +232,12 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 		}
 		if po.TarballFile != "" {
 			tp := publish.NewTarball(po.TarballFile, repoName, namer, po.Tags)
+			if po.TagOnly && !po.Push {
+				if len(po.Tags) == 0 || po.Tags[0] == "" {
+					return nil, errors.New("must specify tag if requesting tag only")
+				}
+				tp = tarballTagPublisher{Interface: tp, tag: po.Tags[0]}
+			}
 			publishers = append(publishers, tp)
 		}
 		userAgent := ua()
@@ -285,6 +291,20 @@ func makePublisher(po *options.PublishOptions) (publish.Interface, error) {
 
 	// Wrap publisher in a memoizing publisher implementation.
 	return publish.NewCaching(innerPublisher)
+}
+
+// tarballTagPublisher keeps all archive entries and resolves the image to the first tag.
+type tarballTagPublisher struct {
+	publish.Interface
+	tag string
+}
+
+func (p tarballTagPublisher) Publish(ctx context.Context, br build.Result, importPath string) (name.Reference, error) {
+	ref, err := p.Interface.Publish(ctx, br, importPath)
+	if err != nil {
+		return nil, err
+	}
+	return ref.Context().Tag(p.tag), nil
 }
 
 // nopPublisher simulates publishing without actually publishing anything, to
