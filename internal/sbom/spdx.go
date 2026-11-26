@@ -155,6 +155,12 @@ func GenerateImageSPDX(koVersion string, mod []byte, img oci.SignedImage) ([]byt
 	})
 
 	for _, dep := range bi.Deps {
+		// A replace directive swaps the module that is actually compiled in.
+		// Record the replacement, unless it is a local directory, which has
+		// no version to refer to.
+		if dep.Replace != nil && dep.Replace.Version != "" {
+			dep = dep.Replace
+		}
 		depID := modulePackageName(dep)
 
 		doc.Relationships = append(doc.Relationships, Relationship{
