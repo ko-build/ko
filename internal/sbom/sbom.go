@@ -17,16 +17,26 @@ package sbom
 import (
 	"bufio"
 	"bytes"
+	"crypto/sha256"
 	"fmt"
+	"regexp"
 	"runtime/debug"
 	"strings"
 	"unicode"
 )
 
+var spdxIDChars = regexp.MustCompile(`^[a-zA-Z0-9.-]+$`)
+
 func modulePackageName(mod *debug.Module) string {
-	return fmt.Sprintf("SPDXRef-Package-%s-%s",
-		strings.ReplaceAll(mod.Path, "/", "."),
-		mod.Version)
+	id := strings.ReplaceAll(mod.Path, "/", ".") + "-" + mod.Version
+	if spdxIDChars.MatchString(id) {
+		return "SPDXRef-Package-" + id
+	}
+
+	// Hash the original fields under a separate prefix to avoid colliding
+	// with IDs formed from valid module names or OCI digests.
+	digest := sha256.Sum256([]byte(mod.Path + "\x00" + mod.Version))
+	return fmt.Sprintf("SPDXRef-GoModule-%x", digest)
 }
 
 func goRef(mod *debug.Module) string {
