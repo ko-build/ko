@@ -64,3 +64,49 @@ func TestGenerateImageSPDXModuleIDs(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateImageSPDXReplacedModules(t *testing.T) {
+	modules := "app: go1.27.0\n" +
+		"\tpath\texample.com/app\n" +
+		"\tmod\texample.com/app\t(devel)\t\n" +
+		"\tdep\texample.com/lib\tv1.6.0\t\n" +
+		"\t=>\texample.com/fork\tv1.3.0\th1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=\n" +
+		"\tdep\texample.com/local\tv1.0.0\t\n" +
+		"\t=>\t../local\t\t\n"
+	data, err := GenerateImageSPDX("test", []byte(modules), signed.Image(empty.Image))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var doc Document
+	if err := json.Unmarshal(data, &doc); err != nil {
+		t.Fatal(err)
+	}
+	packages := make(map[string]Package)
+	for _, pkg := range doc.Packages {
+		packages[pkg.Name] = pkg
+	}
+
+	if _, ok := packages["example.com/lib"]; ok {
+		t.Error("replaced module is still listed under its original path")
+	}
+	fork, ok := packages["example.com/fork"]
+	if !ok {
+		t.Fatal("replacement module is missing")
+	}
+	if fork.Version != "v1.3.0" {
+		t.Errorf("replacement version = %q, want v1.3.0", fork.Version)
+	}
+	if len(fork.Checksums) != 1 {
+		t.Errorf("replacement checksums = %v, want one", fork.Checksums)
+	}
+	if got := fork.ExternalRefs[0].Locator; got != "pkg:golang/example.com/fork@v1.3.0?type=module" {
+		t.Errorf("replacement purl = %q", got)
+	}
+
+	// A replacement with a local path has no version, so the original is kept.
+	local, ok := packages["example.com/local"]
+	if !ok || local.Version != "v1.0.0" {
+		t.Errorf("module replaced by a local path should be kept as is, got %+v", local)
+	}
+}
