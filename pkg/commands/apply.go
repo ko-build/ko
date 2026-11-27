@@ -40,8 +40,6 @@ func addApply(topLevel *cobra.Command) {
   # Registry as:
   #   ${KO_DOCKER_REPO}/<package name>-<hash of import path>
   # Then, feed the resulting yaml into "kubectl apply".
-  # When KO_DOCKER_REPO is ko.local, it is the same as if
-  # --local was passed.
   ko apply -f config/
 
   # Build and publish import path references to a Docker
@@ -53,8 +51,9 @@ func addApply(topLevel *cobra.Command) {
   # Build and publish import path references to a Docker
   # daemon as:
   #   ko.local/<import path>
+  # KO_DOCKER_REPO=ko.local selects Docker if --local-podman is not set.
   # Then, feed the resulting yaml into "kubectl apply".
-  ko apply --local -f config/
+  ko apply --local --preserve-import-paths -f config/
 
   # Apply from stdin:
   cat config.yaml | ko apply -f -
