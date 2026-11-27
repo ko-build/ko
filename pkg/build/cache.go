@@ -122,6 +122,10 @@ func (c *layerCache) put(ctx context.Context, file string, layer v1.Layer) error
 		return err
 	}
 
+	// TODO: Implement better per-file locking.
+	c.Lock()
+	defer c.Unlock()
+
 	btod, ok := c.buildToDiff[file]
 	if !ok {
 		btod = buildIDToDiffID{}
@@ -133,10 +137,6 @@ func (c *layerCache) put(ctx context.Context, file string, layer v1.Layer) error
 		dtod = diffIDToDescriptor{}
 	}
 	dtod[diffid] = *desc
-
-	// TODO: Implement better per-file locking.
-	c.Lock()
-	defer c.Unlock()
 
 	btodf, err := os.OpenFile(filepath.Join(filepath.Dir(file), "buildid-to-diffid"), os.O_RDWR|os.O_CREATE, 0755)
 	if err != nil {
